@@ -7,9 +7,10 @@ import { useTheme } from '@/context/ThemeContext';
 interface DataTableProps {
     data: any[];
     settings?: any;
+    onRowClick?: (record: any) => void;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => {
     const { colors } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
 
@@ -91,6 +92,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings }) => {
                     backgroundColor: colors.background,
                     color: colors.text,
                 }}
+                onCellClick={(props: any) => {
+                    if (onRowClick) {
+                        onRowClick(rows[props.rowIdx]);
+                    }
+                }}
             />
             <style jsx global>{`
                 .rdg {
@@ -114,6 +120,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings }) => {
                     color: ${colors.text};
                 }
 
+                .rdg-row {
+                    cursor: ${onRowClick ? 'pointer' : 'default'};
+                }
+
                 .rdg-row:nth-child(even) {
                     background-color: ${colors.evenCardBackground};
                 }
@@ -123,7 +133,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings }) => {
                 }
 
                 .rdg-row:hover {
-                    background-color: ${colors.color1};
+                    background-color: ${colors.color1} !important;
                 }
             `}</style>
         </div>

@@ -29,6 +29,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         direction: 'asc'
     });
     const [downloadFilters, setDownloadFilters] = useState<Record<string, any>>({});
+    const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
 
     const { colors } = useTheme();
 
@@ -158,17 +159,41 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
-    // Handle record click for level navigation
+    // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
+        console.log('Record clicked:', record);
+
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
+            // Get primary key from rs1Settings or fallback to 'id'
+            const primaryKey = rs1Settings?.primaryKey || 'id';
+
+            console.log('Primary key:', primaryKey);
+            console.log('Record value:', record[primaryKey]);
+
             // Set primary key filters based on the clicked record
-            setPrimaryKeyFilters(prev => ({
-                ...prev,
-                // Add the necessary primary key values from the record
-                // You'll need to adjust this based on your data structure
-                PrimaryKey: record.id // or whatever your primary key field is
-            }));
-            setCurrentLevel(prev => prev + 1);
+            setPrimaryKeyFilters(prev => {
+                const newFilters = {
+                    ...prev,
+                    [primaryKey]: record[primaryKey]
+                };
+                console.log('New primary key filters:', newFilters);
+                return newFilters;
+            });
+
+            // Update level stack and current level
+            const nextLevel = currentLevel + 1;
+            setLevelStack([...levelStack, nextLevel]);
+            setCurrentLevel(nextLevel);
+        }
+    };
+
+    // Add handleTabClick function
+    const handleTabClick = (level: number, index: number) => {
+        const newStack = levelStack.slice(0, index + 1);
+        setLevelStack(newStack);
+        setCurrentLevel(level);
+        if (index === 0) {
+            setPrimaryKeyFilters({});
         }
     };
 
@@ -236,10 +261,48 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     return (
         <div className="">
-            {/* Header Actions */}
+            {/* Tabs - Only show if there are multiple levels */}
+            {pageData[0].levels.length > 1 && (
+                <div className="flex mb-4 border-b border-gray-200">
+                    <div className="flex flex-1 gap-2">
+                        {levelStack.map((level, index) => (
+                            <button
+                                key={index}
+                                className={`px-4 py-2 text-sm rounded-t-lg ${currentLevel === level
+                                    ? `bg-${colors.primary} text-${colors.buttonText}`
+                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                    }`}
+                                onClick={() => handleTabClick(level, index)}
+                            >
+                                {level === 0
+                                    ? pageData[0].level || 'Main'
+                                    : pageData[0].levels[level].name
+                                }
+                            </button>
+                        ))}
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            className="p-2 rounded"
+                            onClick={() => fetchData()}
+                            style={{ color: colors.text }}
+                        >
+                            <FaSync size={20} />
+                        </button>
+                        {pageData[0].filters && pageData[0].filters.length > 0 && (
+                            <button
+                                className="p-2 rounded"
+                                onClick={() => setIsFilterModalOpen(true)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaFilter size={20} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
 
-
-            {/* Filter Modal */}
+            {/* Filter Modals */}
             <FilterModal
                 isOpen={isFilterModalOpen}
                 onClose={() => setIsFilterModalOpen(false)}
@@ -269,41 +332,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onApply={() => { }}
             />
 
-            {/* Tabs */}
-            <div className="flex mb-4">
-                <div className="flex flex-1">
-                    {pageData[0].levels.map((level, index) => (
-                        <button
-                            key={index}
-                            className={`px-4 py-2 mr-2 ${currentLevel === index ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                            disabled={index > currentLevel}
-                        >
-                            {level.name}
-                        </button>
-                    ))}
-                </div>
-                <div>
-                    <div className="flex justify-end mb-4 gap-2">
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => fetchData()}
-                            style={{ color: colors.text }}
-                        >
-                            <FaSync size={20} />
-                        </button>
-                        {pageData[0].filters && pageData[0].filters.length > 0 && (
-                            <button
-                                className="p-2 rounded"
-                                onClick={() => setIsFilterModalOpen(true)}
-                                style={{ color: colors.text }}
-                            >
-                                <FaFilter size={20} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
             {/* Loading State */}
             {isLoading && <div>Loading...</div>}
 
@@ -313,6 +341,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     <DataTable
                         data={apiData}
                         settings={pageData[0].levels[currentLevel].settings}
+                        onRowClick={handleRecordClick}
                     />
                 </div>
             )}
