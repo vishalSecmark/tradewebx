@@ -3,12 +3,14 @@ import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
 import { ThemeType, useTheme } from "@/context/ThemeContext";
+import { setTableStyle } from "@/redux/features/common/commonSlice";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
+import { useAppDispatch } from "@/redux/hooks";
 
 const AppHeader: React.FC = () => {
-
+  const dispatch = useAppDispatch();
   const { theme, setTheme, availableThemes, colors } = useTheme();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
@@ -208,6 +210,32 @@ const AppHeader: React.FC = () => {
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
             {/* Theme Selector Dropdown */}
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <select
+                  className="h-11 w-40 appearance-none rounded-lg border px-4 pr-10 text-sm transition-colors focus:outline-none focus:ring-2"
+                  style={{
+                    backgroundColor: colors.textInputBackground,
+                    borderColor: colors.textInputBorder,
+                    color: colors.textInputText,
+                  }}
+                  onChange={(e) => dispatch(setTableStyle(e.target.value as 'small' | 'medium' | 'large'))}
+                >
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
             <div className="relative">
               <select
                 value={theme}
