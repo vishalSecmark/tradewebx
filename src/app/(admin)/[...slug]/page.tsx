@@ -1,48 +1,38 @@
 import type { Metadata } from "next";
-import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
-import React from "react";
-import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
-import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
 import { notFound } from 'next/navigation';
 import Dashboard from "@/pages/Dashboard";
 import LogoutPage from "../(auth)/logout/page";
-
+import DynamicReportComponent from "@/components/DynamicReportComponent";
 
 export const metadata: Metadata = {
   title: "TradeWeb",
   description: "TradeWeb",
 };
 
-// Define your route mappings
-const routeComponents: Record<string, React.ReactNode> = {
-  'dashboard': (
-    <Dashboard />
-  ),
-  'reports': (
-    <div className="grid grid-cols-12 gap-4 md:gap-6">
-      <div className="col-span-12 space-y-6 xl:col-span-7">
-        <EcommerceMetrics />
-        <MonthlySalesChart />
-      </div>
-      <div className="col-span-12 xl:col-span-5">
-        <MonthlyTarget />
-      </div>
-    </div>
-  ),
-  'logout': (
-    <LogoutPage />
-  ),
-  // Add more routes as needed
+// Define static route components
+const staticRoutes: Record<string, React.ReactNode> = {
+  'dashboard': <Dashboard />,
+  'logout': <LogoutPage />,
 };
 
 export default function DynamicPage({ params }: { params: { slug: string[] } }) {
-  // Get the first segment of the URL
   const route = params.slug[0];
+  const subRoute = params.slug[1];
 
-  // Check if we have a component for this route
-  if (!routeComponents[route]) {
-    notFound();
+  // Handle static routes
+  if (staticRoutes[route]) {
+    return staticRoutes[route];
   }
 
-  return routeComponents[route];
+  // For dynamic routes, we need to determine the actual componentName
+  // This might come from the last segment of the URL
+  const componentName = subRoute || route;
+
+  // Convert kebab-case to PascalCase if needed
+  const formattedComponentName = componentName
+    .split('-')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
+
+  return <DynamicReportComponent componentName={formattedComponentName} />;
 }

@@ -1,16 +1,60 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import type { RootState } from '../store';
+import { BASE_URL, PATH_URL } from '@/utils/constants';
 
-const BASE_URL = 'https://trade-plus.in';
-const PATH_URL = '/TradeWebAPI/api/main/tradeweb';
+// Enhanced types to include pageData
+type PageSettings = {
+    gridType: string;
+    gridDirection: string;
+    borderStyle: string;
+    borderColor: string;
+    fontSize?: number;
+    // ... other settings
+};
 
-// Define types
-type NavItem = {
+type PageLevel = {
     name: string;
-    icon: React.ReactNode;
+    primaryHeaderKey: string;
+    primaryKey: string;
+    level: number;
+    J_Ui: {
+        ActionName: string;
+        Option: string;
+        Level: number;
+        RequestFrom: string;
+    };
+    settings: PageSettings;
+    summary?: any;
+};
+
+type PageData = {
+    wPage: string;
+    level: string;
+    isShortAble: string;
+    gridType: string;
+    horizontalScroll: number;
+    filters: any[];
+    levels: PageLevel[];
+};
+
+type SubMenuItem = {
+    name: string;
+    path: string;
+    pro?: boolean;
+    new?: boolean;
+    componentName: string;
+    pageData?: PageData[];
+};
+
+type NavItem = {
+    id: number;
+    name: string;
+    icon: string;
+    componentName: string;
     path?: string;
-    subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+    subItems?: SubMenuItem[];
+    pageData?: PageData[];
 };
 
 interface MenuState {
@@ -25,6 +69,44 @@ const initialState: MenuState = {
     error: null
 };
 
+// Update the convertToNavItems function
+const convertToNavItems = (data: any): NavItem[] => {
+    return data.map((item: any) => {
+        const routeMapping: Record<string, string> = {
+            'Dashboard': 'dashboard',
+            'Reports': 'reports',
+            'Logout': 'logout',
+            // Add other mappings as needed
+        };
+
+        const basePath = `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+
+        const navItem: NavItem = {
+            id: item.id,
+            icon: item.icon || 'default-icon',
+            name: item.title,
+            componentName: item.componentName,
+            path: basePath,
+            pageData: item.pageData
+        };
+
+        if (item.submenu && item.submenu.length > 0) {
+            navItem.subItems = item.submenu.map((subItem: any) => ({
+                name: subItem.title,
+                path: `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`,
+                componentName: subItem.componentName,
+                pageData: subItem.pageData,
+                pro: false,
+                new: false
+            }));
+            // Remove path from parent if it has subItems
+            delete navItem.path;
+        }
+
+        return navItem;
+    });
+};
+
 // Create async thunk for fetching menu
 export const fetchMenuItems = createAsyncThunk(
     'menu/fetchMenuItems',
@@ -34,13 +116,13 @@ export const fetchMenuItems = createAsyncThunk(
         };
 
         const xmlData = `<dsXml>
-      <J_Ui>"ActionName":"TradeWeb", "Option":"MOBILEMENU","RequestFrom" :"M"</J_Ui>
-      <Sql></Sql>
-      <X_Filter>
-          <UserId>${userData.UserId}</UserId>
-      </X_Filter>
-      <J_Api>"UserId":"${userData.UserId}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
-    </dsXml>`;
+            <J_Ui>"ActionName":"TradeWeb", "Option":"MOBILEMENU","RequestFrom" :"M"</J_Ui>
+            <Sql></Sql>
+            <X_Filter>
+                <UserId>${userData.UserId}</UserId>
+            </X_Filter>
+            <J_Api>"UserId":"${userData.UserId}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+        </dsXml>`;
 
         const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
             headers: {
@@ -48,34 +130,6 @@ export const fetchMenuItems = createAsyncThunk(
                 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
             }
         });
-
-        // Convert API response to NavItems
-        const convertToNavItems = (data: any): NavItem[] => {
-            return data.map((item: any) => {
-                const routeMapping: Record<string, string> = {
-                    'Dashboard': 'dashboard',
-                    'Reports': 'reports',
-                };
-
-                const basePath = `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
-
-                const navItem: NavItem = {
-                    icon: item.icon,
-                    name: item.title,
-                    path: basePath
-                };
-
-                if (item.submenu && item.submenu.length > 0) {
-                    navItem.subItems = item.submenu.map((subItem: any) => ({
-                        name: subItem.title,
-                        path: `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`,
-                        pro: false
-                    }));
-                }
-
-                return navItem;
-            });
-        };
 
         return convertToNavItems(response.data.data.rs0);
     }

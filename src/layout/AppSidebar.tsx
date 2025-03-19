@@ -103,9 +103,7 @@ const AppSidebar: React.FC = () => {
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group cursor-pointer ${!isExpanded && !isHovered
-                ? "lg:justify-center"
-                : "lg:justify-start"
+              className={`menu-item group cursor-pointer ${!isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"
                 }`}
               style={{
                 backgroundColor: openSubmenu?.type === menuType && openSubmenu?.index === index
@@ -123,15 +121,14 @@ const AppSidebar: React.FC = () => {
                     : colors.text
                 }}
               >
-                {iconMap[nav.icon]}
+                {iconMap[nav.icon] || iconMap['default-icon']}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
                 <span>{nav.name}</span>
               )}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
+                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === menuType && openSubmenu?.index === index
                     ? "rotate-180"
                     : ""
                     }`}
@@ -158,7 +155,7 @@ const AppSidebar: React.FC = () => {
                     color: isActive(nav.path) ? colors.buttonText : colors.text
                   }}
                 >
-                  {iconMap[nav.icon]}
+                  {iconMap[nav.icon] || iconMap['default-icon']}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span>{nav.name}</span>
