@@ -8,6 +8,7 @@ import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
+import DataTable from './DataTable';
 
 interface DynamicReportComponentProps {
     componentName: string;
@@ -234,26 +235,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     return (
-        <div className="p-4">
+        <div className="">
             {/* Header Actions */}
-            <div className="flex justify-end mb-4 gap-2">
-                <button
-                    className="p-2 rounded"
-                    onClick={() => fetchData()}
-                    style={{ color: colors.text }}
-                >
-                    <FaSync size={20} />
-                </button>
-                {pageData[0].filters && pageData[0].filters.length > 0 && (
-                    <button
-                        className="p-2 rounded"
-                        onClick={() => setIsFilterModalOpen(true)}
-                        style={{ color: colors.text }}
-                    >
-                        <FaFilter size={20} />
-                    </button>
-                )}
-            </div>
+
 
             {/* Filter Modal */}
             <FilterModal
@@ -287,15 +271,37 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Tabs */}
             <div className="flex mb-4">
-                {pageData[0].levels.map((level, index) => (
-                    <button
-                        key={index}
-                        className={`px-4 py-2 mr-2 ${currentLevel === index ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-                        disabled={index > currentLevel}
-                    >
-                        {level.name}
-                    </button>
-                ))}
+                <div className="flex flex-1">
+                    {pageData[0].levels.map((level, index) => (
+                        <button
+                            key={index}
+                            className={`px-4 py-2 mr-2 ${currentLevel === index ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                            disabled={index > currentLevel}
+                        >
+                            {level.name}
+                        </button>
+                    ))}
+                </div>
+                <div>
+                    <div className="flex justify-end mb-4 gap-2">
+                        <button
+                            className="p-2 rounded"
+                            onClick={() => fetchData()}
+                            style={{ color: colors.text }}
+                        >
+                            <FaSync size={20} />
+                        </button>
+                        {pageData[0].filters && pageData[0].filters.length > 0 && (
+                            <button
+                                className="p-2 rounded"
+                                onClick={() => setIsFilterModalOpen(true)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaFilter size={20} />
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Loading State */}
@@ -303,8 +309,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Data Display */}
             {!isLoading && apiData && (
-                <div>
-                    <pre>{JSON.stringify(apiData, null, 2)}</pre>
+                <div className="space-y-4">
+                    <DataTable
+                        data={apiData}
+                        settings={pageData[0].levels[currentLevel].settings}
+                    />
                 </div>
             )}
         </div>

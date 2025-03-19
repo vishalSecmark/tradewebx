@@ -54,7 +54,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
 
                     <div className="max-h-[70vh] overflow-y-auto">
                         {/* Sorting Section */}
-                        {!isDownload && isSortingAllowed && sortableFields.length > 0 && (
+                        {/* {!isDownload && isSortingAllowed && sortableFields.length > 0 && (
                             <div className="mb-4 p-4 rounded" style={{ backgroundColor: colors.oddCardBackground }}>
                                 <h3 className="text-sm font-medium mb-2" style={{ color: colors.text }}>
                                     Sort By
@@ -111,7 +111,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                                     )}
                                 </div>
                             </div>
-                        )}
+                        )} */}
 
                         {/* Form Creator */}
                         <FormCreator
