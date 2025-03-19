@@ -1,58 +1,225 @@
 "use client";
 
-import type React from "react";
-import { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Theme = "light" | "dark";
+// Define theme types
+export type ThemeType = 'dark' | 'light' | 'lightDark' | 'blue';
 
-type ThemeContextType = {
-  theme: Theme;
-  toggleTheme: () => void;
+// Define theme colors interface
+interface ThemeColors {
+  background: string;
+  background2: string;
+  text: string;
+  primary: string;
+  secondary: string;
+  color1: string;
+  color2: string;
+  color3: string;
+  textInputBackground: string;
+  textInputBorder: string;
+  textInputText: string;
+  buttonBackground: string;
+  buttonText: string;
+  errorText: string;
+  cardBackground: string;
+  oddCardBackground: string;
+  evenCardBackground: string;
+  filtersBackground: string;
+  tabBackground: string;
+  tabText: string;
+}
+
+// Define themes
+const initialThemes: Record<ThemeType, ThemeColors> = {
+  dark: {
+    background: '#334155',
+    background2: '#1e293b',
+    text: '#ffffff',
+    primary: '#3B82F6',
+    secondary: '#60A5FA',
+    color1: '#475569',
+    color2: '#4B5563',
+    color3: '#64748B',
+    textInputBackground: "#475569",
+    textInputBorder: "#64748B",
+    textInputText: "#E2E8F0",
+    buttonBackground: "#3B82F6",
+    buttonText: "#FFFFFF",
+    errorText: "#EF4444",
+    biometricBox: "#475569",
+    biometricText: "#E2E8F0",
+    cardBackground: "#ffffff",
+    oddCardBackground: "#fff8e7",
+    evenCardBackground: "#ffffff",
+    filtersBackground: "#3F4758",
+    tabBackground: "#3F4758",
+    tabText: "#ffffff",
+  },
+  light: {
+    background: '#d2e7ff',
+    background2: '#f9fafb',
+    text: '#121212',
+    primary: '#fff6e9',
+    secondary: '#ffefd7',
+    color1: '#fffef9',
+    color2: '#e3f0ff',
+    color3: '#f0f0f0',
+    textInputBackground: "#fffef9",
+    textInputBorder: "#87bdfa",
+    textInputText: "#121212",
+    buttonBackground: "#87bdfa",
+    buttonText: "#121212",
+    errorText: "#EF4444",
+    biometricBox: "#d2e7ff",
+    biometricText: "#121212",
+    cardBackground: "#ffffff",
+    oddCardBackground: "#fffef9",
+    evenCardBackground: "#e3f0ff",
+    filtersBackground: "#ffffff",
+    tabBackground: "#ffffff",
+    tabText: "#121212",
+
+  },
+  lightDark: {
+    background: '#242424',
+    background2: '#1e293b',
+    text: '#E0E0E0',
+    primary: '#a0c8ff',
+    secondary: '#7ba7e0',
+    color1: '#303030',
+    color2: '#3a3a3a',
+    color3: '#454545',
+    textInputBackground: "#303030",
+    textInputBorder: "#505050",
+    textInputText: "#E0E0E0",
+    buttonBackground: "#a0c8ff",
+    buttonText: "#242424",
+    errorText: "#FF8080",
+    biometricBox: "#3a3a3a",
+    biometricText: "#E0E0E0",
+    cardBackground: "#303030",
+    oddCardBackground: "#353535",
+    evenCardBackground: "#3a3a3a",
+    filtersBackground: "#303030",
+    tabBackground: "#303030",
+    tabText: "#E0E0E0",
+
+  },
+  blue: {
+    background: '#E3F2FD',
+    background2: '#1e293b',
+    text: '#0D47A1',
+    primary: '#2196F3',
+    secondary: '#64B5F6',
+    color1: '#BBDEFB',
+    color2: '#90CAF9',
+    color3: '#42A5F5',
+    textInputBackground: "#FFFFFF",
+    textInputBorder: "#90CAF9",
+    textInputText: "#0D47A1",
+    buttonBackground: "#2196F3",
+    buttonText: "#FFFFFF",
+    errorText: "#F44336",
+    biometricBox: "#90CAF9",
+    biometricText: "#0D47A1",
+    cardBackground: "#FFFFFF",
+    oddCardBackground: "#F5F9FF",
+    evenCardBackground: "#E3F2FD",
+    filtersBackground: "#FFFFFF",
+    tabBackground: "#FFFFFF",
+    tabText: "#0D47A1",
+
+  },
 };
+
+
+interface ThemeContextType {
+  theme: ThemeType;
+  colors: ThemeColors;
+  setTheme: (theme: ThemeType) => void;
+  updateTheme: (themeData: Record<ThemeType, ThemeColors>) => void;
+  availableThemes: ThemeType[];
+}
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const [theme, setTheme] = useState<Theme>("light");
-  const [isInitialized, setIsInitialized] = useState(false);
+// Storage keys for localStorage
+const THEME_STORAGE_KEY = 'app_theme';
+const THEME_COLORS_STORAGE_KEY = 'app_theme_colors';
+
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [theme, setTheme] = useState<ThemeType>('light');
+  const [themes, setThemes] = useState<Record<ThemeType, ThemeColors>>(initialThemes);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This code will only run on the client side
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
-    const initialTheme = savedTheme || "light"; // Default to light theme
+    const loadTheme = () => {
+      try {
+        // Load saved theme colors
+        const savedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
+        if (savedThemeColors) {
+          setThemes(JSON.parse(savedThemeColors));
+        }
 
-    setTheme(initialTheme);
-    setIsInitialized(true);
+        // Load saved theme type
+        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        if (savedTheme) {
+          setTheme(savedTheme as ThemeType);
+        }
+      } catch (error) {
+        console.error('Failed to load theme from storage:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Only run in browser environment
+    if (typeof window !== 'undefined') {
+      loadTheme();
+    }
   }, []);
 
-  useEffect(() => {
-    if (isInitialized) {
-      localStorage.setItem("theme", theme);
-      if (theme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+  // Update theme and save to localStorage
+  const handleSetTheme = (newTheme: ThemeType) => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      setTheme(newTheme);
+      // Optional: Update document body class for global CSS changes
+      document.body.className = newTheme;
+    } catch (error) {
+      console.error('Failed to save theme to storage:', error);
     }
-  }, [theme, isInitialized]);
-
-  const toggleTheme = () => {
-    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
   };
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  // Update theme colors
+  const updateTheme = (themeData: Record<ThemeType, ThemeColors>) => {
+    try {
+      setThemes(themeData);
+      localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(themeData));
+    } catch (error) {
+      console.error('Failed to update theme colors:', error);
+    }
+  };
+
+  const value = {
+    theme,
+    colors: themes[theme],
+    setTheme: handleSetTheme,
+    updateTheme,
+    availableThemes: Object.keys(themes) as ThemeType[],
+  };
+
+  if (isLoading) {
+    return null;
+  }
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
 };

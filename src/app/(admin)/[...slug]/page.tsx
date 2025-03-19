@@ -9,14 +9,14 @@ import LogoutPage from "../(auth)/logout/page";
 
 
 export const metadata: Metadata = {
-  title: "Dashboard | TailAdmin",
-  description: "Dashboard page",
+  title: "TradeWeb",
+  description: "TradeWeb",
 };
 
 // Define your route mappings
 const routeComponents: Record<string, React.ReactNode> = {
   'dashboard': (
-   <Dashboard />
+    <Dashboard />
   ),
   'reports': (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
@@ -38,7 +38,7 @@ const routeComponents: Record<string, React.ReactNode> = {
 export default function DynamicPage({ params }: { params: { slug: string[] } }) {
   // Get the first segment of the URL
   const route = params.slug[0];
-  
+
   // Check if we have a component for this route
   if (!routeComponents[route]) {
     notFound();

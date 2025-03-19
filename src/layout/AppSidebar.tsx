@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState,useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -19,6 +19,7 @@ import {
   UserCircleIcon,
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
+import { useTheme } from "@/context/ThemeContext";
 
 type NavItem = {
   name: string;
@@ -46,6 +47,7 @@ const PATH_URL = '/TradeWebAPI/api/main/tradeweb'
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
+  const { colors } = useTheme();
 
   function convertToNavItems(data) {
     return data.map(item => {
@@ -57,7 +59,7 @@ const AppSidebar: React.FC = () => {
       };
 
       const basePath = `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
-      
+
       const navItem = {
         icon: item.icon,
         name: item.title,
@@ -71,7 +73,7 @@ const AppSidebar: React.FC = () => {
           pro: false
         }));
       }
-      
+
       return navItem;
     });
   }
@@ -98,7 +100,7 @@ const AppSidebar: React.FC = () => {
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
       });
-      
+
       console.log('Menu API Response:', response.data.data.rs0);
       const nav = convertToNavItems(response.data.data.rs0);
       setNavItemsFromApi(nav);
@@ -112,7 +114,7 @@ const AppSidebar: React.FC = () => {
     getMenuApiCall();
   }, []);
 
-  
+
 
   const renderMenuItems = (
     navItemsFromApi: NavItem[],
@@ -124,37 +126,43 @@ const AppSidebar: React.FC = () => {
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
-              }`}
+              className={`menu-item group cursor-pointer ${!isExpanded && !isHovered
+                ? "lg:justify-center"
+                : "lg:justify-start"
+                }`}
+              style={{
+                backgroundColor: openSubmenu?.type === menuType && openSubmenu?.index === index
+                  ? colors.primary
+                  : 'transparent',
+                color: openSubmenu?.type === menuType && openSubmenu?.index === index
+                  ? colors.buttonText
+                  : colors.text
+              }}
             >
               <span
-                className={` ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                }`}
+                style={{
+                  color: openSubmenu?.type === menuType && openSubmenu?.index === index
+                    ? colors.buttonText
+                    : colors.text
+                }}
               >
                 {iconMap[nav.icon]}
-                
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
-                <span className={`menu-item-text`}>{nav.name}</span>
+                <span>{nav.name}</span>
               )}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType &&
+                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${openSubmenu?.type === menuType &&
                     openSubmenu?.index === index
-                      ? "rotate-180 text-brand-500"
-                      : ""
-                  }`}
+                    ? "rotate-180"
+                    : ""
+                    }`}
+                  style={{
+                    color: openSubmenu?.type === menuType && openSubmenu?.index === index
+                      ? colors.buttonText
+                      : colors.text
+                  }}
                 />
               )}
             </button>
@@ -162,21 +170,21 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 href={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
+                className="menu-item group"
+                style={{
+                  backgroundColor: isActive(nav.path) ? colors.primary : 'transparent',
+                  color: isActive(nav.path) ? colors.buttonText : colors.text
+                }}
               >
                 <span
-                  className={`${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
-                  }`}
+                  style={{
+                    color: isActive(nav.path) ? colors.buttonText : colors.text
+                  }}
                 >
                   {iconMap[nav.icon]}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
+                  <span>{nav.name}</span>
                 )}
               </Link>
             )
@@ -199,32 +207,32 @@ const AppSidebar: React.FC = () => {
                   <li key={subItem.name}>
                     <Link
                       href={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
+                      style={{
+                        backgroundColor: isActive(subItem.path) ? colors.primary : 'transparent',
+                        color: isActive(subItem.path) ? colors.buttonText : colors.text
+                      }}
+                      className="menu-dropdown-item"
                     >
                       {subItem.name}
                       <span className="flex items-center gap-1 ml-auto">
                         {subItem.new && (
                           <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
+                            style={{
+                              backgroundColor: colors.primary,
+                              color: colors.buttonText
+                            }}
+                            className="menu-dropdown-badge"
                           >
                             new
                           </span>
                         )}
                         {subItem.pro && (
                           <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
+                            style={{
+                              backgroundColor: colors.primary,
+                              color: colors.buttonText
+                            }}
+                            className="menu-dropdown-badge"
                           >
                             pro
                           </span>
@@ -251,7 +259,7 @@ const AppSidebar: React.FC = () => {
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
   useEffect(() => {
     // Check if the current path matches any submenu item
@@ -277,7 +285,7 @@ const AppSidebar: React.FC = () => {
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname,isActive]);
+  }, [pathname, isActive]);
 
   useEffect(() => {
     // Set the height of the submenu items when the submenu is opened
@@ -307,31 +315,34 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 h-screen transition-all duration-300 ease-in-out z-50
+        ${isExpanded || isMobileOpen
+          ? "w-[290px]"
+          : isHovered
             ? "w-[290px]"
             : "w-[90px]"
         }
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
+      style={{
+        backgroundColor: colors.background,
+        borderRight: `1px solid ${colors.color3}`,
+        color: colors.text
+      }}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex  ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
+        className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          }`}
       >
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <h1 className="text-xl font-bold">Tradeweb</h1>
-            </>
+            <h1 className="text-xl font-bold" style={{ color: colors.text }}>
+              Tradeweb
+            </h1>
           ) : (
-           <></>
+            <></>
           )}
         </Link>
       </div>
@@ -340,11 +351,11 @@ const AppSidebar: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div>
               <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
+                className={`mb-4 text-xs uppercase flex leading-[20px] ${!isExpanded && !isHovered
+                  ? "lg:justify-center"
+                  : "justify-start"
+                  }`}
+                style={{ color: colors.color3 }}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
                   "Menu"
@@ -355,7 +366,7 @@ const AppSidebar: React.FC = () => {
               {renderMenuItems(navItemsFromApi, "main")}
             </div>
 
-            
+
           </div>
         </nav>
         {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
