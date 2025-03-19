@@ -107,7 +107,7 @@ const initialThemes: Record<ThemeType, ThemeColors> = {
   },
   blue: {
     background: '#E3F2FD',
-    background2: '#1e293b',
+    background2: '#f0f6fa',
     text: '#0D47A1',
     primary: '#2196F3',
     secondary: '#64B5F6',

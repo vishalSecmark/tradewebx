@@ -17,6 +17,7 @@
     "@fullcalendar/timegrid": "^6.1.15",
     "@react-jvectormap/core": "^1.0.4",
     "@react-jvectormap/world": "^1.1.2",
+    "@reduxjs/toolkit": "^2.6.1",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/postcss": "^4.0.9",
     "apexcharts": "^4.3.0",
@@ -32,6 +33,8 @@
     "react-dropzone": "^14.3.5",
     "react-flatpickr": "^3.10.13",
     "react-icons": "^5.5.0",
+    "react-redux": "^9.2.0",
+    "redux": "^5.0.1",
     "swiper": "^11.2.0",
     "tailwind-merge": "^2.6.0"
   },

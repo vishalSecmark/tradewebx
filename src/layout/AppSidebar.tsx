@@ -20,6 +20,8 @@ import {
 } from "../icons/index";
 import SidebarWidget from "./SidebarWidget";
 import { useTheme } from "@/context/ThemeContext";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { fetchMenuItems, selectAllMenuItems, selectMenuStatus, selectMenuError } from "@/redux/features/menuSlice";
 
 type NavItem = {
   name: string;
@@ -29,6 +31,8 @@ type NavItem = {
 };
 
 import { FaHome, FaCalendar, FaUser, FaList, FaTable, FaFileAlt } from 'react-icons/fa';
+import { PATH_URL } from "@/utils/constants";
+import { BASE_URL } from "@/utils/constants";
 const iconMap = {
   'home': <FaHome />,
   'area-graph': <FaTable />,
@@ -41,13 +45,16 @@ const iconMap = {
 };
 
 
-const BASE_URL = 'https://trade-plus.in'
-const PATH_URL = '/TradeWebAPI/api/main/tradeweb'
+
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const { colors } = useTheme();
+  const dispatch = useAppDispatch();
+  const menuItems = useAppSelector(selectAllMenuItems);
+  const menuStatus = useAppSelector(selectMenuStatus);
+  const menuError = useAppSelector(selectMenuError);
 
   function convertToNavItems(data) {
     return data.map(item => {
@@ -78,41 +85,11 @@ const AppSidebar: React.FC = () => {
     });
   }
 
-  const [navItemsFromApi, setNavItemsFromApi] = useState<NavItem[]>([]);
-  const getMenuApiCall = async () => {
-    try {
-      const userData = {
-        UserId: localStorage.getItem('userId') || ''
-      };
-
-      const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb", "Option":"MOBILEMENU","RequestFrom" :"M"</J_Ui>
-        <Sql></Sql>
-        <X_Filter>
-            <UserId>${userData.UserId}</UserId>
-        </X_Filter>
-        <J_Api>"UserId":"${userData.UserId}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
-      </dsXml>`;
-
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-        headers: {
-          'Content-Type': 'application/xml',
-          'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-        }
-      });
-
-      console.log('Menu API Response:', response.data.data.rs0);
-      const nav = convertToNavItems(response.data.data.rs0);
-      setNavItemsFromApi(nav);
-
-    } catch (error) {
-      console.error('Error fetching menu data:', error);
-    }
-  };
-
   useEffect(() => {
-    getMenuApiCall();
-  }, []);
+    if (menuStatus === 'idle') {
+      dispatch(fetchMenuItems());
+    }
+  }, [menuStatus, dispatch]);
 
 
 
@@ -265,7 +242,7 @@ const AppSidebar: React.FC = () => {
     // Check if the current path matches any submenu item
     let submenuMatched = false;
     ["main", "others"].forEach((menuType) => {
-      const items = navItemsFromApi;
+      const items = menuItems;
       items.forEach((nav, index) => {
         if (nav.subItems) {
           nav.subItems.forEach((subItem) => {
@@ -285,7 +262,7 @@ const AppSidebar: React.FC = () => {
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname, isActive]);
+  }, [pathname, isActive, menuItems]);
 
   useEffect(() => {
     // Set the height of the submenu items when the submenu is opened
@@ -363,7 +340,11 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots />
                 )}
               </h2>
-              {renderMenuItems(navItemsFromApi, "main")}
+              {menuStatus === 'loading' && <div>Loading...</div>}
+              {menuStatus === 'failed' && <div>Error: {menuError}</div>}
+              {menuStatus === 'succeeded' && (
+                renderMenuItems(menuItems, "main")
+              )}
             </div>
 
 
