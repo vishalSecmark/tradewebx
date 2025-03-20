@@ -5,6 +5,7 @@ import 'react-data-grid/lib/styles.css';
 import { useTheme } from '@/context/ThemeContext';
 import { useAppSelector } from '@/redux/hooks';
 import { RootState } from '@/redux/store';
+import moment from 'moment';
 
 interface DataTableProps {
     data: any[];
@@ -12,7 +13,21 @@ interface DataTableProps {
     onRowClick?: (record: any) => void;
 }
 
+interface DecimalColumn {
+    key: string;
+    decimalPlaces: number;
+}
+
+interface ValueBasedColor {
+    key: string;
+    checkNumber: number;
+    lessThanColor: string;
+    greaterThanColor: string;
+    equalToColor: string;
+}
+
 const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => {
+    console.log(settings, 'settings');
     const { colors } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
@@ -40,15 +55,136 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
         return maxWidth;
     };
 
+    // Format date function
+    const formatDateValue = (value: string | number | Date, format: string = 'DD-MM-YYYY'): string => {
+        if (!value) return '';
+
+        try {
+            // Parse the YYYYMMDD format
+            const momentDate = moment(value.toString(), 'YYYYMMDD');
+
+            // Check if the date is valid
+            if (!momentDate.isValid()) {
+                // Try parsing as a regular date string
+                const fallbackDate = moment(value);
+                return fallbackDate.isValid() ? fallbackDate.format(format) : '';
+            }
+
+            return momentDate.format(format);
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return '';
+        }
+    };
+
+    // New decimal formatting function
+    const formatDecimalValue = (value: number | string, decimalPlaces: number): string => {
+        if (value === null || value === undefined || value === '') {
+            return '';
+        }
+
+        try {
+            const numValue = typeof value === 'string' ? parseFloat(value) : value;
+            return numValue.toFixed(decimalPlaces);
+        } catch (error) {
+            console.error('Error formatting decimal:', error);
+            return value.toString();
+        }
+    };
+
+    // New function to get color based on value comparison
+    const getValueBasedColor = (
+        value: number | string,
+        colorRule: ValueBasedColor
+    ): string => {
+        if (value === null || value === undefined || value === '') {
+            return ''; // Default color
+        }
+
+        try {
+            const numValue = typeof value === 'string' ? parseFloat(value) : value;
+
+            if (isNaN(numValue)) {
+                return ''; // Default color for non-numeric values
+            }
+
+            if (numValue < colorRule.checkNumber) {
+                return colorRule.lessThanColor;
+            } else if (numValue > colorRule.checkNumber) {
+                return colorRule.greaterThanColor;
+            } else {
+                return colorRule.equalToColor;
+            }
+        } catch (error) {
+            console.error('Error determining value-based color:', error);
+            return ''; // Default color on error
+        }
+    };
+
+    // Process and format the data
+    const formattedData = useMemo(() => {
+        if (!data || !Array.isArray(data)) {
+            return data;
+        }
+
+        return data.map(row => {
+            const newRow = { ...row };
+
+            // Handle date formatting
+            if (settings?.dateFormat?.key) {
+                const dateColumns = settings.dateFormat.key.split(',').map(key => key.trim());
+                const dateFormat = settings.dateFormat.format;
+
+                dateColumns.forEach(column => {
+                    if (newRow.hasOwnProperty(column)) {
+                        newRow[column] = formatDateValue(newRow[column], dateFormat);
+                    }
+                });
+            }
+
+            // Handle decimal formatting
+            if (settings?.decimalColumns && Array.isArray(settings.decimalColumns)) {
+                settings.decimalColumns.forEach((decimalSetting: DecimalColumn) => {
+                    if (decimalSetting.key) {
+                        const decimalColumns = decimalSetting.key.split(',').map(key => key.trim());
+
+                        decimalColumns.forEach(column => {
+                            if (newRow.hasOwnProperty(column)) {
+                                newRow[column] = formatDecimalValue(newRow[column], decimalSetting.decimalPlaces);
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Handle value-based text colors
+            if (settings?.valueBasedTextColor) {
+                settings.valueBasedTextColor.forEach(colorRule => {
+                    const columns = colorRule.key.split(',').map(key => key.trim());
+                    columns.forEach(column => {
+                        if (newRow.hasOwnProperty(column)) {
+                            const color = getValueBasedColor(newRow[column], colorRule);
+                            if (color) {
+                                newRow[column] = <div style={{ color }}>{newRow[column]}</div>;
+                            }
+                        }
+                    });
+                });
+            }
+
+            return newRow;
+        });
+    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor]);
+
     // Dynamically create columns from the first data item
     const columns = useMemo(() => {
-        if (!data || data.length === 0) return [];
+        if (!formattedData || formattedData.length === 0) return [];
 
-        return Object.keys(data[0]).map(key => ({
+        return Object.keys(formattedData[0]).map(key => ({
             key,
             name: key,
             sortable: true,
-            // width: getColumnWidth(key, data),
+            // width: getColumnWidth(key, formattedData),
             minWidth: 80,
             maxWidth: 400,
             resizable: true,
@@ -73,7 +209,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
                 return value;
             }
         }));
-    }, [data, colors.text]);
+    }, [formattedData, colors.text]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
@@ -105,8 +241,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
     };
 
     const rows = useMemo(() => {
-        return sortRows(data, sortColumns);
-    }, [data, sortColumns]);
+        return sortRows(formattedData, sortColumns);
+    }, [formattedData, sortColumns]);
 
     return (
         <div style={{ height: 'calc(100vh - 200px)', width: '100%' }}>
