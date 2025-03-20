@@ -48,6 +48,7 @@ const Downloads = () => {
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
                 headers: {
                     'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${userData.tempToken}`
                 }
             });
 
