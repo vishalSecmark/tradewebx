@@ -20,15 +20,15 @@ export default function AdminLayout({
     : isExpanded || isHovered
       ? "lg:ml-[290px]"
       : "lg:ml-[90px]";
-
+  const mainContentWidth = isMobileOpen ? "w-full" : isExpanded || isHovered ? "lg:w-[calc(100%-290px)]" : "lg:w-[calc(100%-90px)]"
   return (
-    <div className="min-h-screen xl:flex">
+    <div className="min-h-screen">
       {/* Sidebar and Backdrop */}
       <AppSidebar />
       <Backdrop />
       {/* Main Content Area */}
       <div
-        className={`flex-1 transition-all  duration-300 ease-in-out ${mainContentMargin}`}
+        className={`transition-all duration-300 ease-in-out ${mainContentWidth} ml-auto`}
       >
         {/* Header */}
         <AppHeader />
