@@ -1,6 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import { PATH_URL } from '@/utils/constants';
+import { BASE_URL } from '@/utils/constants';
 
 // Define theme types
 export type ThemeType = 'dark' | 'light' | 'lightDark' | 'blue';
@@ -152,28 +155,69 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [themes, setThemes] = useState<Record<ThemeType, ThemeColors>>(initialThemes);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Add fetchThemes function
+  const fetchThemes = async () => {
+    try {
+      const userData = {
+        UserId: localStorage.getItem('userId') // Make sure this matches your user ID storage key
+      };
+
+      const xmlData = `<dsXml>
+        <J_Ui>"ActionName":"TradeWeb", "Option":"Theme","Level":1, "RequestFrom":"M"</J_Ui>
+        <Sql/>
+        <X_Filter>
+        </X_Filter>
+        <X_GFilter/>
+        <J_Api>"UserId":"${userData.UserId}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+      </dsXml>`;
+
+      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+        headers: {
+          'Content-Type': 'application/xml',
+          'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+        }
+      });
+
+      if (response.data?.data?.rs0?.[0]?.LevelSetting) {
+        const parsedThemeSettings = JSON.parse(response.data.data.rs0[0].LevelSetting);
+        setThemes(prevThemes => ({
+          ...prevThemes,
+          ...parsedThemeSettings
+        }));
+
+        // Save to localStorage
+        localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
+      }
+    } catch (error) {
+      console.error('Error fetching theme data:', error);
+      // Fallback to initial themes if API fails
+      setThemes(initialThemes);
+    }
+  };
+
   useEffect(() => {
-    const loadTheme = () => {
+    const loadTheme = async () => {
       try {
-        // Load saved theme colors
+        // First try to load from localStorage
         const savedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
         if (savedThemeColors) {
           setThemes(JSON.parse(savedThemeColors));
         }
 
-        // Load saved theme type
         const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme) {
           setTheme(savedTheme as ThemeType);
         }
+
+        // Then fetch latest themes from API
+        await fetchThemes();
       } catch (error) {
-        console.error('Failed to load theme from storage:', error);
+        console.error('Failed to load theme:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Only run in browser environment
     if (typeof window !== 'undefined') {
       loadTheme();
     }
