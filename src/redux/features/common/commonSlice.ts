@@ -5,15 +5,17 @@ import { BASE_URL, PATH_URL } from '@/utils/constants';
 interface CommonState {
     tableStyle: 'small' | 'medium' | 'large';
     lastTradingDate: string | null;
-    companyLogo: string | null;
+    companyLogo: string;
+    companyName: string;
     status: 'idle' | 'loading' | 'succeeded' | 'failed';
     error: string | null;
 }
 
 const initialState: CommonState = {
-    tableStyle: 'small',
+    tableStyle: 'medium',
     lastTradingDate: null,
-    companyLogo: null,
+    companyLogo: '',
+    companyName: '',
     status: 'idle',
     error: null,
 };
@@ -62,7 +64,16 @@ export const initializeLogin = createAsyncThunk(
             }
         });
 
-        return response.data.data.rs0[0].CompanyLogo || '';
+        const base64Logo = response.data.data.rs0[0].CompanyLogo || '';
+        // Ensure the base64 string has the proper data URI prefix for images
+        const formattedLogo = base64Logo.startsWith('data:image')
+            ? base64Logo
+            : `data:image/png;base64,${base64Logo}`;
+
+        return {
+            companyLogo: formattedLogo,
+            companyName: response.data.data.rs0[0].CompanyName || ''
+        };
     }
 );
 
@@ -76,8 +87,9 @@ export const commonSlice = createSlice({
         setLastTradingDate: (state, action: PayloadAction<string>) => {
             state.lastTradingDate = action.payload;
         },
-        setCompanyLogo: (state, action: PayloadAction<string>) => {
-            state.companyLogo = action.payload;
+        setCompanyDetails: (state, action: PayloadAction<{ logo: string; name: string }>) => {
+            state.companyLogo = action.payload.logo;
+            state.companyName = action.payload.name;
         },
     },
     extraReducers: (builder) => {
@@ -101,7 +113,8 @@ export const commonSlice = createSlice({
             })
             .addCase(initializeLogin.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.companyLogo = action.payload;
+                state.companyLogo = action.payload.companyLogo;
+                state.companyName = action.payload.companyName;
             })
             .addCase(initializeLogin.rejected, (state, action) => {
                 state.status = 'failed';
@@ -110,5 +123,5 @@ export const commonSlice = createSlice({
     },
 });
 
-export const { setTableStyle, setLastTradingDate, setCompanyLogo } = commonSlice.actions;
+export const { setTableStyle, setLastTradingDate, setCompanyDetails } = commonSlice.actions;
 export default commonSlice.reducer; 

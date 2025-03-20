@@ -55,8 +55,9 @@ const AppSidebar: React.FC = () => {
   const menuItems = useAppSelector(selectAllMenuItems);
   const menuStatus = useAppSelector(selectMenuStatus);
   const menuError = useAppSelector(selectMenuError);
+  const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
-  function convertToNavItems(data) {
+  function convertToNavItems(data: any) {
     return data.map(item => {
       // Map your component names to the routes you want to use
       const routeMapping: Record<string, string> = {
@@ -306,19 +307,34 @@ const AppSidebar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+
       <div
-        className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+        className={`py-8 flex flex-col ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
           }`}
       >
-        <Link href="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <h1 className="text-xl font-bold" style={{ color: colors.text }}>
-              Tradeweb
-            </h1>
-          ) : (
-            <></>
+        <div>
+          {companyLogo && (
+            <Image
+              src={companyLogo}
+              alt={companyName || "Company Logo"}
+              width={32}
+              height={32}
+              loader={({ src }) => src}
+              unoptimized
+            />
           )}
-        </Link>
+        </div>
+        <div>
+          <Link href="/">
+            {isExpanded || isHovered || isMobileOpen ? (
+              <h1 className="text-xl font-bold" style={{ color: colors.text }}>
+                {companyName}
+              </h1>
+            ) : (
+              <></>
+            )}
+          </Link>
+        </div>
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
