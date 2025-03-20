@@ -6,19 +6,22 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
 
 export default function SignInForm() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    dispatch(setLoading(true));
+    dispatch(setAuthError(null));
 
     const params = {
       userId: userId,
@@ -43,31 +46,39 @@ export default function SignInForm() {
       console.log(data);
 
       if (data.status) {
-        // Store all relevant data in localStorage
+        dispatch(setAuthData({
+          userId: userId,
+          token: data.token,
+          tokenExpireTime: data.tokenExpireTime,
+          clientCode: data.data[0].ClientCode,
+          clientName: data.data[0].ClientName,
+          userType: data.data[0].UserType,
+          loginType: data.data[0].LoginType,
+        }));
+
         localStorage.setItem('userId', userId);
-        localStorage.setItem('temp_token', data.token); // Temporary token for OTP verification
+        localStorage.setItem('temp_token', data.token);
         localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
         localStorage.setItem('clientCode', data.data[0].ClientCode);
         localStorage.setItem('clientName', data.data[0].ClientName);
         localStorage.setItem('userType', data.data[0].UserType);
         localStorage.setItem('loginType', data.data[0].LoginType);
-        
-        // You might want to store the masked mobile number for display purposes
-        // localStorage.setItem('maskedMobile', data.data[0].LoginMessage.match(/\d+xxxxxx\d+/)[0]);
 
         router.push('/otp-verification');
       } else {
+        dispatch(setAuthError(data.message || 'Login failed'));
         setError(data.message || 'Login failed');
       }
     } catch (err) {
-      console.log(err)
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'An error occurred during login');
-      } else {
-        setError('An error occurred during login');
-      }
+      console.log(err);
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message || 'An error occurred during login'
+        : 'An error occurred during login';
+
+      dispatch(setAuthError(errorMessage));
+      setError(errorMessage);
     } finally {
-      setIsLoading(false);
+      dispatch(setLoading(false));
     }
   };
 
@@ -80,7 +91,7 @@ export default function SignInForm() {
               Sign In
             </h1>
           </div>
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
               {error}
@@ -99,7 +110,7 @@ export default function SignInForm() {
                   required
                 />
               </div>
-              
+
               <div>
                 <Label>Password</Label>
                 <div className="relative">

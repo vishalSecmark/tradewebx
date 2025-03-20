@@ -17,29 +17,30 @@ const ThemePage = () => {
             <h1 style={{ marginBottom: '20px' }}>Theme Settings</h1>
 
             <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '20px'
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
             }}>
                 {availableThemes.map((themeOption: ThemeType) => (
                     <button
                         key={themeOption}
                         onClick={() => setTheme(themeOption)}
                         style={{
-                            padding: '20px',
+                            padding: '15px',
                             border: `2px solid ${themeOption === theme ? colors.primary : colors.textInputBorder}`,
                             borderRadius: '8px',
                             background: colors.cardBackground,
                             cursor: 'pointer',
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '10px'
+                            gap: '15px',
+                            width: '100%',
+                            textAlign: 'left'
                         }}
                     >
                         <div style={{
-                            width: '100px',
-                            height: '100px',
+                            width: '30px',
+                            height: '30px',
                             borderRadius: '50%',
                             background: themeOption === 'dark' ? '#334155' :
                                 themeOption === 'light' ? '#d2e7ff' :
@@ -47,7 +48,8 @@ const ThemePage = () => {
                         }} />
                         <span style={{
                             color: colors.text,
-                            textTransform: 'capitalize'
+                            textTransform: 'capitalize',
+                            flex: 1
                         }}>
                             {themeOption}
                         </span>

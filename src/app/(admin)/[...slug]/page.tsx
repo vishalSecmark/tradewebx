@@ -5,6 +5,7 @@ import LogoutPage from "../(auth)/logout/page";
 import DynamicReportComponent from "@/components/DynamicReportComponent";
 import ChangePassword from "@/pages/ChangePassword";
 import ThemePage from "@/pages/ThemePage";
+import Downloads from "@/pages/Downloads";
 
 export const metadata: Metadata = {
   title: "TradeWeb",
@@ -17,6 +18,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   'logout': <LogoutPage />,
   'changepassword': <ChangePassword />,
   'theme': <ThemePage />,
+  'downloads': <Downloads />,
 };
 
 export default function DynamicPage({ params }: { params: { slug: string[] } }) {

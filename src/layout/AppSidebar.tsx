@@ -23,6 +23,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { fetchMenuItems, selectAllMenuItems, selectMenuStatus, selectMenuError } from "@/redux/features/menuSlice";
 
+
 type NavItem = {
   name: string;
   icon: React.ReactNode;
@@ -33,6 +34,7 @@ type NavItem = {
 import { FaHome, FaCalendar, FaUser, FaList, FaTable, FaFileAlt } from 'react-icons/fa';
 import { PATH_URL } from "@/utils/constants";
 import { BASE_URL } from "@/utils/constants";
+import { initializeLogin } from "@/redux/features/common/commonSlice";
 const iconMap = {
   'home': <FaHome />,
   'area-graph': <FaTable />,
@@ -56,6 +58,18 @@ const AppSidebar: React.FC = () => {
   const menuStatus = useAppSelector(selectMenuStatus);
   const menuError = useAppSelector(selectMenuError);
   const { companyLogo, companyName } = useAppSelector((state) => state.common);
+
+  useEffect(() => {
+    if (!companyLogo) {
+      dispatch(initializeLogin());
+    }
+  }, [dispatch, companyLogo]);
+
+  useEffect(() => {
+    if (menuStatus === 'idle') {
+      dispatch(fetchMenuItems());
+    }
+  }, [menuStatus, dispatch]);
 
   function convertToNavItems(data: any) {
     return data.map(item => {
@@ -85,14 +99,6 @@ const AppSidebar: React.FC = () => {
       return navItem;
     });
   }
-
-  useEffect(() => {
-    if (menuStatus === 'idle') {
-      dispatch(fetchMenuItems());
-    }
-  }, [menuStatus, dispatch]);
-
-
 
   const renderMenuItems = (
     navItemsFromApi: NavItem[],

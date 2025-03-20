@@ -5,9 +5,12 @@ import Button from "@/components/ui/button/Button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setFinalAuthData, setError as setAuthError } from '@/redux/features/authSlice';
 
 export default function OTPVerificationForm() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,12 +42,21 @@ export default function OTPVerificationForm() {
       });
 
       const data = response.data;
-      
+
       if (data.status && data.status_code === 200) {
-        // Store the final authentication token
+        // Store in Redux and set cookie
+        dispatch(setFinalAuthData({
+          token: data.token,
+          tokenExpireTime: data.tokenExpireTime,
+          clientCode: data.data[0].ClientCode,
+          clientName: data.data[0].ClientName,
+          userType: data.data[0].UserType,
+        }));
+
+        // Set cookie
         document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`;
-        
-        // Update user data in localStorage
+
+        // Update localStorage
         localStorage.setItem('clientCode', data.data[0].ClientCode);
         localStorage.setItem('clientName', data.data[0].ClientName);
         localStorage.setItem('userType', data.data[0].UserType);
@@ -52,18 +64,20 @@ export default function OTPVerificationForm() {
 
         // Clean up temporary token
         localStorage.removeItem('temp_token');
-        
-        // Redirect to dashboard
+
         router.push('/dashboard');
       } else {
-        setError(data.message || 'OTP verification failed');
+        const errorMessage = data.message || 'OTP verification failed';
+        dispatch(setAuthError(errorMessage));
+        setError(errorMessage);
       }
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || 'An error occurred during OTP verification');
-      } else {
-        setError('An error occurred during OTP verification');
-      }
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message || 'An error occurred during OTP verification'
+        : 'An error occurred during OTP verification';
+
+      dispatch(setAuthError(errorMessage));
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
