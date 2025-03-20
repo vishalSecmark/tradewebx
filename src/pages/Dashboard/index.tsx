@@ -5,11 +5,14 @@ import dynamic from 'next/dynamic';
 import { ApexOptions } from "apexcharts";
 import Link from 'next/link';
 import { useTheme } from "@/context/ThemeContext";
+import { PATH_URL } from '@/utils/constants';
+import { BASE_URL } from '@/utils/constants';
+import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { fetchLastTradingDate, initializeLogin } from '@/redux/features/common/commonSlice';
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-const BASE_URL = 'https://trade-plus.in';
-const PATH_URL = '/TradeWebAPI/api/main/tradeweb';
+
 
 function Card({ cardData, onRefresh }: any) {
     const { colors } = useTheme();
@@ -242,6 +245,9 @@ function Dashboard() {
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+    const dispatch = useAppDispatch();
+    const lastTradingDate = useAppSelector(state => state.common.lastTradingDate);
+    const companyLogo = useAppSelector(state => state.common.companyLogo);
 
     const getDashboardData = async () => {
         setLoading(true);
@@ -275,8 +281,18 @@ function Dashboard() {
     };
 
     useEffect(() => {
+        // Fetch dashboard data
         getDashboardData();
-    }, []);
+
+        // Fetch last trading date and company logo if not already in Redux store
+        if (!lastTradingDate) {
+            dispatch(fetchLastTradingDate());
+        }
+
+        if (!companyLogo) {
+            dispatch(initializeLogin());
+        }
+    }, [dispatch, lastTradingDate, companyLogo]);
 
     if (loading) {
         return (
