@@ -48,7 +48,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
             key,
             name: key,
             sortable: true,
-            width: getColumnWidth(key, data),
+            // width: getColumnWidth(key, data),
             minWidth: 80,
             maxWidth: 400,
             resizable: true,

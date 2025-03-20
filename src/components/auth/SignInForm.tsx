@@ -40,7 +40,8 @@ export default function SignInForm() {
       });
 
       const data = response.data;
-      
+      console.log(data);
+
       if (data.status) {
         // Store all relevant data in localStorage
         localStorage.setItem('userId', userId);
@@ -52,13 +53,14 @@ export default function SignInForm() {
         localStorage.setItem('loginType', data.data[0].LoginType);
         
         // You might want to store the masked mobile number for display purposes
-        localStorage.setItem('maskedMobile', data.data[0].LoginMessage.match(/\d+xxxxxx\d+/)[0]);
+        // localStorage.setItem('maskedMobile', data.data[0].LoginMessage.match(/\d+xxxxxx\d+/)[0]);
 
         router.push('/otp-verification');
       } else {
         setError(data.message || 'Login failed');
       }
     } catch (err) {
+      console.log(err)
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || 'An error occurred during login');
       } else {
