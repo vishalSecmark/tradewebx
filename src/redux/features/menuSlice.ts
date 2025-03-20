@@ -116,7 +116,7 @@ export const fetchMenuItems = createAsyncThunk(
         };
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"TradeWeb", "Option":"MOBILEMENU","RequestFrom" :"M"</J_Ui>
+            <J_Ui>"ActionName":"TradeWeb", "Option":"MOBILEMENU","RequestFrom" :"W"</J_Ui>
             <Sql></Sql>
             <X_Filter>
                 <UserId>${userData.UserId}</UserId>
