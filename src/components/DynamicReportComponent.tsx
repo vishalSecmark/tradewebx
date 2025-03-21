@@ -50,13 +50,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return null;
     };
 
-    const pageData = findPageData();
+    const pageData: any = findPageData();
     console.log('pageData', pageData);
     // Helper functions for parsing XML settings
     const parseXmlList = (xmlString: string, tag: string): string[] => {
         const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
         const matches = xmlString.match(regex);
-        return matches ? matches.map(match => match.replace(new RegExp(`</?${tag}>`, 'g'), '').split(',')) : [];
+        return matches ? matches.map((match: any) => match.replace(new RegExp(`</?${tag}>`, 'g'), '').split(',')) : [];
     };
 
     const parseXmlValue = (xmlString: string, tag: string): string => {

@@ -82,14 +82,14 @@ const AppSidebar: React.FC = () => {
 
       const basePath = `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
 
-      const navItem = {
+      const navItem: NavItem = {
         icon: item.icon,
         name: item.title,
         path: basePath
       };
 
       if (item.submenu && item.submenu.length > 0) {
-        navItem.subItems = item.submenu.map(subItem => ({
+        navItem.subItems = item.submenu.map((subItem: any) => ({
           name: subItem.title,
           path: `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`,
           pro: false
@@ -128,7 +128,7 @@ const AppSidebar: React.FC = () => {
                     : colors.text
                 }}
               >
-                {iconMap[nav.icon] || iconMap['default-icon']}
+                {iconMap[nav.icon as keyof typeof iconMap] || iconMap['default-icon']}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
                 <span>{nav.name}</span>
@@ -162,7 +162,7 @@ const AppSidebar: React.FC = () => {
                     color: isActive(nav.path) ? colors.buttonText : colors.text
                   }}
                 >
-                  {iconMap[nav.icon] || iconMap['default-icon']}
+                  {iconMap[nav.icon as keyof typeof iconMap] || iconMap['default-icon']}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span>{nav.name}</span>

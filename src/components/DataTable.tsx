@@ -132,10 +132,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
 
             // Handle date formatting
             if (settings?.dateFormat?.key) {
-                const dateColumns = settings.dateFormat.key.split(',').map(key => key.trim());
+                const dateColumns = settings.dateFormat.key.split(',').map((key: any) => key.trim());
                 const dateFormat = settings.dateFormat.format;
 
-                dateColumns.forEach(column => {
+                dateColumns.forEach((column: any) => {
                     if (newRow.hasOwnProperty(column)) {
                         newRow[column] = formatDateValue(newRow[column], dateFormat);
                     }
@@ -146,9 +146,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
             if (settings?.decimalColumns && Array.isArray(settings.decimalColumns)) {
                 settings.decimalColumns.forEach((decimalSetting: DecimalColumn) => {
                     if (decimalSetting.key) {
-                        const decimalColumns = decimalSetting.key.split(',').map(key => key.trim());
+                        const decimalColumns = decimalSetting.key.split(',').map((key: any) => key.trim());
 
-                        decimalColumns.forEach(column => {
+                        decimalColumns.forEach((column: any) => {
                             if (newRow.hasOwnProperty(column)) {
                                 newRow[column] = formatDecimalValue(newRow[column], decimalSetting.decimalPlaces);
                             }
@@ -159,9 +159,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
 
             // Handle value-based text colors
             if (settings?.valueBasedTextColor) {
-                settings.valueBasedTextColor.forEach(colorRule => {
-                    const columns = colorRule.key.split(',').map(key => key.trim());
-                    columns.forEach(column => {
+                settings.valueBasedTextColor.forEach((colorRule: any) => {
+                    const columns = colorRule.key.split(',').map((key: any) => key.trim());
+                    columns.forEach((column: any) => {
                         if (newRow.hasOwnProperty(column)) {
                             const color = getValueBasedColor(newRow[column], colorRule);
                             if (color) {
@@ -180,7 +180,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
     const columns = useMemo(() => {
         if (!formattedData || formattedData.length === 0) return [];
 
-        return Object.keys(formattedData[0]).map(key => ({
+        return Object.keys(formattedData[0]).map((key: any) => ({
             key,
             name: key,
             sortable: true,

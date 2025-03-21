@@ -30,6 +30,8 @@ interface ThemeColors {
   filtersBackground: string;
   tabBackground: string;
   tabText: string;
+  biometricBox: string;
+  biometricText: string;
 }
 
 // Define themes
@@ -262,8 +264,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
+
+  // If we're on the server or outside a ThemeProvider, return default values
   if (context === undefined) {
+    // Don't throw an error if we're on the server
+    if (typeof window === 'undefined') {
+      return {
+        theme: 'light' as ThemeType,
+        colors: initialThemes['light'],
+        setTheme: () => { },
+        updateTheme: () => { },
+        availableThemes: Object.keys(initialThemes) as ThemeType[],
+      };
+    }
+    // Only throw if we're on the client and outside a ThemeProvider
     throw new Error('useTheme must be used within a ThemeProvider');
   }
+
   return context;
 };

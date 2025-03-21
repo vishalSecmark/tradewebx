@@ -108,7 +108,7 @@ export default function SignInForm() {
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   placeholder="Enter your username"
-                  required
+                  {...{} as any}
                 />
               </div>
 
@@ -120,7 +120,7 @@ export default function SignInForm() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    required
+                    {...{} as any}
                   />
                   <span
                     onClick={() => setShowPassword(!showPassword)}

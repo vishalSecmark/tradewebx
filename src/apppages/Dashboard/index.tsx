@@ -1,7 +1,8 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { ApexOptions } from "apexcharts";
 import Link from 'next/link';
 import { useTheme } from "@/context/ThemeContext";
@@ -10,7 +11,7 @@ import { BASE_URL } from '@/utils/constants';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchLastTradingDate, initializeLogin } from '@/redux/features/common/commonSlice';
 
-const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
+const ReactApexChart = nextDynamic(() => import("react-apexcharts"), { ssr: false });
 
 
 

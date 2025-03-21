@@ -14,12 +14,7 @@ export default function AdminLayout({
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
   const { colors } = useTheme();
-  // Dynamic class for main content margin based on sidebar state
-  const mainContentMargin = isMobileOpen
-    ? "ml-0"
-    : isExpanded || isHovered
-      ? "lg:ml-[290px]"
-      : "lg:ml-[90px]";
+
   const mainContentWidth = isMobileOpen ? "w-full" : isExpanded || isHovered ? "lg:w-[calc(100%-290px)]" : "lg:w-[calc(100%-90px)]"
   return (
     <div className="min-h-screen">

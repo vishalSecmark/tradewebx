@@ -2,7 +2,6 @@ import GridShape from "@/components/common/GridShape";
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
 
 import { ThemeProvider } from "@/context/ThemeContext";
-import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
@@ -25,7 +24,7 @@ export default function AuthLayout({
                   <h1 className="text-3xl font-bold text-white">TRADEWEB</h1>
                 </Link>
                 <p className="text-center text-gray-400 dark:text-white/60">
-                  
+
                 </p>
               </div>
             </div>

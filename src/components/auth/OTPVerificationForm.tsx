@@ -12,7 +12,7 @@ import { BASE_URL } from "@/utils/constants";
 export default function OTPVerificationForm() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState<any>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -110,14 +110,14 @@ export default function OTPVerificationForm() {
                 <Input
                   type="text"
                   value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
+                  onChange={(e: any) => setOtp(e.target.value)}
                   placeholder="Enter OTP"
                   required
+                  {...{} as any}
                 />
               </div>
 
               <Button
-                type="submit"
                 className="w-full"
                 disabled={isLoading}
               >

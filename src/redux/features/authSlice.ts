@@ -14,8 +14,23 @@ interface AuthState {
     loading: boolean;
 }
 
+// Define a default initial state first to avoid circular reference
+const defaultInitialState: AuthState = {
+    isAuthenticated: false,
+    userId: null,
+    tempToken: null,
+    authToken: null,
+    tokenExpireTime: null,
+    clientCode: null,
+    clientName: null,
+    userType: null,
+    loginType: null,
+    error: null,
+    loading: false,
+};
+
 const loadInitialState = (): AuthState => {
-    if (typeof window === 'undefined') return initialState;
+    if (typeof window === 'undefined') return defaultInitialState;
 
     return {
         isAuthenticated: !!document.cookie.includes('auth_token='),
@@ -81,7 +96,7 @@ const authSlice = createSlice({
             document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
             // Clear localStorage
             localStorage.clear();
-            return initialState;
+            return defaultInitialState;
         },
     },
 });
