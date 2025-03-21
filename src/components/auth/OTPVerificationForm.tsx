@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
 import { setFinalAuthData, setError as setAuthError } from '@/redux/features/authSlice';
+import { BASE_URL } from "@/utils/constants";
 
 export default function OTPVerificationForm() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function OTPVerificationForm() {
     try {
       const response = await axios({
         method: 'post',
-        url: 'https://trade-plus.in/TradeWebAPI/api/Main/InitializeLogin',
+        url: BASE_URL + '/TradeWebAPI/api/Main/InitializeLogin',
         headers: {
           'Content-Type': 'application/xml',
           'Authorization': `Bearer ${localStorage.getItem('temp_token')}`

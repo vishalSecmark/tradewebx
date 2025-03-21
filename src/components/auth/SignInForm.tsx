@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
+import { BASE_URL } from "@/utils/constants";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -34,7 +35,7 @@ export default function SignInForm() {
     try {
       const response = await axios({
         method: 'post',
-        url: 'https://trade-plus.in/TradeWebAPI/api/Main/Login_validate_Password',
+        url: BASE_URL + '/TradeWebAPI/api/Main/Login_validate_Password',
         params: params,
         headers: {
           'Content-Type': 'application/json',

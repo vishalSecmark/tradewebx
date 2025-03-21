@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { BASE_URL } from './constants';
 
 // Create axios instance with default config
 export const api = axios.create({
-  baseURL: 'https://trade-plus.in/TradeWebAPI/api',
+  baseURL: BASE_URL + '/TradeWebAPI/api',
 });
 
 // Add request interceptor to add auth token to all requests
@@ -35,10 +36,10 @@ api.interceptors.response.use(
 export const logout = () => {
   // Clear cookies
   document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
-  
+
   // Clear all localStorage data
   localStorage.clear();
-  
+
   // Redirect to login page
   window.location.href = '/signin';
 };
