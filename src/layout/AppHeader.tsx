@@ -7,13 +7,13 @@ import { setTableStyle } from "@/redux/features/common/commonSlice";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState, useEffect, useRef } from "react";
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 
 const AppHeader: React.FC = () => {
   const dispatch = useAppDispatch();
   const { theme, setTheme, availableThemes, colors } = useTheme();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
-
+  const { companyLogo, companyName } = useAppSelector((state) => state.common);
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
 
   const handleToggle = () => {
@@ -108,8 +108,19 @@ const AppHeader: React.FC = () => {
             )}
             {/* Cross Icon */}
           </button>
-
-          <Link href="/" className="lg:hidden">
+          {companyLogo && (
+            <Link className="lg:hidden" href="/dashboard">
+             <Image
+              src={companyLogo}
+              alt={companyName || "Company Logo"}
+              width={32}
+              height={32}
+              loader={({ src }) => src}
+              unoptimized
+            />
+            </Link>
+          )}
+          {/* <Link href="/" className="lg:hidden">
             <Image
               width={154}
               height={32}
@@ -124,8 +135,8 @@ const AppHeader: React.FC = () => {
               src="./images/logo/logo-dark.svg"
               alt="Logo"
             />
-          </Link>
-
+          </Link> */}
+        {/* 
           <button
             onClick={toggleApplicationMenu}
             className="flex items-center justify-center w-10 h-10 rounded-lg z-99999 lg:hidden"
@@ -148,7 +159,8 @@ const AppHeader: React.FC = () => {
                 fill="currentColor"
               />
             </svg>
-          </button>
+          </button> */}
+          <div></div>
 
 
         </div>

@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
-  const isAuthPage = request.nextUrl.pathname.startsWith('/signin') || 
-                    request.nextUrl.pathname.startsWith('/otp-verification');
+  const isAuthPage = request.nextUrl.pathname.startsWith('/signin') ||
+    request.nextUrl.pathname.startsWith('/otp-verification');
 
   // If user is not authenticated and trying to access protected route
   if (!authToken && !isAuthPage) {
@@ -29,6 +29,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|images).*)',
   ],
 }
