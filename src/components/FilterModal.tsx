@@ -36,6 +36,29 @@ const FilterModal: React.FC<FilterModalProps> = ({
     isDownload = false
 }) => {
     const { colors } = useTheme();
+    const [localValues, setLocalValues] = React.useState<Record<string, any>>({});
+
+    // Initialize form with current filters when modal opens
+    React.useEffect(() => {
+        if (isOpen && initialValues) {
+            console.log('Initializing filter modal with values:', initialValues);
+            setLocalValues(initialValues);
+            // Only call onFilterChange if values are different to prevent loops
+            if (JSON.stringify(localValues) !== JSON.stringify(initialValues)) {
+                onFilterChange(initialValues);
+            }
+        }
+    }, [isOpen, initialValues]);
+
+    // Handle local form changes
+    const handleLocalFilterChange = (values: any) => {
+        console.log('Local filter change in modal:', values);
+        // Only update if values are different to prevent loops
+        if (JSON.stringify(localValues) !== JSON.stringify(values)) {
+            setLocalValues(values);
+            onFilterChange(values);
+        }
+    };
 
     return (
         <Dialog
@@ -116,10 +139,10 @@ const FilterModal: React.FC<FilterModalProps> = ({
                         {/* Form Creator */}
                         <FormCreator
                             formData={filters || [[]]}
-                            onFilterChange={onFilterChange}
-                            initialValues={initialValues}
+                            onFilterChange={handleLocalFilterChange}
+                            initialValues={localValues}
                         />
-
+                        <div className='h-30'></div>
                         {/* Download Buttons */}
                         {isDownload && (
                             <div className="flex justify-around mt-4">

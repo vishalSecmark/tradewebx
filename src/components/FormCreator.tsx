@@ -50,8 +50,18 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
 
     const handleFormChange = useCallback((newValues: any) => {
-        if (JSON.stringify(newValues) !== JSON.stringify(formValues)) {
-            onFilterChange(newValues);
+        console.log('Form values changed in FormCreator:', newValues);
+
+        // Filter out undefined/null values
+        const cleanedValues = Object.fromEntries(
+            Object.entries(newValues).filter(([_, value]) =>
+                value !== undefined && value !== null
+            )
+        );
+
+        if (JSON.stringify(cleanedValues) !== JSON.stringify(formValues)) {
+            console.log('Sending cleaned form values to parent:', cleanedValues);
+            onFilterChange(cleanedValues);
         }
     }, [onFilterChange, formValues]);
 
@@ -91,14 +101,38 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const fetchDropdownOptions = async (item: FormElement) => {
         try {
+            let jUi, jApi;
+
+            if (typeof item.wQuery?.J_Ui === 'object') {
+                const uiObj = item.wQuery.J_Ui;
+                jUi = Object.keys(uiObj)
+                    .map(key => `"${key}":"${uiObj[key]}"`)
+                    .join(',');
+            } else {
+                jUi = item.wQuery?.J_Ui;
+            }
+
+            if (typeof item.wQuery?.J_Api === 'object') {
+                const apiObj = item.wQuery.J_Api;
+                jApi = Object.keys(apiObj)
+                    .map(key => `"${key}":"${apiObj[key]}"`)
+                    .join(',');
+            } else {
+                jApi = item.wQuery?.J_Api;
+            }
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${item.wQuery?.Sql || ''}</Sql>
+                <X_Filter>${item.wQuery?.X_Filter || ''}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            console.log('Dropdown request XML:', xmlData);
+
             const response = await axios.post(
                 BASE_URL + PATH_URL,
-                `<dsXml>
-                    <J_Ui>${item.wQuery?.J_Ui}</J_Ui>
-                    <Sql>${item.wQuery?.Sql}</Sql>
-                    <X_Filter>${item.wQuery?.X_Filter}</X_Filter>
-                    <J_Api>${item.wQuery?.J_Api}</J_Api>
-                </dsXml>`,
+                xmlData,
                 {
                     headers: {
                         'Content-Type': 'application/xml',
@@ -112,10 +146,15 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return [];
             }
 
-            const options = rs0Data.map(item => ({
-                label: item.DisplayName,
-                value: item.Value
+            const keyField = item.wDropDownKey?.key || 'DisplayName';
+            const valueField = item.wDropDownKey?.value || 'Value';
+
+            const options = rs0Data.map(dataItem => ({
+                label: dataItem[keyField],
+                value: dataItem[valueField]
             }));
+
+            console.log(`Fetched ${options.length} options for ${item.wKey}:`, options);
 
             setDropdownOptions(prev => ({
                 ...prev,
@@ -133,26 +172,54 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         try {
             if (!item.dependsOn) return [];
 
-            const xFilter = item.dependsOn.wQuery.X_Filter.replace('${value}', parentValue);
-            const jUi = JSON.stringify(item.dependsOn.wQuery.J_Ui);
-            const jApi = JSON.stringify(item.dependsOn.wQuery.J_Api);
-            const cleanJUi = jUi.substring(1, jUi.length - 1);
-            const cleanJApi = jApi.substring(1, jApi.length - 1);
+            if (!parentValue) {
+                console.error(`Parent value for ${item.wKey} is empty or undefined`);
+                return [];
+            }
+
+            console.log(`Fetching dependent options for ${item.wKey} based on ${item.dependsOn.field} = ${parentValue}`);
+
+            let jUi, jApi;
+
+            if (typeof item.dependsOn.wQuery.J_Ui === 'object') {
+                const uiObj = item.dependsOn.wQuery.J_Ui;
+                jUi = Object.keys(uiObj)
+                    .map(key => `"${key}":"${uiObj[key]}"`)
+                    .join(',');
+            } else {
+                jUi = item.dependsOn.wQuery.J_Ui;
+            }
+
+            if (typeof item.dependsOn.wQuery.J_Api === 'object') {
+                const apiObj = item.dependsOn.wQuery.J_Api;
+                jApi = Object.keys(apiObj)
+                    .map(key => `"${key}":"${apiObj[key]}"`)
+                    .join(',');
+            } else {
+                jApi = item.dependsOn.wQuery.J_Api;
+            }
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${item.dependsOn.wQuery.Sql || ''}</Sql>
+                <X_Filter>${parentValue}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            console.log('Dependent dropdown request XML:', xmlData);
 
             const response = await axios.post(
                 BASE_URL + PATH_URL,
-                `<dsXml>
-                    <J_Ui>${cleanJUi}</J_Ui>
-                    <Sql>${item.dependsOn.wQuery.Sql}</Sql>
-                    <X_Filter>${xFilter}</X_Filter>
-                    <J_Api>${cleanJApi}</J_Api>
-                </dsXml>`,
+                xmlData,
                 {
                     headers: {
                         'Content-Type': 'application/xml',
+                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
                     }
                 }
             );
+
+            console.log('Dependent dropdown response:', response.data);
 
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
@@ -160,10 +227,15 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return [];
             }
 
+            const keyField = item.wDropDownKey?.key || 'DisplayName';
+            const valueField = item.wDropDownKey?.value || 'Value';
+
             const options = rs0Data.map(dataItem => ({
-                label: dataItem[item.wDropDownKey?.key || 'DisplayName'],
-                value: dataItem[item.wDropDownKey?.value || 'Value']
+                label: dataItem[keyField],
+                value: dataItem[valueField]
             }));
+
+            console.log(`Got ${options.length} options for ${item.wKey}:`, options);
 
             setDropdownOptions(prev => ({
                 ...prev,
@@ -176,6 +248,17 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             return [];
         }
     };
+
+    useEffect(() => {
+        formData?.flat().forEach(item => {
+            if (item.dependsOn && formValues[item.dependsOn.field]) {
+                const parentValue = formValues[item.dependsOn.field];
+                if (parentValue) {
+                    fetchDependentOptions(item, parentValue);
+                }
+            }
+        });
+    }, [formData, formValues]);
 
     const renderDateRangeBox = (item: FormElement) => {
         const [fromKey, toKey] = item.wKey as string[];
@@ -265,8 +348,15 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderDropDownBox = (item: FormElement) => {
         const options = item.options
-            ? item.options
+            ? item.options.map(opt => ({
+                label: opt.label,
+                value: opt.Value || opt.value
+            }))
             : dropdownOptions[item.wKey as string] || [];
+
+        const selectedOption = options.find(opt =>
+            String(opt.value) === String(formValues[item.wKey as string])
+        );
 
         return (
             <div className="mb-4">
@@ -275,19 +365,46 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 </label>
                 <Select
                     options={options}
-                    value={options.find(opt => opt.value === formValues[item.wKey as string])}
-                    onChange={(selectedOption) => {
-                        if (selectedOption) {
-                            setFormValues(prev => ({
-                                ...prev,
-                                [item.wKey as string]: selectedOption.value
-                            }));
+                    value={selectedOption}
+                    onChange={(selected) => {
+                        if (selected) {
+                            const newValue = selected.value;
+                            console.log(`Dropdown ${item.wKey} changed to:`, newValue, `(type: ${typeof newValue})`);
 
-                            formData?.[0]?.forEach(dependentItem => {
+                            // Immediately update form values
+                            const updatedValues = {
+                                ...formValues,
+                                [item.wKey as string]: newValue
+                            };
+
+                            setFormValues(updatedValues);
+
+                            // Trigger the callback to parent component
+                            handleFormChange(updatedValues);
+
+                            // Handle dependent fields
+                            formData.flat().forEach(dependentItem => {
                                 if (dependentItem.dependsOn?.field === item.wKey) {
-                                    fetchDependentOptions(dependentItem, selectedOption.value);
+                                    console.log(`Found dependent field ${dependentItem.wKey} that depends on ${item.wKey}`);
+
+                                    setFormValues(prev => ({
+                                        ...prev,
+                                        [dependentItem.wKey as string]: undefined
+                                    }));
+
+                                    fetchDependentOptions(dependentItem, newValue);
                                 }
                             });
+                        } else {
+                            // Handle clearing the selection
+                            console.log(`Dropdown ${item.wKey} cleared`);
+                            const updatedValues = {
+                                ...formValues,
+                                [item.wKey as string]: undefined
+                            };
+
+                            setFormValues(updatedValues);
+                            handleFormChange(updatedValues);
                         }
                     }}
                     className="react-select-container"
@@ -351,6 +468,31 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return null;
         }
     };
+
+    useEffect(() => {
+        console.log('Current form values:', formValues);
+    }, [formValues]);
+
+    useEffect(() => {
+        formData?.flat().forEach(item => {
+            if (item.type === 'WDropDownBox') {
+                if (item.options) {
+                    const normalizedOptions = item.options.map(opt => ({
+                        label: opt.label,
+                        value: opt.Value || opt.value
+                    }));
+
+                    setDropdownOptions(prev => ({
+                        ...prev,
+                        [item.wKey as string]: normalizedOptions
+                    }));
+                }
+                else if (item.wQuery && !dropdownOptions[item.wKey as string]) {
+                    fetchDropdownOptions(item);
+                }
+            }
+        });
+    }, [formData]);
 
     return (
         <div className="p-4" style={{ backgroundColor: colors.filtersBackground }}>
