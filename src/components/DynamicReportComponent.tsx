@@ -250,12 +250,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }, [pageData]);
 
-    // Initial data fetch
+    // Initial data fetch - modified to add a delay
     useEffect(() => {
         if (pageData) {
-            fetchData();
+            // Add a small delay on initial load to ensure filters are set
+            const timer = setTimeout(() => {
+                fetchData();
+            }, 300); // 1 second delay
+
+            return () => clearTimeout(timer);
         }
-    }, [currentLevel, pageData]);
+    }, [currentLevel, pageData, filters]);
 
     if (!pageData) {
         return <div>Loading report data...</div>;
