@@ -180,36 +180,43 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
     const columns = useMemo(() => {
         if (!formattedData || formattedData.length === 0) return [];
 
-        return Object.keys(formattedData[0]).map((key: any) => ({
-            key,
-            name: key,
-            sortable: true,
-            // width: getColumnWidth(key, formattedData),
-            minWidth: 80,
-            maxWidth: 400,
-            resizable: true,
-            formatter: (props: any) => {
-                const value = props.row[key];
-                // Check if the value is numeric
-                const numValue = parseFloat(value);
-                if (!isNaN(numValue)) {
-                    // Format number with commas and 2 decimal places
-                    const formattedValue = new Intl.NumberFormat('en-IN', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(numValue);
+        // Get columns to hide (if specified in settings)
+        const columnsToHide = settings?.hideEntireColumn
+            ? settings.hideEntireColumn.split(',').map((col: string) => col.trim())
+            : [];
 
-                    // Determine text color based on value
-                    const textColor = numValue < 0 ? '#dc2626' :
-                        numValue > 0 ? '#16a34a' :
-                            colors.text;
+        return Object.keys(formattedData[0])
+            .filter(key => !columnsToHide.includes(key)) // Filter out columns that should be hidden
+            .map((key: any) => ({
+                key,
+                name: key,
+                sortable: true,
+                // width: getColumnWidth(key, formattedData),
+                minWidth: 80,
+                maxWidth: 400,
+                resizable: true,
+                formatter: (props: any) => {
+                    const value = props.row[key];
+                    // Check if the value is numeric
+                    const numValue = parseFloat(value);
+                    if (!isNaN(numValue)) {
+                        // Format number with commas and 2 decimal places
+                        const formattedValue = new Intl.NumberFormat('en-IN', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }).format(numValue);
 
-                    return <div style={{ color: textColor }}>{formattedValue}</div>;
+                        // Determine text color based on value
+                        const textColor = numValue < 0 ? '#dc2626' :
+                            numValue > 0 ? '#16a34a' :
+                                colors.text;
+
+                        return <div style={{ color: textColor }}>{formattedValue}</div>;
+                    }
+                    return value;
                 }
-                return value;
-            }
-        }));
-    }, [formattedData, colors.text]);
+            }));
+    }, [formattedData, colors.text, settings?.hideEntireColumn]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
