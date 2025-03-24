@@ -164,8 +164,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         console.log('Record clicked:', record);
 
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
-            // Get primary key from rs1Settings or fallback to 'id'
-            const primaryKey = rs1Settings?.primaryKey || 'id';
+            // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
+            const primaryKey = pageData[0].levels[currentLevel].primaryHeaderKey ||
+                rs1Settings?.primaryKey ||
+                'id';
 
             console.log('Primary key:', primaryKey);
             console.log('Record value:', record[primaryKey]);
