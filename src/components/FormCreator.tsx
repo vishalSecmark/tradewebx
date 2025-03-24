@@ -12,7 +12,7 @@ interface FormElement {
     type: string;
     label: string;
     wKey: string | string[];
-    options?: Array<{ label: string; value: string }>;
+    options?: Array<{ label: string; value: string, Value: string }>;
     wQuery?: {
         J_Ui: any;
         Sql: string;
