@@ -205,13 +205,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const handleFilterChange = (newFilters: Record<string, any>) => {
         console.log('New filters received from modal:', newFilters);
         setFilters(newFilters);
-        // Fetch data immediately when filters are applied
-        fetchData(newFilters);
-    };
-
-    // Simplified apply function
-    const handleApply = () => {
-        fetchData();
+        fetchData(newFilters); // Call API with new filters
     };
 
     const handleDownloadFilterChange = (newFilters: Record<string, any>) => {
@@ -330,7 +324,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 currentSort={sortConfig}
                 onSortChange={setSortConfig}
                 isSortingAllowed={pageData[0].isShortAble !== "false"}
-                onApply={handleApply}
+                onApply={() => { }} // Empty function since we don't need it anymore
             />
 
             {/* Download Modal */}
