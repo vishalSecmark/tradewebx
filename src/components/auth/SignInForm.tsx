@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_URL } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS,, PRODUCT LOGIN_KEY, LOGIN_URL } from "@/utils/constants";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -27,9 +27,9 @@ export default function SignInForm() {
     const params = {
       userId: userId,
       password: password,
-      key: 'PKQMK2-ZDQS6F-/4UKSQ-QBB3',
-      loginAs: 'M~2.0.0.1',
-      product: 'T'
+      key: LOGIN_KEY,
+      loginAs: LOGIN_AS,
+      product: PRODUCT
     };
 
     try {
