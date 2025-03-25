@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL, PATH_URL } from '@/utils/constants';
 
 interface CommonState {
     tableStyle: 'small' | 'medium' | 'large';
@@ -26,7 +26,7 @@ export const fetchLastTradingDate = createAsyncThunk(
     async () => {
         const userId = localStorage.getItem('userId') || '';
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"tradeweb", "Option":"LastTradingDate","Level":1, "RequestFrom":"W"</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"LastTradingDate","Level":1, "RequestFrom":"W"</J_Ui>
             <Sql></Sql>
             <X_Filter></X_Filter>
             <X_GFilter></X_GFilter>
@@ -49,7 +49,7 @@ export const initializeLogin = createAsyncThunk(
     'common/initializeLogin',
     async () => {
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"TradeWeb", "Option":"InitializeLogin", "Level":1, "RequestFrom":"M"</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"InitializeLogin", "Level":1, "RequestFrom":"W"</J_Ui>
             <Sql></Sql>
             <X_Filter> </X_Filter>
             <X_Data></X_Data>

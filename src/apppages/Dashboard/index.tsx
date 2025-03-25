@@ -6,7 +6,7 @@ import nextDynamic from 'next/dynamic';
 import { ApexOptions } from "apexcharts";
 import Link from 'next/link';
 import { useTheme } from "@/context/ThemeContext";
-import { PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, PATH_URL } from '@/utils/constants';
 import { BASE_URL } from '@/utils/constants';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchLastTradingDate, initializeLogin } from '@/redux/features/common/commonSlice';
@@ -255,7 +255,7 @@ function Dashboard() {
         setError(false);
         try {
             const xmlData = `<dsXml>
-                <J_Ui>"ActionName":"TradeWeb", "Option":"DASHBOARD_F","Level":1, "RequestFrom":"M"</J_Ui>
+                <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"DASHBOARD_F","Level":1, "RequestFrom":"W"</J_Ui>
                 <Sql></Sql>
                 <X_Filter>
                 </X_Filter>

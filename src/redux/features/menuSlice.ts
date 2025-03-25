@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import type { RootState } from '../store';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 
 // Enhanced types to include pageData
 type PageSettings = {
@@ -116,7 +116,7 @@ export const fetchMenuItems = createAsyncThunk(
         };
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"TradeWeb", "Option":"MOBILEMENU","RequestFrom" :"W"</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"MOBILEMENU","RequestFrom" :"W"</J_Ui>
             <Sql></Sql>
             <X_Filter>
                 <UserId>${userData.UserId}</UserId>
