@@ -30,6 +30,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     });
     const [downloadFilters, setDownloadFilters] = useState<Record<string, any>>({});
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
+    const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
 
     const { colors } = useTheme();
 
@@ -77,19 +78,24 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         try {
             let filterXml = '';
 
-            // Handle filters
-            Object.entries(currentFilters).forEach(([key, value]) => {
-                if (value === undefined || value === null || value === '') {
-                    return;
-                }
+            // Check if page has filters and if filters are initialized
+            const hasFilters = pageData[0]?.filters?.length > 0;
 
-                if (value instanceof Date || moment.isMoment(value)) {
-                    const formattedDate = moment(value).format('YYYYMMDD');
-                    filterXml += `<${key}>${formattedDate}</${key}>`;
-                } else {
-                    filterXml += `<${key}>${value}</${key}>`;
-                }
-            });
+            // Only process filters if the page has filter configuration and filters are initialized
+            if (hasFilters && areFiltersInitialized) {
+                Object.entries(currentFilters).forEach(([key, value]) => {
+                    if (value === undefined || value === null || value === '') {
+                        return;
+                    }
+
+                    if (value instanceof Date || moment.isMoment(value)) {
+                        const formattedDate = moment(value).format('YYYYMMDD');
+                        filterXml += `<${key}>${formattedDate}</${key}>`;
+                    } else {
+                        filterXml += `<${key}>${value}</${key}>`;
+                    }
+                });
+            }
 
             // Add primary key filters for levels > 0
             if (currentLevel > 0) {
@@ -99,6 +105,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }
 
             console.log('Final filter XML:', filterXml);
+            console.log('Has Filters:', hasFilters);
+            console.log('Filters Initialized:', areFiltersInitialized);
+            console.log('Current Filters:', currentFilters);
 
             const xmlData = `<dsXml>
                 <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)}</J_Ui>
@@ -214,9 +223,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
-    // Modified the filter initialization useEffect
+    // Modified filter initialization useEffect
     useEffect(() => {
-        if (pageData?.[0]?.filters) {
+        if (pageData?.[0]?.filters?.length > 0) {
             const defaultFilters: Record<string, any> = {};
 
             // Handle the nested array structure
@@ -244,23 +253,27 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             defaultFilters[toKey] = moment().toDate();
                         }
                     }
+                    // Add other filter type initializations if needed
                 });
             });
 
             console.log('Setting default filters:', defaultFilters);
             setFilters(defaultFilters);
+            setAreFiltersInitialized(true);
+        } else {
+            // No filters needed, mark as initialized
+            setAreFiltersInitialized(true);
         }
     }, [pageData]);
 
-    // Modified to use filters directly, not react to filter changes
+    // Modified initial data fetch useEffect
     useEffect(() => {
-        if (pageData) {
-            // Only fetch on initial load and level changes, not filter changes
-            setTimeout(() => {
-                fetchData();
-            }, 500);
+        if (pageData && areFiltersInitialized) {
+            // If page has filters, use the initialized filters
+            // If no filters, just fetch the data
+            fetchData();
         }
-    }, [currentLevel, pageData]); // Removed filters dependency
+    }, [currentLevel, pageData, areFiltersInitialized]); // Added areFiltersInitialized dependency
 
     if (!pageData) {
         return <div>Loading report data...</div>;
