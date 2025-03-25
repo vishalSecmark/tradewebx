@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import FormCreator from './FormCreator';
 import Select from 'react-select';
@@ -36,28 +36,25 @@ const FilterModal: React.FC<FilterModalProps> = ({
     isDownload = false
 }) => {
     const { colors } = useTheme();
-    const [localValues, setLocalValues] = React.useState<Record<string, any>>({});
+    // Add local state to store filter values
+    const [localFilterValues, setLocalFilterValues] = useState(initialValues);
 
-    // Initialize form with current filters when modal opens
-    React.useEffect(() => {
-        if (isOpen && initialValues) {
-            console.log('Initializing filter modal with values:', initialValues);
-            setLocalValues(initialValues);
-            // Only call onFilterChange if values are different to prevent loops
-            if (JSON.stringify(localValues) !== JSON.stringify(initialValues)) {
-                onFilterChange(initialValues);
-            }
-        }
-    }, [isOpen, initialValues]);
+    // Reset local values when modal opens with new initial values
+    useEffect(() => {
+        setLocalFilterValues(initialValues);
+    }, [initialValues, isOpen]);
 
     // Handle local form changes
     const handleLocalFilterChange = (values: any) => {
         console.log('Local filter change in modal:', values);
-        // Only update if values are different to prevent loops
-        if (JSON.stringify(localValues) !== JSON.stringify(values)) {
-            setLocalValues(values);
-            onFilterChange(values);
-        }
+        setLocalFilterValues(values);
+    };
+
+    // Handle apply button click
+    const handleApply = () => {
+        onFilterChange(localFilterValues); // Send final values to parent
+        onApply(); // Trigger parent's apply function
+        onClose(); // Close the modal
     };
 
     return (
@@ -76,71 +73,12 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     </Dialog.Title>
 
                     <div className="max-h-[70vh] overflow-y-auto">
-                        {/* Sorting Section */}
-                        {/* {!isDownload && isSortingAllowed && sortableFields.length > 0 && (
-                            <div className="mb-4 p-4 rounded" style={{ backgroundColor: colors.oddCardBackground }}>
-                                <h3 className="text-sm font-medium mb-2" style={{ color: colors.text }}>
-                                    Sort By
-                                </h3>
-                                <div className="flex gap-2 items-center">
-                                    <div className="flex-1">
-                                        <Select
-                                            options={sortableFields}
-                                            value={sortableFields.find(field => field.value === currentSort?.field)}
-                                            onChange={(selected) => {
-                                                if (selected && onSortChange) {
-                                                    onSortChange({
-                                                        field: selected.value,
-                                                        direction: currentSort?.direction || 'asc'
-                                                    });
-                                                }
-                                            }}
-                                            styles={{
-                                                control: (base) => ({
-                                                    ...base,
-                                                    backgroundColor: colors.textInputBackground,
-                                                    borderColor: colors.textInputBorder,
-                                                }),
-                                                singleValue: (base) => ({
-                                                    ...base,
-                                                    color: colors.textInputText,
-                                                }),
-                                                option: (base, state) => ({
-                                                    ...base,
-                                                    backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
-                                                    color: state.isFocused ? colors.buttonText : colors.textInputText,
-                                                }),
-                                            }}
-                                        />
-                                    </div>
-                                    {currentSort?.field && (
-                                        <button
-                                            className="p-2 rounded border"
-                                            onClick={() => onSortChange?.({
-                                                field: currentSort.field,
-                                                direction: currentSort.direction === 'asc' ? 'desc' : 'asc'
-                                            })}
-                                            style={{
-                                                backgroundColor: colors.textInputBackground,
-                                                borderColor: colors.textInputBorder,
-                                                color: colors.textInputText
-                                            }}
-                                        >
-                                            {currentSort.direction === 'asc' ?
-                                                <FaSortAmountUp size={20} /> :
-                                                <FaSortAmountDown size={20} />
-                                            }
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )} */}
 
                         {/* Form Creator */}
                         <FormCreator
                             formData={filters || [[]]}
                             onFilterChange={handleLocalFilterChange}
-                            initialValues={localValues}
+                            initialValues={localFilterValues}
                         />
                         <div className='h-30'></div>
                         {/* Download Buttons */}
@@ -169,10 +107,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                             <button
                                 className="px-4 py-2 rounded"
                                 style={{ backgroundColor: colors.buttonBackground }}
-                                onClick={() => {
-                                    onApply();
-                                    onClose();
-                                }}
+                                onClick={handleApply}
                             >
                                 <span style={{ color: colors.buttonText }}>Apply</span>
                             </button>

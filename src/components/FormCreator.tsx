@@ -49,55 +49,42 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const [formValues, setFormValues] = useState(initialValues);
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
 
-    const handleFormChange = useCallback((newValues: any) => {
-        console.log('Form values changed in FormCreator:', newValues);
+    useEffect(() => {
+        setFormValues(initialValues);
+    }, [initialValues]);
 
-        // Filter out undefined/null values
+    const handleFormChange = useCallback((newValues: any) => {
         const cleanedValues = Object.fromEntries(
             Object.entries(newValues).filter(([_, value]) =>
                 value !== undefined && value !== null
             )
         );
 
-        if (JSON.stringify(cleanedValues) !== JSON.stringify(formValues)) {
-            console.log('Sending cleaned form values to parent:', cleanedValues);
-            onFilterChange(cleanedValues);
-        }
-    }, [onFilterChange, formValues]);
+        setFormValues(cleanedValues);
+        onFilterChange(cleanedValues);
+    }, [onFilterChange]);
+
+    const handleInputChange = (key: string, value: any) => {
+        const newValues = {
+            ...formValues,
+            [key]: value
+        };
+        handleFormChange(newValues);
+    };
 
     useEffect(() => {
-        handleFormChange(formValues);
-    }, [formValues, handleFormChange]);
-
-    useEffect(() => {
-        setFormValues(initialValues);
-    }, [initialValues]);
-
-    useEffect(() => {
-        formData?.[0]?.forEach(item => {
-            if (item.type === 'WDropDownBox' && !item.options && item.wQuery) {
-                fetchDropdownOptions(item);
-            }
-        });
-    }, []);
-
-    useEffect(() => {
-        const defaultValues = { ...initialValues };
-
         formData?.[0]?.forEach(item => {
             if (item.type === 'WDateRangeBox') {
                 const [fromKey, toKey] = item.wKey as string[];
-                if (!defaultValues[fromKey] && !defaultValues[toKey]) {
+                if (!formValues[fromKey] && !formValues[toKey]) {
+                    const defaultValues = { ...formValues };
                     defaultValues[fromKey] = moment().subtract(3, 'months').toDate();
                     defaultValues[toKey] = moment().toDate();
+                    setFormValues(defaultValues);
                 }
             }
         });
-
-        if (Object.keys(defaultValues).length > Object.keys(initialValues).length) {
-            setFormValues(defaultValues);
-        }
-    }, [formData, initialValues]);
+    }, [formData, formValues]);
 
     const fetchDropdownOptions = async (item: FormElement) => {
         try {
@@ -272,10 +259,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     <div className="flex-1">
                         <DatePicker
                             selected={formValues[fromKey]}
-                            onChange={(date: Date) => setFormValues(prev => ({
-                                ...prev,
-                                [fromKey]: date
-                            }))}
+                            onChange={(date: Date) => handleInputChange(fromKey, date)}
                             dateFormat="dd/MM/yyyy"
                             className="w-full px-3 py-2 border rounded-md"
                             wrapperClassName="w-full"
@@ -285,10 +269,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     <div className="flex-1">
                         <DatePicker
                             selected={formValues[toKey]}
-                            onChange={(date: Date) => setFormValues(prev => ({
-                                ...prev,
-                                [toKey]: date
-                            }))}
+                            onChange={(date: Date) => handleInputChange(toKey, date)}
                             dateFormat="dd/MM/yyyy"
                             className="w-full px-3 py-2 border rounded-md"
                             wrapperClassName="w-full"
@@ -315,10 +296,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         color: colors.textInputText
                     }}
                     value={formValues[item.wKey as string] || ''}
-                    onChange={(e) => setFormValues(prev => ({
-                        ...prev,
-                        [item.wKey as string]: e.target.value
-                    }))}
+                    onChange={(e) => handleInputChange(item.wKey as string, e.target.value)}
                     placeholder={item.label}
                 />
             </div>
@@ -333,10 +311,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 </label>
                 <DatePicker
                     selected={formValues[item.wKey as string]}
-                    onChange={(date: Date) => setFormValues(prev => ({
-                        ...prev,
-                        [item.wKey as string]: date
-                    }))}
+                    onChange={(date: Date) => handleInputChange(item.wKey as string, date)}
                     dateFormat="dd/MM/yyyy"
                     className="w-full px-3 py-2 border rounded-md"
                     wrapperClassName="w-full"
@@ -367,45 +342,28 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     options={options}
                     value={selectedOption}
                     onChange={(selected) => {
+                        const newValues = { ...formValues };
+
                         if (selected) {
-                            const newValue = selected.value;
-                            console.log(`Dropdown ${item.wKey} changed to:`, newValue, `(type: ${typeof newValue})`);
+                            newValues[item.wKey as string] = selected.value;
 
-                            // Immediately update form values
-                            const updatedValues = {
-                                ...formValues,
-                                [item.wKey as string]: newValue
-                            };
-
-                            setFormValues(updatedValues);
-
-                            // Trigger the callback to parent component
-                            handleFormChange(updatedValues);
-
-                            // Handle dependent fields
                             formData.flat().forEach(dependentItem => {
                                 if (dependentItem.dependsOn?.field === item.wKey) {
-                                    console.log(`Found dependent field ${dependentItem.wKey} that depends on ${item.wKey}`);
-
-                                    setFormValues(prev => ({
-                                        ...prev,
-                                        [dependentItem.wKey as string]: undefined
-                                    }));
-
-                                    fetchDependentOptions(dependentItem, newValue);
+                                    newValues[dependentItem.wKey as string] = undefined;
+                                    fetchDependentOptions(dependentItem, selected.value);
                                 }
                             });
                         } else {
-                            // Handle clearing the selection
-                            console.log(`Dropdown ${item.wKey} cleared`);
-                            const updatedValues = {
-                                ...formValues,
-                                [item.wKey as string]: undefined
-                            };
+                            newValues[item.wKey as string] = undefined;
 
-                            setFormValues(updatedValues);
-                            handleFormChange(updatedValues);
+                            formData.flat().forEach(dependentItem => {
+                                if (dependentItem.dependsOn?.field === item.wKey) {
+                                    newValues[dependentItem.wKey as string] = undefined;
+                                }
+                            });
                         }
+
+                        handleFormChange(newValues);
                     }}
                     className="react-select-container"
                     classNamePrefix="react-select"
@@ -437,10 +395,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300"
                     checked={formValues[item.wKey as string] || false}
-                    onChange={(e) => setFormValues(prev => ({
-                        ...prev,
-                        [item.wKey as string]: e.target.checked
-                    }))}
+                    onChange={(e) => handleInputChange(item.wKey as string, e.target.checked)}
                     style={{
                         accentColor: colors.primary
                     }}
@@ -475,21 +430,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     useEffect(() => {
         formData?.flat().forEach(item => {
-            if (item.type === 'WDropDownBox') {
-                if (item.options) {
-                    const normalizedOptions = item.options.map(opt => ({
-                        label: opt.label,
-                        value: opt.Value || opt.value
-                    }));
-
-                    setDropdownOptions(prev => ({
-                        ...prev,
-                        [item.wKey as string]: normalizedOptions
-                    }));
-                }
-                else if (item.wQuery && !dropdownOptions[item.wKey as string]) {
-                    fetchDropdownOptions(item);
-                }
+            if (item.type === 'WDropDownBox' && !item.options && item.wQuery) {
+                fetchDropdownOptions(item);
             }
         });
     }, [formData]);

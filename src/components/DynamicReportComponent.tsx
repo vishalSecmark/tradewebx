@@ -20,7 +20,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [apiData, setApiData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState<Record<string, any>>({});
-    const [pendingFilters, setPendingFilters] = useState<Record<string, any>>({});
     const [primaryKeyFilters, setPrimaryKeyFilters] = useState<Record<string, any>>({});
     const [rs1Settings, setRs1Settings] = useState<any>(null);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -71,33 +70,24 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return {};
     };
 
-    const fetchData = async () => {
+    const fetchData = async (currentFilters = filters) => {
         if (!pageData) return;
 
         setIsLoading(true);
         try {
             let filterXml = '';
 
-            // Handle filters - Add debugging
-            console.log('All filters before API call:', filters);
-
-            // Create a copy to avoid any reference issues
-            const currentFilters = { ...filters };
-
+            // Handle filters
             Object.entries(currentFilters).forEach(([key, value]) => {
                 if (value === undefined || value === null || value === '') {
-                    console.log(`Skipping undefined/null/empty filter: ${key}`);
                     return;
                 }
 
                 if (value instanceof Date || moment.isMoment(value)) {
                     const formattedDate = moment(value).format('YYYYMMDD');
                     filterXml += `<${key}>${formattedDate}</${key}>`;
-                    console.log(`Adding date filter: ${key}=${formattedDate}`);
                 } else {
-                    // Handle all non-date values, including dropdown selections
                     filterXml += `<${key}>${value}</${key}>`;
-                    console.log(`Adding filter: ${key}=${value} (type: ${typeof value})`);
                 }
             });
 
@@ -211,136 +201,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
-    // Modified filter change handler to store pending changes
+    // Modified filter change handler
     const handleFilterChange = (newFilters: Record<string, any>) => {
-        console.log('Filter change received:', newFilters);
-
-        // Check for empty/undefined values and handle them appropriately
-        const cleanedFilters = Object.fromEntries(
-            Object.entries(newFilters).filter(([_, value]) =>
-                value !== undefined && value !== null && value !== ''
-            )
-        );
-
-        // Only update if there's an actual change to prevent infinite loops
-        if (JSON.stringify(pendingFilters) !== JSON.stringify(cleanedFilters)) {
-            console.log('Cleaned filters to be stored as pending:', cleanedFilters);
-            setPendingFilters(cleanedFilters);
-        }
+        console.log('New filters received from modal:', newFilters);
+        setFilters(newFilters);
+        // Fetch data immediately when filters are applied
+        fetchData(newFilters);
     };
 
-    // New function to apply pending filters
-    const applyFilters = () => {
-        console.log('Applying pending filters:', pendingFilters);
-
-        // Create a new object with all the filters
-        const newFilters = { ...pendingFilters };
-
-        console.log('New filters to be applied:', newFilters);
-
-        // Update the filters state
-        setFilters(newFilters);
-
-        // Force the API call with the new filters
-        const fetchWithNewFilters = async () => {
-            if (!pageData) return;
-
-            setIsLoading(true);
-            try {
-                let filterXml = '';
-
-                // Use the new filters directly
-                console.log('Using new filters for API call:', newFilters);
-
-                Object.entries(newFilters).forEach(([key, value]) => {
-                    if (value === undefined || value === null || value === '') {
-                        console.log(`Skipping undefined/null/empty filter: ${key}`);
-                        return;
-                    }
-
-                    if (value instanceof Date || moment.isMoment(value)) {
-                        const formattedDate = moment(value).format('YYYYMMDD');
-                        filterXml += `<${key}>${formattedDate}</${key}>`;
-                        console.log(`Adding date filter: ${key}=${formattedDate}`);
-                    } else {
-                        // Handle all non-date values, including dropdown selections
-                        filterXml += `<${key}>${value}</${key}>`;
-                        console.log(`Adding filter: ${key}=${value} (type: ${typeof value})`);
-                    }
-                });
-
-                // Add primary key filters for levels > 0
-                if (currentLevel > 0) {
-                    Object.entries(primaryKeyFilters).forEach(([key, value]) => {
-                        filterXml += `<${key}>${value}</${key}>`;
-                    });
-                }
-
-                console.log('Final filter XML:', filterXml);
-
-                const xmlData = `<dsXml>
-                    <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)}</J_Ui>
-                    <Sql>${pageData[0].Sql || ''}</Sql>
-                    <X_Filter>${filterXml}</X_Filter>
-                    <X_GFilter></X_GFilter>
-                    <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
-                </dsXml>`;
-
-                console.log('Request XML:', xmlData);
-
-                const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                    },
-                    timeout: 50000
-                });
-
-                console.log('API Response:', response.data);
-                setApiData(response.data.data.rs0);
-
-                // Parse RS1 Settings if available
-                if (response.data.data.rs1?.[0]?.Settings) {
-                    const xmlString = response.data.data.rs1[0].Settings;
-                    const settingsJson = {
-                        totalList: parseXmlList(xmlString, 'TotalList'),
-                        rightList: parseXmlList(xmlString, 'RightList'),
-                        hideList: parseXmlList(xmlString, 'HideList'),
-                        dateFormat: parseXmlValue(xmlString, 'DateFormat'),
-                        dateFormatList: parseXmlList(xmlString, 'DateFormatList'),
-                        dec2List: parseXmlList(xmlString, 'Dec2List'),
-                        dec4List: parseXmlList(xmlString, 'Dec4List'),
-                        drCRColorList: parseXmlList(xmlString, 'DrCRColorList'),
-                        pnLColorList: parseXmlList(xmlString, 'PnLColorList'),
-                        primaryKey: parseXmlValue(xmlString, 'PrimaryKey'),
-                        companyName: parseXmlValue(xmlString, 'CompanyName'),
-                        companyAdd1: parseXmlValue(xmlString, 'CompanyAdd1'),
-                        companyAdd2: parseXmlValue(xmlString, 'CompanyAdd2'),
-                        companyAdd3: parseXmlValue(xmlString, 'CompanyAdd3'),
-                        reportHeader: parseXmlValue(xmlString, 'ReportHeader'),
-                        pdfWidth: parseXmlValue(xmlString, 'PDFWidth'),
-                        pdfHeight: parseXmlValue(xmlString, 'PDFHeight'),
-                        mobileColumns: parseXmlList(xmlString, 'MobileColumns'),
-                        tabletColumns: parseXmlList(xmlString, 'TabletColumns'),
-                        webColumns: parseXmlList(xmlString, 'WebColumns'),
-                        headings: parseHeadings(xmlString)
-                    };
-
-                    setRs1Settings(settingsJson);
-                }
-
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                if (error.response?.data) {
-                    console.error('Error response data:', error.response.data);
-                }
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        // Execute the fetch function
-        fetchWithNewFilters();
+    // Simplified apply function
+    const handleApply = () => {
+        fetchData();
     };
 
     const handleDownloadFilterChange = (newFilters: Record<string, any>) => {
@@ -384,7 +255,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             console.log('Setting default filters:', defaultFilters);
             setFilters(defaultFilters);
-            setPendingFilters(defaultFilters);
         }
     }, [pageData]);
 
@@ -392,7 +262,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     useEffect(() => {
         if (pageData) {
             // Only fetch on initial load and level changes, not filter changes
-            fetchData();
+            setTimeout(() => {
+                fetchData();
+            }, 500);
         }
     }, [currentLevel, pageData]); // Removed filters dependency
 
@@ -458,7 +330,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 currentSort={sortConfig}
                 onSortChange={setSortConfig}
                 isSortingAllowed={pageData[0].isShortAble !== "false"}
-                onApply={applyFilters}
+                onApply={handleApply}
             />
 
             {/* Download Modal */}
