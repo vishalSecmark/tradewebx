@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { APP_METADATA_KEY, BASE_URL, PATH_URL } from '@/utils/constants';
 
 interface CommonState {
     tableStyle: 'small' | 'medium' | 'large';
@@ -70,10 +70,12 @@ export const initializeLogin = createAsyncThunk(
             ? base64Logo
             : `data:image/png;base64,${base64Logo}`;
 
-        return {
+        const appMetadata = {
             companyLogo: formattedLogo,
             companyName: response.data.data.rs0[0].CompanyName || ''
         };
+        localStorage.setItem(APP_METADATA_KEY, JSON.stringify(appMetadata));
+        return appMetadata;
     }
 );
 
