@@ -288,6 +288,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         {levelStack.map((level, index) => (
                             <button
                                 key={index}
+                                style={{ backgroundColor: colors.cardBackground }}
                                 className={`px-4 py-2 text-sm rounded-t-lg ${currentLevel === level
                                     ? `bg-${colors.primary} text-${colors.buttonText}`
                                     : `bg-${colors.tabBackground} text-${colors.tabText}`
