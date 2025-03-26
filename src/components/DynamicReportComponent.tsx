@@ -1,14 +1,14 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
-import DataTable from './DataTable';
+import DataTable, { exportTableToCsv, exportTableToPdf } from './DataTable';
 
 interface DynamicReportComponentProps {
     componentName: string;
@@ -278,6 +278,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
+    const tableRef = useRef<HTMLDivElement>(null);
 
     return (
         <div className="">
@@ -303,6 +304,21 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
+                        <button
+                            className="p-2 rounded"
+                            onClick={() => exportTableToCsv(tableRef.current)}
+                            style={{ color: colors.text }}
+                        >
+                            <FaFileCsv size={20} />
+                        </button>
+                        <button
+                            className="p-2 rounded"
+                            onClick={() => exportTableToPdf(tableRef.current)}
+                            style={{ color: colors.text }}
+                        >
+                            <FaFilePdf size={20} />
+                        </button>
+
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -363,6 +379,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         data={apiData}
                         settings={pageData[0].levels[currentLevel].settings}
                         onRowClick={handleRecordClick}
+                        tableRef={tableRef}
                     />
                 </div>
             )}

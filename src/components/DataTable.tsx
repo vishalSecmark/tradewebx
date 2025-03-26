@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { DataGrid } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { useTheme } from '@/context/ThemeContext';
@@ -11,6 +11,7 @@ interface DataTableProps {
     data: any[];
     settings?: any;
     onRowClick?: (record: any) => void;
+    tableRef?: React.RefObject<HTMLDivElement>;
 }
 
 interface DecimalColumn {
@@ -26,7 +27,40 @@ interface ValueBasedColor {
     equalToColor: string;
 }
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => {
+function getGridContent(gridEl: HTMLDivElement) {
+    return {
+        head: getRows('.rdg-header-row'),
+        body: getRows('.rdg-row:not(.rdg-summary-row)'),
+        foot: getRows('.rdg-summary-row')
+    };
+
+    function getRows(selector: string) {
+        return Array.from(gridEl.querySelectorAll<HTMLDivElement>(selector)).map((gridRow) => {
+            return Array.from(gridRow.querySelectorAll<HTMLDivElement>('.rdg-cell')).map(
+                (gridCell) => gridCell.innerText
+            );
+        });
+    }
+}
+
+function serialiseCellValue(value: unknown) {
+    if (typeof value === 'string') {
+        const formattedValue = value.replace(/"/g, '""');
+        return formattedValue.includes(',') ? `"${formattedValue}"` : formattedValue;
+    }
+    return value;
+}
+
+function downloadFile(fileName: string, data: Blob) {
+    const downloadLink = document.createElement('a');
+    downloadLink.download = fileName;
+    const url = URL.createObjectURL(data);
+    downloadLink.href = url;
+    downloadLink.click();
+    URL.revokeObjectURL(url);
+}
+
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef }) => {
     console.log(settings, 'settings');
     const { colors } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
@@ -252,7 +286,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
     }, [formattedData, sortColumns]);
 
     return (
-        <div style={{ height: 'calc(100vh - 200px)', width: '100%' }}>
+        <div
+            ref={tableRef}
+            style={{ height: 'calc(100vh - 200px)', width: '100%' }}
+        >
             <DataGrid
                 columns={columns}
                 rows={rows}
@@ -323,6 +360,49 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick }) => 
             `}</style>
         </div>
     );
+};
+
+export const exportTableToCsv = (gridEl: HTMLDivElement | null) => {
+    if (!gridEl) return;
+
+    const { head, body, foot } = getGridContent(gridEl);
+    const content = [...head, ...body, ...foot]
+        .map((cells) => cells.map(serialiseCellValue).join(','))
+        .join('\n');
+
+    downloadFile(
+        'export.csv',
+        new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    );
+};
+
+export const exportTableToPdf = async (gridEl: HTMLDivElement | null) => {
+    if (!gridEl) return;
+
+    try {
+        const { head, body, foot } = getGridContent(gridEl);
+        const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+            import('jspdf'),
+            import('jspdf-autotable')
+        ]);
+
+        const doc = new jsPDF({
+            orientation: 'l',
+            unit: 'px'
+        });
+
+        autoTable(doc, {
+            head,
+            body,
+            foot,
+            horizontalPageBreak: true,
+            styles: { cellPadding: 1.5, fontSize: 8, cellWidth: 'wrap' },
+            tableWidth: 'wrap'
+        });
+        doc.save('export.pdf');
+    } catch (error) {
+        console.error('Error exporting to PDF:', error);
+    }
 };
 
 export default DataTable; 

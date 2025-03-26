@@ -83,7 +83,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                         {/* Download Buttons */}
                         {isDownload && (
                             <div className="flex justify-around mt-4">
-                                {['word', 'excel', 'pdf'].map((type) => (
+                                {['CSV', 'PDF'].map((type) => (
                                     <button
                                         key={type}
                                         className="px-4 py-2 rounded flex flex-col items-center"
