@@ -377,32 +377,33 @@ export const exportTableToCsv = (gridEl: HTMLDivElement | null) => {
 };
 
 export const exportTableToPdf = async (gridEl: HTMLDivElement | null) => {
-    if (!gridEl) return;
+    console.log(gridEl, 'gridEl');
+    // if (!gridEl) return;
 
-    try {
-        const { head, body, foot } = getGridContent(gridEl);
-        const [{ jsPDF }, { default: autoTable }] = await Promise.all([
-            import('jspdf'),
-            import('jspdf-autotable')
-        ]);
+    // try {
+    //     const { head, body, foot } = getGridContent(gridEl);
+    //     const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+    //         import('jspdf'),
+    //         import('jspdf-autotable')
+    //     ]);
 
-        const doc = new jsPDF({
-            orientation: 'l',
-            unit: 'px'
-        });
+    //     const doc = new jsPDF({
+    //         orientation: 'l',
+    //         unit: 'px'
+    //     });
 
-        autoTable(doc, {
-            head,
-            body,
-            foot,
-            horizontalPageBreak: true,
-            styles: { cellPadding: 1.5, fontSize: 8, cellWidth: 'wrap' },
-            tableWidth: 'wrap'
-        });
-        doc.save('export.pdf');
-    } catch (error) {
-        console.error('Error exporting to PDF:', error);
-    }
+    //     autoTable(doc, {
+    //         head,
+    //         body,
+    //         foot,
+    //         horizontalPageBreak: true,
+    //         styles: { cellPadding: 1.5, fontSize: 8, cellWidth: 'wrap' },
+    //         tableWidth: 'wrap'
+    //     });
+    //     doc.save('export.pdf');
+    // } catch (error) {
+    //     console.error('Error exporting to PDF:', error);
+    // }
 };
 
 export default DataTable; 
