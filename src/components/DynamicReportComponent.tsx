@@ -32,6 +32,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
 
+    const tableRef = useRef<HTMLDivElement>(null);
     const { colors } = useTheme();
 
     const findPageData = () => {
@@ -114,7 +115,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <Sql>${pageData[0].Sql || ''}</Sql>
                 <X_Filter>${filterXml}</X_Filter>
                 <X_GFilter></X_GFilter>
-                <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+                <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
             console.log('Request XML:', xmlData);
@@ -278,7 +279,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
-    const tableRef = useRef<HTMLDivElement>(null);
 
     return (
         <div className="">

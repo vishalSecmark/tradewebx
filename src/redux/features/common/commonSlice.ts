@@ -25,12 +25,13 @@ export const fetchLastTradingDate = createAsyncThunk(
     'common/fetchLastTradingDate',
     async () => {
         const userId = localStorage.getItem('userId') || '';
+        const userType = localStorage.getItem('userType') || '';
         const xmlData = `<dsXml>
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"LastTradingDate","Level":1, "RequestFrom":"W"</J_Ui>
             <Sql></Sql>
             <X_Filter></X_Filter>
             <X_GFilter></X_GFilter>
-            <J_Api>"UserId":"${userId}"</J_Api>
+            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
         </dsXml>`;
 
         const response = await axios.post(BASE_URL + PATH_URL, xmlData, {

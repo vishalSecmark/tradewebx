@@ -96,8 +96,8 @@ export default function ChangePassword() {
     };
 
     return (
-        <div className="min-h-screen p-6" style={{ backgroundColor: colors.background2 }}>
-            <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8" style={{ backgroundColor: colors.background }}>
+        <div className="min-h-screen p-6" style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}>
+            <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8" style={{ backgroundColor: colors?.background || '#fff' }}>
                 <h1 className="text-2xl font-bold mb-6" style={{ color: colors.text }}>Change Password</h1>
 
                 {error && (

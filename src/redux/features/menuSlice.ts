@@ -112,7 +112,8 @@ export const fetchMenuItems = createAsyncThunk(
     'menu/fetchMenuItems',
     async () => {
         const userData = {
-            UserId: localStorage.getItem('userId') || ''
+            UserId: localStorage.getItem('userId') || '',
+            UserType: localStorage.getItem('userType') || ''
         };
 
         const xmlData = `<dsXml>
@@ -121,7 +122,7 @@ export const fetchMenuItems = createAsyncThunk(
             <X_Filter>
                 <UserId>${userData.UserId}</UserId>
             </X_Filter>
-            <J_Api>"UserId":"${userData.UserId}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+            <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
         </dsXml>`;
 
         const response = await axios.post(BASE_URL + PATH_URL, xmlData, {

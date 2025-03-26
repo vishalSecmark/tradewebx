@@ -161,7 +161,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const fetchThemes = async () => {
     try {
       const userData = {
-        UserId: localStorage.getItem('userId') // Make sure this matches your user ID storage key
+        UserId: localStorage.getItem('userId'),
+        UserType: localStorage.getItem('userType')
       };
 
       const xmlData = `<dsXml>
@@ -170,7 +171,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <X_Filter>
         </X_Filter>
         <X_GFilter/>
-        <J_Api>"UserId":"${userData.UserId}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+        <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
@@ -249,15 +250,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const value = {
     theme,
-    colors: themes[theme],
+    colors: themes[theme] || initialThemes[theme],
     setTheme: handleSetTheme,
     updateTheme,
     availableThemes: Object.keys(themes) as ThemeType[],
   };
-
-  if (isLoading) {
-    return null;
-  }
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

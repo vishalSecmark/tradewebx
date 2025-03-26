@@ -260,7 +260,7 @@ function Dashboard() {
                 <X_Filter>
                 </X_Filter>
                 <X_GFilter></X_GFilter>
-                <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+                <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
@@ -299,7 +299,7 @@ function Dashboard() {
         return (
             <div
                 className="flex items-center justify-center min-h-screen"
-                style={{ backgroundColor: colors.background2 }}
+                style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}
             >
                 <div className="text-center">
                     <div
@@ -318,7 +318,7 @@ function Dashboard() {
         return (
             <div
                 className="flex items-center justify-center min-h-screen"
-                style={{ backgroundColor: colors.background2 }}
+                style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}
             >
                 <div className="text-center">
                     <p style={{ color: colors.text }} className="mb-4">
@@ -344,7 +344,7 @@ function Dashboard() {
     return (
         <div
             className="container mx-auto p-4"
-            style={{ backgroundColor: colors.background2 }}
+            style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}
         >
             <div className="space-y-4">
                 {dashboardData && dashboardData.map((cardData: any, index: number) => (

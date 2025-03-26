@@ -56,8 +56,8 @@ const AppHeader: React.FC = () => {
     <header
       className="sticky top-0 flex w-full z-99999 lg:border-b"
       style={{
-        backgroundColor: colors.background,
-        borderColor: colors.color3,
+        backgroundColor: colors?.background || '#f0f0f0',
+        borderColor: colors?.color3 || '#000',
       }}
     >
       <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
@@ -110,14 +110,14 @@ const AppHeader: React.FC = () => {
           </button>
           {companyLogo && (
             <Link className="lg:hidden" href="/dashboard">
-             <Image
-              src={companyLogo}
-              alt={companyName || "Company Logo"}
-              width={32}
-              height={32}
-              loader={({ src }) => src}
-              unoptimized
-            />
+              <Image
+                src={companyLogo}
+                alt={companyName || "Company Logo"}
+                width={32}
+                height={32}
+                loader={({ src }) => src}
+                unoptimized
+              />
             </Link>
           )}
           {/* <Link href="/" className="lg:hidden">
@@ -136,7 +136,7 @@ const AppHeader: React.FC = () => {
               alt="Logo"
             />
           </Link> */}
-        {/* 
+          {/* 
           <button
             onClick={toggleApplicationMenu}
             className="flex items-center justify-center w-10 h-10 rounded-lg z-99999 lg:hidden"

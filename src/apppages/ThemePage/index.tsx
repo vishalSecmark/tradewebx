@@ -9,8 +9,8 @@ const ThemePage = () => {
 
     return (
         <div style={{
-            background: colors.background,
-            color: colors.text,
+            background: colors?.background || '#f0f0f0',
+            color: colors?.text || '#000',
             minHeight: '100vh',
             padding: '20px'
         }}>
