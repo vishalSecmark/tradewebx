@@ -79,7 +79,7 @@ function downloadFile(fileName: string, data: Blob) {
 }
 
 const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary }) => {
-    console.log(settings, 'settings');
+    console.log(JSON.stringify(summary, null, 2), 'settings');
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
@@ -247,6 +247,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     return !isNaN(parseFloat(rawValue)) && isFinite(rawValue);
                 });
 
+                // Check if this column should show a total in the summary row
+                const shouldShowTotal = summary?.columnsToShowTotal?.some(
+                    (col: any) => col.key === key
+                );
+
                 return {
                     key,
                     name: key,
@@ -257,6 +262,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     // Add a class to identify numeric columns
                     headerCellClass: isNumericColumn ? 'numeric-column-header' : '',
                     cellClass: isNumericColumn ? 'numeric-column-cell' : '',
+                    renderSummaryCell: (props: any) => {
+                        // Only show values for totalCount and columns that should show totals
+                        if (key === 'totalCount' || shouldShowTotal) {
+                            return <div className="numeric-value" style={{ color: colors.text }}>{props.row[key]}</div>;
+                        }
+                        // Return empty div for columns that shouldn't show totals
+                        return <div></div>;
+                    },
                     formatter: (props: any) => {
                         const value = props.row[key];
                         // Check if the value is numeric
@@ -298,7 +311,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     }
                 };
             });
-    }, [formattedData, colors.text, settings?.hideEntireColumn]);
+    }, [formattedData, colors.text, settings?.hideEntireColumn, summary?.columnsToShowTotal]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
@@ -340,15 +353,35 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
         return sortRows(formattedData, sortColumns);
     }, [formattedData, sortColumns]);
 
-    const summaryRows = useMemo(() => {
-        return [
-            {
-                id: 'summary_row',
-                totalCount: rows.length,
-                yesCount: rows.filter((r) => r.available).length
-            }
-        ];
-    }, [rows]);
+    const summmaryRows = useMemo(() => {
+        const totals: Record<string, any> = {
+            id: 'summary_row',
+            totalCount: rows.length
+        };
+
+        // Only calculate totals for columns specified in summary.columnsToShowTotal
+        if (summary?.columnsToShowTotal && Array.isArray(summary.columnsToShowTotal)) {
+            summary.columnsToShowTotal.forEach(column => {
+                if (column.key) {
+                    // Calculate the sum for this column
+                    const sum = rows.reduce((total, row) => {
+                        const value = row[column.key];
+                        // Handle React elements (from value-based text color formatting)
+                        const actualValue = React.isValidElement(value)
+                            ? parseFloat((value as StyledValue).props.children.toString())
+                            : parseFloat(value);
+
+                        return !isNaN(actualValue) ? total + actualValue : total;
+                    }, 0);
+
+                    // Format the sum with 2 decimal places
+                    totals[column.key] = sum.toFixed(2);
+                }
+            });
+        }
+
+        return [totals];
+    }, [rows, summary?.columnsToShowTotal]);
 
     return (
         <div
@@ -368,7 +401,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     color: colors.text,
                     fontFamily: fonts.content,
                 }}
-                bottomSummaryRows={summaryRows}
+                bottomSummaryRows={summmaryRows}
                 onCellClick={(props: any) => {
                     if (onRowClick) {
                         onRowClick(rows[props.rowIdx]);
