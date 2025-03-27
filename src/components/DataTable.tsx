@@ -221,35 +221,66 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         return Object.keys(formattedData[0])
             .filter(key => !columnsToHide.includes(key)) // Filter out columns that should be hidden
-            .map((key: any) => ({
-                key,
-                name: key,
-                sortable: true,
-                // width: getColumnWidth(key, formattedData),
-                minWidth: 80,
-                maxWidth: 400,
-                resizable: true,
-                formatter: (props: any) => {
-                    const value = props.row[key];
-                    // Check if the value is numeric
-                    const numValue = parseFloat(value);
-                    if (!isNaN(numValue)) {
-                        // Format number with commas and 2 decimal places
-                        const formattedValue = new Intl.NumberFormat('en-IN', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        }).format(numValue);
+            .map((key: any) => {
+                // Check if this column contains numeric values
+                const isNumericColumn = formattedData.some(row => {
+                    const value = row[key];
+                    const rawValue = React.isValidElement(value) ? value.props.children : value;
+                    return !isNaN(parseFloat(rawValue)) && isFinite(rawValue);
+                });
 
-                        // Determine text color based on value
-                        const textColor = numValue < 0 ? '#dc2626' :
-                            numValue > 0 ? '#16a34a' :
-                                colors.text;
+                return {
+                    key,
+                    name: key,
+                    sortable: true,
+                    minWidth: 80,
+                    maxWidth: 400,
+                    resizable: true,
+                    // Add a class to identify numeric columns
+                    headerCellClass: isNumericColumn ? 'numeric-column-header' : '',
+                    cellClass: isNumericColumn ? 'numeric-column-cell' : '',
+                    formatter: (props: any) => {
+                        const value = props.row[key];
+                        // Check if the value is numeric
+                        const rawValue = React.isValidElement(value) ? value.props.children : value;
+                        const numValue = parseFloat(rawValue);
 
-                        return <div style={{ color: textColor }}>{formattedValue}</div>;
+                        if (!isNaN(numValue)) {
+                            // Format number with commas and 2 decimal places
+                            const formattedValue = new Intl.NumberFormat('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }).format(numValue);
+
+                            // Determine text color based on value
+                            const textColor = numValue < 0 ? '#dc2626' :
+                                numValue > 0 ? '#16a34a' :
+                                    colors.text;
+
+                            return <div className="numeric-value" style={{ color: textColor }}>{formattedValue}</div>;
+                        }
+
+                        // If it's already a React element (from value-based formatting) and contains a number
+                        if (React.isValidElement(value)) {
+                            const childValue = value.props.children;
+                            const childNumValue = parseFloat(childValue);
+
+                            if (!isNaN(childNumValue)) {
+                                // It's a numeric value that was already formatted with a color
+                                return React.cloneElement(value, {
+                                    className: "numeric-value",
+                                    style: { ...value.props.style }
+                                });
+                            }
+
+                            // Return the original React element if it's not numeric
+                            return value;
+                        }
+
+                        return value;
                     }
-                    return value;
-                }
-            }));
+                };
+            });
     }, [formattedData, colors.text, settings?.hideEntireColumn]);
 
     // Sort function
@@ -351,6 +382,16 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     overflow: hidden;
                     text-overflow: ellipsis;
                     color: ${colors.text};
+                }
+
+                .numeric-column-header, .numeric-column-cell {
+                    text-align: right !important;
+                }
+
+                .numeric-value {
+                    text-align: right !important;
+                    width: 100% !important;
+                    display: block !important;
                 }
 
                 .rdg-row {
