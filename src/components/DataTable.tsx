@@ -262,16 +262,23 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 const aValue = a[columnKey];
                 const bValue = b[columnKey];
 
+                // Handle React elements (from value-based text color formatting)
+                const aActual = React.isValidElement(aValue) ? aValue.props.children : aValue;
+                const bActual = React.isValidElement(bValue) ? bValue.props.children : bValue;
+
                 // Convert to numbers if possible for comparison
-                const aNum = parseFloat(aValue);
-                const bNum = parseFloat(bValue);
+                const aNum = parseFloat(aActual);
+                const bNum = parseFloat(bActual);
 
                 if (!isNaN(aNum) && !isNaN(bNum)) {
                     if (aNum !== bNum) {
                         return direction === 'ASC' ? aNum - bNum : bNum - aNum;
                     }
                 } else {
-                    const comparison = aValue.localeCompare(bValue);
+                    // Make sure we're comparing strings
+                    const aStr = aActual?.toString() || '';
+                    const bStr = bActual?.toString() || '';
+                    const comparison = aStr.localeCompare(bStr);
                     if (comparison !== 0) {
                         return direction === 'ASC' ? comparison : -comparison;
                     }
