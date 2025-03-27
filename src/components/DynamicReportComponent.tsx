@@ -22,6 +22,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [filters, setFilters] = useState<Record<string, any>>({});
     const [primaryKeyFilters, setPrimaryKeyFilters] = useState<Record<string, any>>({});
     const [rs1Settings, setRs1Settings] = useState<any>(null);
+    const [jsonData, setJsonData] = useState<any>(null);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ field: string; direction: string }>({
@@ -71,6 +72,55 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         // Implement heading parsing logic if needed
         return {};
     };
+
+    function convertXmlToJson(xmlString) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+        const root = xmlDoc.documentElement;
+        return xmlToJson(root);
+    }
+
+    function xmlToJson(xml) {
+        if (xml.nodeType !== 1) return null; // Only process element nodes
+
+        let obj = {};
+
+        if (xml.hasChildNodes()) {
+            // Collect all child elements and text nodes
+            const childElements = Array.from(xml.childNodes).filter(child => child.nodeType === 1);
+            const textNodes = Array.from(xml.childNodes).filter(child => child.nodeType === 3);
+
+            if (childElements.length > 0) {
+                // Group child elements by name
+                const childrenByName = {};
+                childElements.forEach(child => {
+                    const childName = child.nodeName;
+                    const childValue = xmlToJson(child);
+                    if (!childrenByName[childName]) {
+                        childrenByName[childName] = [];
+                    }
+                    childrenByName[childName].push(childValue);
+                });
+
+                // Assign all children as arrays, even if there's only one
+                for (const [name, values] of Object.entries(childrenByName)) {
+                    obj[name] = values; // Always keep as array
+                }
+            } else if (textNodes.length > 0) {
+                // Handle pure text content
+                const textContent = textNodes.map(node => node.nodeValue.trim()).join('').trim();
+                if (textContent) {
+                    if (textContent.includes(',')) {
+                        return textContent.split(',').map(item => item.trim());
+                    }
+                    return textContent;
+                }
+            }
+        }
+
+        // Return null for empty elements with no meaningful content
+        return Object.keys(obj).length > 0 ? obj : null;
+    }
 
     const fetchData = async (currentFilters = filters) => {
         if (!pageData) return;
@@ -158,6 +208,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     headings: parseHeadings(xmlString)
                 };
 
+                console.log('Settings JSON:', xmlString);
+                const json = convertXmlToJson(xmlString);
+                setJsonData(json);
                 setRs1Settings(settingsJson);
             }
 
@@ -374,7 +427,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Data Display */}
             {!isLoading && apiData && (
-                <div className="space-y-4">
+                <div className="space-y-0">
+                    <div className="text-sm text-gray-500">
+                        {jsonData?.Headings?.map((headingObj, index) => (
+                            <div key={index}>
+                                {headingObj.Heading?.map((headingText, i) => (
+                                    <span key={i}>{headingText}</span>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
                     <DataTable
                         data={apiData}
                         settings={pageData[0].levels[currentLevel].settings}
