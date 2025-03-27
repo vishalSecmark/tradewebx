@@ -83,17 +83,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
 
-        let obj = {};
+        const obj: any = {};
 
         if (xml.hasChildNodes()) {
             // Collect all child elements and text nodes
-            const childElements = Array.from(xml.childNodes).filter(child => child.nodeType === 1);
-            const textNodes = Array.from(xml.childNodes).filter(child => child.nodeType === 3);
+            const childElements = Array.from(xml.childNodes).filter((child: any) => child.nodeType === 1);
+            const textNodes = Array.from(xml.childNodes).filter((child: any) => child.nodeType === 3);
 
             if (childElements.length > 0) {
                 // Group child elements by name
                 const childrenByName = {};
-                childElements.forEach(child => {
+                childElements.forEach((child: any) => {
                     const childName = child.nodeName;
                     const childValue = xmlToJson(child);
                     if (!childrenByName[childName]) {
@@ -108,7 +108,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 }
             } else if (textNodes.length > 0) {
                 // Handle pure text content
-                const textContent = textNodes.map(node => node.nodeValue.trim()).join('').trim();
+                const textContent = textNodes.map((node: any) => node.nodeValue.trim()).join('').trim();
                 if (textContent) {
                     if (textContent.includes(',')) {
                         return textContent.split(',').map(item => item.trim());

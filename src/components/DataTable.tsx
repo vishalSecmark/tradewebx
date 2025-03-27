@@ -12,6 +12,7 @@ interface DataTableProps {
     settings?: any;
     onRowClick?: (record: any) => void;
     tableRef?: React.RefObject<HTMLDivElement>;
+    summary?: any;
 }
 
 interface DecimalColumn {
@@ -25,6 +26,23 @@ interface ValueBasedColor {
     lessThanColor: string;
     greaterThanColor: string;
     equalToColor: string;
+}
+
+interface StyledValue {
+    type: string;
+    props: {
+        children: string | number;
+        style?: React.CSSProperties;
+        className?: string;
+    };
+}
+
+interface StyledElement extends React.ReactElement {
+    props: {
+        children: string | number;
+        style?: React.CSSProperties;
+        className?: string;
+    };
 }
 
 function getGridContent(gridEl: HTMLDivElement) {
@@ -60,7 +78,7 @@ function downloadFile(fileName: string, data: Blob) {
     URL.revokeObjectURL(url);
 }
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary }) => {
     console.log(settings, 'settings');
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
@@ -223,9 +241,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
             .filter(key => !columnsToHide.includes(key)) // Filter out columns that should be hidden
             .map((key: any) => {
                 // Check if this column contains numeric values
-                const isNumericColumn = formattedData.some(row => {
+                const isNumericColumn = formattedData.some((row: any) => {
                     const value = row[key];
-                    const rawValue = React.isValidElement(value) ? value.props.children : value;
+                    const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
                     return !isNaN(parseFloat(rawValue)) && isFinite(rawValue);
                 });
 
@@ -242,7 +260,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     formatter: (props: any) => {
                         const value = props.row[key];
                         // Check if the value is numeric
-                        const rawValue = React.isValidElement(value) ? value.props.children : value;
+                        const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
                         const numValue = parseFloat(rawValue);
 
                         if (!isNaN(numValue)) {
@@ -262,14 +280,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
                         // If it's already a React element (from value-based formatting) and contains a number
                         if (React.isValidElement(value)) {
-                            const childValue = value.props.children;
-                            const childNumValue = parseFloat(childValue);
+                            const childValue = (value as StyledValue).props.children;
+                            const childNumValue = parseFloat(childValue.toString());
 
                             if (!isNaN(childNumValue)) {
-                                // It's a numeric value that was already formatted with a color
-                                return React.cloneElement(value, {
+                                return React.cloneElement(value as StyledElement, {
                                     className: "numeric-value",
-                                    style: { ...value.props.style }
+                                    style: { ...(value as StyledElement).props.style }
                                 });
                             }
 
@@ -294,8 +311,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 const bValue = b[columnKey];
 
                 // Handle React elements (from value-based text color formatting)
-                const aActual = React.isValidElement(aValue) ? aValue.props.children : aValue;
-                const bActual = React.isValidElement(bValue) ? bValue.props.children : bValue;
+                const aActual = React.isValidElement(aValue) ? (aValue as StyledValue).props.children : aValue;
+                const bActual = React.isValidElement(bValue) ? (bValue as StyledValue).props.children : bValue;
 
                 // Convert to numbers if possible for comparison
                 const aNum = parseFloat(aActual);
@@ -307,8 +324,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     }
                 } else {
                     // Make sure we're comparing strings
-                    const aStr = aActual?.toString() || '';
-                    const bStr = bActual?.toString() || '';
+                    const aStr = String(aActual ?? '');  // Convert to string explicitly
+                    const bStr = String(bActual ?? '');  // Convert to string explicitly
                     const comparison = aStr.localeCompare(bStr);
                     if (comparison !== 0) {
                         return direction === 'ASC' ? comparison : -comparison;
