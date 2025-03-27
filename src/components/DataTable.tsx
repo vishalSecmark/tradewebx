@@ -62,7 +62,7 @@ function downloadFile(fileName: string, data: Blob) {
 
 const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef }) => {
     console.log(settings, 'settings');
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
     console.log(tableStyle);
@@ -285,6 +285,16 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
         return sortRows(formattedData, sortColumns);
     }, [formattedData, sortColumns]);
 
+    const summaryRows = useMemo(() => {
+        return [
+            {
+                id: 'summary_row',
+                totalCount: rows.length,
+                yesCount: rows.filter((r) => r.available).length
+            }
+        ];
+    }, [rows]);
+
     return (
         <div
             ref={tableRef}
@@ -301,7 +311,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 style={{
                     backgroundColor: colors.background,
                     color: colors.text,
+                    fontFamily: fonts.content,
                 }}
+                bottomSummaryRows={summaryRows}
                 onCellClick={(props: any) => {
                     if (onRowClick) {
                         onRowClick(rows[props.rowIdx]);

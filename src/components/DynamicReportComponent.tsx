@@ -34,7 +34,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
 
     const tableRef = useRef<HTMLDivElement>(null);
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
 
     const findPageData = () => {
         for (const item of menuItems) {
@@ -208,7 +208,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     headings: parseHeadings(xmlString)
                 };
 
-                console.log('Settings JSON:', xmlString);
+                // console.log('Settings JSON:', xmlString);
                 const json = convertXmlToJson(xmlString);
                 setJsonData(json);
                 setRs1Settings(settingsJson);
@@ -334,7 +334,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     return (
-        <div className="">
+        <div className=""
+            style={{
+                fontFamily: `${fonts.content} !important`
+            }}
+        >
             {/* Tabs - Only show if there are multiple levels */}
             {pageData[0].levels.length > 1 && (
                 <div className="flex mb-4 border-b border-gray-200">
@@ -440,6 +444,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     <DataTable
                         data={apiData}
                         settings={pageData[0].levels[currentLevel].settings}
+                        summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
                         tableRef={tableRef}
                     />
