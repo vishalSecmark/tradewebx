@@ -377,7 +377,7 @@ function Dashboard() {
 
     return (
         <div
-            className="container mx-auto p-4"
+            className="container mx-auto"
             style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}
         >
             <div className="space-y-4">

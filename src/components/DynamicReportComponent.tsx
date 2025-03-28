@@ -434,9 +434,18 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <div className="space-y-0">
                     <div className="text-sm text-gray-500">
                         {jsonData?.Headings?.map((headingObj, index) => (
-                            <div key={index}>
+                            <div key={index} className="flex flex-wrap gap-2 my-1">
                                 {headingObj?.Heading?.map((headingText, i) => (
-                                    <span key={i}>{headingText}</span>
+                                    <span
+                                        key={i}
+                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            color: colors.text
+                                        }}
+                                    >
+                                        {headingText}
+                                    </span>
                                 ))}
                             </div>
                         ))}

@@ -85,27 +85,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
     console.log(tableStyle);
     const rowHeight = tableStyle === 'small' ? 30 : tableStyle === 'medium' ? 40 : 50;
-    // Calculate minimum column width based on content
-    const getColumnWidth = (key: string, rows: any[]) => {
-        // Start with the header length (plus some padding)
-        let maxWidth = key.length * 10 + 32;
-
-        // Check all row values
-        rows.forEach(row => {
-            const value = row[key];
-            const valueString = value?.toString() || '';
-            // Calculate based on content type
-            if (typeof value === 'number') {
-                // For numbers, use a fixed width or calculate based on digits
-                maxWidth = Math.max(maxWidth, valueString.length * 10 + 24);
-            } else {
-                // For text, calculate based on character length
-                maxWidth = Math.max(maxWidth, Math.min(valueString.length * 8 + 24, 300));
-            }
-        });
-
-        return maxWidth;
-    };
 
     // Format date function
     const formatDateValue = (value: string | number | Date, format: string = 'DD-MM-YYYY'): string => {
@@ -386,7 +365,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
     return (
         <div
             ref={tableRef}
-            style={{ height: 'calc(100vh - 200px)', width: '100%' }}
+            style={{ height: 'calc(100vh - 170px)', width: '100%' }}
         >
             <DataGrid
                 columns={columns}
