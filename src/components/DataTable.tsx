@@ -265,7 +265,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     renderSummaryCell: (props: any) => {
                         // Only show values for totalCount and columns that should show totals
                         if (key === 'totalCount' || shouldShowTotal) {
-                            return <div className="numeric-value" style={{ color: colors.text }}>{props.row[key]}</div>;
+                            return <div className="numeric-value font-bold" style={{ color: colors.text }}>{props.row[key]}</div>;
                         }
                         // Return empty div for columns that shouldn't show totals
                         return <div></div>;

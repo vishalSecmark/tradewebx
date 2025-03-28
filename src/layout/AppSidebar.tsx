@@ -114,7 +114,7 @@ const AppSidebar: React.FC = () => {
     navItemsFromApi: NavItem[],
     menuType: "main" | "others"
   ) => (
-    <ul className="flex flex-col gap-4">
+    <ul className="flex flex-col gap-4 font-bold">
       {navItemsFromApi.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
@@ -141,7 +141,7 @@ const AppSidebar: React.FC = () => {
                 {iconMap[nav.icon as keyof typeof iconMap] || iconMap['default-icon']}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
-                <span>{nav.name}</span>
+                <span className="font-bold">{nav.name}</span>
               )}
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
@@ -175,7 +175,7 @@ const AppSidebar: React.FC = () => {
                   {iconMap[nav.icon as keyof typeof iconMap] || iconMap['default-icon']}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
-                  <span>{nav.name}</span>
+                  <span className="font-bold">{nav.name}</span>
                 )}
               </Link>
             )
@@ -319,7 +319,8 @@ const AppSidebar: React.FC = () => {
         backgroundColor: colors.background,
         borderRight: `1px solid ${colors.color3}`,
         color: colors.text,
-        fontFamily: fonts.sidebar
+        fontFamily: fonts.sidebar,
+        fontWeight: 'bold'
       }}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

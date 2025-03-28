@@ -341,13 +341,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         >
             {/* Tabs - Only show if there are multiple levels */}
             {pageData[0].levels.length > 1 && (
-                <div className="flex mb-4 border-b border-gray-200">
+                <div className="flex  border-b border-gray-200">
                     <div className="flex flex-1 gap-2">
                         {levelStack.map((level, index) => (
                             <button
                                 key={index}
                                 style={{ backgroundColor: colors.cardBackground }}
-                                className={`px-4 py-2 text-sm rounded-t-lg ${currentLevel === level
+                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
                                     ? `bg-${colors.primary} text-${colors.buttonText}`
                                     : `bg-${colors.tabBackground} text-${colors.tabText}`
                                     }`}
@@ -435,7 +435,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     <div className="text-sm text-gray-500">
                         {jsonData?.Headings?.map((headingObj, index) => (
                             <div key={index}>
-                                {headingObj.Heading?.map((headingText, i) => (
+                                {headingObj?.Heading?.map((headingText, i) => (
                                     <span key={i}>{headingText}</span>
                                 ))}
                             </div>
