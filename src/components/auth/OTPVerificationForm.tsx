@@ -28,7 +28,7 @@ export default function OTPVerificationForm() {
           <OTP>${otp}</OTP>
       </X_Data>
       <X_GFilter/>
-      <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+      <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
     </dsXml>`;
 
     try {

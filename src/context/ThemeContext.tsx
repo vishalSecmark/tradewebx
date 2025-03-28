@@ -8,6 +8,12 @@ import { BASE_URL } from '@/utils/constants';
 // Define theme types
 export type ThemeType = 'dark' | 'light' | 'lightDark' | 'blue';
 
+// Define font settings interface
+interface FontSettings {
+  sidebar: string;
+  content: string;
+}
+
 // Define theme colors interface
 interface ThemeColors {
   background: string;
@@ -141,8 +147,10 @@ const initialThemes: Record<ThemeType, ThemeColors> = {
 interface ThemeContextType {
   theme: ThemeType;
   colors: ThemeColors;
+  fonts: FontSettings;
   setTheme: (theme: ThemeType) => void;
   updateTheme: (themeData: Record<ThemeType, ThemeColors>) => void;
+  updateFonts: (fontData: FontSettings) => void;
   availableThemes: ThemeType[];
 }
 
@@ -151,17 +159,26 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 // Storage keys for localStorage
 const THEME_STORAGE_KEY = 'app_theme';
 const THEME_COLORS_STORAGE_KEY = 'app_theme_colors';
+const FONTS_STORAGE_KEY = 'app_fonts';
+
+// Default font settings
+const defaultFonts: FontSettings = {
+  sidebar: 'Arial',
+  content: 'Arial'
+};
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeType>('light');
   const [themes, setThemes] = useState<Record<ThemeType, ThemeColors>>(initialThemes);
+  const [fonts, setFonts] = useState<FontSettings>(defaultFonts);
   const [isLoading, setIsLoading] = useState(true);
 
   // Add fetchThemes function
   const fetchThemes = async () => {
     try {
       const userData = {
-        UserId: localStorage.getItem('userId') // Make sure this matches your user ID storage key
+        UserId: localStorage.getItem('userId'),
+        UserType: localStorage.getItem('userType')
       };
 
       const xmlData = `<dsXml>
@@ -170,7 +187,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <X_Filter>
         </X_Filter>
         <X_GFilter/>
-        <J_Api>"UserId":"${userData.UserId}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+        <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
@@ -182,6 +199,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (response.data?.data?.rs0?.[0]?.LevelSetting) {
         const parsedThemeSettings = JSON.parse(response.data.data.rs0[0].LevelSetting);
+
+        if (response.data?.data?.rs1?.[0]?.LevelSetting1) {
+          try {
+            const parsedFontSettings = JSON.parse(response.data.data.rs1[0].LevelSetting1);
+            if (parsedFontSettings.fontSettings) {
+              setFonts(parsedFontSettings.fontSettings);
+              // Save to localStorage
+              localStorage.setItem(FONTS_STORAGE_KEY, JSON.stringify(parsedFontSettings.fontSettings));
+            }
+          } catch (error) {
+            console.error('Error parsing font settings:', error);
+            console.log('Invalid JSON:', response.data.data.rs1[0].LevelSetting1);
+            // Continue using default or previously saved font settings
+          }
+        }
+
         setThemes(prevThemes => ({
           ...prevThemes,
           ...parsedThemeSettings
@@ -209,6 +242,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme) {
           setTheme(savedTheme as ThemeType);
+        }
+
+        const savedFonts = localStorage.getItem(FONTS_STORAGE_KEY);
+        if (savedFonts) {
+          setFonts(JSON.parse(savedFonts));
         }
 
         // Then fetch latest themes from API
@@ -247,17 +285,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const value = {
-    theme,
-    colors: themes[theme],
-    setTheme: handleSetTheme,
-    updateTheme,
-    availableThemes: Object.keys(themes) as ThemeType[],
+  // Update font settings
+  const updateFonts = (fontData: FontSettings) => {
+    try {
+      setFonts(fontData);
+      localStorage.setItem(FONTS_STORAGE_KEY, JSON.stringify(fontData));
+    } catch (error) {
+      console.error('Failed to update font settings:', error);
+    }
   };
 
-  if (isLoading) {
-    return null;
-  }
+  const value = {
+    theme,
+    colors: themes[theme] || initialThemes[theme],
+    fonts,
+    setTheme: handleSetTheme,
+    updateTheme,
+    updateFonts,
+    availableThemes: Object.keys(themes) as ThemeType[],
+  };
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };
@@ -272,8 +318,10 @@ export const useTheme = () => {
       return {
         theme: 'light' as ThemeType,
         colors: initialThemes['light'],
+        fonts: defaultFonts,
         setTheme: () => { },
         updateTheme: () => { },
+        updateFonts: () => { },
         availableThemes: Object.keys(initialThemes) as ThemeType[],
       };
     }

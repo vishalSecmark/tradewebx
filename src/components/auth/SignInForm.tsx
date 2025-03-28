@@ -21,6 +21,7 @@ export default function SignInForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
 
@@ -80,6 +81,7 @@ export default function SignInForm() {
       setError(errorMessage);
     } finally {
       dispatch(setLoading(false));
+      setIsLoading(false);
     }
   };
 

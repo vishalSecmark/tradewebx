@@ -41,7 +41,7 @@ const Downloads = () => {
                 <Segment>${filterValues.segment}</Segment>
             </X_Filter>
             <X_GFilter></X_GFilter>
-            <J_Api>"UserId":"${userData.userId}"</J_Api>
+            <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
         </dsXml>`;
 
         try {
@@ -93,7 +93,7 @@ const Downloads = () => {
                 <DocumentNo>${record['Document No']}</DocumentNo>
             </X_Filter>
             <X_GFilter></X_GFilter>
-            <J_Api>"UserId":"${userData.userId}"</J_Api>
+            <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
         </dsXml>`;
 
         try {
