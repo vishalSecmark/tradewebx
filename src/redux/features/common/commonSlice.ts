@@ -12,7 +12,7 @@ interface CommonState {
 }
 
 const initialState: CommonState = {
-    tableStyle: 'medium',
+    tableStyle: 'small',
     lastTradingDate: null,
     companyLogo: '',
     companyName: '',
