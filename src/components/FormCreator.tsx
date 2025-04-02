@@ -17,14 +17,16 @@ interface FormElement {
         J_Ui: any;
         Sql: string;
         X_Filter: string;
+        X_Filter_Multiple?: string;
         J_Api: any;
     };
     dependsOn?: {
-        field: string;
+        field: string | string[];
         wQuery: {
             J_Ui: any;
             Sql: string;
             X_Filter: string;
+            X_Filter_Multiple?: string;
             J_Api: any;
         };
     };
@@ -190,21 +192,34 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 jApi = item.dependsOn.wQuery.J_Api;
             }
 
-            let xFilter = item.dependsOn.wQuery.X_Filter || '';
+            let xmlFilterContent = '';
 
             if (Array.isArray(item.dependsOn.field)) {
-                item.dependsOn.field.forEach(field => {
-                    const value = typeof parentValue === 'object' ? parentValue[field] : '';
-                    xFilter = xFilter.replace(`\${${field}}`, value);
-                });
+                if (item.dependsOn.wQuery.X_Filter_Multiple) {
+                    xmlFilterContent = item.dependsOn.wQuery.X_Filter_Multiple;
+
+                    item.dependsOn.field.forEach(field => {
+                        const value = typeof parentValue === 'object' ? parentValue[field] : '';
+                        xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, value);
+                    });
+                } else {
+                    xmlFilterContent = item.dependsOn.wQuery.X_Filter || '';
+                    item.dependsOn.field.forEach(field => {
+                        const value = typeof parentValue === 'object' ? parentValue[field] : '';
+                        xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, value);
+                    });
+                }
             } else {
-                xFilter = typeof parentValue === 'string' ? parentValue : '';
+                xmlFilterContent = typeof parentValue === 'string' ? parentValue : '';
             }
 
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${item.dependsOn.wQuery.Sql || ''}</Sql>
-                <X_Filter>${xFilter}</X_Filter>
+                ${Array.isArray(item.dependsOn.field) && item.dependsOn.wQuery.X_Filter_Multiple
+                    ? `<X_Filter_Multiple>${xmlFilterContent}</X_Filter_Multiple>`
+                    : `<X_Filter>${xmlFilterContent}</X_Filter>`
+                }
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
 
