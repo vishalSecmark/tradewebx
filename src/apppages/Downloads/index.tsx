@@ -7,6 +7,8 @@ import moment from 'moment';
 import DataTable from '@/components/DataTable';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { RootState } from '@/redux/store';
+import FilterModal from '@/components/FilterModal';
+
 const Downloads = () => {
     const [downloads, setDownloads] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -122,6 +124,47 @@ const Downloads = () => {
         }
     };
 
+    const handleFilterChange = (values) => {
+        console.log('values', values);
+        handleApplyFilters();
+        setFilterValues(values);
+
+    };
+
+    const handleApplyFilters = () => {
+        getDownloads();
+    };
+
+    // Define filter fields for the FilterModal
+    const filterFields = [
+        [
+            {
+                type: 'WDateBox',
+                label: 'From Date',
+                wKey: 'fromDate',
+                value: filterValues.fromDate
+            },
+            {
+                type: 'WDateBox',
+                label: 'To Date',
+                wKey: 'toDate',
+                value: filterValues.toDate
+            }
+        ],
+        [
+            {
+                type: 'WDropDownBox',
+                label: 'Segment',
+                wKey: 'segment',
+                value: filterValues.segment,
+                options: [
+                    { label: 'Equity/Derivative', value: 'Equity/Derivative' },
+                    { label: 'Commodity', value: 'Commodity' }
+                ]
+            }
+        ]
+    ];
+
     return (
         <div className="p-4">
             {/* Headings Section */}
@@ -173,78 +216,15 @@ const Downloads = () => {
             />
 
             {/* Filter Modal */}
-            {isFilterModalVisible && (
-                <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="rounded-lg p-6 w-full max-w-md" style={{ backgroundColor: colors.background }}>
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-semibold" style={{ color: colors.text }}>Filter Downloads</h3>
-                            <button
-                                onClick={() => setFilterModalVisible(false)}
-                                className="hover:text-gray-700 dark:hover:text-gray-200"
-                                style={{ color: colors.text }}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block mb-2 text-sm font-medium" style={{ color: colors.text }}>Date Range</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="date"
-                                        className="block w-full px-3 py-2 border rounded-md"
-                                        style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.textInputBorder }}
-                                        value={filterValues.fromDate}
-                                        onChange={(e) => setFilterValues(prev => ({ ...prev, fromDate: e.target.value }))}
-                                    />
-                                    <input
-                                        type="date"
-                                        className="block w-full px-3 py-2 border rounded-md"
-                                        style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.textInputBorder }}
-                                        value={filterValues.toDate}
-                                        onChange={(e) => setFilterValues(prev => ({ ...prev, toDate: e.target.value }))}
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block mb-2 text-sm font-medium" style={{ color: colors.text }}>Segment</label>
-                                <select
-                                    className="block w-full px-3 py-2 border rounded-md"
-                                    style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.textInputBorder }}
-                                    value={filterValues.segment}
-                                    onChange={(e) => setFilterValues(prev => ({ ...prev, segment: e.target.value }))}
-                                >
-                                    <option value="Equity/Derivative">Equity/Derivative</option>
-                                    <option value="Commodity">Commodity</option>
-                                </select>
-                            </div>
-
-                            <div className="flex justify-end gap-2 mt-6">
-                                <button
-                                    className="px-4 py-2 text-sm font-medium rounded-md hover:opacity-80"
-                                    style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
-                                    onClick={() => setFilterModalVisible(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="px-4 py-2 text-sm font-medium rounded-md hover:opacity-80"
-                                    style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
-                                    onClick={() => {
-                                        setFilterModalVisible(false);
-                                        getDownloads();
-                                    }}
-                                >
-                                    Apply
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <FilterModal
+                isOpen={isFilterModalVisible}
+                onClose={() => setFilterModalVisible(false)}
+                title="Filter Downloads"
+                filters={filterFields}
+                onFilterChange={handleFilterChange}
+                initialValues={filterValues}
+                onApply={handleApplyFilters}
+            />
         </div>
     );
 };
