@@ -178,7 +178,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     'Content-Type': 'application/xml',
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 },
-                timeout: 50000
+                timeout: 600000
             });
 
             const endTime = performance.now();
