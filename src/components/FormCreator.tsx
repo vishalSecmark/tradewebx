@@ -50,6 +50,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const { colors } = useTheme();
     const [formValues, setFormValues] = useState(initialValues);
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
+    const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         setFormValues(initialValues);
@@ -90,6 +91,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const fetchDropdownOptions = async (item: FormElement) => {
         try {
+            setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: true
+            }));
+
             let jUi, jApi;
 
             if (typeof item.wQuery?.J_Ui === 'object') {
@@ -151,9 +157,18 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 [item.wKey as string]: options
             }));
 
+            setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: false
+            }));
+
             return options;
         } catch (error) {
             console.error('Error fetching dropdown options:', error);
+            setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: false
+            }));
             return [];
         }
     };
@@ -169,6 +184,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 console.error(`Parent value for ${item.wKey} is empty or undefined`, parentValue);
                 return [];
             }
+
+            setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: true
+            }));
 
             console.log(`Fetching dependent options for ${item.wKey} based on:`, parentValue);
 
@@ -259,9 +279,18 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 [item.wKey as string]: options
             }));
 
+            setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: false
+            }));
+
             return options;
         } catch (error) {
             console.error('Error fetching dependent options:', error);
+            setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: false
+            }));
             return [];
         }
     };
@@ -432,10 +461,13 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             String(opt.value) === String(formValues[item.wKey as string])
         );
 
+        const isLoading = loadingDropdowns[item.wKey as string];
+
         return (
             <div className="mb-4">
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {item.label}
+                    {isLoading && <span className="ml-2 inline-block animate-pulse">Loading...</span>}
                 </label>
                 <Select
                     options={options}
@@ -509,6 +541,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
                         handleFormChange(newValues);
                     }}
+                    isDisabled={isLoading}
+                    placeholder={isLoading ? "Loading options..." : "Select..."}
                     className="react-select-container"
                     classNamePrefix="react-select"
                     styles={{
@@ -516,6 +550,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             ...base,
                             borderColor: colors.textInputBorder,
                             backgroundColor: colors.textInputBackground,
+                            boxShadow: isLoading ? `0 0 0 1px ${colors.primary}` : base.boxShadow,
                         }),
                         singleValue: (base) => ({
                             ...base,
@@ -528,6 +563,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         }),
                     }}
                 />
+                {isLoading && (
+                    <div className="mt-1 text-xs text-right" style={{ color: colors.primary }}>
+                        Fetching options...
+                    </div>
+                )}
             </div>
         );
     };
