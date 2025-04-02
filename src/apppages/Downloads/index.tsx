@@ -196,14 +196,14 @@ const Downloads = () => {
                                     <input
                                         type="date"
                                         className="block w-full px-3 py-2 border rounded-md"
-                                        style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }}
+                                        style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.textInputBorder }}
                                         value={filterValues.fromDate}
                                         onChange={(e) => setFilterValues(prev => ({ ...prev, fromDate: e.target.value }))}
                                     />
                                     <input
                                         type="date"
                                         className="block w-full px-3 py-2 border rounded-md"
-                                        style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }}
+                                        style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.textInputBorder }}
                                         value={filterValues.toDate}
                                         onChange={(e) => setFilterValues(prev => ({ ...prev, toDate: e.target.value }))}
                                     />
@@ -213,7 +213,7 @@ const Downloads = () => {
                                 <label className="block mb-2 text-sm font-medium" style={{ color: colors.text }}>Segment</label>
                                 <select
                                     className="block w-full px-3 py-2 border rounded-md"
-                                    style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.border }}
+                                    style={{ backgroundColor: colors.cardBackground, color: colors.text, borderColor: colors.textInputBorder }}
                                     value={filterValues.segment}
                                     onChange={(e) => setFilterValues(prev => ({ ...prev, segment: e.target.value }))}
                                 >
@@ -225,14 +225,14 @@ const Downloads = () => {
                             <div className="flex justify-end gap-2 mt-6">
                                 <button
                                     className="px-4 py-2 text-sm font-medium rounded-md hover:opacity-80"
-                                    style={{ backgroundColor: colors.buttonSecondary, color: colors.buttonSecondaryText }}
+                                    style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
                                     onClick={() => setFilterModalVisible(false)}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     className="px-4 py-2 text-sm font-medium rounded-md hover:opacity-80"
-                                    style={{ backgroundColor: colors.buttonPrimary, color: colors.buttonPrimaryText }}
+                                    style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
                                     onClick={() => {
                                         setFilterModalVisible(false);
                                         getDownloads();
