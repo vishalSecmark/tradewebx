@@ -9,6 +9,10 @@ import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf } from './DataTable';
+import { store } from "@/redux/store";
+import { APP_METADATA_KEY } from "@/utils/constants";
+
+// const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
 interface DynamicReportComponentProps {
     componentName: string;
@@ -35,6 +39,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
+
+    const appMetadata = (() => {
+        try {
+          return JSON.parse(localStorage.getItem(APP_METADATA_KEY))
+        }catch(err) {
+          return store.getState().common
+        }
+      })();
+
 
     const findPageData = () => {
         for (const item of menuItems) {
@@ -121,6 +134,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         // Return null for empty elements with no meaningful content
         return Object.keys(obj).length > 0 ? obj : null;
     }
+
+ 
+    
 
     const fetchData = async (currentFilters = filters) => {
         if (!pageData) return;
@@ -223,6 +239,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setIsLoading(false);
         }
     };
+
+
+    console.log(fetchData,'fetchData fetchData');
+    
+
+
+ 
+      
 
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
@@ -368,13 +392,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaFileCsv size={20} />
                         </button>
-                        {/* <button
+                        <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current)}
+                            onClick={() => exportTableToPdf(tableRef.current,jsonData,appMetadata,apiData)}
                             style={{ color: colors.text }}
                         >
                             <FaFilePdf size={20} />
-                        </button> */}
+                        </button>
 
                         <button
                             className="p-2 rounded"
