@@ -32,6 +32,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [downloadFilters, setDownloadFilters] = useState<Record<string, any>>({});
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
+    const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -126,6 +127,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (!pageData) return;
 
         setIsLoading(true);
+        const startTime = performance.now();
+
         try {
             let filterXml = '';
 
@@ -178,6 +181,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 timeout: 50000
             });
 
+            const endTime = performance.now();
+            setApiResponseTime(Math.round(endTime - startTime));
+
             console.log('API Response:', response.data);
             setApiData(response.data.data.rs0);
 
@@ -219,6 +225,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             if (error.response?.data) {
                 console.error('Error response data:', error.response.data);
             }
+            setApiResponseTime(undefined);
         } finally {
             setIsLoading(false);
         }
@@ -433,22 +440,27 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {!isLoading && apiData && (
                 <div className="space-y-0">
                     <div className="text-sm text-gray-500">
-                        {jsonData?.Headings?.map((headingObj, index) => (
-                            <div key={index} className="flex flex-wrap gap-2 my-1">
-                                {headingObj?.Heading?.map((headingText, i) => (
-                                    <span
-                                        key={i}
-                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                        style={{
-                                            backgroundColor: colors.cardBackground,
-                                            color: colors.text
-                                        }}
-                                    >
-                                        {headingText}
-                                    </span>
+                        <div className="flex flex-col sm:flex-row justify-between">
+                            <div className="flex flex-wrap gap-2 my-1">
+                                {jsonData?.Headings?.map((headingObj, index) => (
+                                    <div key={index} className="flex flex-wrap gap-2 my-1">
+                                        {headingObj?.Heading?.map((headingText, i) => (
+                                            <span
+                                                key={i}
+                                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                style={{
+                                                    backgroundColor: colors.cardBackground,
+                                                    color: colors.text
+                                                }}
+                                            >
+                                                {headingText}
+                                            </span>
+                                        ))}
+                                    </div>
                                 ))}
                             </div>
-                        ))}
+                            <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
+                        </div>
                     </div>
                     <DataTable
                         data={apiData}
