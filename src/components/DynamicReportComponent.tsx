@@ -394,7 +394,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     <div className="flex gap-2">
                         <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToCsv(tableRef.current)}
+                            onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
                             style={{ color: colors.text }}
                         >
                             <FaFileCsv size={20} />
