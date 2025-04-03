@@ -19,6 +19,9 @@ const Downloads = () => {
         segment: 'Equity/Derivative'
     });
     const [headings, setHeadings] = useState([]);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [downloadError, setDownloadError] = useState<string | null>(null);
 
     const { colors } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
@@ -80,6 +83,63 @@ const Downloads = () => {
         getDownloads();
     }, []);
 
+    const handleFileDownload = async (fileId: string, fileName: string) => {
+        setIsDownloading(true);
+        setDownloadError(null);
+        setDownloadProgress(0);
+
+        try {
+            // Create a CancelToken source for axios
+            const source = axios.CancelToken.source();
+
+            // Set up a timer to update progress (simulated if actual progress isn't available)
+            const progressInterval = setInterval(() => {
+                setDownloadProgress(prev => {
+                    // Cap at 95% until we actually complete
+                    return prev < 95 ? prev + 5 : 95;
+                });
+            }, 1000);
+
+            // Make the API call with extended timeout
+            const response = await axios({
+                url: `${BASE_URL}/api/downloads/${fileId}`,
+                method: 'GET',
+                responseType: 'blob', // Important for file downloads
+                headers: {
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                },
+                timeout: 600000, // 10 minutes timeout
+                cancelToken: source.token,
+                onDownloadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setDownloadProgress(percentCompleted);
+                    }
+                }
+            });
+
+            // Clear the progress interval
+            clearInterval(progressInterval);
+            setDownloadProgress(100);
+
+            // Create a download link and trigger the download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+        } catch (error) {
+            console.error('Download error:', error);
+            setDownloadError(error.message || 'Download failed. Please try again later.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     const handleDownload = async (record) => {
         const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
         const toDateStr = moment(filterValues.toDate).format('YYYYMMDD');
@@ -103,7 +163,8 @@ const Downloads = () => {
                 headers: {
                     'Content-Type': 'application/xml',
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
+                },
+                timeout: 600000
             });
 
             const fileData = response.data.data.rs0[0];
@@ -225,6 +286,28 @@ const Downloads = () => {
                 initialValues={filterValues}
                 onApply={handleApplyFilters}
             />
+
+            {isDownloading && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+                        <div className="mb-4">
+                            <svg className="animate-spin h-10 w-10 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                        <h3 className="text-lg font-semibold mb-2">Downloading File</h3>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${downloadProgress}%` }}></div>
+                        </div>
+                        <p className="mt-2 text-sm text-gray-600">{downloadProgress}%</p>
+                        <p className="mt-2 text-xs text-gray-500">This may take several minutes for large files</p>
+                        {downloadError && (
+                            <div className="mt-4 text-red-500 text-sm">{downloadError}</div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
