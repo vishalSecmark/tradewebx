@@ -394,10 +394,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
         return [totals];
     }, [rows, summary?.columnsToShowTotal, settings?.valueBasedTextColor]);
 
-    console.log(rows,'rows of fff');
-    console.log(columns,'columns of ffff');
-    
-    
+    console.log(rows, 'rows of fff');
+    console.log(columns, 'columns of ffff');
+
+
 
     return (
         <div
@@ -498,7 +498,7 @@ export const exportTableToCsv = (
     const levelData = pageData[0]?.levels[0] || {};
     const settings = levelData.settings || {};
     const columnsToShowTotal = levelData.summary?.columnsToShowTotal || [];
-    
+
     // Extract report details
     const companyName = headerData.CompanyName?.[0] || "Company Name";
     const reportHeader = headerData.ReportHeader?.[0] || "Report Header";
@@ -508,7 +508,7 @@ export const exportTableToCsv = (
     fileTitle = fileTitle?.trim() || "Report"; // Fallback title
 
     // **1. Get all available headers from API data**
-    let headers = Object.keys(apiData[0] || {});
+    const headers = Object.keys(apiData[0] || {});
 
     // **2. Remove columns mentioned in hideEntireColumn**
     const hiddenColumns = settings.hideEntireColumn?.split(",") || [];
@@ -525,7 +525,7 @@ export const exportTableToCsv = (
     });
 
     // **4. Initialize totals (only for columns in columnsToShowTotal)**
-    let totals: Record<string, number> = {};
+    const totals: Record<string, number> = {};
     const totalLabels: Record<string, string> = {};
 
     columnsToShowTotal.forEach(({ key, label }: { key: string; label: string }) => {
@@ -605,7 +605,7 @@ export const exportTableToCsv = (
 
 
 export const exportTableToPdf = async (
-    gridEl: HTMLDivElement | null, 
+    gridEl: HTMLDivElement | null,
     jsonData: any,
     appMetadata: any,
     allData: any[],
@@ -614,7 +614,7 @@ export const exportTableToPdf = async (
 
     try {
         console.log(jsonData, 'jsonData jsonData');
-        
+
         const { head, foot } = getGridContent(gridEl);
 
         // Prepare table body with proper formatting
@@ -629,8 +629,8 @@ export const exportTableToPdf = async (
 
                 // Handle numeric fields
                 if (['debit', 'credit', 'balance'].includes(key.toLowerCase())) {
-                    const numValue = typeof value === 'string' 
-                        ? parseFloat(value.replace(/,/g, '')) 
+                    const numValue = typeof value === 'string'
+                        ? parseFloat(value.replace(/,/g, ''))
                         : Number(value);
                     return isNaN(numValue) ? '0.00' : numValue.toFixed(2);
                 }
@@ -691,7 +691,7 @@ export const exportTableToPdf = async (
 
         // Get right-aligned columns from jsonData.RightList
         const rightAlignedColumns = jsonData.RightList?.[0]?.filter(Boolean) || [];
-        
+
         // Create column styles dynamically based on RightList
         const columnStyles = {};
         if (head && head[0]) {
@@ -711,7 +711,7 @@ export const exportTableToPdf = async (
             body,  // **Foot row is now inside body**
             startY: textY,
             margin: { top: 10, horizontal: 20 },
-            styles: { 
+            styles: {
                 fontSize: 10,
                 cellPadding: 4,
                 lineColor: [0, 0, 0],
@@ -727,7 +727,7 @@ export const exportTableToPdf = async (
             },
             columnStyles,
             tableWidth: 'auto',
-        
+
             // ✅ Apply blue color to the last row (total row)
             didParseCell: (data) => {
                 if (data.row.index === body.length - 1) {
@@ -736,19 +736,19 @@ export const exportTableToPdf = async (
                     data.cell.styles.fontStyle = 'bold';           // Bold text for total
                 }
             },
-        
+
             didDrawPage: (data) => {
                 finalY = data.cursor.y; // Track last printed row position
             }
         });
-        
+
 
         const totalPages = doc.internal.getNumberOfPages();
 
-            // Add footer
+        // Add footer
         // const totalPages = doc.internal.getNumberOfPages();
-        console.log(totalPages,'totalPages');
-        
+        console.log(totalPages, 'totalPages');
+
         const now = new Date();
         const formattedDate = now.toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -765,7 +765,7 @@ export const exportTableToPdf = async (
             doc.setPage(i);
             doc.setFontSize(10);
             doc.text(`Print Date: ${formattedDate} ${formattedTime}`, 20, doc.internal.pageSize.getHeight() - 15);
-            
+
             const appName = appMetadata?.applicationName || '';
             doc.text(`${ACTION_NAME}[Page ${i} of ${totalPages}]`, pageWidth - 100, doc.internal.pageSize.getHeight() - 15);
         }

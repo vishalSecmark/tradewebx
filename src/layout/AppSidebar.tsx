@@ -307,13 +307,16 @@ const AppSidebar: React.FC = () => {
           }`}
       >
         <div>
-          {companyLogo && (
-            <img
+          {companyInfo?.CompanyLogo && (
+            <Image
               src={companyInfo.CompanyLogo.startsWith('data:')
                 ? companyInfo.CompanyLogo
                 : `data:image/png;base64,${companyInfo.CompanyLogo}`}
               alt="Company Logo"
-              className="h-6 w-auto"
+              width={64}
+              height={64}
+              className="h-16 w-auto object-contain"
+              priority
             />
           )}
         </div>

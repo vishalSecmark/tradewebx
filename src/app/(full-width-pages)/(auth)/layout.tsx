@@ -1,6 +1,7 @@
 'use client'
 import GridShape from "@/components/common/GridShape";
 import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
+import Image from "next/image";
 
 import { ThemeProvider } from "@/context/ThemeContext";
 import Link from "next/link";
@@ -45,12 +46,15 @@ export default function AuthLayout({
                 <Link href="/" className="block mb-4">
                   {companyInfo?.CompanyLogo && (
                     <div className="flex justify-center mb-3">
-                      <img
+                      <Image
                         src={companyInfo.CompanyLogo.startsWith('data:')
                           ? companyInfo.CompanyLogo
                           : `data:image/png;base64,${companyInfo.CompanyLogo}`}
                         alt="Company Logo"
-                        className="h-16 w-auto"
+                        width={64}
+                        height={64}
+                        className="h-16 w-auto object-contain"
+                        priority
                       />
                     </div>
                   )}
