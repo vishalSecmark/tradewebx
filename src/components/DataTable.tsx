@@ -743,7 +743,13 @@ export const exportTableToPdf = async (
         });
 
 
-        const totalPages = doc.internal.getNumberOfPages();
+        let totalPages = 0;
+        try {
+            totalPages = doc.internal.pages.length;
+        } catch (error) {
+            console.error("Error getting number of pages:", error);
+            totalPages = 1; // Default to 1 page
+        }
 
         // Add footer
         // const totalPages = doc.internal.getNumberOfPages();
