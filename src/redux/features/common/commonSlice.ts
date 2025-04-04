@@ -66,7 +66,7 @@ export const fetchInitializeLogin = createAsyncThunk(
     <J_Api></J_Api>
 </dsXml>`;
 
-        const response = await axios.post('https://trade-plus.in/TradeWebAPI/api/Main/InitializeLogin', xmlData, {
+        const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
             headers: {
                 'Content-Type': 'application/xml',
             }
