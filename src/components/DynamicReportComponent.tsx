@@ -8,7 +8,7 @@ import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
-import DataTable, { exportTableToCsv, exportTableToPdf } from './DataTable';
+import DataTable, { exportTableToCsv } from './DataTable';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 
@@ -43,11 +43,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const appMetadata = (() => {
         try {
-          return JSON.parse(localStorage.getItem(APP_METADATA_KEY))
-        }catch(err) {
-          return store.getState().common
+            return JSON.parse(localStorage.getItem(APP_METADATA_KEY))
+        } catch (err) {
+            return store.getState().common
         }
-      })();
+    })();
 
 
     const findPageData = () => {
@@ -136,8 +136,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return Object.keys(obj).length > 0 ? obj : null;
     }
 
- 
-    
+
+
 
     const fetchData = async (currentFilters = filters) => {
         if (!pageData) return;
@@ -248,12 +248,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
 
-    console.log(fetchData,'fetchData fetchData');
-    
+    console.log(fetchData, 'fetchData fetchData');
 
 
- 
-      
+
+
+
 
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
@@ -399,13 +399,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaFileCsv size={20} />
                         </button>
-                        <button
+                        {/* <button
                             className="p-2 rounded"
                             onClick={() => exportTableToPdf(tableRef.current,jsonData,appMetadata,apiData)}
                             style={{ color: colors.text }}
                         >
                             <FaFilePdf size={20} />
-                        </button>
+                        </button> */}
 
                         <button
                             className="p-2 rounded"
