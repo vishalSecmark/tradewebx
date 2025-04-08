@@ -8,7 +8,7 @@ import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
-import DataTable, { exportTableToCsv } from './DataTable';
+import DataTable, { exportTableToCsv,exportTableToPdf } from './DataTable';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 
@@ -399,13 +399,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaFileCsv size={20} />
                         </button>
-                        {/* <button
+                             <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current,jsonData,appMetadata,apiData)}
+                            onClick={() => exportTableToPdf(tableRef.current,jsonData,appMetadata,apiData,pageData)}
                             style={{ color: colors.text }}
                         >
                             <FaFilePdf size={20} />
-                        </button> */}
+                        </button> 
 
                         <button
                             className="p-2 rounded"
