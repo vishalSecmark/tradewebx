@@ -6,10 +6,11 @@ import { EyeCloseIcon, EyeIcon } from "@/icons";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
 import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL } from "@/utils/constants";
 import Image from "next/image";
+import { RootState } from "@/redux/store";
 
 // Default options to use if JSON file is not available
 const DEFAULT_LOGIN_OPTIONS = [];
@@ -23,7 +24,7 @@ export default function SignInForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginAsOptions, setLoginAsOptions] = useState(DEFAULT_LOGIN_OPTIONS);
-
+  const { companyInfo, status } = useSelector((state: RootState) => state.common);
   // Initialize with first option's values
   const [selectedName, setSelectedName] = useState("");
   const [selectedLoginAs, setSelectedLoginAs] = useState("");
@@ -137,6 +138,27 @@ export default function SignInForm() {
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
+          <div>
+            {companyInfo?.CompanyLogo && (
+              <div className="flex justify-center mb-3">
+                <Image
+                  src={companyInfo.CompanyLogo.startsWith('data:')
+                    ? companyInfo.CompanyLogo
+                    : `data:image/png;base64,${companyInfo.CompanyLogo}`}
+                  alt="Company Logo"
+                  width={64}
+                  height={64}
+                  className="h-16 w-auto object-contain"
+                  priority
+                />
+              </div>
+            )}
+            <h1 className="text-3xl font-bold text-black text-center">
+              {companyInfo?.CompanyName?.trim() || ""}
+            </h1>
+
+          </div>
+          <div style={{ border: '1px solid #000', margin: '10px 0' }}></div>
           <div className="mb-5">
             <h1 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
               Sign In
