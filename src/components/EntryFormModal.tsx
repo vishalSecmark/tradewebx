@@ -54,6 +54,8 @@ interface EntryFormProps {
     dropdownOptions: Record<string, any[]>;
     loadingDropdowns: Record<string, boolean>;
     onDropdownChange?: (key: string, value: any) => void;
+    fieldErrors: Record<string, string>;
+    setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
 
 interface ChildEntryModalProps {
@@ -75,19 +77,151 @@ const EntryForm: React.FC<EntryFormProps> = ({
     setFormValues,
     dropdownOptions,
     loadingDropdowns,
-    onDropdownChange
+    onDropdownChange,
+    fieldErrors,
+    setFieldErrors
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
 
     const handleInputChange = (key: string, value: any) => {
         setFormValues(prev => ({ ...prev, [key]: value }));
+        setFieldErrors(prev => ({ ...prev, [key]: '' })); // Clear validation error when field is filled
         if (onDropdownChange) {
             onDropdownChange(key, value);
         }
     };
 
+    // function called to check the validation of the field 
+    const handleBlur = async (field: FormField) => {
+        if (!field.ValidationAPI || !field.ValidationAPI.dsXml) return;
+
+        const { J_Ui, Sql, X_Filter, X_Filter_Multiple, J_Api } = field.ValidationAPI.dsXml;
+
+        let xFilter = '';
+        let xFilterMultiple = '';
+        let shouldCallApi = true;
+
+        if (X_Filter_Multiple) {
+            Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
+                let fieldValue;
+                if (placeholder?.startsWith('##') && placeholder?.endsWith('##')) {
+                    const formKey = placeholder?.slice(2, -2);
+                    fieldValue = formValues[formKey];
+                } else {
+                    fieldValue = placeholder;
+                }
+
+                if (!fieldValue) {
+                    setFieldErrors(prev => ({ ...prev, [key]: `Please fill the required field: ${key}` }));
+                    setFormValues(prev => ({ ...prev, [field.wKey]: '' }));
+                    shouldCallApi = false;
+                } else {
+                    xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+                }
+            });
+        } else if (X_Filter) {
+            let fieldValue;
+            if (X_Filter.startsWith('##') && X_Filter.endsWith('##')) {
+                const formKey = X_Filter.slice(2, -2);
+                fieldValue = formValues[formKey];
+            } else {
+                fieldValue = X_Filter;
+            }
+
+            if (!fieldValue) {
+                setFieldErrors(prev => ({ ...prev, [X_Filter]: `Please fill the required field: ${X_Filter}` }));
+                setFormValues(prev => ({ ...prev, [field.wKey]: '' }));
+                shouldCallApi = false;
+            } else {
+                xFilter = `<${X_Filter}>${fieldValue}</${X_Filter}>`;
+            }
+        }
+
+        if (!shouldCallApi) return;
+
+        const jUi = Object.entries(J_Ui || {}).map(([key, value]) => `"${key}":"${value}"`).join(',');
+        const jApi = Object.entries(J_Api || {}).map(([key, value]) => `"${key}":"${value}"`).join(',');
+
+        const xmlData = `<dsXml>
+            <J_Ui>${jUi}</J_Ui>
+            <Sql>${Sql || ''}</Sql>
+            <X_Filter>${xFilter}</X_Filter>
+            <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+            <J_Api>${jApi}</J_Api>
+        </dsXml>`;
+
+        try {
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            // calling the function to  handle the flags 
+            handleValidationApiResponse(response?.data?.data?.rs0[0]?.Column1, field.wKey);
+        } catch (error) {
+            console.error('Validation API error:', error);
+            setFieldErrors(prev => ({ ...prev, [field.wKey]: 'Validation failed. Please try again.' }));
+            setFormValues(prev => ({ ...prev, [field.wKey]: '' }));
+        }
+    };
+
+
+    // this function is used to show the respected flags according to the response from the API
+    const handleValidationApiResponse = (response, currFieldName) => {
+        if (!response.trim().startsWith("<root>")) {
+            response = `<root>${response}</root>`;  // Wrap in root tag
+        }
+        
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(response, "text/xml");
+
+        // Extract Flag and Message
+        const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
+        const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
+
+        // Extract all other dynamic tags
+        const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
+            (node) => node.tagName !== "Flag" && node.tagName !== "Message"
+        );
+
+        switch (flag) {
+            case 'M':
+                const userConfirmed = window.confirm(message);
+                if (userConfirmed) {
+                    dynamicTags.forEach((tag) => {
+                        const tagName = tag.tagName;
+                        const tagValue = tag.textContent;
+                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                    });
+                }
+                break;
+
+            case 'S':
+                if (message) {
+                    alert(message);
+                }
+                dynamicTags.forEach((tag) => {
+                    const tagName = tag.tagName;
+                    const tagValue = tag.textContent;
+                    setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                });
+                break;
+
+            case 'E':
+                alert(message); // Show error message
+                setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                break;
+
+            default:
+                console.error("Unknown flag received:", flag);
+        }
+    };
+
     const renderFormField = (field: FormField) => {
+        console.log('Rendering field:', field);
         switch (field.type) {
             case 'WDropDownBox':
                 return (
@@ -108,7 +242,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             styles={{
                                 control: (base) => ({
                                     ...base,
-                                    borderColor: colors.textInputBorder,
+                                    borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
                                     backgroundColor: colors.textInputBackground,
                                 }),
                                 singleValue: (base) => ({
@@ -121,7 +255,11 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                     color: state.isFocused ? colors.buttonText : colors.textInputText,
                                 }),
                             }}
+                            onBlur={() => handleBlur(field)}
                         />
+                        {fieldErrors[field.wKey] && (
+                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                        )}
                     </div>
                 );
 
@@ -138,7 +276,16 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             className="w-full px-3 py-1 border rounded-md"
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
+                            style={{
+                                borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                                backgroundColor: colors.textInputBackground,
+                                color: colors.textInputText
+                            }}
+                            onBlur={() => handleBlur(field)}
                         />
+                        {fieldErrors[field.wKey] && (
+                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                        )}
                     </div>
                 );
 
@@ -152,14 +299,18 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             type="text"
                             className="w-full px-3 py-1 border rounded-md"
                             style={{
-                                borderColor: colors.textInputBorder,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
                                 backgroundColor: colors.textInputBackground,
                                 color: colors.textInputText
                             }}
                             value={formValues[field.wKey] || ''}
                             onChange={(e) => handleInputChange(field.wKey, e.target.value)}
+                            onBlur={() => handleBlur(field)}
                             placeholder={field.label}
                         />
+                        {fieldErrors[field.wKey] && (
+                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                        )}
                     </div>
                 );
 
@@ -228,6 +379,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                     dropdownOptions={dropdownOptions}
                     loadingDropdowns={loadingDropdowns}
                     onDropdownChange={onDropdownChange}
+                    fieldErrors={{}} // Pass empty fieldErrors
+                    setFieldErrors={() => {}} // Pass empty setFieldErrors
                 />
             </div>
         </div>
@@ -246,6 +399,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [childFormValues, setChildFormValues] = useState<Record<string, any>>({});
     const [childDropdownOptions, setChildDropdownOptions] = useState<Record<string, any[]>>({});
     const [childLoadingDropdowns, setChildLoadingDropdowns] = useState<Record<string, boolean>>({});
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
@@ -520,6 +674,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         fetchChildEntryData();
     };
 
+    const isFormInvalid = Object.values(fieldErrors).some(error => error);
+
     if (!isOpen) return null;
 
     return (
@@ -546,6 +702,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             dropdownOptions={masterDropdownOptions}
                             loadingDropdowns={masterLoadingDropdowns}
                             onDropdownChange={handleMasterDropdownChange}
+                            fieldErrors={fieldErrors} // Pass fieldErrors
+                            setFieldErrors={setFieldErrors} // Pass setFieldErrors
                         />
 
                         <div className="mt-8">
@@ -553,7 +711,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 <h3 className="text-lg font-semibold">Child Entries</h3>
                                 <button
                                     onClick={handleAddChildEntry}
-                                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                    className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                    disabled={isFormInvalid}
                                 >
                                     <FaPlus /> Add Entry
                                 </button>
