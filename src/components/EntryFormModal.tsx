@@ -85,10 +85,11 @@ const EntryForm: React.FC<EntryFormProps> = ({
     const marginBottom = 'mb-1';
 
     const handleInputChange = (key: string, value: any) => {
-        setFormValues(prev => ({ ...prev, [key]: value }));
+        const formattedValue = value instanceof Date ? moment(value).format('YYYYMMDD') : value;
+        setFormValues(prev => ({ ...prev, [key]: formattedValue }));
         setFieldErrors(prev => ({ ...prev, [key]: '' })); // Clear validation error when field is filled
         if (onDropdownChange) {
-            onDropdownChange(key, value);
+            onDropdownChange(key, formattedValue);
         }
     };
 
@@ -105,8 +106,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
         if (X_Filter_Multiple) {
             Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
                 let fieldValue;
-                if (placeholder?.startsWith('##') && placeholder?.endsWith('##')) {
-                    const formKey = placeholder?.slice(2, -2);
+                if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
+                    const formKey = placeholder.slice(2, -2);
                     fieldValue = formValues[formKey];
                 } else {
                     fieldValue = placeholder;
@@ -174,7 +175,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         if (!response.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;  // Wrap in root tag
         }
-        
+
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
 
@@ -270,7 +271,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             {field.label}
                         </label>
                         <DatePicker
-                            selected={formValues[field.wKey]}
+                            selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
                             className="w-full px-3 py-1 border rounded-md"
@@ -359,6 +360,67 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 }) => {
     if (!isOpen) return null;
 
+    const submitFormData = async (masterValues, childEntries) => {
+        const jTag = { "ActionName": "OffMarketEntry", "Option": "add" };
+
+        const entry = pageData[0].Entry;
+        const childEntry = entry.ChildEntry;
+
+        // Construct J_Ui
+        const jUi = Object.entries(jTag)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        // Construct J_Api
+        const jApi = Object.entries(childEntry.J_Api)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        const createXmlTags = (data) => {
+            return Object.entries(data).map(([key, value]) => {
+                if (Array.isArray(value)) {
+                    return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
+                } else if (typeof value === 'object' && value !== null) {
+                    return `<${key}>${createXmlTags(value)}</${key}>`;
+                } else {
+                    return `<${key}>${value || ''}</${key}>`;
+                }
+            }).join('');
+        };
+
+        const xData = createXmlTags({
+            ...masterValues,
+            items: { item: childEntries },
+            UserId: "ANUJ"
+        });
+
+        const xmlData = `<dsXml>
+            <J_Ui>${jUi}</J_Ui>
+            <X_Filter></X_Filter>
+            <X_Data>${xData}</X_Data>
+            <J_Api>${jApi}</J_Api>
+        </dsXml>`;
+
+        try {
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            if (response.success) {
+                console.log('Form submitted successfully:', response.data);
+            } else {
+                alert(response.message)
+            }
+            alert('Form submitted successfully!');
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Failed to submit the form. Please try again.');
+        }
+    };
+
+
     return (
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
@@ -380,8 +442,21 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                     loadingDropdowns={loadingDropdowns}
                     onDropdownChange={onDropdownChange}
                     fieldErrors={{}} // Pass empty fieldErrors
-                    setFieldErrors={() => {}} // Pass empty setFieldErrors
+                    setFieldErrors={() => { }} // Pass empty setFieldErrors
                 />
+
+        <div className="text-end mt-5">
+                <button
+                    onClick={() => {
+                        console.log('Form Values:', formValues, masterValues) // For debugging purposes
+                        submitFormData(masterValues, formValues)
+                    }
+                    }
+                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
+                >
+                    Submit
+                </button>
+                </div>
             </div>
         </div>
     );
@@ -401,6 +476,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [childLoadingDropdowns, setChildLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+    console.log('Master Form Data:', masterFormValues, childFormValues);
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -580,7 +656,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const initialValues: Record<string, any> = {};
             response.data.data.rs0.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
-                    initialValues[field.wKey] = moment(field.wValue, 'YYYYMMDD').toDate();
+                    initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
             });
             setMasterFormValues(initialValues);
@@ -647,7 +723,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const initialValues: Record<string, any> = {};
             response.data.data.rs0.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
-                    initialValues[field.wKey] = moment(field.wValue, 'YYYYMMDD').toDate();
+                    initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
             });
             setChildFormValues(initialValues);
