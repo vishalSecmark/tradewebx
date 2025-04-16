@@ -140,11 +140,19 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     // Set autoFetch based on pageData
     useEffect(() => {
         if (pageData?.[0]?.autoFetch !== undefined) {
-            setAutoFetch(pageData[0].autoFetch === "true");
+            const newAutoFetch = pageData[0].autoFetch === "true";
+            setAutoFetch(newAutoFetch);
+            // If autoFetch is false, we don't want to fetch data
+            if (!newAutoFetch) {
+                return;
+            }
+            // Only fetch if autoFetch is true
+            fetchData();
         }
     }, [pageData]);
 
     const fetchData = async (currentFilters = filters) => {
+        console.log('fetchData', currentFilters);
         if (!pageData) return;
 
         setIsLoading(true);
@@ -234,6 +242,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     webColumns: parseXmlList(xmlString, 'WebColumns'),
                     headings: parseHeadings(xmlString)
                 };
+
+
 
                 // console.log('Settings JSON:', xmlString);
                 const json = convertXmlToJson(xmlString);
@@ -347,13 +357,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setAreFiltersInitialized(true);
         }
     }, [pageData]);
-
-    // Modified initial data fetch useEffect
-    useEffect(() => {
-        if (pageData && autoFetch) {
-            fetchData();
-        }
-    }, [currentLevel, pageData, areFiltersInitialized, autoFetch]);
 
     if (!pageData) {
         return <div>Loading report data...</div>;
