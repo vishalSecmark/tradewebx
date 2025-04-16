@@ -142,7 +142,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (pageData?.[0]?.autoFetch !== undefined) {
             const newAutoFetch = pageData[0].autoFetch === "true";
             setAutoFetch(newAutoFetch);
-            // If autoFetch is false, we don't want to fetch data
+            // If autoFetch is false, we don't want to fetch data automatically
             if (!newAutoFetch) {
                 return;
             }
@@ -151,8 +151,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }, [pageData]);
 
+    // Add new useEffect to handle level changes and manual fetching
+    useEffect(() => {
+        // If we're in a level > 0, we should always fetch data regardless of autoFetch
+        if (currentLevel > 0) {
+            console.log('Fetching data for level:', currentLevel);
+            fetchData();
+        }
+        // If we're in level 0 and autoFetch is true, fetch data
+        else if (autoFetch) {
+            console.log('Auto-fetching data for level 0');
+            fetchData();
+        }
+    }, [currentLevel, autoFetch]);
+
     const fetchData = async (currentFilters = filters) => {
-        console.log('fetchData', currentFilters);
+        console.log('fetchData called for level:', currentLevel);
+        console.log('AutoFetch value:', autoFetch);
+        console.log('Primary key filters:', primaryKeyFilters);
+
         if (!pageData) return;
 
         setIsLoading(true);
@@ -181,16 +198,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }
 
             // Add primary key filters for levels > 0
-            if (currentLevel > 0) {
+            if (currentLevel > 0 && Object.keys(primaryKeyFilters).length > 0) {
                 Object.entries(primaryKeyFilters).forEach(([key, value]) => {
                     filterXml += `<${key}>${value}</${key}>`;
                 });
             }
 
             console.log('Final filter XML:', filterXml);
-            console.log('Has Filters:', hasFilters);
-            console.log('Filters Initialized:', areFiltersInitialized);
-            console.log('Current Filters:', currentFilters);
+            console.log('Current Level:', currentLevel);
+            console.log('Using J_Ui for level:', currentLevel);
 
             const xmlData = `<dsXml>
                 <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)}</J_Ui>
@@ -243,12 +259,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     headings: parseHeadings(xmlString)
                 };
 
-
-
-                // console.log('Settings JSON:', xmlString);
+                console.log('Settings JSON:', settingsJson);
                 const json = convertXmlToJson(xmlString);
                 setJsonData(json);
-                console.log('Settings JSON:', settingsJson);
                 setRs1Settings(settingsJson);
             }
 
@@ -266,6 +279,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
         console.log('Record clicked:', record);
+        console.log('Current level:', currentLevel);
+        console.log('Total levels:', pageData?.[0].levels.length);
 
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
             // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
@@ -275,6 +290,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             console.log('Primary key:', primaryKey);
             console.log('Record value:', record[primaryKey]);
+            console.log('RS1 Settings:', rs1Settings);
 
             // Set primary key filters based on the clicked record
             setPrimaryKeyFilters(prev => {
@@ -293,14 +309,36 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
+    // Add useEffect to handle data fetching when level changes
+    useEffect(() => {
+        console.log('Level changed to:', currentLevel);
+        console.log('Primary key filters:', primaryKeyFilters);
+
+        // If we have page data, fetch for the current level
+        if (pageData) {
+            // Add a small delay to ensure state updates are complete
+            const timer = setTimeout(() => {
+                fetchData();
+            }, 0);
+
+            return () => clearTimeout(timer);
+        }
+    }, [currentLevel, primaryKeyFilters]);
+
     // Add handleTabClick function
     const handleTabClick = (level: number, index: number) => {
+        console.log('Tab clicked - Level:', level, 'Index:', index);
         const newStack = levelStack.slice(0, index + 1);
         setLevelStack(newStack);
-        setCurrentLevel(level);
+
+        // If going back to first level (index 0), clear primary key filters first
         if (index === 0) {
+            console.log('Clearing primary key filters for first level');
             setPrimaryKeyFilters({});
         }
+
+        // Set the current level after clearing filters
+        setCurrentLevel(level);
     };
 
     // Modified filter change handler
@@ -491,7 +529,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             ...pageData[0].levels[currentLevel].settings,
                             mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                             tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                            webColumns: rs1Settings?.webColumns?.[0] || []
+                            webColumns: rs1Settings?.webColumns?.[0] || [],
+                            // Add level-specific settings
+                            ...(currentLevel > 0 ? {
+                                // Override responsive columns for second level if needed
+                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                webColumns: rs1Settings?.webColumns?.[0] || []
+                            } : {})
                         }}
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
