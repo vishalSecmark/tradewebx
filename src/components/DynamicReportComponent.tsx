@@ -248,6 +248,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 // console.log('Settings JSON:', xmlString);
                 const json = convertXmlToJson(xmlString);
                 setJsonData(json);
+                console.log('Settings JSON:', settingsJson);
                 setRs1Settings(settingsJson);
             }
 
