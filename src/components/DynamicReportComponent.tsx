@@ -37,6 +37,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
+    const [autoFetch, setAutoFetch] = useState<boolean>(true);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -136,8 +137,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return Object.keys(obj).length > 0 ? obj : null;
     }
 
-
-
+    // Set autoFetch based on pageData
+    useEffect(() => {
+        if (pageData?.[0]?.autoFetch !== undefined) {
+            setAutoFetch(pageData[0].autoFetch === "true");
+        }
+    }, [pageData]);
 
     const fetchData = async (currentFilters = filters) => {
         if (!pageData) return;
@@ -247,14 +252,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
-
-
-
-
-
-
-
-
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
         console.log('Record clicked:', record);
@@ -353,12 +350,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     // Modified initial data fetch useEffect
     useEffect(() => {
-        if (pageData && areFiltersInitialized) {
-            // If page has filters, use the initialized filters
-            // If no filters, just fetch the data
+        if (pageData && autoFetch) {
             fetchData();
         }
-    }, [currentLevel, pageData, areFiltersInitialized]); // Added areFiltersInitialized dependency
+    }, [currentLevel, pageData, areFiltersInitialized, autoFetch]);
 
     if (!pageData) {
         return <div>Loading report data...</div>;
@@ -442,7 +437,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 currentSort={sortConfig}
                 onSortChange={setSortConfig}
                 isSortingAllowed={pageData[0].isShortAble !== "false"}
-                onApply={() => { }} // Empty function since we don't need it anymore
+                onApply={() => { }}
             />
 
             {/* Download Modal */}
