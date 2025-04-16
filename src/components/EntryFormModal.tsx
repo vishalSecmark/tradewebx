@@ -15,6 +15,13 @@ interface EntryFormModalProps {
     pageData: any;
 }
 
+interface ApiResponse {
+    success: boolean;
+    message?: string;
+    data?: any;
+}
+
+
 interface FormField {
     Srno: number;
     type: string;
@@ -274,14 +281,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
-                            className="w-full px-3 py-1 border rounded-md"
+                            className={`w-full px-3 py-1 border rounded-md ${fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-300'} bg-${colors.textInputBackground} text-${colors.textInputText}`}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
-                            style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
-                                backgroundColor: colors.textInputBackground,
-                                color: colors.textInputText
-                            }}
                             onBlur={() => handleBlur(field)}
                         />
                         {fieldErrors[field.wKey] && (
@@ -402,16 +404,16 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
         </dsXml>`;
 
         try {
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+            const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
                 headers: {
                     'Content-Type': 'application/xml',
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
-            if (response.success) {
-                console.log('Form submitted successfully:', response.data);
+            if (response?.data?.success) {
+                console.log('Form submitted successfully:', response?.data?.data);
             } else {
-                alert(response.message)
+                alert(response?.data?.message)
             }
             alert('Form submitted successfully!');
         } catch (error) {
