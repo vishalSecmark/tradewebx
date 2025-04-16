@@ -487,7 +487,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     </div>
                     <DataTable
                         data={apiData}
-                        settings={pageData[0].levels[currentLevel].settings}
+                        settings={{
+                            ...pageData[0].levels[currentLevel].settings,
+                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                            webColumns: rs1Settings?.webColumns?.[0] || []
+                        }}
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
                         tableRef={tableRef}
