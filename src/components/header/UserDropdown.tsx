@@ -14,7 +14,7 @@ export default function UserDropdown() {
     e.stopPropagation();
     setIsOpen((prev) => !prev);
   }
-  console.log(userData, 'userData');
+  // console.log(userData, 'userData');
   function closeDropdown() {
     setIsOpen(false);
   }
@@ -26,17 +26,23 @@ export default function UserDropdown() {
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
           <div className="flex items-center justify-center w-full h-full bg-blue-500 text-white rounded-full">
-            {userData.clientName != "undefined" ? userData.clientName.split(' ')
-              .slice(0, 2) // Take first two words
-              .map(word => word[0]) // Get first letter of each word
-              .join('') : userData.userId.split(' ')
-                .slice(0, 2) // Take first two words
-                .map(word => word[0]) // Get first letter of each word
-                .join('')} {/* Join letters together */}
+            {userData?.clientName && userData.clientName !== "undefined"
+              ? userData.clientName.split(' ')
+                .slice(0, 2)
+                .map(word => word[0])
+                .join('')
+              : (userData?.userId || 'U').split(' ')
+                .slice(0, 2)
+                .map(word => word[0])
+                .join('')}
           </div>
         </span>
 
-        <span className="block mr-1 font-medium text-theme-sm">{userData.clientName != "undefined" ? userData.clientName.slice(0, 10) : userData.userId.slice(0, 10)}...</span>
+        <span className="block mr-1 font-medium text-theme-sm">
+          {userData?.clientName && userData.clientName !== "undefined"
+            ? userData.clientName.slice(0, 10)
+            : (userData?.userId || 'User').slice(0, 10)}...
+        </span>
 
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
@@ -64,10 +70,12 @@ export default function UserDropdown() {
       >
         <div>
           <span className="block font-medium text-gray-700 text-theme-sm dark:text-gray-400">
-            {userData.clientName === "undefined" ? userData.userId : userData.clientName}
+            {userData?.clientName && userData.clientName !== "undefined"
+              ? userData.clientName
+              : userData?.userId || 'User'}
           </span>
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
-            {userData.userId}
+            {userData?.userId || 'User ID'}
           </span>
         </div>
 
