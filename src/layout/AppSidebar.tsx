@@ -83,7 +83,7 @@ const AppSidebar: React.FC = () => {
     title: "text-xl font-bold",
     menuHeader: "text-xs uppercase leading-[20px]",
     menuItem: "text-sm font-medium",
-    submenuItem: "text-xs font-normal",
+    submenuItem: "text-xs font-bold",
     badge: "text-xs font-semibold",
   };
 
