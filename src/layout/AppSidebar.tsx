@@ -161,9 +161,10 @@ const AppSidebar: React.FC = () => {
       const currentPath = parentPath ? `${parentPath}-${index}` : `${index}`;
       const hasSubItems = item.subItems && item.subItems.length > 0;
       const isOpen = openSubmenus[currentPath];
+      const uniqueKey = `${item.name}-${item.path || ''}-${currentPath}`;
 
       return (
-        <li key={item.name} className="relative">
+        <li key={uniqueKey} className="relative">
           {hasSubItems ? (
             <div className="w-full">
               <button
@@ -222,9 +223,10 @@ const AppSidebar: React.FC = () => {
       {navItemsFromApi.map((nav, index) => {
         const currentPath = `${index}`;
         const isOpen = openSubmenus[currentPath];
+        const uniqueKey = `${nav.name}-${nav.path || ''}-${currentPath}`;
 
         return (
-          <li key={nav.name} className="relative">
+          <li key={uniqueKey} className="relative">
             {nav.subItems ? (
               <div className="w-full">
                 <button
