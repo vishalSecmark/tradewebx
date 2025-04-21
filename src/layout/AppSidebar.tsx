@@ -186,21 +186,11 @@ const AppSidebar: React.FC = () => {
                 ref={(el) => {
                   if (el) {
                     subMenuRefs.current[currentPath] = el;
-                    if (isOpen) {
-                      requestAnimationFrame(() => {
-                        const height = el.scrollHeight;
-                        el.style.height = `${height}px`;
-                      });
-                    } else {
-                      el.style.height = '0px';
-                    }
                   }
                 }}
-                className="overflow-hidden transition-all duration-300"
+                className="overflow-hidden"
                 style={{
-                  height: isOpen ? 'auto' : '0px',
-                  opacity: isOpen ? 1 : 0,
-                  visibility: isOpen ? 'visible' : 'hidden',
+                  display: isOpen ? 'block' : 'none',
                   paddingLeft: '1rem'
                 }}
               >
@@ -269,21 +259,11 @@ const AppSidebar: React.FC = () => {
                     ref={(el) => {
                       if (el) {
                         subMenuRefs.current[currentPath] = el;
-                        if (isOpen) {
-                          requestAnimationFrame(() => {
-                            const height = el.scrollHeight;
-                            el.style.height = `${height}px`;
-                          });
-                        } else {
-                          el.style.height = '0px';
-                        }
                       }
                     }}
-                    className="overflow-hidden transition-all duration-300"
+                    className="overflow-hidden"
                     style={{
-                      height: isOpen ? 'auto' : '0px',
-                      opacity: isOpen ? 1 : 0,
-                      visibility: isOpen ? 'visible' : 'hidden',
+                      display: isOpen ? 'block' : 'none',
                       paddingLeft: '1rem'
                     }}
                   >
@@ -324,7 +304,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 h-screen transition-all duration-300 ease-in-out z-50
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 h-screen z-50
         ${isExpanded || isMobileOpen
           ? "w-[290px]"
           : isHovered
