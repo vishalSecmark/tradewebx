@@ -229,47 +229,73 @@ const EntryForm: React.FC<EntryFormProps> = ({
     };
 
     const renderFormField = (field: FormField) => {
-        console.log('Rendering field:', field);
         switch (field.type) {
             case 'WDropDownBox':
+                const options = dropdownOptions[field.wKey] || [];
+                const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
+                const [searchText, setSearchText] = useState('');
+              
+                useEffect(() => {
+                  const filtered = options.filter(opt =>
+                    opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
+                    opt.value.toLowerCase().includes(searchText.toLowerCase())
+                  );
+              
+                  setVisibleOptions(filtered.slice(0, 50));
+                }, [searchText, options]);
+              
                 return (
-                    <div key={field.Srno} className={marginBottom}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
-                            {field.label}
-                        </label>
-                        <Select
-                            options={dropdownOptions[field.wKey] || []}
-                            value={dropdownOptions[field.wKey]?.find(
-                                (opt: any) => opt.value === formValues[field.wKey]
-                            )}
-                            onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
-                            isLoading={loadingDropdowns[field.wKey]}
-                            placeholder="Select..."
-                            className="react-select-container"
-                            classNamePrefix="react-select"
-                            styles={{
-                                control: (base) => ({
-                                    ...base,
-                                    borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
-                                    backgroundColor: colors.textInputBackground,
-                                }),
-                                singleValue: (base) => ({
-                                    ...base,
-                                    color: colors.textInputText,
-                                }),
-                                option: (base, state) => ({
-                                    ...base,
-                                    backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
-                                    color: state.isFocused ? colors.buttonText : colors.textInputText,
-                                }),
-                            }}
+                  <div key={field.Srno} className={marginBottom}>
+                    <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                      {field.label}
+                    </label>
+                    <Select
+                      options={visibleOptions}
+                      value={options.find((opt: any) => opt.value === formValues[field.wKey])}
+                      onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
+                      onInputChange={(inputValue, { action }) => {
+                        if (action === 'input-change') setSearchText(inputValue);
+                        return inputValue;
+                      }}
+                      placeholder="Select..."
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      isLoading={loadingDropdowns[field.wKey]}
+                      filterOption={() => true} // disables react-select internal filter
+                      onMenuScrollToBottom={() => {
+                        const filtered = options.filter(opt =>
+                          opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
+                          opt.value.toLowerCase().includes(searchText.toLowerCase())
+                        );
+                        const next = filtered.slice(visibleOptions.length, visibleOptions.length + 50);
+                        if (next.length) {
+                          setVisibleOptions(prev => [...prev, ...next]);
+                        }
+                      }}
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                          backgroundColor: colors.textInputBackground,
+                        }),
+                        singleValue: (base) => ({
+                          ...base,
+                          color: colors.textInputText,
+                        }),
+                        option: (base, state) => ({
+                          ...base,
+                          backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
+                          color: state.isFocused ? colors.buttonText : colors.textInputText,
+                        }),
+                      }}
                             onBlur={() => handleBlur(field)}
-                        />
-                        {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-                        )}
-                    </div>
+                    />
+                    {fieldErrors[field.wKey] && (
+                      <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                    )}
+                  </div>
                 );
+              
 
             case 'WDateBox':
                 return (
