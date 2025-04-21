@@ -8,7 +8,7 @@ import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
-import DataTable, { exportTableToCsv } from './DataTable';
+import DataTable, { exportTableToCsv, exportTableToPdf } from './DataTable';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import EntryFormModal from './EntryFormModal';
@@ -39,6 +39,7 @@ const DynamicEntryComponent: React.FC<DynamicEntryComponentProps> = ({ component
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+    const [autoFetch, setAutoFetch] = useState<boolean>(true);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -353,14 +354,19 @@ const DynamicEntryComponent: React.FC<DynamicEntryComponentProps> = ({ component
         }
     }, [pageData]);
 
-    // Modified initial data fetch useEffect
+    // Set autoFetch based on pageData
     useEffect(() => {
-        if (pageData && areFiltersInitialized) {
-            // If page has filters, use the initialized filters
-            // If no filters, just fetch the data
+        if (pageData?.[0]?.autoFetch !== undefined) {
+            const newAutoFetch = pageData[0].autoFetch === "true";
+            setAutoFetch(newAutoFetch);
+            // If autoFetch is false, we don't want to fetch data
+            if (!newAutoFetch) {
+                return;
+            }
+            // Only fetch if autoFetch is true
             fetchData();
         }
-    }, [currentLevel, pageData, areFiltersInitialized]); // Added areFiltersInitialized dependency
+    }, [pageData]);
 
     if (!pageData) {
         return <div>Loading report data...</div>;
@@ -408,13 +414,13 @@ const DynamicEntryComponent: React.FC<DynamicEntryComponentProps> = ({ component
                         >
                             <FaFileCsv size={20} />
                         </button>
-                        {/* <button
+                        <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current,jsonData,appMetadata,apiData)}
+                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData)}
                             style={{ color: colors.text }}
                         >
                             <FaFilePdf size={20} />
-                        </button> */}
+                        </button>
 
                         <button
                             className="p-2 rounded"

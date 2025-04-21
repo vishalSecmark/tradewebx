@@ -11,6 +11,7 @@ import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf } from './DataTable';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
+import { useSearchParams } from 'next/navigation';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -20,6 +21,8 @@ interface DynamicReportComponentProps {
 
 const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ componentName }) => {
     const menuItems = useAppSelector(selectAllMenuItems);
+    const searchParams = useSearchParams();
+    const clientCode = searchParams.get('clientCode');
     const [currentLevel, setCurrentLevel] = useState(0);
     const [apiData, setApiData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +40,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
+    const [autoFetch, setAutoFetch] = useState<boolean>(true);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -136,178 +140,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return Object.keys(obj).length > 0 ? obj : null;
     }
 
-
-
-
-    const fetchData = async (currentFilters = filters) => {
-        if (!pageData) return;
-
-        setIsLoading(true);
-        const startTime = performance.now();
-
-        try {
-            let filterXml = '';
-
-            // Check if page has filters and if filters are initialized
-            const hasFilters = pageData[0]?.filters?.length > 0;
-
-            // Only process filters if the page has filter configuration and filters are initialized
-            if (hasFilters && areFiltersInitialized) {
-                Object.entries(currentFilters).forEach(([key, value]) => {
-                    if (value === undefined || value === null || value === '') {
-                        return;
-                    }
-
-                    if (value instanceof Date || moment.isMoment(value)) {
-                        const formattedDate = moment(value).format('YYYYMMDD');
-                        filterXml += `<${key}>${formattedDate}</${key}>`;
-                    } else {
-                        filterXml += `<${key}>${value}</${key}>`;
-                    }
-                });
-            }
-
-            // Add primary key filters for levels > 0
-            if (currentLevel > 0) {
-                Object.entries(primaryKeyFilters).forEach(([key, value]) => {
-                    filterXml += `<${key}>${value}</${key}>`;
-                });
-            }
-
-            console.log('Final filter XML:', filterXml);
-            console.log('Has Filters:', hasFilters);
-            console.log('Filters Initialized:', areFiltersInitialized);
-            console.log('Current Filters:', currentFilters);
-
-            const xmlData = `<dsXml>
-                <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)}</J_Ui>
-                <Sql>${pageData[0].Sql || ''}</Sql>
-                <X_Filter>${filterXml}</X_Filter>
-                <X_GFilter></X_GFilter>
-                <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
-            </dsXml>`;
-
-            console.log('Request XML:', xmlData);
-
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 600000
-            });
-
-            const endTime = performance.now();
-            setApiResponseTime(Math.round(endTime - startTime));
-
-            console.log('API Response:', response.data);
-            setApiData(response.data.data.rs0);
-
-            // Parse RS1 Settings if available
-            if (response.data.data.rs1?.[0]?.Settings) {
-                const xmlString = response.data.data.rs1[0].Settings;
-                const settingsJson = {
-                    totalList: parseXmlList(xmlString, 'TotalList'),
-                    rightList: parseXmlList(xmlString, 'RightList'),
-                    hideList: parseXmlList(xmlString, 'HideList'),
-                    dateFormat: parseXmlValue(xmlString, 'DateFormat'),
-                    dateFormatList: parseXmlList(xmlString, 'DateFormatList'),
-                    dec2List: parseXmlList(xmlString, 'Dec2List'),
-                    dec4List: parseXmlList(xmlString, 'Dec4List'),
-                    drCRColorList: parseXmlList(xmlString, 'DrCRColorList'),
-                    pnLColorList: parseXmlList(xmlString, 'PnLColorList'),
-                    primaryKey: parseXmlValue(xmlString, 'PrimaryKey'),
-                    companyName: parseXmlValue(xmlString, 'CompanyName'),
-                    companyAdd1: parseXmlValue(xmlString, 'CompanyAdd1'),
-                    companyAdd2: parseXmlValue(xmlString, 'CompanyAdd2'),
-                    companyAdd3: parseXmlValue(xmlString, 'CompanyAdd3'),
-                    reportHeader: parseXmlValue(xmlString, 'ReportHeader'),
-                    pdfWidth: parseXmlValue(xmlString, 'PDFWidth'),
-                    pdfHeight: parseXmlValue(xmlString, 'PDFHeight'),
-                    mobileColumns: parseXmlList(xmlString, 'MobileColumns'),
-                    tabletColumns: parseXmlList(xmlString, 'TabletColumns'),
-                    webColumns: parseXmlList(xmlString, 'WebColumns'),
-                    headings: parseHeadings(xmlString)
-                };
-
-                // console.log('Settings JSON:', xmlString);
-                const json = convertXmlToJson(xmlString);
-                setJsonData(json);
-                setRs1Settings(settingsJson);
-            }
-
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            if (error.response?.data) {
-                console.error('Error response data:', error.response.data);
-            }
-            setApiResponseTime(undefined);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-
-
-
-
-
-
-
-
-    // Modify handleRecordClick
-    const handleRecordClick = (record: any) => {
-        console.log('Record clicked:', record);
-
-        if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
-            // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
-            const primaryKey = pageData[0].levels[currentLevel].primaryHeaderKey ||
-                rs1Settings?.primaryKey ||
-                'id';
-
-            console.log('Primary key:', primaryKey);
-            console.log('Record value:', record[primaryKey]);
-
-            // Set primary key filters based on the clicked record
-            setPrimaryKeyFilters(prev => {
-                const newFilters = {
-                    ...prev,
-                    [primaryKey]: record[primaryKey]
-                };
-                console.log('New primary key filters:', newFilters);
-                return newFilters;
-            });
-
-            // Update level stack and current level
-            const nextLevel = currentLevel + 1;
-            setLevelStack([...levelStack, nextLevel]);
-            setCurrentLevel(nextLevel);
-        }
-    };
-
-    // Add handleTabClick function
-    const handleTabClick = (level: number, index: number) => {
-        const newStack = levelStack.slice(0, index + 1);
-        setLevelStack(newStack);
-        setCurrentLevel(level);
-        if (index === 0) {
-            setPrimaryKeyFilters({});
-        }
-    };
-
-    // Modified filter change handler
-    const handleFilterChange = (newFilters: Record<string, any>) => {
-        console.log('New filters received from modal:', newFilters);
-        setFilters(newFilters);
-        fetchData(newFilters); // Call API with new filters
-    };
-
-    const handleDownloadFilterChange = (newFilters: Record<string, any>) => {
-        if (JSON.stringify(downloadFilters) !== JSON.stringify(newFilters)) {
-            setDownloadFilters(newFilters);
-        }
-    };
-
     // Modified filter initialization useEffect
     useEffect(() => {
         if (pageData?.[0]?.filters?.length > 0) {
@@ -342,23 +174,224 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 });
             });
 
-            console.log('Setting default filters:', defaultFilters);
+            // Add client code to filters if present in query params
+            if (clientCode) {
+                defaultFilters['ClientCode'] = clientCode;
+            }
+
+            // console.log('Setting default filters:', defaultFilters);
             setFilters(defaultFilters);
             setAreFiltersInitialized(true);
         } else {
             // No filters needed, mark as initialized
             setAreFiltersInitialized(true);
         }
-    }, [pageData]);
+    }, [pageData, clientCode]);
 
-    // Modified initial data fetch useEffect
+    // Set autoFetch based on pageData and clientCode
     useEffect(() => {
-        if (pageData && areFiltersInitialized) {
-            // If page has filters, use the initialized filters
-            // If no filters, just fetch the data
+        if (pageData?.[0]?.autoFetch !== undefined) {
+            const newAutoFetch = pageData[0].autoFetch === "true" || clientCode !== null;
+            setAutoFetch(newAutoFetch);
+
+            // If we have a client code, we want to fetch data regardless of autoFetch setting
+            if (clientCode) {
+                fetchData();
+            } else if (!newAutoFetch) {
+                return;
+            }
             fetchData();
         }
-    }, [currentLevel, pageData, areFiltersInitialized]); // Added areFiltersInitialized dependency
+    }, [pageData, clientCode]);
+
+    // Add new useEffect to handle level changes and manual fetching
+    useEffect(() => {
+        // If we're in a level > 0, we should always fetch data regardless of autoFetch
+        if (pageLoaded) {
+            if (currentLevel > 0) {
+                console.log('Fetching data for level:', currentLevel);
+                fetchData();
+            }
+            // If we're in level 0 and autoFetch is true, fetch data
+            else if (autoFetch) {
+                console.log('Auto-fetching data for level 0');
+                fetchData();
+            }
+        }
+    }, [currentLevel, autoFetch]);
+
+    const fetchData = async (currentFilters = filters) => {
+        if (!pageData) return;
+
+        setIsLoading(true);
+        const startTime = performance.now();
+
+        try {
+            let filterXml = '';
+
+            // Always include client code in filters if present in URL
+            if (clientCode) {
+                filterXml += `<ClientCode>${clientCode}</ClientCode>`;
+            }
+
+            // Check if page has filters and if filters are initialized
+            const hasFilters = pageData[0]?.filters?.length > 0;
+
+            // Only process filters if the page has filter configuration and filters are initialized
+            if (hasFilters && areFiltersInitialized) {
+                Object.entries(currentFilters).forEach(([key, value]) => {
+                    if (value === undefined || value === null || value === '') {
+                        return;
+                    }
+
+                    if (value instanceof Date || moment.isMoment(value)) {
+                        const formattedDate = moment(value).format('YYYYMMDD');
+                        filterXml += `<${key}>${formattedDate}</${key}>`;
+                    } else {
+                        filterXml += `<${key}>${value}</${key}>`;
+                    }
+                });
+            }
+
+            // Add primary key filters for levels > 0
+            if (currentLevel > 0 && Object.keys(primaryKeyFilters).length > 0) {
+                Object.entries(primaryKeyFilters).forEach(([key, value]) => {
+                    filterXml += `<${key}>${value}</${key}>`;
+                });
+            }
+
+            const xmlData = `<dsXml>
+                <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)}</J_Ui>
+                <Sql>${pageData[0].Sql || ''}</Sql>
+                <X_Filter>${filterXml}</X_Filter>
+                <X_GFilter></X_GFilter>
+                <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                },
+                timeout: 600000
+            });
+
+            const endTime = performance.now();
+            setApiResponseTime(Math.round(endTime - startTime));
+
+            setApiData(response.data.data.rs0);
+
+            // Parse RS1 Settings if available
+            if (response.data.data.rs1?.[0]?.Settings) {
+                const xmlString = response.data.data.rs1[0].Settings;
+                const settingsJson = {
+                    totalList: parseXmlList(xmlString, 'TotalList'),
+                    rightList: parseXmlList(xmlString, 'RightList'),
+                    hideList: parseXmlList(xmlString, 'HideList'),
+                    dateFormat: parseXmlValue(xmlString, 'DateFormat'),
+                    dateFormatList: parseXmlList(xmlString, 'DateFormatList'),
+                    dec2List: parseXmlList(xmlString, 'Dec2List'),
+                    dec4List: parseXmlList(xmlString, 'Dec4List'),
+                    drCRColorList: parseXmlList(xmlString, 'DrCRColorList'),
+                    pnLColorList: parseXmlList(xmlString, 'PnLColorList'),
+                    primaryKey: parseXmlValue(xmlString, 'PrimaryKey'),
+                    companyName: parseXmlValue(xmlString, 'CompanyName'),
+                    companyAdd1: parseXmlValue(xmlString, 'CompanyAdd1'),
+                    companyAdd2: parseXmlValue(xmlString, 'CompanyAdd2'),
+                    companyAdd3: parseXmlValue(xmlString, 'CompanyAdd3'),
+                    reportHeader: parseXmlValue(xmlString, 'ReportHeader'),
+                    pdfWidth: parseXmlValue(xmlString, 'PDFWidth'),
+                    pdfHeight: parseXmlValue(xmlString, 'PDFHeight'),
+                    mobileColumns: parseXmlList(xmlString, 'MobileColumns'),
+                    tabletColumns: parseXmlList(xmlString, 'TabletColumns'),
+                    webColumns: parseXmlList(xmlString, 'WebColumns'),
+                    headings: parseHeadings(xmlString)
+                };
+
+                const json = convertXmlToJson(xmlString);
+                setJsonData(json);
+                setRs1Settings(settingsJson);
+            }
+
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            if (error.response?.data) {
+                console.error('Error response data:', error.response.data);
+            }
+            setApiResponseTime(undefined);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Modify handleRecordClick
+    const handleRecordClick = (record: any) => {
+        if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
+            // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
+            const primaryKey = pageData[0].levels[currentLevel].primaryHeaderKey ||
+                rs1Settings?.primaryKey ||
+                'id';
+
+            // Set primary key filters based on the clicked record
+            setPrimaryKeyFilters(prev => {
+                const newFilters = {
+                    ...prev,
+                    [primaryKey]: record[primaryKey]
+                };
+                return newFilters;
+            });
+
+            // Update level stack and current level
+            const nextLevel = currentLevel + 1;
+            setLevelStack([...levelStack, nextLevel]);
+            setCurrentLevel(nextLevel);
+        }
+    };
+    const [pageLoaded, setPageLoaded] = useState(false);
+    // Add useEffect to handle data fetching when level changes
+    useEffect(() => {
+        // If we have page data, fetch for the current level
+        if (pageData && pageLoaded) {
+            // Add a small delay to ensure state updates are complete
+            const timer = setTimeout(() => {
+                fetchData();
+            }, 0);
+
+            return () => clearTimeout(timer);
+        }
+
+        setTimeout(() => {
+            setPageLoaded(true);
+        }, 1000);
+    }, [currentLevel, primaryKeyFilters]);
+
+    // Add handleTabClick function
+    const handleTabClick = (level: number, index: number) => {
+        const newStack = levelStack.slice(0, index + 1);
+        setLevelStack(newStack);
+
+        // If going back to first level (index 0), clear primary key filters first
+        if (index === 0) {
+            setPrimaryKeyFilters({});
+        }
+
+        // Set the current level after clearing filters
+        setCurrentLevel(level);
+    };
+
+    // Modified filter change handler
+    const handleFilterChange = (newFilters: Record<string, any>) => {
+        setFilters(newFilters);
+        if (pageLoaded) {
+            fetchData(newFilters); // Call API with new filters
+        }
+    };
+
+    const handleDownloadFilterChange = (newFilters: Record<string, any>) => {
+        if (JSON.stringify(downloadFilters) !== JSON.stringify(newFilters)) {
+            setDownloadFilters(newFilters);
+        }
+    };
 
     if (!pageData) {
         return <div>Loading report data...</div>;
@@ -442,7 +475,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 currentSort={sortConfig}
                 onSortChange={setSortConfig}
                 isSortingAllowed={pageData[0].isShortAble !== "false"}
-                onApply={() => { }} // Empty function since we don't need it anymore
+                onApply={() => { }}
             />
 
             {/* Download Modal */}
@@ -488,7 +521,19 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     </div>
                     <DataTable
                         data={apiData}
-                        settings={pageData[0].levels[currentLevel].settings}
+                        settings={{
+                            ...pageData[0].levels[currentLevel].settings,
+                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                            webColumns: rs1Settings?.webColumns?.[0] || [],
+                            // Add level-specific settings
+                            ...(currentLevel > 0 ? {
+                                // Override responsive columns for second level if needed
+                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                webColumns: rs1Settings?.webColumns?.[0] || []
+                            } : {})
+                        }}
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
                         tableRef={tableRef}
