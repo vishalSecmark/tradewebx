@@ -7,6 +7,9 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { Provider } from 'react-redux';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 const appMetadata = (() => {
   try {
     return JSON.parse(localStorage.getItem(APP_METADATA_KEY))
@@ -38,7 +41,10 @@ export default function RootLayout({
       <body className={`${outfit.variable} dark:bg-gray-900`}>
         <Provider store={store}>
           <ThemeProvider>
-            <SidebarProvider>{children}</SidebarProvider>
+            <SidebarProvider>
+              {children}
+              <ToastContainer />
+            </SidebarProvider>
           </ThemeProvider>
         </Provider>
       </body>
