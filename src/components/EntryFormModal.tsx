@@ -259,7 +259,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     );
 
                     setVisibleOptions(filtered.slice(0, 50));
-                }, [searchText]);
+                }, [searchText,options]);
 
                 return (
                     <div key={field.Srno} className={marginBottom}>
