@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setFinalAuthData, setError as setAuthError } from '@/redux/features/authSlice';
-import { BASE_URL, OTP_VERIFICATION_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
 
 import Image from "next/image";
@@ -28,7 +28,7 @@ export default function OTPVerificationForm() {
     setError("");
 
     const xmlData = `<dsXml>
-      <J_Ui>"ActionName":"TradeWeb", "Option":"Verify2FA","Level":1, "RequestFrom":"M"</J_Ui>
+      <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Verify2FA","Level":1, "RequestFrom":"M"</J_Ui>
       <Sql/>
       <X_Data>
           <OTP>${otp}</OTP>
