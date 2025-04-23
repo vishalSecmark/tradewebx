@@ -83,6 +83,105 @@ interface ChildEntryModalProps {
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
 
+const DropdownField: React.FC<{
+    field: FormField;
+    formValues: Record<string, any>;
+    setFormValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    dropdownOptions: Record<string, any[]>;
+    loadingDropdowns: Record<string, boolean>;
+    fieldErrors: Record<string, string>;
+    setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    colors: any;
+    handleBlur: (field: FormField) => void;
+    isDisabled: boolean;
+}> = ({
+    field,
+    formValues,
+    setFormValues,
+    dropdownOptions,
+    loadingDropdowns,
+    fieldErrors,
+    setFieldErrors,
+    colors,
+    handleBlur,
+    isDisabled
+}) => {
+    const options = dropdownOptions[field.wKey] || [];
+    const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
+    const [searchText, setSearchText] = useState('');
+
+    useEffect(() => {
+        if (options.length > 0) {
+            const filtered = options.filter(opt =>
+                opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
+                opt.value.toLowerCase().includes(searchText.toLowerCase())
+            );
+            setVisibleOptions(filtered.slice(0, 50));
+        }
+    }, [searchText, options]);
+
+    const handleInputChange = (key: string, value: any) => {
+        setFormValues(prev => ({ ...prev, [key]: value }));
+        setFieldErrors(prev => ({ ...prev, [key]: '' }));
+    };
+
+    const onMenuScrollToBottom = (field: FormField) => {
+        const options = dropdownOptions[field.wKey] || [];
+        const currentLength = visibleOptions.length;
+    
+        if (currentLength < options.length) {
+            const additionalOptions = options.slice(currentLength, currentLength + 50);
+            setVisibleOptions(prev => [...prev, ...additionalOptions]);
+        }
+    };
+
+    return (
+        <div key={field.Srno} className="mb-1">
+            <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                {field.label}
+            </label>
+            <Select
+                options={visibleOptions}
+                value={options.find((opt: any) => opt.value === formValues[field.wKey])}
+                onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
+                onInputChange={(inputValue, { action }) => {
+                    if (action === 'input-change') setSearchText(inputValue);
+                    return inputValue;
+                }}
+                onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
+                placeholder="Select..."
+                className="react-select-container"
+                classNamePrefix="react-select"
+                isLoading={loadingDropdowns[field.wKey]}
+                filterOption={() => true}
+                isDisabled={isDisabled}
+                styles={{
+                    control: (base) => ({
+                        ...base,
+                        borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                        backgroundColor: colors.textInputBackground,
+                    }),
+                    singleValue: (base) => ({
+                        ...base,
+                        color: colors.textInputText,
+                    }),
+                    option: (base, state) => ({
+                        ...base,
+                        backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
+                        color: state.isFocused ? colors.buttonText : colors.textInputText,
+                    }),
+                }}
+                onBlur={() => {
+                    handleBlur(field);
+                }}
+            />
+            {fieldErrors[field.wKey] && (
+                <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+            )}
+        </div>
+    );
+};
+
 const EntryForm: React.FC<EntryFormProps> = ({
     formData,
     formValues,
@@ -180,9 +279,11 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
-
             // calling the function to  handle the flags 
-            handleValidationApiResponse(response?.data?.data?.rs0[0]?.Column1, field.wKey);
+            let columnData = response?.data?.data?.rs0[0]?.Column1
+            if(columnData){
+                handleValidationApiResponse(columnData, field.wKey);
+            }
         } catch (error) {
             console.error('Validation API error:', error);
             // setFieldErrors(prev => ({ ...prev, [field.wKey]: 'Validation failed. Please try again.' }));
@@ -193,7 +294,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     // this function is used to show the respected flags according to the response from the API
     const handleValidationApiResponse = (response, currFieldName) => {
-        if (!response.trim().startsWith("<root>")) {
+        console.log("Validation API Response:", response,currFieldName);
+        if (!response?.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;  // Wrap in root tag
         }
 
@@ -248,74 +350,21 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
         switch (field.type) {
             case 'WDropDownBox':
-                const options = dropdownOptions[field.wKey] || [];
-                const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
-                const [searchText, setSearchText] = useState('');
-
-                useEffect(() => {
-                    const filtered = options.filter(opt =>
-                        opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
-                        opt.value.toLowerCase().includes(searchText.toLowerCase())
-                    );
-
-                    setVisibleOptions(filtered.slice(0, 50));
-                }, [searchText,options]);
-
                 return (
-                    <div key={field.Srno} className={marginBottom}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
-                            {field.label}
-                        </label>
-                        <Select
-                            options={visibleOptions}
-                            value={options.find((opt: any) => opt.value === formValues[field.wKey])}
-                            onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
-                            onInputChange={(inputValue, { action }) => {
-                                if (action === 'input-change') setSearchText(inputValue);
-                                return inputValue;
-                            }}
-                            placeholder="Select..."
-                            className="react-select-container"
-                            classNamePrefix="react-select"
-                            isLoading={loadingDropdowns[field.wKey]}
-                            filterOption={() => true} // disables react-select internal filter
-                            onMenuScrollToBottom={() => {
-                                const filtered = options.filter(opt =>
-                                    opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
-                                    opt.value.toLowerCase().includes(searchText.toLowerCase())
-                                );
-                                const next = filtered.slice(visibleOptions.length, visibleOptions.length + 50);
-                                if (next.length) {
-                                    setVisibleOptions(prev => [...prev, ...next]);
-                                }
-                            }}
-                            styles={{
-                                control: (base) => ({
-                                    ...base,
-                                    borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
-                                    backgroundColor: colors.textInputBackground,
-                                }),
-                                singleValue: (base) => ({
-                                    ...base,
-                                    color: colors.textInputText,
-                                }),
-                                option: (base, state) => ({
-                                    ...base,
-                                    backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
-                                    color: state.isFocused ? colors.buttonText : colors.textInputText,
-                                }),
-                            }}
-                            onBlur={() => {
-                                handleBlur(field)
-                            }}
-                            isDisabled={!isEnabled}
-                        />
-                        {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-                        )}
-                    </div>
+                    <DropdownField
+                        key={field.Srno}
+                        field={field}
+                        formValues={formValues}
+                        setFormValues={setFormValues}
+                        dropdownOptions={dropdownOptions}
+                        loadingDropdowns={loadingDropdowns}
+                        fieldErrors={fieldErrors}
+                        setFieldErrors={setFieldErrors}
+                        colors={colors}
+                        handleBlur={() => handleBlur(field)}
+                        isDisabled={!isEnabled}
+                    />
                 );
-
 
             case 'WDateBox':
                 return (
