@@ -66,6 +66,7 @@ interface EntryFormProps {
     onDropdownChange?: (key: string, value: any) => void;
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    setFormData : React.Dispatch<React.SetStateAction<Record<string, any>>>;
 }
 
 interface ChildEntryModalProps {
@@ -81,6 +82,7 @@ interface ChildEntryModalProps {
     onDropdownChange?: (key: string, value: any) => void;
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    setFormData:React.Dispatch<React.SetStateAction<Record<string, any>>>;
 }
 
 const DropdownField: React.FC<{
@@ -142,7 +144,7 @@ const DropdownField: React.FC<{
             </label>
             <Select
                 options={visibleOptions}
-                value={options.find((opt: any) => opt.value === formValues[field.wKey])}
+                value={options.find((opt: any) => opt.value === formValues[field.wKey]) || null}
                 onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
                 onInputChange={(inputValue, { action }) => {
                     if (action === 'input-change') setSearchText(inputValue);
@@ -191,7 +193,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
     onDropdownChange,
     fieldErrors,
     setFieldErrors,
-    masterValues
+    masterValues,
+    setFormData
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -310,7 +313,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
             (node) => node.tagName !== "Flag" && node.tagName !== "Message"
         );
-
+        console.log("check flag:", flag);
         switch (flag) {
             case 'M':
                 const userConfirmed = window.confirm(message);
@@ -338,6 +341,26 @@ const EntryForm: React.FC<EntryFormProps> = ({
             case 'E':
                 alert(message); // Show error message
                 setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                break;
+
+            case 'D':
+                console.log("Dynamic Tags:", dynamicTags);
+                dynamicTags.forEach((tag) => {
+                    const tagName = tag.tagName;
+                    const tagValue = tag.textContent;
+                
+                    // Update FieldEnabledTag based on the tag value
+                    const isDisabled = tagValue.toLowerCase() === 'false';
+                    const updatedFormData = formData.map(field => {
+                        if (field.wKey === tagName) {
+                            return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
+                        }
+                        return field;
+                    });
+                    console.log("isDisabled", isDisabled, tagName,updatedFormData);
+                    setFormData(updatedFormData);
+                    
+                });
                 break;
 
             default:
@@ -465,7 +488,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     loadingDropdowns,
     onDropdownChange,
     fieldErrors,
-    setFieldErrors
+    setFieldErrors,
+    setFormData
 }) => {
     if (!isOpen) return null;
 
@@ -553,6 +577,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                     onDropdownChange={onDropdownChange}
                     fieldErrors={fieldErrors}
                     setFieldErrors={setFieldErrors}
+                    setFormData={setFormData}
                 />
 
                 <div className="text-end mt-5">
@@ -890,6 +915,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             fieldErrors={fieldErrors} // Pass fieldErrors
                             setFieldErrors={setFieldErrors} // Pass setFieldErrors
                             masterValues={masterFormValues}
+                            setFormData={setMasterFormData}
                         />
 
                         <div className="mt-8">
@@ -949,6 +975,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     onDropdownChange={handleChildDropdownChange}
                     fieldErrors={fieldErrors} // Pass fieldErrors
                     setFieldErrors={setFieldErrors} // Pass setFieldErrors
+                    setFormData={setChildFormData} 
                 />
             )}
         </div>
