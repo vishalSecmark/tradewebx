@@ -214,11 +214,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           } catch (error) {
             console.error('Error parsing font settings:', error);
             console.log('Invalid JSON:', response.data.data.rs1[0].LevelSetting1);
-            try {
-              JSON.parse(response.data.data.rs1[0].LevelSetting1); // Validate JSON
-            } catch (validationError) {
-              console.error('Validation Error: Invalid JSON format.', validationError);
-            }
             // Continue using default or previously saved font settings
           }
         }
