@@ -7,13 +7,14 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/otp-verification');
 
   // If user is not authenticated and trying to access protected route
+  console.log("pathname", request.nextUrl.pathname);
   if (!authToken && !isAuthPage) {
-    return NextResponse.redirect(new URL('/signin', request.url));
+    return NextResponse.redirect(new URL('/apps/signin', request.url));
   }
 
   // If user is authenticated and trying to access auth pages
   if (authToken && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/apps/dashboard', request.url));
   }
 
   return NextResponse.next();

@@ -28,7 +28,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       logout();
-      window.location.href = '/signin';
+      window.location.href = '/apps/signin';
     }
     return Promise.reject(error);
   }
@@ -40,7 +40,7 @@ export const logout = () => {
   // Clear all localStorage data
   clearLocalStorage();
   // Redirect to login page
-  window.location.href = '/signin';
+  window.location.href = '/apps/signin';
 };
 
 export const isAuthenticated = () => {
