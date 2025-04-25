@@ -27,6 +27,7 @@ interface FormField {
     Srno: number;
     type: string;
     label: string;
+    childDependents?: string[];
     wKey: string;
     FieldSize: string;
     FieldType: string;
@@ -66,7 +67,7 @@ interface EntryFormProps {
     onDropdownChange?: (key: string, value: any) => void;
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-    setFormData : React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
 }
 
 interface ChildEntryModalProps {
@@ -82,7 +83,8 @@ interface ChildEntryModalProps {
     onDropdownChange?: (key: string, value: any) => void;
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-    setFormData:React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    resetChildForm: () => void;
 }
 
 const DropdownField: React.FC<{
@@ -96,6 +98,7 @@ const DropdownField: React.FC<{
     colors: any;
     handleBlur: (field: FormField) => void;
     isDisabled: boolean;
+    handleDropDownChange: any;
 }> = ({
     field,
     formValues,
@@ -106,83 +109,98 @@ const DropdownField: React.FC<{
     setFieldErrors,
     colors,
     handleBlur,
-    isDisabled
+    isDisabled,
+    handleDropDownChange
 }) => {
-    const options = dropdownOptions[field.wKey] || [];
-    const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
-    const [searchText, setSearchText] = useState('');
-
-    useEffect(() => {
-        if (options.length > 0) {
-            const filtered = options.filter(opt =>
-                opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
-                opt.value.toLowerCase().includes(searchText.toLowerCase())
-            );
-            setVisibleOptions(filtered.slice(0, 50));
-        }
-    }, [searchText, options]);
-
-    const handleInputChange = (key: string, value: any) => {
-        setFormValues(prev => ({ ...prev, [key]: value }));
-        setFieldErrors(prev => ({ ...prev, [key]: '' }));
-    };
-
-    const onMenuScrollToBottom = (field: FormField) => {
         const options = dropdownOptions[field.wKey] || [];
-        const currentLength = visibleOptions.length;
-    
-        if (currentLength < options.length) {
-            const additionalOptions = options.slice(currentLength, currentLength + 50);
-            setVisibleOptions(prev => [...prev, ...additionalOptions]);
-        }
-    };
+        const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
+        const [searchText, setSearchText] = useState('');
 
-    return (
-        <div key={field.Srno} className="mb-1">
-            <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
-                {field.label}
-            </label>
-            <Select
-                options={visibleOptions}
-                value={options.find((opt: any) => opt.value === formValues[field.wKey]) || null}
-                onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
-                onInputChange={(inputValue, { action }) => {
-                    if (action === 'input-change') setSearchText(inputValue);
-                    return inputValue;
-                }}
-                onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
-                placeholder="Select..."
-                className="react-select-container"
-                classNamePrefix="react-select"
-                isLoading={loadingDropdowns[field.wKey]}
-                filterOption={() => true}
-                isDisabled={isDisabled}
-                styles={{
-                    control: (base) => ({
-                        ...base,
-                        borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
-                        backgroundColor: colors.textInputBackground,
-                    }),
-                    singleValue: (base) => ({
-                        ...base,
-                        color: colors.textInputText,
-                    }),
-                    option: (base, state) => ({
-                        ...base,
-                        backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
-                        color: state.isFocused ? colors.buttonText : colors.textInputText,
-                    }),
-                }}
-                onBlur={() => {
-                    handleBlur(field);
-                }}
-            />
-            {fieldErrors[field.wKey] && (
-                <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-            )}
-        </div>
-    );
-};
+        useEffect(() => {
+            if (options.length > 0) {
+                const filtered = options.filter(opt =>
+                    opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
+                    opt.value.toLowerCase().includes(searchText.toLowerCase())
+                );
+                setVisibleOptions(filtered.slice(0, 50));
+            }
+        }, [searchText, options]);
+
+        const handleRemoveChildDropdownValue = (dependent: string[]) => {
+            if(dependent.length > 0 && dependent[0] !== "") {
+                dependent.forEach((fieldName: string) => {
+                    setFormValues(prev => ({ ...prev, [fieldName]: '' }));
+                    setFieldErrors(prev => ({ ...prev, [fieldName]: '' }));
+                });
+            }
+        }
+
+        const handleInputChange = (key: string, value: any) => {
+            setFormValues(prev => ({ ...prev, [key]: value }));
+
+            // handleDropDownChange(key, value);
+
+            handleRemoveChildDropdownValue(field?.childDependents);
+            setFieldErrors(prev => ({ ...prev, [key]: '' }));
+        };
+
+        const onMenuScrollToBottom = (field: FormField) => {
+            const options = dropdownOptions[field.wKey] || [];
+            const currentLength = visibleOptions.length;
+
+            if (currentLength < options.length) {
+                const additionalOptions = options.slice(currentLength, currentLength + 50);
+                setVisibleOptions(prev => [...prev, ...additionalOptions]);
+            }
+        };
+
+        return (
+            <div key={field.Srno} className="mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    {field.label}
+                </label>
+                <Select
+                    options={visibleOptions}
+                    value={options.find((opt: any) => opt.value === formValues[field.wKey]) || null}
+                    onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
+                    onInputChange={(inputValue, { action }) => {
+                        if (action === 'input-change') setSearchText(inputValue);
+                        return inputValue;
+                    }}
+                    onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
+                    onFocus={() => handleDropDownChange(field)}
+                    placeholder="Select..."
+                    className="react-select-container"
+                    classNamePrefix="react-select"
+                    isLoading={loadingDropdowns[field.wKey]}
+                    filterOption={() => true}
+                    isDisabled={isDisabled}
+                    styles={{
+                        control: (base) => ({
+                            ...base,
+                            borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                            backgroundColor: colors.textInputBackground,
+                        }),
+                        singleValue: (base) => ({
+                            ...base,
+                            color: colors.textInputText,
+                        }),
+                        option: (base, state) => ({
+                            ...base,
+                            backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
+                            color: state.isFocused ? colors.buttonText : colors.textInputText,
+                        }),
+                    }}
+                    onBlur={() => {
+                        handleBlur(field);
+                    }}
+                />
+                {fieldErrors[field.wKey] && (
+                    <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                )}
+            </div>
+        );
+    };
 
 const EntryForm: React.FC<EntryFormProps> = ({
     formData,
@@ -284,7 +302,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             });
             // calling the function to  handle the flags 
             let columnData = response?.data?.data?.rs0[0]?.Column1
-            if(columnData){
+            if (columnData) {
                 handleValidationApiResponse(columnData, field.wKey);
             }
         } catch (error) {
@@ -297,7 +315,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     // this function is used to show the respected flags according to the response from the API
     const handleValidationApiResponse = (response, currFieldName) => {
-        console.log("Validation API Response:", response,currFieldName);
+
         if (!response?.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;  // Wrap in root tag
         }
@@ -313,7 +331,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
             (node) => node.tagName !== "Flag" && node.tagName !== "Message"
         );
-        console.log("check flag:", flag);
+
         switch (flag) {
             case 'M':
                 const userConfirmed = window.confirm(message);
@@ -344,11 +362,11 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 break;
 
             case 'D':
-                console.log("Dynamic Tags:", dynamicTags);
+        
                 dynamicTags.forEach((tag) => {
                     const tagName = tag.tagName;
                     const tagValue = tag.textContent;
-                
+
                     // Update FieldEnabledTag based on the tag value
                     const isDisabled = tagValue.toLowerCase() === 'false';
                     const updatedFormData = formData.map(field => {
@@ -357,9 +375,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         }
                         return field;
                     });
-                    console.log("isDisabled", isDisabled, tagName,updatedFormData);
-                    setFormData(updatedFormData);
                     
+                    setFormData(updatedFormData);
+
                 });
                 break;
 
@@ -386,6 +404,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         colors={colors}
                         handleBlur={() => handleBlur(field)}
                         isDisabled={!isEnabled}
+                        handleDropDownChange={onDropdownChange}
                     />
                 );
 
@@ -489,7 +508,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     onDropdownChange,
     fieldErrors,
     setFieldErrors,
-    setFormData
+    setFormData,
+    resetChildForm
 }) => {
     if (!isOpen) return null;
 
@@ -582,6 +602,12 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 
                 <div className="text-end mt-5">
                     <button
+                        onClick={resetChildForm}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                    >
+                        Reset
+                    </button>
+                    <button
                         onClick={() => {
                             submitFormData(masterValues, formValues)
                         }
@@ -610,7 +636,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [childLoadingDropdowns, setChildLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-    console.log('Master Form Data:', masterFormValues, childFormValues);
+    console.log('Master Form Data:', masterFormValues, childFormValues,childDropdownOptions);
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -661,7 +687,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const setLoadingDropdowns = isChild ? setChildLoadingDropdowns : setMasterLoadingDropdowns;
         const setDropdownOptions = isChild ? setChildDropdownOptions : setMasterDropdownOptions;
-        const formValues = isChild ? childFormValues : masterFormValues;
+
+        // adding this to remove the dependent field value when the parent field is changed 
+        const setDependentfieldEmpty = isChild ? setChildFormValues : setMasterFormValues;
 
         try {
             setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
@@ -678,7 +706,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (field.dependsOn.wQuery.X_Filter_Multiple) {
                 if (Array.isArray(field.dependsOn.field)) {
                     field.dependsOn.field.forEach(fieldName => {
-                        xFilter += `<${fieldName}>${formValues[fieldName] || ''}</${fieldName}>`;
+                        if (!childFormValues[fieldName] && !masterFormValues[fieldName]) {
+                            toast.error(`Please select the field: ${fieldName}`);
+                            return;
+                        }
+                        xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
                     });
                 } else {
                     xFilter = `<${field.dependsOn.field}>${parentValue}</${field.dependsOn.field}>`;
@@ -688,7 +720,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
-                <X_Filter>${xFilter}</X_Filter>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
 
@@ -705,6 +738,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }));
 
             setDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
+
+            //setting the dependent field value to empty if master dropdown values is changed to reselect the value 
+            // setDependentfieldEmpty(prev => ({ ...prev, [field.wKey]: '' }));
+
         } catch (error) {
             console.error(`Error fetching dependent options for ${field.wKey}:`, error);
         } finally {
@@ -712,34 +749,25 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const handleMasterDropdownChange = (key: string, value: any) => {
+    const handleMasterDropdownChange = (field: any) => {
         // Find dependent fields and update them
-        masterFormData.forEach(field => {
-            if (field.dependsOn) {
-                if (Array.isArray(field.dependsOn.field)) {
-                    if (field.dependsOn.field.includes(key)) {
-                        fetchDependentOptions(field, value);
-                    }
-                } else if (field.dependsOn.field === key) {
-                    fetchDependentOptions(field, value);
-                }
+        console.log("check field", field);
+        if (field.dependsOn) {
+            if (Array.isArray(field.dependsOn.field)) {
+                fetchDependentOptions(field, "");
             }
-        });
+        }
+
     };
 
-    const handleChildDropdownChange = (key: string, value: any) => {
+    const handleChildDropdownChange = (field: any) => {
         // Find dependent fields and update them
-        childFormData.forEach(field => {
-            if (field.dependsOn) {
-                if (Array.isArray(field.dependsOn.field)) {
-                    if (field.dependsOn.field.includes(key)) {
-                        fetchDependentOptions(field, value, true);
-                    }
-                } else if (field.dependsOn.field === key) {
-                    fetchDependentOptions(field, value, true);
-                }
+        console.log("check field", field);
+        if (field.dependsOn) {
+            if (Array.isArray(field.dependsOn.field)) {
+                fetchDependentOptions(field, "", true);
             }
-        });
+        }
     };
 
     const fetchMasterEntryData = async () => {
@@ -881,10 +909,39 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const handleAddChildEntry = () => {
         setIsChildModalOpen(true);
-        fetchChildEntryData();
+        if (childFormData?.length > 0) {
+            return
+        } else {
+            fetchChildEntryData();
+        }
     };
 
     const isFormInvalid = Object.values(fieldErrors).some(error => error);
+
+    // use this in future
+    const resetChildForm = () => {
+        setChildFormValues({}); // Reset child form values
+        // Clear errors related to child form fields
+        setFieldErrors(prevErrors => {
+            const updatedErrors = { ...prevErrors };
+            childFormData.forEach(field => {
+                if (updatedErrors[field.wKey]) {
+                    delete updatedErrors[field.wKey];
+                }
+            });
+            return updatedErrors;
+        });
+        //clear the child dependent dropdown options
+        // setChildDropdownOptions(prevOptions =>{
+        //     const updatedOptions = { ...prevOptions };
+        //     childFormData.forEach(field => {
+        //         if (field.dependsOn) {
+        //             delete updatedOptions[field.wKey];
+        //         }
+        //     });
+        //     return updatedOptions;
+        // })
+    };
 
     if (!isOpen) return null;
 
@@ -975,7 +1032,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     onDropdownChange={handleChildDropdownChange}
                     fieldErrors={fieldErrors} // Pass fieldErrors
                     setFieldErrors={setFieldErrors} // Pass setFieldErrors
-                    setFormData={setChildFormData} 
+                    setFormData={setChildFormData}
+                    resetChildForm={resetChildForm}
                 />
             )}
         </div>
