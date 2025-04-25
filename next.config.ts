@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  basePath: "/apps",
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || "/apps",
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/",
-        destination: "/apps",
+        destination:  process.env.NEXT_PUBLIC_BASE_PATH || "/apps",
         permanent: true, // Set to true for a 308 redirect, false for a 307 redirect
       },
     ];
