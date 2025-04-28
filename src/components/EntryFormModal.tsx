@@ -301,8 +301,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 }
             });
             // calling the function to  handle the flags 
-            let columnData = response?.data?.data?.rs0[0]?.Column1
-            if (columnData) {
+            const columnData = response?.data?.data?.rs0[0]?.Column1
+            if(columnData){
                 handleValidationApiResponse(columnData, field.wKey);
             }
         } catch (error) {
