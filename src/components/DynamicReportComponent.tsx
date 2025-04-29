@@ -13,6 +13,8 @@ import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import { useSearchParams } from 'next/navigation';
 import EntryFormModal from './EntryFormModal';
+//ts-ignore
+import { parseStringPromise } from 'xml2js';
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
 interface DynamicReportComponentProps {
@@ -31,6 +33,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [primaryKeyFilters, setPrimaryKeyFilters] = useState<Record<string, any>>({});
     const [rs1Settings, setRs1Settings] = useState<any>(null);
     const [jsonData, setJsonData] = useState<any>(null);
+    const [jsonDataUpdated, setJsonDataUpdated] = useState<any>(null);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ field: string; direction: string }>({
@@ -99,12 +102,34 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return {};
     };
 
+
+
+
     function convertXmlToJson(xmlString) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
         const root = xmlDoc.documentElement;
         return xmlToJson(root);
     }
+
+    async function convertXmlToJsonUpdated(rawXml: string): Promise<any> {
+        try {
+            // Sanitize common unescaped characters (only & in this case)
+            const sanitizedXml = rawXml.replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[a-fA-F0-9]+;)/g, '&amp;');
+
+            const result = await parseStringPromise(sanitizedXml, {
+                explicitArray: false,
+                trim: true,
+                mergeAttrs: true,
+            });
+
+            return result;
+        } catch (error) {
+            console.error('Error parsing XML:', error);
+            throw error;
+        }
+    }
+
 
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
@@ -317,7 +342,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 };
 
                 const json = convertXmlToJson(xmlString);
+                const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
+
+                // console.log('JSON UPDATED', jsonUpdated);
                 setJsonData(json);
+                setJsonDataUpdated(jsonUpdated);
                 setRs1Settings(settingsJson);
             }
 
@@ -515,23 +544,29 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <div className="space-y-0">
                     <div className="text-sm text-gray-500">
                         <div className="flex flex-col sm:flex-row justify-between">
-                            <div className="flex flex-wrap gap-2 my-1">
-                                {jsonData?.Headings?.map((headingObj, index) => (
-                                    <div key={index} className="flex flex-wrap gap-2 my-1">
-                                        {headingObj?.Heading?.map((headingText, i) => (
-                                            <span
-                                                key={i}
-                                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                                style={{
-                                                    backgroundColor: colors.cardBackground,
-                                                    color: colors.text
-                                                }}
-                                            >
-                                                {headingText}
-                                            </span>
-                                        ))}
+                            <div className="flex flex-col gap-2 my-1">
+                                {/* Report Header */}
+                                {/* {jsonDataUpdated?.XmlData?.ReportHeader && (
+                                    <div className="text-lg font-bold mb-2" style={{ color: colors.text }}>
+                                        {jsonDataUpdated.XmlData.ReportHeader}
                                     </div>
-                                ))}
+                                )} */}
+
+                                {/* Headings */}
+                                <div className="flex flex-wrap gap-2">
+                                    {jsonDataUpdated?.XmlData?.Headings?.Heading?.map((headingText, index) => (
+                                        <span
+                                            key={index}
+                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                            style={{
+                                                backgroundColor: colors.cardBackground,
+                                                color: colors.text
+                                            }}
+                                        >
+                                            {headingText}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                             <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
                         </div>
