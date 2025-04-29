@@ -539,6 +539,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {/* Loading State */}
             {isLoading && <div>Loading...</div>}
 
+            {!apiData && !isLoading && <div>No Data Found</div>}
             {/* Data Display */}
             {!isLoading && apiData && (
                 <div className="space-y-0">
