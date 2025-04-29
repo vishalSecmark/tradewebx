@@ -554,21 +554,32 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                                 {/* Headings */}
                                 <div className="flex flex-wrap gap-2">
-                                    {Array.isArray(jsonDataUpdated?.XmlData?.Headings?.Heading)
-                                        ? jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                    {jsonDataUpdated?.XmlData?.Headings?.Heading ? (
+                                        Array.isArray(jsonDataUpdated.XmlData.Headings.Heading) ? (
+                                            jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                    style={{
+                                                        backgroundColor: colors.cardBackground,
+                                                        color: colors.text
+                                                    }}
+                                                >
+                                                    {headingText}
+                                                </span>
+                                            ))
+                                        ) : (
                                             <span
-                                                key={index}
                                                 className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                                 style={{
                                                     backgroundColor: colors.cardBackground,
                                                     color: colors.text
                                                 }}
                                             >
-                                                {headingText}
+                                                {jsonDataUpdated.XmlData.Headings.Heading}
                                             </span>
-                                        ))
-                                        : null
-                                    }
+                                        )
+                                    ) : null}
                                 </div>
                             </div>
                             <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
