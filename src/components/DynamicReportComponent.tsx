@@ -13,7 +13,7 @@ import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import { useSearchParams } from 'next/navigation';
 import EntryFormModal from './EntryFormModal';
-import ConfirmationModal from './Modals/ConfirmationModa
+import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
