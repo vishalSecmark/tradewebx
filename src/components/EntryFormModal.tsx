@@ -445,7 +445,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             case 'WDropDownBox':
                 return (
                     <DropdownField
-                        key={field.Srno}
+                        key={`dropdown-${field.Srno}-${field.wKey}`}
                         field={field}
                         formValues={formValues}
                         setFormValues={setFormValues}
@@ -462,7 +462,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDateBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div 
+                        key={`dateBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -485,7 +487,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WTextBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div
+                         key={`textBox-${field.Srno}-${field.wKey}`}
+                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -520,7 +524,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDisplayBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div 
+                         key={`displayBox-${field.Srno}-${field.wKey}`}
+                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -746,7 +752,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            const options = response.data.data.rs0.map((item: any) => ({
+            const options = response.data?.data?.rs0?.map((item: any) => ({
                 label: item[field.wDropDownKey?.key || 'DisplayName'],
                 value: item[field.wDropDownKey?.value || 'Value']
             }));
@@ -806,7 +812,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            const options = response.data.data.rs0.map((item: any) => ({
+            const options = response.data?.data?.rs0?.map((item: any) => ({
                 label: item[field.wDropDownKey?.key || 'DisplayName'],
                 value: item[field.wDropDownKey?.value || 'Value']
             }));
@@ -909,12 +915,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            setMasterFormData(response.data.data.rs0);
+            setMasterFormData(response?.data?.data?.rs0);
             setChildEntriesTable(response?.data?.data?.rs1 || []);
 
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
@@ -927,7 +933,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setMasterFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field);
                 }
@@ -1009,11 +1015,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            setChildFormData(response.data.data.rs0);
+            setChildFormData(response.data?.data?.rs0);
 
             // Initialize child form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
@@ -1025,7 +1031,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setChildFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field, true);
                 }
