@@ -79,6 +79,26 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         });
     }, [formData, formValues]);
 
+    useEffect(() => {
+        // Reset everything when initialValues changes
+        setFormValues(initialValues);
+
+        // Reset all dropdown options
+        setDropdownOptions({});
+
+        // Reset loading states
+        setLoadingDropdowns({});
+
+        // Re-fetch dropdown options if needed
+        if (formData) {
+            formData.flat().forEach(item => {
+                if (item.type === 'WDropDownBox' && !item.options && item.wQuery) {
+                    fetchDropdownOptions(item);
+                }
+            });
+        }
+    }, [initialValues, formData]);
+
     const handleFormChange = useCallback((newValues: any) => {
         const cleanedValues = Object.fromEntries(
             Object.entries(newValues).filter(([_, value]) =>
