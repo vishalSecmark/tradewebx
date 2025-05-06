@@ -111,10 +111,94 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     }, [onFilterChange]);
 
     const handleInputChange = (key: string, value: any) => {
-        const newValues = {
-            ...formValues,
-            [key]: value
-        };
+        const newValues = { ...formValues };
+
+        // Find if this key belongs to a WDateRangeBox
+        const dateRangeField = formData.flat().find(item =>
+            item.type === 'WDateRangeBox' &&
+            Array.isArray(item.wKey) &&
+            item.wKey.includes(key)
+        );
+
+        if (dateRangeField) {
+            // This is part of a date range
+            const [fromKey, toKey] = dateRangeField.wKey as string[];
+            if (key === fromKey) {
+                newValues[fromKey] = value;
+                // If from date is after to date, update to date
+                if (value && formValues[toKey] && value > formValues[toKey]) {
+                    newValues[toKey] = value;
+                }
+            } else if (key === toKey) {
+                newValues[toKey] = value;
+                // If to date is before from date, update from date
+                if (value && formValues[fromKey] && value < formValues[fromKey]) {
+                    newValues[fromKey] = value;
+                }
+            }
+        } else {
+            // Regular field update
+            newValues[key] = value;
+        }
+
+        // Find dependent fields that need to be updated
+        const dependentFields = formData.flat().filter(dependentItem => {
+            if (!dependentItem.dependsOn) return false;
+
+            return Array.isArray(dependentItem.dependsOn.field)
+                ? dependentItem.dependsOn.field.includes(key)
+                : dependentItem.dependsOn.field === key;
+        });
+
+        if (dependentFields.length > 0) {
+            dependentFields.forEach(dependentItem => {
+                newValues[dependentItem.wKey as string] = undefined;
+
+                if (Array.isArray(dependentItem.dependsOn!.field)) {
+                    const allDependenciesFilled = dependentItem.dependsOn!.field.every(field =>
+                        newValues[field] !== undefined && newValues[field] !== null
+                    );
+
+                    if (allDependenciesFilled) {
+                        const dependencyValues = dependentItem.dependsOn!.field.reduce((acc, field) => {
+                            const fieldElement = formData.flat().find(el => el.wKey === field);
+
+                            if (fieldElement?.type === 'WDateBox' && newValues[field]) {
+                                acc[field] = moment(newValues[field]).format('YYYYMMDD');
+                            } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
+                                const [fromKey, toKey] = fieldElement.wKey;
+                                if (field === fromKey || field === toKey) {
+                                    acc[field] = moment(newValues[field]).format('YYYYMMDD');
+                                }
+                            } else {
+                                acc[field] = newValues[field];
+                            }
+                            return acc;
+                        }, {} as Record<string, any>);
+
+                        fetchDependentOptions(dependentItem, dependencyValues);
+                    }
+                } else {
+                    const fieldElement = formData.flat().find(el => el.wKey === dependentItem.dependsOn!.field);
+                    if (fieldElement?.type === 'WDateBox' && newValues[dependentItem.dependsOn!.field]) {
+                        const formattedDate = moment(newValues[dependentItem.dependsOn!.field]).format('YYYYMMDD');
+                        fetchDependentOptions(dependentItem, formattedDate);
+                    } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
+                        const [fromKey, toKey] = fieldElement.wKey;
+                        const field = dependentItem.dependsOn!.field;
+                        if (field === fromKey || field === toKey) {
+                            const formattedDate = moment(newValues[field]).format('YYYYMMDD');
+                            fetchDependentOptions(dependentItem, formattedDate);
+                        } else {
+                            fetchDependentOptions(dependentItem, newValues[field]);
+                        }
+                    } else {
+                        fetchDependentOptions(dependentItem, newValues[dependentItem.dependsOn!.field]);
+                    }
+                }
+            });
+        }
+
         handleFormChange(newValues);
     };
 
@@ -248,18 +332,80 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     xmlFilterContent = item.dependsOn.wQuery.X_Filter_Multiple;
 
                     item.dependsOn.field.forEach(field => {
+                        console.log('field_multiple', field);
                         const value = typeof parentValue === 'object' ? parentValue[field] : '';
-                        xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, value);
+                        const fieldElement = formData.flat().find(el => el.wKey === field);
+                        console.log('fieldElement', fieldElement);
+                        // Format date values for both WDateBox and WDateRangeBox
+                        let formattedValue = value instanceof Date ? moment(value).format('YYYYMMDD') : value;
+                        if (fieldElement?.type === 'WDateBox' && value instanceof Date) {
+                            console.log('formattedValue_CHK1', formattedValue);
+                        } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
+                            const [fromKey, toKey] = fieldElement.wKey;
+                            if (field === fromKey || field === toKey) {
+                                console.log('formattedValue_CHK2', formattedValue);
+                            }
+                        }
+
+                        console.log('formattedValue', formattedValue);
+                        xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, formattedValue);
                     });
                 } else {
                     xmlFilterContent = item.dependsOn.wQuery.X_Filter || '';
                     item.dependsOn.field.forEach(field => {
+                        console.log('field', field);
                         const value = typeof parentValue === 'object' ? parentValue[field] : '';
-                        xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, value);
+                        const fieldElement = formData.flat().find(el => el.wKey === field);
+
+                        // Format date values for both WDateBox and WDateRangeBox
+                        let formattedValue = value;
+                        if (fieldElement?.type === 'WDateBox' && value instanceof Date) {
+                            formattedValue = moment(value).format('YYYYMMDD');
+                        } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
+                            const [fromKey, toKey] = fieldElement.wKey;
+                            if (field === fromKey || field === toKey) {
+                                formattedValue = moment(value).format('YYYYMMDD');
+                            }
+                        }
+                        console.log('formattedValue_single', formattedValue);
+                        xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, formattedValue);
                     });
                 }
             } else {
-                xmlFilterContent = typeof parentValue === 'string' ? parentValue : '';
+                const fieldElement = formData.flat().find(el => el.wKey === item.dependsOn.field);
+                if (fieldElement?.type === 'WDateBox' && parentValue instanceof Date) {
+                    xmlFilterContent = moment(parentValue).format('YYYYMMDD');
+                } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
+                    const [fromKey, toKey] = fieldElement.wKey;
+                    if (item.dependsOn.field === fromKey || item.dependsOn.field === toKey) {
+                        xmlFilterContent = moment(parentValue).format('YYYYMMDD');
+                    } else {
+                        xmlFilterContent = typeof parentValue === 'string' ? parentValue : '';
+                    }
+                } else {
+                    xmlFilterContent = typeof parentValue === 'string' ? parentValue : '';
+                }
+            }
+
+            // Format dates in X_Filter_Multiple
+            if (item.dependsOn.wQuery.X_Filter_Multiple) {
+                const formattedXmlFilter = xmlFilterContent.replace(/<([^>]+)>([^<]+)<\/\1>/g, (match, tag, value) => {
+                    const fieldElement = formData.flat().find(el => el.wKey === tag);
+                    if (fieldElement?.type === 'WDateBox' ||
+                        (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey) &&
+                            (fieldElement.wKey.includes(tag)))) {
+                        try {
+                            const date = new Date(value);
+                            if (!isNaN(date.getTime())) {
+                                return `<${tag}>${moment(date).format('YYYYMMDD')}</${tag}>`;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing date:', e);
+                        }
+                    }
+                    return match;
+                });
+                xmlFilterContent = formattedXmlFilter;
             }
 
             const xmlData = `<dsXml>
