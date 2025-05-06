@@ -282,6 +282,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         // Get columns to show based on screen size
         let columnsToShow: string[] = [];
+        console.log('Columns to show:', columnsToShow);
         if (settings?.mobileColumns && screenSize === 'mobile') {
             columnsToShow = settings.mobileColumns;
             console.log('Using mobile columns:', columnsToShow);
@@ -384,12 +385,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                                             <button
                                                 className="edit-button"
                                                 onClick={() => handleAction('edit', row)}
+                                                disabled={row?.isUpdated === "true" ? true : false}
                                             >
                                                 Edit
                                             </button>
                                             <button
                                                 className="delete-button"
                                                 onClick={() => handleAction('delete', row)}
+                                                disabled={row?.isDeleted === "true" ? true : false}
                                             >
                                                 Delete
                                             </button>
@@ -486,20 +489,24 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 {
                     key: 'actions',
                     name: 'Actions',
-                    minWidth: 100,
-                    maxWidth: 150,
+                    minWidth: 120,
+                    maxWidth: 350,
                     renderCell: ({ row }: any) => (
                         isEntryForm && (
                             <div className="action-buttons">
                                 <button
                                     className="edit-button"
+                                    style={{}}
                                     onClick={() => handleAction('edit', row)}
+                                    disabled={row?.isUpdated === "true" ? true : false}
                                 >
                                     Edit
                                 </button>
                                 <button
                                     className="delete-button"
+                                    style={{}}
                                     onClick={() => handleAction('delete', row)}
+                                    disabled={row?.isDeleted === "true" ? true : false}
                                 >
                                     Delete
                                 </button>
@@ -776,6 +783,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     cursor: pointer;
                     font-size: 12px;
                     border-radius: 4px;
+                    transition: background-color 0.2s ease; 
+                }
+                
+                .edit-button:disabled, 
+                .delete-button:disabled {
+                    background-color: #e0e0e0;
+                    color: #a0a0a0;
+                    cursor: not-allowed;
                 }
 
                 .edit-button {

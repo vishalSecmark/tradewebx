@@ -160,7 +160,7 @@ const DropdownField: React.FC<{
             }
         };
 
-        console.log("check",options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()),field.wKey,typeof formValues[field.wKey]?.toString())
+        console.log("check", options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()), field.wKey, typeof formValues[field.wKey]?.toString())
         return (
             <div key={field.Srno} className="mb-1">
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
@@ -183,10 +183,28 @@ const DropdownField: React.FC<{
                     filterOption={() => true}
                     isDisabled={isDisabled}
                     styles={{
-                        control: (base) => ({
+                        control: (base, state) => ({
                             ...base,
-                            borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                            borderColor: state.isFocused
+                                ? '#3b82f6' // blue-500 when focused
+                                : !isDisabled
+                                    ? fieldErrors[field.wKey]
+                                        ? 'red'
+                                        : '#374151' // gray-700 when enabled
+                                    : '#d1d5db', // gray-300 when disabled
+                            boxShadow: state.isFocused
+                                ? '0 0 0 3px rgba(59, 130, 246, 0.5)' // blue-500 with opacity
+                                : 'none',
                             backgroundColor: colors.textInputBackground,
+                            '&:hover': {
+                                borderColor: state.isFocused
+                                    ? '#3b82f6'
+                                    : !isDisabled
+                                        ? fieldErrors[field.wKey]
+                                            ? 'red'
+                                            : '#374151'
+                                        : '#d1d5db',
+                            },
                         }),
                         singleValue: (base) => ({
                             ...base,
@@ -364,12 +382,12 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 break;
 
             case 'E':
-                alert(message); // Show error message
+                toast.warning(message); // Show error message
                 setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
                 break;
 
             case 'D':
-                let updatedFormData = formData; 
+                let updatedFormData = formData;
 
                 dynamicTags.forEach((tag) => {
                     const tagName = tag.tagName;
@@ -434,7 +452,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
-                            className={`w-full px-3 py-1 border rounded-md ${fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-300'} bg-${colors.textInputBackground} text-${colors.textInputText}`}
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
+                                } bg-${colors.textInputBackground} text-${colors.textInputText}`}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
                             onBlur={() => handleBlur(field)}
@@ -454,9 +473,10 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         </label>
                         <input
                             type="text"
-                            className="w-full px-3 py-1 border rounded-md"
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
+                                }`}
                             style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : "#344054",
                                 backgroundColor: colors.textInputBackground,
                                 color: colors.textInputText
                             }}
@@ -592,10 +612,11 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
             });
             if (response?.data?.success) {
                 onChildFormSubmit()
+                toast.success('Form submitted successfully!');
             } else {
-                alert(response?.data?.message)
+                const message = response?.data?.message.replace(/<\/?Message>/g, '');
+                toast.warning(message);
             }
-            alert('Form submitted successfully!');
         } catch (error) {
             console.error('Error submitting form:', error);
             alert('Failed to submit the form. Please try again.');
@@ -615,20 +636,6 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                         ✕
                     </button>
                 </div>
-
-                <EntryForm
-                    formData={formData}
-                    formValues={formValues}
-                    masterValues={masterValues}
-                    setFormValues={setFormValues}
-                    dropdownOptions={dropdownOptions}
-                    loadingDropdowns={loadingDropdowns}
-                    onDropdownChange={onDropdownChange}
-                    fieldErrors={fieldErrors}
-                    setFieldErrors={setFieldErrors}
-                    setFormData={setFormData}
-                />
-
                 <div className="text-end mt-5">
                     <button
                         onClick={resetChildForm}
@@ -646,6 +653,18 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                         Submit
                     </button>
                 </div>
+                <EntryForm
+                    formData={formData}
+                    formValues={formValues}
+                    masterValues={masterValues}
+                    setFormValues={setFormValues}
+                    dropdownOptions={dropdownOptions}
+                    loadingDropdowns={loadingDropdowns}
+                    onDropdownChange={onDropdownChange}
+                    fieldErrors={fieldErrors}
+                    setFieldErrors={setFieldErrors}
+                    setFormData={setFormData}
+                />
             </div>
         </div>
     );
@@ -1010,7 +1029,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
         }
     }, [childFormValues]);
-   
+
     useEffect(() => {
         // Check if childFormValues has been updated with initial values
         if (Object.keys(masterFormValues).length > 0) {
@@ -1021,7 +1040,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
         }
     }, [masterFormValues]);
-   
+
 
 
     const deleteChildRecord = async () => {
@@ -1032,7 +1051,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const pageName = pageData[0]?.wPage || "";
 
             const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
-        
+
             const jUi = Object.entries(masterEntry.J_Ui)
                 .map(([key, value]) => {
                     if (key === 'Option') {
@@ -1241,6 +1260,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 <tr>
                                                     {/* Static headers */}
                                                     <th className="px-4 py-2 border-b">Sr. No</th>
+                                                    <th className="px-4 py-2 border-b">Actions</th>
 
                                                     {/* Dynamic headers - get all unique keys from the first entry */}
                                                     {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
@@ -1251,7 +1271,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     ))}
 
                                                     {/* Static headers */}
-                                                    <th className="px-4 py-2 border-b">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1259,6 +1278,27 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     <tr key={index}>
                                                         {/* Serial number */}
                                                         <td className="px-4 py-2 border-b text-center">{index + 1}</td>
+                                                        {/* Actions */}
+                                                        <td className="flex gap-1 px-4 py-2 border-b text-center">
+                                                            <button
+                                                                className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                onClick={() => {
+                                                                    setChildEditRecord(entry);
+                                                                    handleChildEditData(entry);
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                className="bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 px-3 py-1 rounded-md transition-colors"
+                                                                onClick={() => {
+                                                                    setChildEditRecord(entry);
+                                                                    setIsConfirmationModalOpen(true);
+                                                                }}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
 
                                                         {/* Dynamic values */}
                                                         {Object.entries(entry).map(([key, value]) => (
@@ -1267,28 +1307,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 {value === null || value === "" ? "-" : value.toString()}
                                                             </td>
                                                         ))}
-
-                                                        {/* Actions */}
-                                                        <td className="px-4 py-2 border-b text-center">
-                                                            <button
-                                                                className="text-blue-500 hover:text-blue-700 mr-2"
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    handleChildEditData(entry)
-                                                                }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className="text-red-500 hover:text-red-700"
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    setIsConfirmationModalOpen(true)
-                                                                }}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
