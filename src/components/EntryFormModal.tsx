@@ -10,6 +10,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { FaPlus } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
+import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
 interface EntryFormModalProps {
     isOpen: boolean;
@@ -71,6 +72,12 @@ interface EntryFormProps {
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
     setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    setValidationModal: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
 }
 
 interface ChildEntryModalProps {
@@ -91,6 +98,12 @@ interface ChildEntryModalProps {
     editData: any;
     isEdit: boolean;
     onChildFormSubmit: () => void;
+    setValidationModal: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
 }
 
 const DropdownField: React.FC<{
@@ -237,7 +250,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
     fieldErrors,
     setFieldErrors,
     masterValues,
-    setFormData
+    setFormData,
+    setValidationModal
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -340,85 +354,89 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     // this function is used to show the respected flags according to the response from the API
     const handleValidationApiResponse = (response, currFieldName) => {
-
         if (!response?.trim().startsWith("<root>")) {
-            response = `<root>${response}</root>`;  // Wrap in root tag
+          response = `<root>${response}</root>`;
         }
-
+      
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
-
-        // Extract Flag and Message
+      
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
-
-        // Extract all other dynamic tags
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
-            (node) => node.tagName !== "Flag" && node.tagName !== "Message"
+          (node) => node.tagName !== "Flag" && node.tagName !== "Message"
         );
-
+      
         switch (flag) {
-            case 'M':
-                const userConfirmed = window.confirm(message);
-                if (userConfirmed) {
-                    dynamicTags.forEach((tag) => {
-                        const tagName = tag.tagName;
-                        const tagValue = tag.textContent;
-                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                    });
-                } else {
-                    setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-                }
-                break;
-            case 'S':
-                if (message) {
-                    alert(message);
-                }
-                dynamicTags.forEach((tag) => {
+          case 'M':
+            setValidationModal({
+              isOpen: true,
+              message: message || 'Are you sure you want to proceed?',
+              type: 'M',
+              callback: (confirmed) => {
+                if (confirmed) {
+                  dynamicTags.forEach((tag) => {
                     const tagName = tag.tagName;
                     const tagValue = tag.textContent;
                     setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                });
-                break;
-
-            case 'E':
-                toast.warning(message); // Show error message
-                setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-                break;
-
-            case 'D':
-                let updatedFormData = formData;
-
+                  });
+                } else {
+                  setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                }
+                setValidationModal({ isOpen: false, message: '', type: 'M' });
+              }
+            });
+            break;
+      
+          case 'S':
+            setValidationModal({
+              isOpen: true,
+              message: message || 'Please press ok to proceed',
+              type: 'S',
+              callback: () => {
                 dynamicTags.forEach((tag) => {
-                    const tagName = tag.tagName;
-                    const tagValue = tag.textContent;
-                    const tagFlag = tagValue.toLowerCase();
-                    const isDisabled = tagFlag === 'false';
-
-                    // Empty the values if tagFlag is 'true' or 'false'
-                    if (tagFlag === 'true' || tagFlag === 'false') {
-                        setFormValues(prev => ({ ...prev, [tagName]: "" }));
-                    } else {
-                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                    }
-
-                    // Collect updates in a temporary array
-                    updatedFormData = updatedFormData.map(field => {
-                        if (field.wKey === tagName) {
-                            return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
-                        }
-                        return field;
-                    });
+                  const tagName = tag.tagName;
+                  const tagValue = tag.textContent;
+                  setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
                 });
-
-                // Apply all updates to formData at once
-                setFormData(updatedFormData);
-                break;
-
-            default:
-                console.error("Unknown flag received:", flag);
+                setValidationModal({ isOpen: false, message: '', type: 'S' });
+              }
+            });
+            break;
+      
+          case 'E':
+            toast.warning(message);
+            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+            break;
+      
+          case 'D':
+            let updatedFormData = formData;
+            dynamicTags.forEach((tag) => {
+              const tagName = tag.tagName;
+              const tagValue = tag.textContent;
+              const tagFlag = tagValue.toLowerCase();
+              const isDisabled = tagFlag === 'false';
+      
+              if (tagFlag === 'true' || tagFlag === 'false') {
+                setFormValues(prev => ({ ...prev, [tagName]: "" }));
+              } else {
+                setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+              }
+      
+              updatedFormData = updatedFormData.map(field => {
+                if (field.wKey === tagName) {
+                  return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
+                }
+                return field;
+              });
+            });
+            setFormData(updatedFormData);
+            break;
+      
+          default:
+            console.error("Unknown flag received:", flag);
         }
-    };
+      };
 
     const renderFormField = (field: FormField) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
@@ -548,7 +566,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     resetChildForm,
     editData,
     isEdit,
-    onChildFormSubmit
+    onChildFormSubmit,
+    setValidationModal
 }) => {
     if (!isOpen) return null;
 
@@ -664,6 +683,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                     fieldErrors={fieldErrors}
                     setFieldErrors={setFieldErrors}
                     setFormData={setFormData}
+                    setValidationModal={setValidationModal}
                 />
             </div>
         </div>
@@ -687,6 +707,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [isEdit, setIsEdit] = useState<boolean>(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [childEditRecord, setChildEditRecord] = useState<any>(null);
+    const [validationModal, setValidationModal] = useState<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+      }>({ isOpen: false, message: '', type: 'M' });
 
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
@@ -1241,6 +1267,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     setFieldErrors={setFieldErrors} // Pass setFieldErrors
                                     masterValues={masterFormValues}
                                     setFormData={setMasterFormData}
+                                    setValidationModal={setValidationModal}
                                 />
                                 <div className="mt-8">
                                     <div className="flex justify-between items-center mb-4">
@@ -1323,6 +1350,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
             />
+              <CaseConfirmationModal
+                  isOpen={validationModal.isOpen}
+                  message={validationModal.message}
+                  type={validationModal.type}
+                  onConfirm={() => validationModal.callback?.(true)}
+                  onCancel={() => validationModal.callback?.(false)}
+                />
             <div>
             </div>
             {isChildModalOpen && (
@@ -1349,6 +1383,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     editData={editData}
                     isEdit={isEdit}
                     onChildFormSubmit={onChildFormSubmit}
+                    setValidationModal={setValidationModal}
                 />
             )}
         </>
