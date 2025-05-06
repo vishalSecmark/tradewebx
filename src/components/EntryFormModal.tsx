@@ -551,15 +551,24 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
             .join(',');
 
         const createXmlTags = (data) => {
+            const seenTags = new Set(); // Track seen tags to avoid duplicates
+
             return Object.entries(data).map(([key, value]) => {
+                if (seenTags.has(key)) {
+                    return ''; // Skip duplicate tags
+                }
+                seenTags.add(key);
+
                 if (Array.isArray(value)) {
                     return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
                 } else if (typeof value === 'object' && value !== null) {
                     return `<${key}>${createXmlTags(value)}</${key}>`;
+                } else if (value) {
+                    return `<${key}>${value}</${key}>`;
                 } else {
-                    return `<${key}>${value || ''}</${key}>`;
+                    return `<${key}></${key}>`; // Keep empty tag if no value
                 }
-            }).join('');
+            }).filter(Boolean).join(''); // Remove any empty strings
         };
 
         const xData = createXmlTags({
@@ -1042,15 +1051,24 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 .join(',');
 
             const createXmlTags = (data) => {
+                const seenTags = new Set(); // Track seen tags to avoid duplicates
+
                 return Object.entries(data).map(([key, value]) => {
+                    if (seenTags.has(key)) {
+                        return ''; // Skip duplicate tags
+                    }
+                    seenTags.add(key);
+
                     if (Array.isArray(value)) {
                         return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
                     } else if (typeof value === 'object' && value !== null) {
                         return `<${key}>${createXmlTags(value)}</${key}>`;
+                    } else if (value) {
+                        return `<${key}>${value}</${key}>`;
                     } else {
-                        return `<${key}>${value || ''}</${key}>`;
+                        return `<${key}></${key}>`; // Keep empty tag if no value
                     }
-                }).join('');
+                }).filter(Boolean).join(''); // Remove any empty strings
             };
 
 
