@@ -13,7 +13,9 @@ import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import { useSearchParams } from 'next/navigation';
 import EntryFormModal from './EntryFormModal';
+import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
+
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
 interface DynamicReportComponentProps {
@@ -46,6 +48,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [autoFetch, setAutoFetch] = useState<boolean>(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
 
+    const [entryFormData, setEntryFormData] = useState<any>(null);
+    const [entryAction, setEntryAction] = useState<'edit' | 'delete' | null>(null);
+     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -57,7 +63,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             return store.getState().common
         }
     })();
-
 
     const findPageData = () => {
         const searchInItems = (items: any[]): any => {
@@ -429,6 +434,91 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
+
+
+    const deleteMasterRecord = async () => {
+        try {
+
+            const entry = pageData[0].Entry;
+            const masterEntry = entry.MasterEntry;
+            const pageName = pageData[0]?.wPage || "";
+
+            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
+            let X_Data = "";
+
+            const jUi = Object.entries(masterEntry.J_Ui)
+                .map(([key, value]) => {
+                    if (key === 'Option') {
+                        return `"${key}":"delete"`;
+                    }
+                    if( key === 'ActionName'){
+                        return `"${key}":"${pageName}"`;
+                    }
+                    return `"${key}":"${value}"`
+
+                })
+                .join(',');
+
+            const jApi = Object.entries(masterEntry.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            Object.entries(entryFormData).forEach(([key, value]) => {
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    !key.startsWith('_') // Skip internal fields
+                ) {
+                    X_Data += `<${key}>${value}</${key}>`;
+                }
+            });
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${sql}</Sql>
+                <X_Filter></X_Filter>
+                <X_Data>${X_Data}</X_Data>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            if (response?.data?.success) {
+                fetchData();
+            }
+            console.log("response of delete api", response)
+
+        } catch (error) {
+            console.error(`Error fetching options for   `);
+        } finally {
+            console.log("check delete record");
+        }
+    }
+
+    // function to handle table actions
+    const handleTableAction = (action: string, record: any) => {
+        setEntryFormData(record);
+        setEntryAction(action as 'edit' | 'delete');
+        if (action === "edit") {
+            setIsEntryModalOpen(true);
+        }else{
+            setIsConfirmationModalOpen(true);
+        }
+    }
+
+    const handleConfirmDelete = () => {
+        deleteMasterRecord();
+        setIsConfirmationModalOpen(false);
+    };
+
+    const handleCancelDelete = () => {
+        setIsConfirmationModalOpen(false);
+    };
+
+
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
@@ -522,6 +612,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isSortingAllowed={pageData[0].isShortAble !== "false"}
                 onApply={() => { }}
             />
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+            />
 
             {/* Download Modal */}
             <FilterModal
@@ -603,14 +698,20 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
                         tableRef={tableRef}
+                        isEntryForm={componentType === "entry" ? true : false}
+                        handleAction={handleTableAction}
                     />
                 </div>
             )}
+            
             {componentType === 'entry' && (
                 <EntryFormModal
                     isOpen={isEntryModalOpen}
                     onClose={() => setIsEntryModalOpen(false)}
                     pageData={pageData}
+                    editData={entryFormData}
+                    action={entryAction}
+                    setEntryEditData={setEntryFormData}
                 />
             )}
         </div>
