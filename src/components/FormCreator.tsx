@@ -35,6 +35,7 @@ interface FormElement {
         value: string;
     };
     wValue?: string;
+    isMultiple?: boolean;
 }
 
 interface FormCreatorProps {
@@ -345,9 +346,13 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             if (field === fromKey || field === toKey) {
                                 console.log('formattedValue_CHK2', formattedValue);
                             }
+                        } else if (fieldElement?.type === 'WDropDownBox' && fieldElement.isMultiple) {
+                            // For multiple select dropdowns, ensure we're working with an array
+                            const values = Array.isArray(value) ? value : [value];
+                            // Join with pipe and ensure no extra spaces
+                            formattedValue = values.filter(Boolean).join('|');
+                            console.log('Multiple select formatted value:', formattedValue);
                         }
-
-                        console.log('formattedValue', formattedValue);
                         xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, formattedValue);
                     });
                 } else {
@@ -632,9 +637,15 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             }))
             : dropdownOptions[item.wKey as string] || [];
 
-        const selectedOption = options.find(opt =>
-            String(opt.value) === String(formValues[item.wKey as string])
-        );
+        const selectedOption = item.isMultiple
+            ? options.filter(opt =>
+                Array.isArray(formValues[item.wKey as string])
+                    ? formValues[item.wKey as string].includes(String(opt.value))
+                    : false
+            )
+            : options.find(opt =>
+                String(opt.value) === String(formValues[item.wKey as string])
+            );
 
         const isLoading = loadingDropdowns[item.wKey as string];
 
@@ -647,11 +658,22 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 <Select
                     options={options}
                     value={selectedOption}
+                    isMulti={item.isMultiple}
+                    closeMenuOnSelect={false}
+                    blurInputOnSelect={false}
                     onChange={(selected) => {
                         const newValues = { ...formValues };
 
                         if (selected) {
-                            newValues[item.wKey as string] = selected.value;
+                            if (item.isMultiple) {
+                                // Ensure we're working with an array of values
+                                const selectedValues = Array.isArray(selected)
+                                    ? selected.map(opt => opt.value)
+                                    : [selected.value];
+                                newValues[item.wKey as string] = selectedValues;
+                            } else {
+                                newValues[item.wKey as string] = selected.value;
+                            }
 
                             formData.flat().forEach(dependentItem => {
                                 if (dependentItem.dependsOn) {
@@ -674,6 +696,9 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
                                                     if (fieldElement?.type === 'WDateBox' && newValues[field]) {
                                                         acc[field] = moment(newValues[field]).format('YYYYMMDD');
+                                                    } else if (fieldElement?.type === 'WDropDownBox' && fieldElement.isMultiple) {
+                                                        const values = Array.isArray(newValues[field]) ? newValues[field] : [newValues[field]];
+                                                        acc[field] = values.filter(Boolean).join('|');
                                                     } else {
                                                         acc[field] = newValues[field];
                                                     }
@@ -690,6 +715,12 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                                             if (fieldElement?.type === 'WDateBox') {
                                                 const formattedDate = moment(selected.value).format('YYYYMMDD');
                                                 fetchDependentOptions(dependentItem, formattedDate);
+                                            } else if (fieldElement?.type === 'WDropDownBox' && fieldElement.isMultiple) {
+                                                const values = Array.isArray(selected)
+                                                    ? selected.map(opt => opt.value)
+                                                    : [selected.value];
+                                                const formattedValue = values.filter(Boolean).join('|');
+                                                fetchDependentOptions(dependentItem, formattedValue);
                                             } else {
                                                 fetchDependentOptions(dependentItem, selected.value);
                                             }
@@ -698,7 +729,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                                 }
                             });
                         } else {
-                            newValues[item.wKey as string] = undefined;
+                            newValues[item.wKey as string] = item.isMultiple ? [] : undefined;
 
                             formData.flat().forEach(dependentItem => {
                                 if (dependentItem.dependsOn) {
@@ -735,6 +766,22 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             ...base,
                             backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
                             color: state.isFocused ? colors.buttonText : colors.textInputText,
+                        }),
+                        multiValue: (base) => ({
+                            ...base,
+                            backgroundColor: colors.primary,
+                        }),
+                        multiValueLabel: (base) => ({
+                            ...base,
+                            color: colors.buttonText,
+                        }),
+                        multiValueRemove: (base) => ({
+                            ...base,
+                            color: colors.buttonText,
+                            ':hover': {
+                                backgroundColor: colors.primary,
+                                color: colors.buttonText,
+                            },
                         }),
                     }}
                 />
