@@ -518,6 +518,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setIsConfirmationModalOpen(false);
     };
 
+    console.log("check page data", pageData,rs1Settings);
 
     if (!pageData) {
         return <div>Loading report data...</div>;

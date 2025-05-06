@@ -10,6 +10,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { FaPlus } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
+import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
 interface EntryFormModalProps {
     isOpen: boolean;
@@ -71,6 +72,12 @@ interface EntryFormProps {
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
     setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    setValidationModal: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
 }
 
 interface ChildEntryModalProps {
@@ -91,6 +98,12 @@ interface ChildEntryModalProps {
     editData: any;
     isEdit: boolean;
     onChildFormSubmit: () => void;
+    setValidationModal: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
 }
 
 const DropdownField: React.FC<{
@@ -160,7 +173,7 @@ const DropdownField: React.FC<{
             }
         };
 
-        console.log("check",options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()),field.wKey,typeof formValues[field.wKey]?.toString())
+        console.log("check", options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()), field.wKey, typeof formValues[field.wKey]?.toString())
         return (
             <div key={field.Srno} className="mb-1">
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
@@ -183,10 +196,28 @@ const DropdownField: React.FC<{
                     filterOption={() => true}
                     isDisabled={isDisabled}
                     styles={{
-                        control: (base) => ({
+                        control: (base, state) => ({
                             ...base,
-                            borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                            borderColor: state.isFocused
+                                ? '#3b82f6' // blue-500 when focused
+                                : !isDisabled
+                                    ? fieldErrors[field.wKey]
+                                        ? 'red'
+                                        : '#374151' // gray-700 when enabled
+                                    : '#d1d5db', // gray-300 when disabled
+                            boxShadow: state.isFocused
+                                ? '0 0 0 3px rgba(59, 130, 246, 0.5)' // blue-500 with opacity
+                                : 'none',
                             backgroundColor: colors.textInputBackground,
+                            '&:hover': {
+                                borderColor: state.isFocused
+                                    ? '#3b82f6'
+                                    : !isDisabled
+                                        ? fieldErrors[field.wKey]
+                                            ? 'red'
+                                            : '#374151'
+                                        : '#d1d5db',
+                            },
                         }),
                         singleValue: (base) => ({
                             ...base,
@@ -219,7 +250,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
     fieldErrors,
     setFieldErrors,
     masterValues,
-    setFormData
+    setFormData,
+    setValidationModal
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -322,85 +354,89 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     // this function is used to show the respected flags according to the response from the API
     const handleValidationApiResponse = (response, currFieldName) => {
-
         if (!response?.trim().startsWith("<root>")) {
-            response = `<root>${response}</root>`;  // Wrap in root tag
+          response = `<root>${response}</root>`;
         }
-
+      
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
-
-        // Extract Flag and Message
+      
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
-
-        // Extract all other dynamic tags
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
-            (node) => node.tagName !== "Flag" && node.tagName !== "Message"
+          (node) => node.tagName !== "Flag" && node.tagName !== "Message"
         );
-
+      
         switch (flag) {
-            case 'M':
-                const userConfirmed = window.confirm(message);
-                if (userConfirmed) {
-                    dynamicTags.forEach((tag) => {
-                        const tagName = tag.tagName;
-                        const tagValue = tag.textContent;
-                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                    });
-                } else {
-                    setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-                }
-                break;
-            case 'S':
-                if (message) {
-                    alert(message);
-                }
-                dynamicTags.forEach((tag) => {
+          case 'M':
+            setValidationModal({
+              isOpen: true,
+              message: message || 'Are you sure you want to proceed?',
+              type: 'M',
+              callback: (confirmed) => {
+                if (confirmed) {
+                  dynamicTags.forEach((tag) => {
                     const tagName = tag.tagName;
                     const tagValue = tag.textContent;
                     setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                });
-                break;
-
-            case 'E':
-                alert(message); // Show error message
-                setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-                break;
-
-            case 'D':
-                let updatedFormData = formData; 
-
+                  });
+                } else {
+                  setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                }
+                setValidationModal({ isOpen: false, message: '', type: 'M' });
+              }
+            });
+            break;
+      
+          case 'S':
+            setValidationModal({
+              isOpen: true,
+              message: message || 'Please press ok to proceed',
+              type: 'S',
+              callback: () => {
                 dynamicTags.forEach((tag) => {
-                    const tagName = tag.tagName;
-                    const tagValue = tag.textContent;
-                    const tagFlag = tagValue.toLowerCase();
-                    const isDisabled = tagFlag === 'false';
-
-                    // Empty the values if tagFlag is 'true' or 'false'
-                    if (tagFlag === 'true' || tagFlag === 'false') {
-                        setFormValues(prev => ({ ...prev, [tagName]: "" }));
-                    } else {
-                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                    }
-
-                    // Collect updates in a temporary array
-                    updatedFormData = updatedFormData.map(field => {
-                        if (field.wKey === tagName) {
-                            return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
-                        }
-                        return field;
-                    });
+                  const tagName = tag.tagName;
+                  const tagValue = tag.textContent;
+                  setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
                 });
-
-                // Apply all updates to formData at once
-                setFormData(updatedFormData);
-                break;
-
-            default:
-                console.error("Unknown flag received:", flag);
+                setValidationModal({ isOpen: false, message: '', type: 'S' });
+              }
+            });
+            break;
+      
+          case 'E':
+            toast.warning(message);
+            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+            break;
+      
+          case 'D':
+            let updatedFormData = formData;
+            dynamicTags.forEach((tag) => {
+              const tagName = tag.tagName;
+              const tagValue = tag.textContent;
+              const tagFlag = tagValue.toLowerCase();
+              const isDisabled = tagFlag === 'false';
+      
+              if (tagFlag === 'true' || tagFlag === 'false') {
+                setFormValues(prev => ({ ...prev, [tagName]: "" }));
+              } else {
+                setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+              }
+      
+              updatedFormData = updatedFormData.map(field => {
+                if (field.wKey === tagName) {
+                  return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
+                }
+                return field;
+              });
+            });
+            setFormData(updatedFormData);
+            break;
+      
+          default:
+            console.error("Unknown flag received:", flag);
         }
-    };
+      };
 
     const renderFormField = (field: FormField) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
@@ -409,7 +445,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             case 'WDropDownBox':
                 return (
                     <DropdownField
-                        key={field.Srno}
+                        key={`dropdown-${field.Srno}-${field.wKey}`}
                         field={field}
                         formValues={formValues}
                         setFormValues={setFormValues}
@@ -426,7 +462,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDateBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div 
+                        key={`dateBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -434,7 +472,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
-                            className={`w-full px-3 py-1 border rounded-md ${fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-300'} bg-${colors.textInputBackground} text-${colors.textInputText}`}
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
+                                } bg-${colors.textInputBackground} text-${colors.textInputText}`}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
                             onBlur={() => handleBlur(field)}
@@ -448,15 +487,18 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WTextBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div
+                         key={`textBox-${field.Srno}-${field.wKey}`}
+                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
                         <input
                             type="text"
-                            className="w-full px-3 py-1 border rounded-md"
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
+                                }`}
                             style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : "#344054",
                                 backgroundColor: colors.textInputBackground,
                                 color: colors.textInputText
                             }}
@@ -482,7 +524,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDisplayBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div 
+                         key={`displayBox-${field.Srno}-${field.wKey}`}
+                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -528,7 +572,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     resetChildForm,
     editData,
     isEdit,
-    onChildFormSubmit
+    onChildFormSubmit,
+    setValidationModal
 }) => {
     if (!isOpen) return null;
 
@@ -592,10 +637,11 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
             });
             if (response?.data?.success) {
                 onChildFormSubmit()
+                toast.success('Form submitted successfully!');
             } else {
-                alert(response?.data?.message)
+                const message = response?.data?.message.replace(/<\/?Message>/g, '');
+                toast.warning(message);
             }
-            alert('Form submitted successfully!');
         } catch (error) {
             console.error('Error submitting form:', error);
             alert('Failed to submit the form. Please try again.');
@@ -615,20 +661,6 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                         ✕
                     </button>
                 </div>
-
-                <EntryForm
-                    formData={formData}
-                    formValues={formValues}
-                    masterValues={masterValues}
-                    setFormValues={setFormValues}
-                    dropdownOptions={dropdownOptions}
-                    loadingDropdowns={loadingDropdowns}
-                    onDropdownChange={onDropdownChange}
-                    fieldErrors={fieldErrors}
-                    setFieldErrors={setFieldErrors}
-                    setFormData={setFormData}
-                />
-
                 <div className="text-end mt-5">
                     <button
                         onClick={resetChildForm}
@@ -646,6 +678,19 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                         Submit
                     </button>
                 </div>
+                <EntryForm
+                    formData={formData}
+                    formValues={formValues}
+                    masterValues={masterValues}
+                    setFormValues={setFormValues}
+                    dropdownOptions={dropdownOptions}
+                    loadingDropdowns={loadingDropdowns}
+                    onDropdownChange={onDropdownChange}
+                    fieldErrors={fieldErrors}
+                    setFieldErrors={setFieldErrors}
+                    setFormData={setFormData}
+                    setValidationModal={setValidationModal}
+                />
             </div>
         </div>
     );
@@ -668,6 +713,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [isEdit, setIsEdit] = useState<boolean>(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [childEditRecord, setChildEditRecord] = useState<any>(null);
+    const [validationModal, setValidationModal] = useState<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+      }>({ isOpen: false, message: '', type: 'M' });
 
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
@@ -701,7 +752,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            const options = response.data.data.rs0.map((item: any) => ({
+            const options = response.data?.data?.rs0?.map((item: any) => ({
                 label: item[field.wDropDownKey?.key || 'DisplayName'],
                 value: item[field.wDropDownKey?.value || 'Value']
             }));
@@ -761,7 +812,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            const options = response.data.data.rs0.map((item: any) => ({
+            const options = response.data?.data?.rs0?.map((item: any) => ({
                 label: item[field.wDropDownKey?.key || 'DisplayName'],
                 value: item[field.wDropDownKey?.value || 'Value']
             }));
@@ -864,12 +915,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            setMasterFormData(response.data.data.rs0);
+            setMasterFormData(response?.data?.data?.rs0);
             setChildEntriesTable(response?.data?.data?.rs1 || []);
 
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
@@ -882,7 +933,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setMasterFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field);
                 }
@@ -964,11 +1015,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            setChildFormData(response.data.data.rs0);
+            setChildFormData(response.data?.data?.rs0);
 
             // Initialize child form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
@@ -980,7 +1031,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setChildFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field, true);
                 }
@@ -1010,7 +1061,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
         }
     }, [childFormValues]);
-   
+
     useEffect(() => {
         // Check if childFormValues has been updated with initial values
         if (Object.keys(masterFormValues).length > 0) {
@@ -1021,7 +1072,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
         }
     }, [masterFormValues]);
-   
+
 
 
     const deleteChildRecord = async () => {
@@ -1032,7 +1083,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const pageName = pageData[0]?.wPage || "";
 
             const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
-        
+
             const jUi = Object.entries(masterEntry.J_Ui)
                 .map(([key, value]) => {
                     if (key === 'Option') {
@@ -1222,6 +1273,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     setFieldErrors={setFieldErrors} // Pass setFieldErrors
                                     masterValues={masterFormValues}
                                     setFormData={setMasterFormData}
+                                    setValidationModal={setValidationModal}
                                 />
                                 <div className="mt-8">
                                     <div className="flex justify-between items-center mb-4">
@@ -1241,6 +1293,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 <tr>
                                                     {/* Static headers */}
                                                     <th className="px-4 py-2 border-b">Sr. No</th>
+                                                    <th className="px-4 py-2 border-b">Actions</th>
 
                                                     {/* Dynamic headers - get all unique keys from the first entry */}
                                                     {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
@@ -1251,7 +1304,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     ))}
 
                                                     {/* Static headers */}
-                                                    <th className="px-4 py-2 border-b">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -1259,6 +1311,27 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     <tr key={index}>
                                                         {/* Serial number */}
                                                         <td className="px-4 py-2 border-b text-center">{index + 1}</td>
+                                                        {/* Actions */}
+                                                        <td className="flex gap-1 px-4 py-2 border-b text-center">
+                                                            <button
+                                                                className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                onClick={() => {
+                                                                    setChildEditRecord(entry);
+                                                                    handleChildEditData(entry);
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                className="bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 px-3 py-1 rounded-md transition-colors"
+                                                                onClick={() => {
+                                                                    setChildEditRecord(entry);
+                                                                    setIsConfirmationModalOpen(true);
+                                                                }}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
 
                                                         {/* Dynamic values */}
                                                         {Object.entries(entry).map(([key, value]) => (
@@ -1267,28 +1340,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 {value === null || value === "" ? "-" : value.toString()}
                                                             </td>
                                                         ))}
-
-                                                        {/* Actions */}
-                                                        <td className="px-4 py-2 border-b text-center">
-                                                            <button
-                                                                className="text-blue-500 hover:text-blue-700 mr-2"
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    handleChildEditData(entry)
-                                                                }}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className="text-red-500 hover:text-red-700"
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    setIsConfirmationModalOpen(true)
-                                                                }}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -1305,6 +1356,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
             />
+              <CaseConfirmationModal
+                  isOpen={validationModal.isOpen}
+                  message={validationModal.message}
+                  type={validationModal.type}
+                  onConfirm={() => validationModal.callback?.(true)}
+                  onCancel={() => validationModal.callback?.(false)}
+                />
             <div>
             </div>
             {isChildModalOpen && (
@@ -1331,6 +1389,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     editData={editData}
                     isEdit={isEdit}
                     onChildFormSubmit={onChildFormSubmit}
+                    setValidationModal={setValidationModal}
                 />
             )}
         </>
