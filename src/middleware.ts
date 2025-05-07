@@ -5,7 +5,8 @@ import { BASE_PATH_FRONT_END } from './utils/constants';
 export function middleware(request: NextRequest) {
   const authToken = request.cookies.get('auth_token');
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') ||
-    request.nextUrl.pathname.startsWith('/otp-verification');
+    request.nextUrl.pathname.startsWith('/otp-verification') ||
+    request.nextUrl.pathname.startsWith('/forgot-password');
 
   // If user is not authenticated and trying to access protected route
   console.log("pathname", request.nextUrl.pathname);

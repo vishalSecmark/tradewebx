@@ -11,6 +11,7 @@ import { setAuthData, setError as setAuthError, setLoading } from '@/redux/featu
 import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
+import Link from "next/link";
 
 // Default options to use if JSON file is not available
 const DEFAULT_LOGIN_OPTIONS = [];
@@ -254,6 +255,9 @@ export default function SignInForm() {
               ) : 'Sign in'}
             </Button>
           </form>
+          <div className="flex justify-center items-center mt-2">
+            <Link href="/forgot-password">Forgot Password?</Link>
+          </div>
         </div>
       </div>
       <div className="flex justify-end items-center p-4">
