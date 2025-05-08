@@ -208,7 +208,9 @@ const DropdownField: React.FC<{
                             boxShadow: state.isFocused
                                 ? '0 0 0 3px rgba(59, 130, 246, 0.5)' // blue-500 with opacity
                                 : 'none',
-                            backgroundColor: colors.textInputBackground,
+                            backgroundColor: isDisabled
+                                ? '#f2f2f0' // light gray when disabled (matches WTextBox)
+                                : colors.textInputBackground,
                             '&:hover': {
                                 borderColor: state.isFocused
                                     ? '#3b82f6'
@@ -221,12 +223,26 @@ const DropdownField: React.FC<{
                         }),
                         singleValue: (base) => ({
                             ...base,
-                            color: colors.textInputText,
+                            color: isDisabled
+                                ? '#6b7280' // gray-500 for disabled text
+                                : colors.textInputText,
                         }),
                         option: (base, state) => ({
                             ...base,
                             backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
                             color: state.isFocused ? colors.buttonText : colors.textInputText,
+                        }),
+                        input: (base) => ({
+                            ...base,
+                            color: colors.textInputText,
+                        }),
+                        menu: (base) => ({
+                            ...base,
+                            backgroundColor: colors.textInputBackground,
+                        }),
+                        placeholder: (base) => ({
+                            ...base,
+                            color: isDisabled ? '#9ca3af' : base.color, // gray-400 for disabled placeholder
                         }),
                     }}
                     onBlur={() => {
@@ -355,88 +371,88 @@ const EntryForm: React.FC<EntryFormProps> = ({
     // this function is used to show the respected flags according to the response from the API
     const handleValidationApiResponse = (response, currFieldName) => {
         if (!response?.trim().startsWith("<root>")) {
-          response = `<root>${response}</root>`;
+            response = `<root>${response}</root>`;
         }
-      
+
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
-      
+
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
-          (node) => node.tagName !== "Flag" && node.tagName !== "Message"
+            (node) => node.tagName !== "Flag" && node.tagName !== "Message"
         );
-      
+
         switch (flag) {
-          case 'M':
-            setValidationModal({
-              isOpen: true,
-              message: message || 'Are you sure you want to proceed?',
-              type: 'M',
-              callback: (confirmed) => {
-                if (confirmed) {
-                  dynamicTags.forEach((tag) => {
+            case 'M':
+                setValidationModal({
+                    isOpen: true,
+                    message: message || 'Are you sure you want to proceed?',
+                    type: 'M',
+                    callback: (confirmed) => {
+                        if (confirmed) {
+                            dynamicTags.forEach((tag) => {
+                                const tagName = tag.tagName;
+                                const tagValue = tag.textContent;
+                                setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                            });
+                        } else {
+                            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                        }
+                        setValidationModal({ isOpen: false, message: '', type: 'M' });
+                    }
+                });
+                break;
+
+            case 'S':
+                setValidationModal({
+                    isOpen: true,
+                    message: message || 'Please press ok to proceed',
+                    type: 'S',
+                    callback: () => {
+                        dynamicTags.forEach((tag) => {
+                            const tagName = tag.tagName;
+                            const tagValue = tag.textContent;
+                            setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                        });
+                        setValidationModal({ isOpen: false, message: '', type: 'S' });
+                    }
+                });
+                break;
+
+            case 'E':
+                toast.warning(message);
+                setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                break;
+
+            case 'D':
+                let updatedFormData = formData;
+                dynamicTags.forEach((tag) => {
                     const tagName = tag.tagName;
                     const tagValue = tag.textContent;
-                    setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                  });
-                } else {
-                  setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-                }
-                setValidationModal({ isOpen: false, message: '', type: 'M' });
-              }
-            });
-            break;
-      
-          case 'S':
-            setValidationModal({
-              isOpen: true,
-              message: message || 'Please press ok to proceed',
-              type: 'S',
-              callback: () => {
-                dynamicTags.forEach((tag) => {
-                  const tagName = tag.tagName;
-                  const tagValue = tag.textContent;
-                  setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                    const tagFlag = tagValue.toLowerCase();
+                    const isDisabled = tagFlag === 'false';
+
+                    if (tagFlag === 'true' || tagFlag === 'false') {
+                        setFormValues(prev => ({ ...prev, [tagName]: "" }));
+                    } else {
+                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                    }
+
+                    updatedFormData = updatedFormData.map(field => {
+                        if (field.wKey === tagName) {
+                            return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
+                        }
+                        return field;
+                    });
                 });
-                setValidationModal({ isOpen: false, message: '', type: 'S' });
-              }
-            });
-            break;
-      
-          case 'E':
-            toast.warning(message);
-            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-            break;
-      
-          case 'D':
-            let updatedFormData = formData;
-            dynamicTags.forEach((tag) => {
-              const tagName = tag.tagName;
-              const tagValue = tag.textContent;
-              const tagFlag = tagValue.toLowerCase();
-              const isDisabled = tagFlag === 'false';
-      
-              if (tagFlag === 'true' || tagFlag === 'false') {
-                setFormValues(prev => ({ ...prev, [tagName]: "" }));
-              } else {
-                setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-              }
-      
-              updatedFormData = updatedFormData.map(field => {
-                if (field.wKey === tagName) {
-                  return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
-                }
-                return field;
-              });
-            });
-            setFormData(updatedFormData);
-            break;
-      
-          default:
-            console.error("Unknown flag received:", flag);
+                setFormData(updatedFormData);
+                break;
+
+            default:
+                console.error("Unknown flag received:", flag);
         }
-      };
+    };
 
     const renderFormField = (field: FormField) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
@@ -462,7 +478,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDateBox':
                 return (
-                    <div 
+                    <div
                         key={`dateBox-${field.Srno}-${field.wKey}`}
                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
@@ -472,8 +488,17 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
-                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
-                                } bg-${colors.textInputBackground} text-${colors.textInputText}`}
+                            className={`
+                                w-full px-3 py-1 border rounded-md 
+                                focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                                ${!isEnabled 
+                                    ? 'border-gray-300 bg-[#f2f2f0]' 
+                                    : fieldErrors[field.wKey] 
+                                        ? 'border-red-500' 
+                                        : 'border-gray-700'
+                                }
+                                ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
+                            `}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
                             onBlur={() => handleBlur(field)}
@@ -488,8 +513,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
             case 'WTextBox':
                 return (
                     <div
-                         key={`textBox-${field.Srno}-${field.wKey}`}
-                         className={marginBottom}>
+                        key={`textBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -498,8 +523,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
                                 }`}
                             style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : "#344054",
-                                backgroundColor: colors.textInputBackground,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
+                                backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                 color: colors.textInputText
                             }}
                             value={formValues[field.wKey] || ''}
@@ -524,17 +549,17 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDisplayBox':
                 return (
-                    <div 
-                         key={`displayBox-${field.Srno}-${field.wKey}`}
-                         className={marginBottom}>
+                    <div
+                        key={`displayBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
                         <div
                             className="w-full px-3 py-1 border rounded-md"
                             style={{
-                                borderColor: colors.textInputBorder,
-                                backgroundColor: colors.textInputBackground,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : colors.textInputBorder,
+                                backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                 color: colors.textInputText
                             }}
                         >
@@ -718,7 +743,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         message: string;
         type: 'M' | 'S' | 'E' | 'D';
         callback?: (confirmed: boolean) => void;
-      }>({ isOpen: false, message: '', type: 'M' });
+    }>({ isOpen: false, message: '', type: 'M' });
 
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
@@ -1356,13 +1381,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
             />
-              <CaseConfirmationModal
-                  isOpen={validationModal.isOpen}
-                  message={validationModal.message}
-                  type={validationModal.type}
-                  onConfirm={() => validationModal.callback?.(true)}
-                  onCancel={() => validationModal.callback?.(false)}
-                />
+            <CaseConfirmationModal
+                isOpen={validationModal.isOpen}
+                message={validationModal.message}
+                type={validationModal.type}
+                onConfirm={() => validationModal.callback?.(true)}
+                onCancel={() => validationModal.callback?.(false)}
+            />
             <div>
             </div>
             {isChildModalOpen && (
