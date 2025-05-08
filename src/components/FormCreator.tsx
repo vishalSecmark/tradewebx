@@ -7,6 +7,7 @@ import moment from 'moment';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { useTheme } from '@/context/ThemeContext';
+import { FaCalendarAlt } from 'react-icons/fa';
 
 interface FormElement {
     type: string;
@@ -53,6 +54,76 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const [formValues, setFormValues] = useState(initialValues);
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
     const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
+    const [showDatePresets, setShowDatePresets] = useState<Record<string, boolean>>({});
+
+    const contextMenuItems = [
+        { id: "today", text: "Today" },
+        { id: "yesterday", text: "Yesterday" },
+        { id: "last7days", text: "Last 7 Days" },
+        { id: "last30days", text: "Last 30 Days" },
+        { id: "thismonth", text: "This Month" },
+        { id: "lastmonth", text: "Last Month" },
+        { id: "thisfinancialyear", text: "This Financial Year" },
+        { id: "lastfinancialyear", text: "Last Financial Year" },
+    ];
+
+    const getFinancialYear = (date: moment.Moment) => {
+        const financialYearStart = date.month() >= 3 ? date.year() : date.year() - 1;
+        return [
+            moment(`${financialYearStart}-04-01`),
+            moment(`${financialYearStart + 1}-03-31`),
+        ];
+    };
+
+    const handlePresetSelection = (itemId: string, fromKey: string, toKey: string) => {
+        let date1: moment.Moment | null = null;
+        let date2: moment.Moment | null = null;
+
+        switch (itemId) {
+            case "today":
+                date1 = moment().startOf("day");
+                date2 = moment().endOf("day");
+                break;
+            case "yesterday":
+                date1 = moment().subtract(1, "day").startOf("day");
+                date2 = moment().subtract(1, "day").endOf("day");
+                break;
+            case "last7days":
+                date1 = moment().subtract(6, "days").startOf("day");
+                date2 = moment().endOf("day");
+                break;
+            case "last30days":
+                date1 = moment().subtract(29, "days").startOf("day");
+                date2 = moment().endOf("day");
+                break;
+            case "thismonth":
+                date1 = moment().startOf("month");
+                date2 = moment().endOf("month");
+                break;
+            case "lastmonth":
+                date1 = moment().subtract(1, "month").startOf("month");
+                date2 = moment().subtract(1, "month").endOf("month");
+                break;
+            case "thisfinancialyear":
+                [date1, date2] = getFinancialYear(moment());
+                break;
+            case "lastfinancialyear":
+                [date1, date2] = getFinancialYear(moment().subtract(1, "year"));
+                break;
+        }
+
+        if (date1 && date2) {
+            const newValues = { ...formValues };
+            newValues[fromKey] = date1.toDate();
+            newValues[toKey] = date2.toDate();
+            handleFormChange(newValues);
+        }
+
+        setShowDatePresets(prev => ({
+            ...prev,
+            [fromKey]: false
+        }));
+    };
 
     useEffect(() => {
         setFormValues(initialValues);
@@ -539,6 +610,38 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             wrapperClassName="w-full"
                             placeholderText="To Date"
                         />
+                    </div>
+                    <div className="relative">
+                        <button
+                            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                            onClick={() => setShowDatePresets(prev => ({
+                                ...prev,
+                                [fromKey]: !prev[fromKey]
+                            }))}
+                        >
+                            <FaCalendarAlt />
+                        </button>
+                        {showDatePresets[fromKey] && (
+                            <div
+                                className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                                style={{ backgroundColor: colors.textInputBackground }}
+                            >
+                                <div className="py-1" role="menu" aria-orientation="vertical">
+                                    {contextMenuItems.map((item) => (
+                                        <button
+                                            key={item.id}
+                                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-100"
+                                            style={{
+                                                color: colors.textInputText
+                                            }}
+                                            onClick={() => handlePresetSelection(item.id, fromKey, toKey)}
+                                        >
+                                            {item.text}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
