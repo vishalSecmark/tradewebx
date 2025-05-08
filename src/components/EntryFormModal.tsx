@@ -17,7 +17,7 @@ interface EntryFormModalProps {
     onClose: () => void;
     pageData: any;
     editData?: any;
-    action?: 'edit' | 'delete' | null;
+    action?: 'edit' | 'delete' | 'view' | null;
     setEntryEditData?: React.Dispatch<React.SetStateAction<any>>;
 }
 
@@ -104,6 +104,8 @@ interface ChildEntryModalProps {
         type: 'M' | 'S' | 'E' | 'D';
         callback?: (confirmed: boolean) => void;
     }>>;
+    viewAccess: boolean;
+    isLoading: boolean;
 }
 
 const DropdownField: React.FC<{
@@ -173,7 +175,6 @@ const DropdownField: React.FC<{
             }
         };
 
-        console.log("check", options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()), field.wKey, typeof formValues[field.wKey]?.toString())
         return (
             <div key={field.Srno} className="mb-1">
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
@@ -491,10 +492,10 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             className={`
                                 w-full px-3 py-1 border rounded-md 
                                 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-                                ${!isEnabled 
-                                    ? 'border-gray-300 bg-[#f2f2f0]' 
-                                    : fieldErrors[field.wKey] 
-                                        ? 'border-red-500' 
+                                ${!isEnabled
+                                    ? 'border-gray-300 bg-[#f2f2f0]'
+                                    : fieldErrors[field.wKey]
+                                        ? 'border-red-500'
                                         : 'border-gray-700'
                                 }
                                 ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
@@ -598,7 +599,9 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     editData,
     isEdit,
     onChildFormSubmit,
-    setValidationModal
+    setValidationModal,
+    viewAccess,
+    isLoading
 }) => {
     if (!isOpen) return null;
 
@@ -686,36 +689,51 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                         ✕
                     </button>
                 </div>
-                <div className="text-end mt-5">
-                    <button
-                        onClick={resetChildForm}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md mr-2"
-                    >
-                        Reset
-                    </button>
-                    <button
-                        onClick={() => {
-                            submitFormData(masterValues, formValues)
-                        }
-                        }
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
-                    >
-                        Submit
-                    </button>
-                </div>
-                <EntryForm
-                    formData={formData}
-                    formValues={formValues}
-                    masterValues={masterValues}
-                    setFormValues={setFormValues}
-                    dropdownOptions={dropdownOptions}
-                    loadingDropdowns={loadingDropdowns}
-                    onDropdownChange={onDropdownChange}
-                    fieldErrors={fieldErrors}
-                    setFieldErrors={setFieldErrors}
-                    setFormData={setFormData}
-                    setValidationModal={setValidationModal}
-                />
+                {isLoading ? (
+                    <div className="text-center py-4">Loading...</div>
+                ) : (
+                    <>
+                        <div className="text-end mt-5">
+                            <button
+                                onClick={resetChildForm}
+                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                    }`}
+                                disabled={viewAccess}
+                            >
+                                Reset
+                            </button>
+                            <button
+                                onClick={() => {
+                                    submitFormData(masterValues, formValues)
+                                }
+                                }
+                                disabled={viewAccess}
+                                className={`px-4 py-2 rounded-md ${viewAccess
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-500 hover:bg-green-600 text-white'
+                                    }`}
+                            >
+                                Submit
+                            </button>
+                        </div>
+                        <EntryForm
+                            formData={formData}
+                            formValues={formValues}
+                            masterValues={masterValues}
+                            setFormValues={setFormValues}
+                            dropdownOptions={dropdownOptions}
+                            loadingDropdowns={loadingDropdowns}
+                            onDropdownChange={onDropdownChange}
+                            fieldErrors={fieldErrors}
+                            setFieldErrors={setFieldErrors}
+                            setFormData={setFormData}
+                            setValidationModal={setValidationModal}
+                        />
+                    </>
+                )}
+
             </div>
         </div>
     );
@@ -744,6 +762,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         type: 'M' | 'S' | 'E' | 'D';
         callback?: (confirmed: boolean) => void;
     }>({ isOpen: false, message: '', type: 'M' });
+
+    const [viewMode, setViewMode] = useState<boolean>(false);
 
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
@@ -873,9 +893,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const fetchMasterEntryData = async (editData?: any) => {
+    const fetchMasterEntryData = async (editData?: any, viewMode: boolean = false) => {
         if (!pageData?.[0]?.Entry) return;
-
         setIsLoading(true);
         try {
             const entry = pageData[0].Entry;
@@ -939,13 +958,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+            let formData = response?.data?.data?.rs0 || [];
+            // If in view mode, set all FieldEnabledTag to "N"
+            if (viewMode) {
+                formData = formData.map((field: any) => ({
+                    ...field,
+                    FieldEnabledTag: "N"
+                }));
+            }
 
-            setMasterFormData(response?.data?.data?.rs0);
+            setMasterFormData(formData);
             setChildEntriesTable(response?.data?.data?.rs1 || []);
 
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data?.data?.rs0?.forEach((field: FormField) => {
+            formData.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
@@ -958,7 +985,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setMasterFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data?.data?.rs0?.forEach((field: FormField) => {
+            formData.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field);
                 }
@@ -966,9 +993,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 //     handleMasterDropdownChange(field);
                 // }
             });
-
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
+            setIsLoading(false);
         } finally {
             setIsLoading(false);
         }
@@ -976,7 +1003,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const fetchChildEntryData = async (editData?: any) => {
         if (!pageData?.[0]?.Entry) return;
-
+        setIsLoading(true)
         try {
             const entry = pageData[0].Entry;
             const childEntry = entry.ChildEntry;
@@ -1039,8 +1066,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
-
-            setChildFormData(response.data?.data?.rs0);
+            let formData = response?.data?.data?.rs0 || [];
+            if (viewMode) {
+                formData = formData.map((field: any) => ({
+                    ...field,
+                    FieldEnabledTag: "N"
+                }));
+            }
+            setChildFormData(formData);
 
             // Initialize child form values with any preset values
             const initialValues: Record<string, any> = {};
@@ -1066,14 +1099,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
         } catch (error) {
             console.error('Error fetching ChildEntry data:', error);
+            setIsLoading(false);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        if (isOpen && !isEdit) {
+        if (isOpen && !isEdit && (!editData || Object.keys(editData).length === 0)) {
             fetchMasterEntryData();
         }
-
     }, [isOpen, pageData]);
 
     useEffect(() => {
@@ -1185,6 +1220,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         if (action === 'edit' && editData) {
             fetchMasterEntryData(editData);
             setIsEdit(true);
+        } else if (action === 'view' && editData) {
+            setViewMode(true);
+            fetchMasterEntryData(editData, true);
         }
     }, [action, editData]);
 
@@ -1262,8 +1300,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         fetchMasterEntryData(masterFormValues)
     }
 
-
-
     if (!isOpen) return null;
 
     return (
@@ -1277,6 +1313,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 onClick={() => {
                                     resetParentForm();
                                     onClose()
+                                    setViewMode(false);
                                 }}
                                 className="text-gray-500 hover:text-gray-700"
                             >
@@ -1305,8 +1342,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         <h3 className="text-lg font-semibold">Child Entries</h3>
                                         <button
                                             onClick={handleAddChildEntry}
-                                            className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
-                                            disabled={isFormInvalid}
+                                            className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                            disabled={isFormInvalid || viewMode}
                                         >
                                             <FaPlus /> Add Entry
                                         </button>
@@ -1338,21 +1375,38 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         <td className="px-4 py-2 border-b text-center">{index + 1}</td>
                                                         {/* Actions */}
                                                         <td className="flex gap-1 px-4 py-2 border-b text-center">
-                                                            <button
-                                                                className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                            {viewMode && (<button
+                                                                className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
                                                                 onClick={() => {
                                                                     setChildEditRecord(entry);
                                                                     handleChildEditData(entry);
                                                                 }}
                                                             >
+                                                                view
+                                                            </button>)}
+                                                            <button
+                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                    : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
+                                                                    }`}
+                                                                onClick={() => {
+                                                                    setChildEditRecord(entry);
+                                                                    handleChildEditData(entry);
+                                                                }}
+                                                                disabled={viewMode}
+                                                            >
                                                                 Edit
                                                             </button>
                                                             <button
-                                                                className="bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 px-3 py-1 rounded-md transition-colors"
+                                                                className={`px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                    : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
+                                                                    }`}
                                                                 onClick={() => {
                                                                     setChildEditRecord(entry);
                                                                     setIsConfirmationModalOpen(true);
                                                                 }}
+                                                                disabled={viewMode}
                                                             >
                                                                 Delete
                                                             </button>
@@ -1399,6 +1453,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         setChildFormData([]);
                         setChildFormValues({});
                     }}
+                    isLoading={isLoading}
                     pageData={pageData}
                     masterValues={masterFormValues}
                     formData={childFormData}
@@ -1415,6 +1470,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     isEdit={isEdit}
                     onChildFormSubmit={onChildFormSubmit}
                     setValidationModal={setValidationModal}
+                    viewAccess={viewMode}
                 />
             )}
         </>
