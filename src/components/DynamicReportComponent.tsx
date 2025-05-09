@@ -695,7 +695,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
                         tableRef={tableRef}
-                        isEntryForm={componentType === "entry" ? true : false}
+                        isEntryForm={componentType === "entry"}
                         handleAction={handleTableAction}
                     />
                 </div>

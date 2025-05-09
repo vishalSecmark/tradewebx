@@ -86,6 +86,7 @@ interface ChildEntryModalProps {
     pageData: any;
     masterValues: Record<string, any>;
     formData: FormField[];
+    masterFormData: FormField[];
     formValues: Record<string, any>;
     setFormValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
     dropdownOptions: Record<string, any[]>;
@@ -107,6 +108,21 @@ interface ChildEntryModalProps {
     viewAccess: boolean;
     isLoading: boolean;
 }
+
+const validateForm = (formData, formValues) => {
+    const errors = {};
+
+    formData.forEach(field => {
+        if (field.FieldEnabledTag === "Y" && field.isMandatory === "true" && field.type !== "WDisplayBox") {
+            if (!formValues[field.wKey] || formValues[field.wKey].toString().trim() === "") {
+                errors[field.wKey] = `${field.label} is required`;
+            }
+        }
+    });
+
+    return errors;
+};
+
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -436,6 +452,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
                     if (tagFlag === 'true' || tagFlag === 'false') {
                         setFormValues(prev => ({ ...prev, [tagName]: "" }));
+                        if (isDisabled) {
+                            setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error for disabled fields
+                        }
                     } else {
                         setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
                     }
@@ -587,6 +606,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     pageData,
     masterValues,
     formData,
+    masterFormData,
     formValues,
     setFormValues,
     dropdownOptions,
@@ -604,6 +624,22 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isLoading
 }) => {
     if (!isOpen) return null;
+
+    const isChildInvalid = Object.values(fieldErrors).some(error => error);
+    const handleFormSubmit = () => {
+        const masterErrors = validateForm(masterFormData, masterValues);
+        const childErrors = validateForm(formData, formValues);
+
+        if (Object.keys(masterErrors).length > 0 || Object.keys(childErrors).length > 0) {
+            setFieldErrors({ ...masterErrors, ...childErrors });
+            toast.error("Please fill all mandatory fields before submitting.");
+            return;
+        }
+        else {
+            submitFormData(masterValues, formValues)
+        }
+    };
+
 
     const submitFormData = async (masterValues, childEntries) => {
         const entry = pageData[0].Entry;
@@ -705,12 +741,9 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                                 Reset
                             </button>
                             <button
-                                onClick={() => {
-                                    submitFormData(masterValues, formValues)
-                                }
-                                }
-                                disabled={viewAccess}
-                                className={`px-4 py-2 rounded-md ${viewAccess
+                                onClick={handleFormSubmit}
+                                disabled={viewAccess || isChildInvalid}
+                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
@@ -765,6 +798,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const [viewMode, setViewMode] = useState<boolean>(false);
 
+    console.log("errors", fieldErrors);
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -1241,17 +1275,36 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         fetchChildEntryData(data)
     }
 
+    const onChildFormSubmit = () => {
+        resetChildForm();
+        setIsChildModalOpen(false);
+        setChildDropdownOptions({});
+        setChildFormData([]);
+        setChildFormValues({});
+        fetchMasterEntryData(masterFormValues);
+    };
 
+    // Updated handleAddChildEntry to validate master form before adding a child entry
     const handleAddChildEntry = () => {
+        const masterErrors = validateForm(masterFormData, masterFormValues);
+
+        if (Object.keys(masterErrors).length > 0) {
+            setFieldErrors(masterErrors);
+            toast.error("Please fill all mandatory fields in the master form before adding a child entry.");
+            return;
+        }
+
         setIsEdit(false);
         setChildFormValues({});
         setIsChildModalOpen(true);
         if (childFormData?.length > 0) {
-            return
+            return;
         } else {
             fetchChildEntryData();
         }
     };
+
+
 
     const isFormInvalid = Object.values(fieldErrors).some(error => error);
 
@@ -1289,15 +1342,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         resetChildForm();
         setIsEdit(false);
         setEntryEditData(null);
-    }
-
-    const onChildFormSubmit = () => {
-        resetChildForm();
-        setIsChildModalOpen(false);
-        setChildDropdownOptions({});
-        setChildFormData([]);
-        setChildFormValues({});
-        fetchMasterEntryData(masterFormValues)
     }
 
     if (!isOpen) return null;
@@ -1457,6 +1501,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     pageData={pageData}
                     masterValues={masterFormValues}
                     formData={childFormData}
+                    masterFormData={masterFormData}
                     formValues={childFormValues}
                     setFormValues={setChildFormValues}
                     dropdownOptions={childDropdownOptions}
