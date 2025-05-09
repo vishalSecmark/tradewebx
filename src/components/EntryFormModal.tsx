@@ -107,6 +107,7 @@ interface ChildEntryModalProps {
     }>>;
     viewAccess: boolean;
     isLoading: boolean;
+    childEntriesTable: any[];
 }
 
 const validateForm = (formData, formValues) => {
@@ -621,7 +622,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     onChildFormSubmit,
     setValidationModal,
     viewAccess,
-    isLoading
+    isLoading,
+    childEntriesTable
 }) => {
     if (!isOpen) return null;
 
@@ -636,62 +638,73 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
             return;
         }
         else {
-            submitFormData(masterValues, formValues)
+            submitFormData(masterValues, formValues, childEntriesTable)
         }
     };
 
 
-    const submitFormData = async (masterValues, childEntries) => {
+    console.log("child table ", childEntriesTable, masterValues, formValues)
+
+
+    const submitFormData = async (masterValues, childEntry, childEntryTable) => {
         const entry = pageData[0].Entry;
-        const childEntry = entry.ChildEntry;
         const pageName = pageData[0]?.wPage || "";
 
         const option = isEdit ? "edit" : "add";
         const jTag = { "ActionName": pageName, "Option": option };
 
-        // Construct J_Ui
         const jUi = Object.entries(jTag)
             .map(([key, value]) => `"${key}":"${value}"`)
             .join(',');
 
-        // Construct J_Api
-        const jApi = Object.entries(childEntry.J_Api)
+        const jApi = Object.entries(entry.ChildEntry.J_Api)
             .map(([key, value]) => `"${key}":"${value}"`)
             .join(',');
 
-        const createXmlTags = (data) => {
-            const seenTags = new Set(); // Track seen tags to avoid duplicates
 
-            return Object.entries(data).map(([key, value]) => {
-                if (seenTags.has(key)) {
-                    return ''; // Skip duplicate tags
-                }
-                seenTags.add(key);
 
-                if (Array.isArray(value)) {
-                    return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
-                } else if (typeof value === 'object' && value !== null) {
-                    return `<${key}>${createXmlTags(value)}</${key}>`;
-                } else if (value) {
-                    return `<${key}>${value}</${key}>`;
-                } else {
-                    return `<${key}></${key}>`; // Keep empty tag if no value
-                }
-            }).filter(Boolean).join(''); // Remove any empty strings
-        };
+        const editedSerialNo = childEntry.SerialNo?.toString(); // Ensure it's string for safe comparison
 
-        const xData = createXmlTags({
-            ...masterValues,
-            items: { item: childEntries },
-            UserId: "ANUJ"
-        });
+        const itemsXml = [
+            {
+                ...childEntry,
+                IsEdit: isEdit.toString(),
+                IsAdd: (!isEdit).toString()
+            },
+            ...childEntryTable
+                .filter(item => item.SerialNo?.toString() !== editedSerialNo)
+                .map(item => ({
+                    ...item,
+                    IsEdit: "false",
+                    IsAdd: "false"
+                }))
+        ].map(item => {
+            const itemTags = Object.entries(item)
+                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .join('');
+            return `<item>${itemTags}</item>`;
+        }).join('');
+
+        // Convert masterValues to XML
+        const masterXml = Object.entries(masterValues)
+            .map(([key, value]) => `<${key}>${value}</${key}>`)
+            .join('');
+
+        const xData = `<X_Data>
+        ${masterXml}
+        <items>
+            ${itemsXml}
+        </items>
+        <UserId>ANUJ</UserId>
+    </X_Data>`;
 
         const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <X_Filter></X_Filter>
-            <X_Data>${xData}</X_Data>
-            <J_Api>${jApi}</J_Api>
-        </dsXml>`;
+        <J_Ui>${jUi}</J_Ui>
+        <X_Filter></X_Filter>
+        ${xData}
+        <J_Api>${jApi}</J_Api>
+    </dsXml>`;
+
         try {
             const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
                 headers: {
@@ -699,8 +712,9 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+
             if (response?.data?.success) {
-                onChildFormSubmit()
+                onChildFormSubmit();
                 toast.success('Form submitted successfully!');
             } else {
                 const message = response?.data?.message.replace(/<\/?Message>/g, '');
@@ -1498,6 +1512,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         setChildFormValues({});
                     }}
                     isLoading={isLoading}
+                    childEntriesTable={childEntriesTable}
                     pageData={pageData}
                     masterValues={masterFormValues}
                     formData={childFormData}
