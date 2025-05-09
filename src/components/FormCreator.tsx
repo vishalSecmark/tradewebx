@@ -762,8 +762,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     options={options}
                     value={selectedOption}
                     isMulti={item.isMultiple}
-                    closeMenuOnSelect={false}
-                    blurInputOnSelect={false}
+                    closeMenuOnSelect={!item.isMultiple}
+                    blurInputOnSelect={!item.isMultiple}
                     onChange={(selected) => {
                         const newValues = { ...formValues };
 
