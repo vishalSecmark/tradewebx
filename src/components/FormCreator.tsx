@@ -324,6 +324,10 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
                 console.error('Unexpected data format:', response.data);
+                setLoadingDropdowns(prev => ({
+                    ...prev,
+                    [item.wKey as string]: false
+                }));
                 return [];
             }
 
@@ -512,6 +516,10 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
                 console.error('Unexpected data format:', response.data);
+                setLoadingDropdowns(prev => ({
+                    ...prev,
+                    [item.wKey as string]: false
+                }));
                 return [];
             }
 
