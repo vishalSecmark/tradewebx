@@ -29,6 +29,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const clientCode = searchParams.get('clientCode');
     const [currentLevel, setCurrentLevel] = useState(0);
     const [apiData, setApiData] = useState<any>(null);
+    const [additionalTables, setAdditionalTables] = useState<Record<string, any[]>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState<Record<string, any>>({});
     const [primaryKeyFilters, setPrimaryKeyFilters] = useState<Record<string, any>>({});
@@ -50,8 +51,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [entryAction, setEntryAction] = useState<'edit' | 'delete' | null>(null);
-     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-    
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -318,6 +319,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             setApiData(response.data.data.rs0);
 
+            // Handle additional tables (rs3, rs4, etc.)
+            const additionalTablesData: Record<string, any[]> = {};
+            Object.entries(response.data.data).forEach(([key, value]) => {
+                if (key !== 'rs0' && key !== 'rs1' && Array.isArray(value)) {
+                    additionalTablesData[key] = value;
+                }
+            });
+            setAdditionalTables(additionalTablesData);
+
             // Parse RS1 Settings if available
             if (response.data.data.rs1?.[0]?.Settings) {
                 const xmlString = response.data.data.rs1[0].Settings;
@@ -348,7 +358,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 const json = convertXmlToJson(xmlString);
                 const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
 
-                // console.log('JSON UPDATED', jsonUpdated);
                 setJsonData(json);
                 setJsonDataUpdated(jsonUpdated);
                 setRs1Settings(settingsJson);
@@ -451,7 +460,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     if (key === 'Option') {
                         return `"${key}":"delete"`;
                     }
-                    if( key === 'ActionName'){
+                    if (key === 'ActionName') {
                         return `"${key}":"${pageName}"`;
                     }
                     return `"${key}":"${value}"`
@@ -504,7 +513,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setEntryAction(action as 'edit' | 'delete');
         if (action === "edit") {
             setIsEntryModalOpen(true);
-        }else{
+        } else {
             setIsConfirmationModalOpen(true);
         }
     }
@@ -518,7 +527,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setIsConfirmationModalOpen(false);
     };
 
-    console.log("check page data", pageData,rs1Settings);
+    console.log("check page data", pageData, rs1Settings);
 
     if (!pageData) {
         return <div>Loading report data...</div>;
@@ -701,10 +710,28 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         tableRef={tableRef}
                         isEntryForm={componentType === "entry" ? true : false}
                         handleAction={handleTableAction}
+                        fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                     />
+                    {console.log(additionalTables, 'additionalTables')}
+                    {Object.keys(additionalTables).length > 0 && (
+                        <div>
+                            {Object.entries(additionalTables).map(([tableKey, tableData]) => (
+                                <div className="mt-3">
+                                    <DataTable
+                                        data={tableData}
+                                        settings={{
+                                            ...pageData[0].levels[currentLevel].settings,
+                                        }}
+                                        tableRef={tableRef}
+                                        fullHeight={false}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
-            
+
             {componentType === 'entry' && (
                 <EntryFormModal
                     isOpen={isEntryModalOpen}
