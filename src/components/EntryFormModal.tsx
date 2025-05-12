@@ -7,7 +7,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import Select from 'react-select';
 import moment from 'moment';
 import { useTheme } from '@/context/ThemeContext';
-import { FaPlus } from 'react-icons/fa';
+import { FaPlus, FaSave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
@@ -108,6 +108,7 @@ interface ChildEntryModalProps {
     viewAccess: boolean;
     isLoading: boolean;
     childEntriesTable: any[];
+    setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const validateForm = (formData, formValues) => {
@@ -124,6 +125,11 @@ const validateForm = (formData, formValues) => {
     return errors;
 };
 
+
+// Helper function to generate unique ID
+const generateUniqueId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -623,7 +629,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     setValidationModal,
     viewAccess,
     isLoading,
-    childEntriesTable
+    childEntriesTable,
+    setChildEntriesTable
 }) => {
     if (!isOpen) return null;
 
@@ -632,99 +639,46 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
         const masterErrors = validateForm(masterFormData, masterValues);
         const childErrors = validateForm(formData, formValues);
 
-        if (Object.keys(masterErrors).length > 0 || Object.keys(childErrors).length > 0) {
+        if (Object.keys(childErrors).length > 0) {
             setFieldErrors({ ...masterErrors, ...childErrors });
             toast.error("Please fill all mandatory fields before submitting.");
             return;
         }
         else {
-            submitFormData(masterValues, formValues, childEntriesTable)
-        }
-    };
+            setChildEntriesTable(prev => {
+                let isUpdated = false;
+                console.log({ formValues })
+                const updatedEntries = prev.map(entry => {
+                    const isMatch = (entry.SerialNo && formValues.SerialNo && entry.SerialNo.toString() === formValues.SerialNo.toString())
+                        || (entry?.Id && formValues?.Id && entry.Id === formValues.Id);
 
+                    console.log("check is match", isMatch, { entryserial: entry.SerialNo }, { formserial: formValues.serialNo }, { entriid: entry.Id }, { formid: formValues.Id })
 
-    console.log("child table ", childEntriesTable, masterValues, formValues)
+                    if (isMatch) {
+                        isUpdated = true;
+                        return { ...entry, ...formValues };
+                    }
+                    return entry;
+                });
 
-
-    const submitFormData = async (masterValues, childEntry, childEntryTable) => {
-        const entry = pageData[0].Entry;
-        const pageName = pageData[0]?.wPage || "";
-
-        const option = isEdit ? "edit" : "add";
-        const jTag = { "ActionName": pageName, "Option": option };
-
-        const jUi = Object.entries(jTag)
-            .map(([key, value]) => `"${key}":"${value}"`)
-            .join(',');
-
-        const jApi = Object.entries(entry.ChildEntry.J_Api)
-            .map(([key, value]) => `"${key}":"${value}"`)
-            .join(',');
-
-
-
-        const editedSerialNo = childEntry.SerialNo?.toString(); // Ensure it's string for safe comparison
-
-        const itemsXml = [
-            {
-                ...childEntry,
-                IsEdit: isEdit.toString(),
-                IsAdd: (!isEdit).toString()
-            },
-            ...childEntryTable
-                .filter(item => item.SerialNo?.toString() !== editedSerialNo)
-                .map(item => ({
-                    ...item,
-                    IsEdit: "false",
-                    IsAdd: "false"
-                }))
-        ].map(item => {
-            const itemTags = Object.entries(item)
-                .map(([key, value]) => `<${key}>${value}</${key}>`)
-                .join('');
-            return `<item>${itemTags}</item>`;
-        }).join('');
-
-        // Convert masterValues to XML
-        const masterXml = Object.entries(masterValues)
-            .map(([key, value]) => `<${key}>${value}</${key}>`)
-            .join('');
-
-        const xData = `<X_Data>
-        ${masterXml}
-        <items>
-            ${itemsXml}
-        </items>
-        <UserId>ANUJ</UserId>
-    </X_Data>`;
-
-        const xmlData = `<dsXml>
-        <J_Ui>${jUi}</J_Ui>
-        <X_Filter></X_Filter>
-        ${xData}
-        <J_Api>${jApi}</J_Api>
-    </dsXml>`;
-
-        try {
-            const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                // If it was an update, return the modified list
+                if (isUpdated) {
+                    return updatedEntries;
                 }
+
+                // Otherwise it's a new unsaved entry (add Id to track it)
+                const entryToAdd = {
+                    ...formValues,
+                    Id: generateUniqueId()
+                };
+                return [...updatedEntries, entryToAdd];
             });
 
-            if (response?.data?.success) {
-                onChildFormSubmit();
-                toast.success('Form submitted successfully!');
-            } else {
-                const message = response?.data?.message.replace(/<\/?Message>/g, '');
-                toast.warning(message);
-            }
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            alert('Failed to submit the form. Please try again.');
+            onChildFormSubmit();
         }
     };
+
+
 
 
     return (
@@ -803,6 +757,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [isEdit, setIsEdit] = useState<boolean>(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [childEditRecord, setChildEditRecord] = useState<any>(null);
+    const [isFormSubmit, setIsFormSubmit] = useState<boolean>(false);
+    const childEntryPresent = pageData[0].Entry.ChildEntry;
+    const isThereChildEntry = !childEntryPresent || Object.keys(childEntryPresent).length === 0;
+    console.log("child edit", childEditRecord)
     const [validationModal, setValidationModal] = useState<{
         isOpen: boolean;
         message: string;
@@ -812,7 +770,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const [viewMode, setViewMode] = useState<boolean>(false);
 
-    console.log("errors", fieldErrors);
+    console.log("child entry table", childEntriesTable);
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -1060,7 +1018,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             // Construct J_Ui - handle 'Option' key specially
             const jUi = Object.entries(childEntry.J_Ui)
                 .map(([key, value]) => {
-                    if (key === 'Option' && editData) {
+                    if (key === 'Option' && editData && editData.SerialNo) {
                         return `"${key}":"ChildEntry_Edit"`;
                     }
                     return `"${key}":"${value}"`;
@@ -1076,7 +1034,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             let xFilter = '';
             Object.entries(childEntry.X_Filter).forEach(([key, value]) => {
                 // If we have edit data and the key exists in it, use that value
-                if (editData && editData[key] !== undefined && editData[key] !== null) {
+                if (editData && editData.SerialNo && editData[key] !== undefined && editData[key] !== null) {
                     xFilter += `<${key}>${editData[key]}</${key}>`;
                 }
                 // Otherwise use the default value from childEntry
@@ -1088,7 +1046,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
 
             // Add any additional fields from editData that aren't in childEntry.X_Filter
-            if (editData) {
+            if (editData && editData.SerialNo) {
                 Object.entries(editData).forEach(([key, value]) => {
                     if (
                         value !== undefined &&
@@ -1126,7 +1084,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             // Initialize child form values with any preset values
             const initialValues: Record<string, any> = {};
             response.data?.data?.rs0?.forEach((field: FormField) => {
-                if (field.type === 'WDateBox' && field.wValue) {
+                if (editData && editData.Id) {
+                    initialValues[field.wKey] = editData[field.wKey];
+                    initialValues['Id'] = editData['Id'];
+                }
+                else if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
                 // If we have edit data, use it to pre-fill the form
@@ -1253,6 +1215,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
             if (response?.data?.success) {
                 fetchMasterEntryData(masterFormValues)
+                setIsConfirmationModalOpen(false);
             }
 
         } catch (error) {
@@ -1275,8 +1238,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }, [action, editData]);
 
     const handleConfirmDelete = () => {
-        deleteChildRecord();
-        setIsConfirmationModalOpen(false);
+        if (childEditRecord && childEditRecord?.Id) {
+            const filteredData = childEntriesTable.filter((item: any) => item.Id !== childEditRecord?.Id);
+            setChildEntriesTable(filteredData);
+            setIsConfirmationModalOpen(false);
+
+        } else {
+            deleteChildRecord();
+        }
     };
 
     const handleCancelDelete = () => {
@@ -1295,7 +1264,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setChildDropdownOptions({});
         setChildFormData([]);
         setChildFormValues({});
-        fetchMasterEntryData(masterFormValues);
+        // fetchMasterEntryData(masterFormValues);
     };
 
     // Updated handleAddChildEntry to validate master form before adding a child entry
@@ -1356,7 +1325,140 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         resetChildForm();
         setIsEdit(false);
         setEntryEditData(null);
+        setChildEditRecord(null);
+
     }
+
+
+
+    const submitFormData = async (masterValues, childEntry, childEntryTable) => {
+        console.log("submit form", masterValues, childEntry, childEntryTable);
+        setIsFormSubmit(true)
+        const entry = pageData[0].Entry;
+        const pageName = pageData[0]?.wPage || "";
+
+        console.log("check entry", entry, pageData)
+
+        const option = isEdit ? "edit" : "add";
+        const jTag = { "ActionName": pageName, "Option": option };
+
+        const jUi = Object.entries(jTag)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        const jApi = Object.entries(entry.ChildEntry.J_Api)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        const editedSerialNo = childEntry?.SerialNo?.toString();
+        const editedId = childEntry?.Id?.toString();
+
+        // Build a set to track processed SerialNo or Ids
+        const processedKeys = new Set();
+
+        // Add main childEntry with correct flags
+        const mainItem = {
+            ...childEntry,
+            IsEdit: editedSerialNo ? "true" : "false",
+            IsAdd: editedSerialNo ? "false" : "true"
+        };
+
+        if (editedSerialNo) processedKeys.add(`S-${editedSerialNo}`);
+        else if (editedId) processedKeys.add(`I-${editedId}`);
+
+        // Add rest of childEntryTable
+        const otherItems = childEntryTable
+            .filter(item => {
+                const serial = item.SerialNo?.toString();
+                const id = item.Id?.toString();
+                const key = serial ? `S-${serial}` : id ? `I-${id}` : null;
+                return key && !processedKeys.has(key);
+            })
+            .map(item => {
+                const serial = item.SerialNo?.toString();
+                const id = item.Id?.toString();
+                const isAdd = (!serial && id) ? "true" : "false";
+                const key = serial ? `S-${serial}` : id ? `I-${id}` : null;
+                if (key) processedKeys.add(key);
+
+                return {
+                    ...item,
+                    IsEdit: "false",
+                    IsAdd: isAdd
+                };
+            });
+
+        const finalItems = [mainItem, ...otherItems];
+
+        const itemsXml = finalItems.map(item => {
+            const itemTags = Object.entries(item)
+                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .join('');
+            return `<item>${itemTags}</item>`;
+        }).join('');
+
+        const masterXml = Object.entries(masterValues)
+            .map(([key, value]) => `<${key}>${value}</${key}>`)
+            .join('');
+
+        const xData = `<X_Data>
+        ${masterXml}
+        <items>
+            ${itemsXml}
+        </items>
+        <UserId>ANUJ</UserId>
+    </X_Data>`;
+
+        const xmlData = `<dsXml>
+        <J_Ui>${jUi}</J_Ui>
+        <X_Filter></X_Filter>
+        ${xData}
+        <J_Api>${jApi}</J_Api>
+    </dsXml>`;
+
+        try {
+            const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response?.data?.success) {
+                onChildFormSubmit();
+                toast.success('Form submitted successfully!');
+                setIsFormSubmit(false)
+            } else {
+                const message = response?.data?.message.replace(/<\/?Message>/g, '');
+                toast.warning(message);
+                setIsFormSubmit(false)
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Failed to submit the form. Please try again.');
+            setIsFormSubmit(false)
+        }
+    };
+
+
+
+    const getAllColumns = (data: any[]): string[] => {
+        const allColumns = new Set<string>();
+        data.forEach(entry => {
+            if (entry && typeof entry === 'object') {
+                Object.keys(entry).forEach(key => {
+                    if (key !== "SerialNo" && key !== "Id") {
+                        allColumns.add(key);
+                    }
+                });
+            }
+        });
+        return Array.from(allColumns);
+    };
+
+    // In your component
+    const dynamicColumns = getAllColumns(childEntriesTable);
+
 
     if (!isOpen) return null;
 
@@ -1398,13 +1500,36 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 <div className="mt-8">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="text-lg font-semibold">Child Entries</h3>
-                                        <button
-                                            onClick={handleAddChildEntry}
-                                            className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
-                                            disabled={isFormInvalid || viewMode}
-                                        >
-                                            <FaPlus /> Add Entry
-                                        </button>
+                                        <div className="flex gap-3">
+                                            <button
+                                                onClick={handleAddChildEntry}
+                                                className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
+                                                        ? 'bg-gray-400 cursor-not-allowed'
+                                                        : 'bg-blue-500 hover:bg-blue-600'
+                                                    } text-white rounded-md`}
+                                                disabled={isFormInvalid || viewMode || isThereChildEntry || isFormSubmit}
+                                            >
+                                                {isFormSubmit ? "Submitting..." : (
+                                                    <>
+                                                        <FaPlus /> Add Entry
+                                                    </>
+                                                )}
+                                            </button>
+                                            <button
+                                                className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                                onClick={() => {
+                                                    submitFormData(masterFormValues, childEditRecord, childEntriesTable);
+                                                }}
+                                                disabled={isFormInvalid || viewMode || isFormSubmit}
+                                            >
+                                                {isFormSubmit ? "Submitting..." : (
+                                                    <>
+                                                        <FaSave /> Save Form
+                                                    </>
+                                                )}
+                                                
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="overflow-x-auto">
@@ -1427,58 +1552,73 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {childEntriesTable.map((entry, index) => (
-                                                    <tr key={index}>
-                                                        {/* Serial number */}
-                                                        <td className="px-4 py-2 border-b text-center">{index + 1}</td>
-                                                        {/* Actions */}
-                                                        <td className="flex gap-1 px-4 py-2 border-b text-center">
-                                                            {viewMode && (<button
-                                                                className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    handleChildEditData(entry);
-                                                                }}
-                                                            >
-                                                                view
-                                                            </button>)}
-                                                            <button
-                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                    : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
-                                                                    }`}
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    handleChildEditData(entry);
-                                                                }}
-                                                                disabled={viewMode}
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className={`px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                    : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
-                                                                    }`}
-                                                                onClick={() => {
-                                                                    setChildEditRecord(entry);
-                                                                    setIsConfirmationModalOpen(true);
-                                                                }}
-                                                                disabled={viewMode}
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
+                                                {childEntriesTable.map((entry, index) => {
+                                                    // Create a safe entry object with all dynamic columns initialized
+                                                    const safeEntry = { ...entry };
+                                                    dynamicColumns.forEach(col => {
+                                                        if (!(col in safeEntry)) {
+                                                            safeEntry[col] = "";
+                                                        }
+                                                    });
 
-                                                        {/* Dynamic values */}
-                                                        {Object.entries(entry).map(([key, value]) => (
-                                                            key !== "SerialNo" && // Exclude SerialNo as it's in the first column
-                                                            <td key={key} className="px-4 py-2 border-b text-center">
-                                                                {value === null || value === "" ? "-" : value.toString()}
+                                                    return (
+                                                        <tr key={index}>
+                                                            {/* Serial number */}
+                                                            <td className="px-4 py-2 border-b text-center">{index + 1}</td>
+
+                                                            {/* Actions */}
+                                                            <td className="flex gap-1 px-4 py-2 border-b text-center">
+                                                                {viewMode && (
+                                                                    <button
+                                                                        className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                        onClick={() => {
+                                                                            setChildEditRecord(entry);
+                                                                            handleChildEditData(entry);
+                                                                        }}
+                                                                    >
+                                                                        view
+                                                                    </button>
+                                                                )}
+                                                                <button
+                                                                    className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                        : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
+                                                                        }`}
+                                                                    onClick={() => {
+                                                                        setChildEditRecord(entry);
+                                                                        handleChildEditData(entry);
+                                                                    }}
+                                                                    disabled={viewMode}
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    className={`px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                        : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
+                                                                        }`}
+                                                                    onClick={() => {
+                                                                        setChildEditRecord(entry);
+                                                                        setIsConfirmationModalOpen(true);
+                                                                    }}
+                                                                    disabled={viewMode}
+                                                                >
+                                                                    Delete
+                                                                </button>
                                                             </td>
-                                                        ))}
-                                                    </tr>
-                                                ))}
+
+                                                            {/* Dynamic values */}
+                                                            {dynamicColumns.map((key) => (
+                                                                <td key={key} className="px-4 py-2 border-b text-center">
+                                                                    {safeEntry[key] == null || safeEntry[key] === ""
+                                                                        ? "-"
+                                                                        : String(safeEntry[key])
+                                                                    }
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    );
+                                                })}
                                             </tbody>
                                         </table>
                                     </div>
@@ -1513,6 +1653,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     }}
                     isLoading={isLoading}
                     childEntriesTable={childEntriesTable}
+                    setChildEntriesTable={setChildEntriesTable}
                     pageData={pageData}
                     masterValues={masterFormValues}
                     formData={childFormData}
