@@ -561,6 +561,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
+
                         {componentType === 'entry' && (
                             <button
                                 className="p-2 rounded"
@@ -570,21 +571,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 <FaPlus size={20} />
                             </button>
                         )}
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFileCsv size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFilePdf size={20} />
-                        </button>
+                        {Object.keys(additionalTables).length == 0 && (
+                            <>
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFileCsv size={20} />
+                                </button>
 
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFilePdf size={20} />
+                                </button>
+                            </>
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -712,21 +717,27 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         handleAction={handleTableAction}
                         fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                     />
-                    {console.log(additionalTables, 'additionalTables')}
                     {Object.keys(additionalTables).length > 0 && (
                         <div>
-                            {Object.entries(additionalTables).map(([tableKey, tableData]) => (
-                                <div className="mt-3">
-                                    <DataTable
-                                        data={tableData}
-                                        settings={{
-                                            ...pageData[0].levels[currentLevel].settings,
-                                        }}
-                                        tableRef={tableRef}
-                                        fullHeight={false}
-                                    />
-                                </div>
-                            ))}
+                            {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                // Get the title from jsonData based on the table key
+                                const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                return (
+                                    <div key={tableKey} className="mt-3">
+                                        <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                            {tableTitle}
+                                        </h3>
+                                        <DataTable
+                                            data={tableData}
+                                            settings={{
+                                                ...pageData[0].levels[currentLevel].settings,
+                                            }}
+                                            tableRef={tableRef}
+                                            fullHeight={false}
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
