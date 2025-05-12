@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import DatePicker from 'react-datepicker';
@@ -1258,10 +1258,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         fetchChildEntryData(data)
     }
 
-    const handleChildEditNonSavedData = (data:any)=>{
+    const handleChildEditNonSavedData = (data: any) => {
         setIsChildModalOpen(true);
         fetchChildEntryData(data)
-    
+
     }
 
     const onChildFormSubmit = () => {
@@ -1336,9 +1336,30 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }
 
 
+    const masterFormValuesRef = useRef(masterFormValues);
+const childEditRecordRef = useRef(childEditRecord);
+const childEntriesTableRef = useRef(childEntriesTable);
 
-    const submitFormData = async (masterValues, childEntry, childEntryTable) => {
-        console.log("submit form", masterValues, childEntry, childEntryTable);
+// Keep refs up to date
+useEffect(() => {
+  masterFormValuesRef.current = masterFormValues;
+}, [masterFormValues]);
+
+useEffect(() => {
+  childEditRecordRef.current = childEditRecord;
+}, [childEditRecord]);
+
+useEffect(() => {
+  childEntriesTableRef.current = childEntriesTable;
+}, [childEntriesTable]);
+
+
+
+    const submitFormData = async () => {
+        const masterValues = structuredClone(masterFormValuesRef.current);
+const childEntry = structuredClone(childEditRecordRef.current);
+const childEntryTable = [...childEntriesTableRef.current].map(item => structuredClone(item));
+console.log("submit form", masterValues, childEntry, childEntryTable);
         setIsFormSubmit(true)
         const entry = pageData[0].Entry;
         const pageName = pageData[0]?.wPage || "";
@@ -1510,8 +1531,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                             <button
                                                 onClick={handleAddChildEntry}
                                                 className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
-                                                        ? 'bg-gray-400 cursor-not-allowed'
-                                                        : 'bg-blue-500 hover:bg-blue-600'
+                                                    ? 'bg-gray-400 cursor-not-allowed'
+                                                    : 'bg-blue-500 hover:bg-blue-600'
                                                     } text-white rounded-md`}
                                                 disabled={isFormInvalid || viewMode || isThereChildEntry || isFormSubmit}
                                             >
@@ -1524,7 +1545,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                             <button
                                                 className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
                                                 onClick={() => {
-                                                    submitFormData(masterFormValues, childEditRecord, childEntriesTable);
+                                                    submitFormData();
                                                 }}
                                                 disabled={isFormInvalid || viewMode || isFormSubmit}
                                             >
@@ -1533,7 +1554,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         <FaSave /> Save Form
                                                     </>
                                                 )}
-                                                
+
                                             </button>
                                         </div>
                                     </div>
@@ -1594,7 +1615,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                     onClick={() => {
                                                                         setChildEditRecord(entry);
                                                                         // handleChildEditData(entry);
-                                                                            handleChildEditNonSavedData(entry);
+                                                                        handleChildEditNonSavedData(entry);
 
                                                                     }}
                                                                     disabled={viewMode}
