@@ -731,7 +731,18 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             data={tableData}
                                             settings={{
                                                 ...pageData[0].levels[currentLevel].settings,
+                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                // Add level-specific settings
+                                                ...(currentLevel > 0 ? {
+                                                    // Override responsive columns for second level if needed
+                                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                    webColumns: rs1Settings?.webColumns?.[0] || []
+                                                } : {})
                                             }}
+                                            summary={pageData[0].levels[currentLevel].summary}
                                             tableRef={tableRef}
                                             fullHeight={false}
                                         />
