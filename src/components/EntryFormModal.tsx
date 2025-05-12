@@ -1125,7 +1125,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         // Check if childFormValues has been updated with initial values
         if (Object.keys(childFormValues).length > 0) {
             childFormData.forEach((field) => {
-                if (field.type === 'WDropDownBox' && field.dependsOn && isEdit) {
+                if (field.type === 'WDropDownBox' && field.dependsOn) {
                     handleChildDropdownChange(field);
                 }
             });
@@ -1136,7 +1136,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         // Check if childFormValues has been updated with initial values
         if (Object.keys(masterFormValues).length > 0) {
             masterFormData.forEach((field) => {
-                if (field.type === 'WDropDownBox' && field.dependsOn && isEdit) {
+                if (field.type === 'WDropDownBox' && field.dependsOn) {
                     handleMasterDropdownChange(field);
                 }
             });
@@ -1256,6 +1256,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setIsEdit(true);
         setIsChildModalOpen(true);
         fetchChildEntryData(data)
+    }
+
+    const handleChildEditNonSavedData = (data:any)=>{
+        setIsChildModalOpen(true);
+        fetchChildEntryData(data)
+    
     }
 
     const onChildFormSubmit = () => {
@@ -1573,7 +1579,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
                                                                         onClick={() => {
                                                                             setChildEditRecord(entry);
-                                                                            handleChildEditData(entry);
+                                                                            // handleChildEditData(entry);
+                                                                            handleChildEditNonSavedData(entry);
                                                                         }}
                                                                     >
                                                                         view
@@ -1586,7 +1593,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         }`}
                                                                     onClick={() => {
                                                                         setChildEditRecord(entry);
-                                                                        handleChildEditData(entry);
+                                                                        // handleChildEditData(entry);
+                                                                            handleChildEditNonSavedData(entry);
+
                                                                     }}
                                                                     disabled={viewMode}
                                                                 >
