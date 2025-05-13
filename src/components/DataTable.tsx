@@ -26,6 +26,7 @@ interface DataTableProps {
     summary?: any;
     isEntryForm?: boolean;
     handleAction?: (action: string, record: any) => void;
+    fullHeight?: boolean;
 }
 
 interface DecimalColumn {
@@ -122,8 +123,7 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary, isEntryForm = false, handleAction = () => { } }) => {
-
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
 
@@ -611,7 +611,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
     return (
         <div
             ref={tableRef}
-            style={{ height: 'calc(100vh - 170px)', width: '100%' }}
+            style={{ height: fullHeight ? 'calc(100vh - 170px)' : 'auto', width: '100%' }}
         >
             <DataGrid
                 columns={columns}

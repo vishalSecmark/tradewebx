@@ -29,6 +29,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const clientCode = searchParams.get('clientCode');
     const [currentLevel, setCurrentLevel] = useState(0);
     const [apiData, setApiData] = useState<any>(null);
+    const [additionalTables, setAdditionalTables] = useState<Record<string, any[]>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState<Record<string, any>>({});
     const [primaryKeyFilters, setPrimaryKeyFilters] = useState<Record<string, any>>({});
@@ -315,6 +316,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             setApiData(response.data.data.rs0);
 
+            // Handle additional tables (rs3, rs4, etc.)
+            const additionalTablesData: Record<string, any[]> = {};
+            Object.entries(response.data.data).forEach(([key, value]) => {
+                if (key !== 'rs0' && key !== 'rs1' && Array.isArray(value)) {
+                    additionalTablesData[key] = value;
+                }
+            });
+            setAdditionalTables(additionalTablesData);
+
             // Parse RS1 Settings if available
             if (response.data.data.rs1?.[0]?.Settings) {
                 const xmlString = response.data.data.rs1[0].Settings;
@@ -344,7 +354,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                 const json = convertXmlToJson(xmlString);
                 const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
-
                 
                 setJsonData(json);
                 setJsonDataUpdated(jsonUpdated);
@@ -501,8 +510,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setEntryAction(action as 'edit' | 'delete' | 'view');
         if (action === "edit" || action === "view") {
             setIsEntryModalOpen(true);
-        }
-        else {
+        } else {
             setIsConfirmationModalOpen(true);
         }
     }
@@ -515,7 +523,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const handleCancelDelete = () => {
         setIsConfirmationModalOpen(false);
     };
-
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
@@ -548,6 +555,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
+
                         {componentType === 'entry' && (
                             <button
                                 className="p-2 rounded"
@@ -557,21 +565,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 <FaPlus size={20} />
                             </button>
                         )}
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFileCsv size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFilePdf size={20} />
-                        </button>
+                        {Object.keys(additionalTables).length == 0 && (
+                            <>
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFileCsv size={20} />
+                                </button>
 
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFilePdf size={20} />
+                                </button>
+                            </>
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -697,7 +709,42 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         tableRef={tableRef}
                         isEntryForm={componentType === "entry"}
                         handleAction={handleTableAction}
+                        fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                     />
+                    {Object.keys(additionalTables).length > 0 && (
+                        <div>
+                            {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                // Get the title from jsonData based on the table key
+                                const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                return (
+                                    <div key={tableKey} className="mt-3">
+                                        <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                            {tableTitle}
+                                        </h3>
+                                        <DataTable
+                                            data={tableData}
+                                            settings={{
+                                                ...pageData[0].levels[currentLevel].settings,
+                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                // Add level-specific settings
+                                                ...(currentLevel > 0 ? {
+                                                    // Override responsive columns for second level if needed
+                                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                    webColumns: rs1Settings?.webColumns?.[0] || []
+                                                } : {})
+                                            }}
+                                            summary={pageData[0].levels[currentLevel].summary}
+                                            tableRef={tableRef}
+                                            fullHeight={false}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 
