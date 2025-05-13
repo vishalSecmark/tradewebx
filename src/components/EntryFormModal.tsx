@@ -113,7 +113,7 @@ const validateForm = (formData, formValues) => {
 
     formData.forEach(field => {
         if (field.FieldEnabledTag === "Y" && field.isMandatory === "true" && field.type !== "WDisplayBox") {
-            if (!formValues[field.wKey] || formValues[field.wKey].toString().trim() === "") {
+            if (!formValues[field.wKey] || formValues[field.wKey]?.toString()?.trim() === "") {
                 errors[field.wKey] = `${field.label} is required`;
             }
         }
@@ -210,7 +210,7 @@ const DropdownField: React.FC<{
                     }}
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
                     onFocus={() => handleDropDownChange(field)}
-                    placeholder={(formValues[field.wKey].trim() !== "" && formValues[field.wKey].trim() !==" ") ? formValues[field.wKey]  : "Select..."}
+                    placeholder={(formValues[field.wKey]?.trim() !== "" && formValues[field.wKey]?.trim() !==" ") ? formValues[field.wKey]  : "Select..."}
                     className="react-select-container"
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field.wKey]}
