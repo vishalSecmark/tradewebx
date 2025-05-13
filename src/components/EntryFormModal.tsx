@@ -83,7 +83,6 @@ interface EntryFormProps {
 interface ChildEntryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    pageData: any;
     masterValues: Record<string, any>;
     formData: FormField[];
     masterFormData: FormField[];
@@ -96,7 +95,6 @@ interface ChildEntryModalProps {
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
     setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
     resetChildForm: () => void;
-    editData: any;
     isEdit: boolean;
     onChildFormSubmit: () => void;
     setValidationModal: React.Dispatch<React.SetStateAction<{
@@ -107,7 +105,6 @@ interface ChildEntryModalProps {
     }>>;
     viewAccess: boolean;
     isLoading: boolean;
-    childEntriesTable: any[];
     setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
@@ -213,7 +210,7 @@ const DropdownField: React.FC<{
                     }}
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
                     onFocus={() => handleDropDownChange(field)}
-                    placeholder="Select..."
+                    placeholder={(formValues[field.wKey].trim() !== "" && formValues[field.wKey].trim() !==" ") ? formValues[field.wKey]  : "Select..."}
                     className="react-select-container"
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field.wKey]}
@@ -610,7 +607,6 @@ const EntryForm: React.FC<EntryFormProps> = ({
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
     onClose,
-    pageData,
     masterValues,
     formData,
     masterFormData,
@@ -623,13 +619,11 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     setFieldErrors,
     setFormData,
     resetChildForm,
-    editData,
     isEdit,
     onChildFormSubmit,
     setValidationModal,
     viewAccess,
     isLoading,
-    childEntriesTable,
     setChildEntriesTable
 }) => {
     if (!isOpen) return null;
@@ -647,12 +641,10 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
         else {
             setChildEntriesTable(prev => {
                 let isUpdated = false;
-                console.log({ formValues })
+
                 const updatedEntries = prev.map(entry => {
                     const isMatch = (entry.SerialNo && formValues.SerialNo && entry.SerialNo.toString() === formValues.SerialNo.toString())
                         || (entry?.Id && formValues?.Id && entry.Id === formValues.Id);
-
-                    console.log("check is match", isMatch, { entryserial: entry.SerialNo }, { formserial: formValues.serialNo }, { entriid: entry.Id }, { formid: formValues.Id })
 
                     if (isMatch) {
                         isUpdated = true;
@@ -756,11 +748,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [isEdit, setIsEdit] = useState<boolean>(false);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
-    const [childEditRecord, setChildEditRecord] = useState<any>(null);
     const [isFormSubmit, setIsFormSubmit] = useState<boolean>(false);
+
     const childEntryPresent = pageData[0].Entry.ChildEntry;
     const isThereChildEntry = !childEntryPresent || Object.keys(childEntryPresent).length === 0;
-    console.log("child edit", childEditRecord)
+
     const [validationModal, setValidationModal] = useState<{
         isOpen: boolean;
         message: string;
@@ -770,7 +762,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const [viewMode, setViewMode] = useState<boolean>(false);
 
-    console.log("child entry table", childEntriesTable);
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -1121,27 +1112,27 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     }, [isOpen, pageData]);
 
-    useEffect(() => {
-        // Check if childFormValues has been updated with initial values
-        if (Object.keys(childFormValues).length > 0) {
-            childFormData.forEach((field) => {
-                if (field.type === 'WDropDownBox' && field.dependsOn) {
-                    handleChildDropdownChange(field);
-                }
-            });
-        }
-    }, [childFormValues]);
+    // useEffect(() => {
+    //     // Check if childFormValues has been updated with initial values
+    //     if (Object.keys(childFormValues).length > 0) {
+    //         childFormData.forEach((field) => {
+    //             if (field.type === 'WDropDownBox' && field.dependsOn) {
+    //                 handleChildDropdownChange(field);
+    //             }
+    //         });
+    //     }
+    // }, [childFormValues]);
 
-    useEffect(() => {
-        // Check if childFormValues has been updated with initial values
-        if (Object.keys(masterFormValues).length > 0) {
-            masterFormData.forEach((field) => {
-                if (field.type === 'WDropDownBox' && field.dependsOn) {
-                    handleMasterDropdownChange(field);
-                }
-            });
-        }
-    }, [masterFormValues]);
+    // useEffect(() => {
+    //     // Check if childFormValues has been updated with initial values
+    //     if (Object.keys(masterFormValues).length > 0) {
+    //         masterFormData.forEach((field) => {
+    //             if (field.type === 'WDropDownBox' && field.dependsOn) {
+    //                 handleMasterDropdownChange(field);
+    //             }
+    //         });
+    //     }
+    // }, [masterFormValues]);
 
 
 
@@ -1195,7 +1186,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             const xData = createXmlTags({
                 ...masterFormValues,
-                items: { item: { ...childEditRecord, IsDeleted: true } },
+                items: { item: { ...childFormValues, IsDeleted: true } },
                 UserId: "ANUJ"
             });
 
@@ -1238,8 +1229,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }, [action, editData]);
 
     const handleConfirmDelete = () => {
-        if (childEditRecord && childEditRecord?.Id) {
-            const filteredData = childEntriesTable.filter((item: any) => item.Id !== childEditRecord?.Id);
+        if (childFormValues && childFormValues?.Id) {
+            const filteredData = childEntriesTable.filter((item: any) => item.Id !== childFormValues?.Id);
             setChildEntriesTable(filteredData);
             setIsConfirmationModalOpen(false);
 
@@ -1293,10 +1284,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-
-
     const isFormInvalid = Object.values(fieldErrors).some(error => error);
-
 
     // use this in future
     const resetChildForm = () => {
@@ -1311,16 +1299,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
             return updatedErrors;
         });
-        //clear the child dependent dropdown options
-        // setChildDropdownOptions(prevOptions =>{
-        //     const updatedOptions = { ...prevOptions };
-        //     childFormData.forEach(field => {
-        //         if (field.dependsOn) {
-        //             delete updatedOptions[field.wKey];
-        //         }
-        //     });
-        //     return updatedOptions;
-        // })
     };
     const resetParentForm = () => {
         setMasterFormValues({});
@@ -1331,40 +1309,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         resetChildForm();
         setIsEdit(false);
         setEntryEditData(null);
-        setChildEditRecord(null);
-
     }
 
-
-    const masterFormValuesRef = useRef(masterFormValues);
-const childEditRecordRef = useRef(childEditRecord);
-const childEntriesTableRef = useRef(childEntriesTable);
-
-// Keep refs up to date
-useEffect(() => {
-  masterFormValuesRef.current = masterFormValues;
-}, [masterFormValues]);
-
-useEffect(() => {
-  childEditRecordRef.current = childEditRecord;
-}, [childEditRecord]);
-
-useEffect(() => {
-  childEntriesTableRef.current = childEntriesTable;
-}, [childEntriesTable]);
-
-
-
     const submitFormData = async () => {
-        const masterValues = structuredClone(masterFormValuesRef.current);
-const childEntry = structuredClone(childEditRecordRef.current);
-const childEntryTable = [...childEntriesTableRef.current].map(item => structuredClone(item));
-console.log("submit form", masterValues, childEntry, childEntryTable);
+        const masterValues = structuredClone(masterFormValues);
+        const childEntry = structuredClone(childFormValues);
+        const childEntryTable = [...childEntriesTable].map(item => structuredClone(item));
+
         setIsFormSubmit(true)
         const entry = pageData[0].Entry;
         const pageName = pageData[0]?.wPage || "";
-
-        console.log("check entry", entry, pageData)
 
         const option = isEdit ? "edit" : "add";
         const jTag = { "ActionName": pageName, "Option": option };
@@ -1415,7 +1369,12 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
                 };
             });
 
-        const finalItems = [mainItem, ...otherItems];
+        const checkIfEmpty = (obj: any) => {
+            const keys = Object.keys(obj);
+            return !(keys.length === 2 && keys.includes("IsEdit") && keys.includes("IsAdd") && Object.keys(childEntry).length === 0);
+        }
+
+        const finalItems = checkIfEmpty(mainItem) ? [mainItem, ...otherItems] : [...otherItems];
 
         const itemsXml = finalItems.map(item => {
             const itemTags = Object.entries(item)
@@ -1485,7 +1444,6 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
 
     // In your component
     const dynamicColumns = getAllColumns(childEntriesTable);
-
 
     if (!isOpen) return null;
 
@@ -1599,8 +1557,7 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
                                                                     <button
                                                                         className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
                                                                         onClick={() => {
-                                                                            setChildEditRecord(entry);
-                                                                            // handleChildEditData(entry);
+                                                                            setChildFormValues(entry);
                                                                             handleChildEditNonSavedData(entry);
                                                                         }}
                                                                     >
@@ -1613,8 +1570,7 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
                                                                         : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
                                                                         }`}
                                                                     onClick={() => {
-                                                                        setChildEditRecord(entry);
-                                                                        // handleChildEditData(entry);
+                                                                        setChildFormValues(entry);
                                                                         handleChildEditNonSavedData(entry);
 
                                                                     }}
@@ -1628,7 +1584,7 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
                                                                         : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
                                                                         }`}
                                                                     onClick={() => {
-                                                                        setChildEditRecord(entry);
+                                                                        setChildFormValues(entry);
                                                                         setIsConfirmationModalOpen(true);
                                                                     }}
                                                                     disabled={viewMode}
@@ -1682,9 +1638,7 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
                         setChildFormValues({});
                     }}
                     isLoading={isLoading}
-                    childEntriesTable={childEntriesTable}
                     setChildEntriesTable={setChildEntriesTable}
-                    pageData={pageData}
                     masterValues={masterFormValues}
                     formData={childFormData}
                     masterFormData={masterFormData}
@@ -1697,7 +1651,6 @@ console.log("submit form", masterValues, childEntry, childEntryTable);
                     setFieldErrors={setFieldErrors} // Pass setFieldErrors
                     setFormData={setChildFormData}
                     resetChildForm={resetChildForm}
-                    editData={editData}
                     isEdit={isEdit}
                     onChildFormSubmit={onChildFormSubmit}
                     setValidationModal={setValidationModal}
