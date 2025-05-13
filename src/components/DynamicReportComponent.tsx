@@ -756,6 +756,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     editData={entryFormData}
                     action={entryAction}
                     setEntryEditData={setEntryFormData}
+                    refreshFunction={() => fetchData()}
                 />
             )}
         </div>

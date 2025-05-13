@@ -19,6 +19,7 @@ interface EntryFormModalProps {
     editData?: any;
     action?: 'edit' | 'delete' | 'view' | null;
     setEntryEditData?: React.Dispatch<React.SetStateAction<any>>;
+    refreshFunction?: () => void; 
 }
 
 interface ApiResponse {
@@ -733,7 +734,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 };
 
 
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData }) => {
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData , refreshFunction}) => {
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -1309,6 +1310,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         resetChildForm();
         setIsEdit(false);
         setEntryEditData(null);
+        onClose();
+        setViewMode(false);
+        refreshFunction()
     }
 
     const submitFormData = async () => {
@@ -1413,7 +1417,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (response?.data?.success) {
                 onChildFormSubmit();
                 toast.success('Form submitted successfully!');
-                setIsFormSubmit(false)
+                setIsFormSubmit(false);
+                resetParentForm();
             } else {
                 const message = response?.data?.message.replace(/<\/?Message>/g, '');
                 toast.warning(message);
@@ -1455,11 +1460,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "}Entry Form</h2>
                             <button
-                                onClick={() => {
-                                    resetParentForm();
-                                    onClose()
-                                    setViewMode(false);
-                                }}
+                                onClick={() => {resetParentForm()}}
                                 className="text-gray-500 hover:text-gray-700"
                             >
                                 ✕
