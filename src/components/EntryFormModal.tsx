@@ -19,7 +19,7 @@ interface EntryFormModalProps {
     editData?: any;
     action?: 'edit' | 'delete' | 'view' | null;
     setEntryEditData?: React.Dispatch<React.SetStateAction<any>>;
-    refreshFunction?: () => void; 
+    refreshFunction?: () => void;
 }
 
 interface ApiResponse {
@@ -211,7 +211,7 @@ const DropdownField: React.FC<{
                     }}
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
                     onFocus={() => handleDropDownChange(field)}
-                    placeholder={(formValues[field.wKey]?.trim() !== "" && formValues[field.wKey]?.trim() !==" ") ? formValues[field.wKey]  : "Select..."}
+                    placeholder={(formValues[field.wKey] !== "" && formValues[field.wKey] !== " ") ? formValues[field.wKey] : "Select..."}
                     className="react-select-container"
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field.wKey]}
@@ -734,7 +734,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 };
 
 
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData , refreshFunction}) => {
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -1460,7 +1460,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "}Entry Form</h2>
                             <button
-                                onClick={() => {resetParentForm()}}
+                                onClick={() => { resetParentForm() }}
                                 className="text-gray-500 hover:text-gray-700"
                             >
                                 ✕
