@@ -12,6 +12,8 @@ import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
+import CreatableSelect from 'react-select/creatable';
+
 interface EntryFormModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -79,6 +81,7 @@ interface EntryFormProps {
         type: 'M' | 'S' | 'E' | 'D';
         callback?: (confirmed: boolean) => void;
     }>>;
+    setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
 }
 
 interface ChildEntryModalProps {
@@ -107,6 +110,7 @@ interface ChildEntryModalProps {
     viewAccess: boolean;
     isLoading: boolean;
     setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
+    setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
 }
 
 const validateForm = (formData, formValues) => {
@@ -141,6 +145,7 @@ const DropdownField: React.FC<{
     handleBlur: (field: FormField) => void;
     isDisabled: boolean;
     handleDropDownChange: any;
+    setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
 }> = ({
     field,
     formValues,
@@ -152,7 +157,8 @@ const DropdownField: React.FC<{
     colors,
     handleBlur,
     isDisabled,
-    handleDropDownChange
+    handleDropDownChange,
+    setDropDownOptions
 }) => {
         const options = dropdownOptions[field.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
@@ -211,27 +217,40 @@ const DropdownField: React.FC<{
                     }}
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
                     onFocus={() => handleDropDownChange(field)}
-                    placeholder={(formValues[field.wKey] !== "" && formValues[field.wKey] !== " ") ? formValues[field.wKey] : "Select..."}
+                    placeholder={(formValues[field.wKey]?.trim() !== "" && formValues[field.wKey]?.trim() !== " ") ? formValues[field.wKey] : "Select..."}
                     className="react-select-container"
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field.wKey]}
                     filterOption={() => true}
                     isDisabled={isDisabled}
+                    // onCreateOption={(inputValue) => {
+                    //     // Handle creation of new option
+                    //     const newOption = {
+                    //         label: inputValue,
+                    //         value: inputValue
+                    //     };
+                    //     setDropDownOptions(prev => ({
+                    //         ...prev,
+                    //         [field.wKey]: [...(prev[field.wKey] || []), newOption]
+                    //     }));
+                    //     // Set the form value to the new option
+                    //     handleInputChange(field.wKey, inputValue);
+                    // }}
                     styles={{
                         control: (base, state) => ({
                             ...base,
                             borderColor: state.isFocused
-                                ? '#3b82f6' // blue-500 when focused
+                                ? '#3b82f6'
                                 : !isDisabled
                                     ? fieldErrors[field.wKey]
                                         ? 'red'
-                                        : '#374151' // gray-700 when enabled
-                                    : '#d1d5db', // gray-300 when disabled
+                                        : '#374151'
+                                    : '#d1d5db',
                             boxShadow: state.isFocused
-                                ? '0 0 0 3px rgba(59, 130, 246, 0.5)' // blue-500 with opacity
+                                ? '0 0 0 3px rgba(59, 130, 246, 0.5)'
                                 : 'none',
                             backgroundColor: isDisabled
-                                ? '#f2f2f0' // light gray when disabled (matches WTextBox)
+                                ? '#f2f2f0'
                                 : colors.textInputBackground,
                             '&:hover': {
                                 borderColor: state.isFocused
@@ -246,7 +265,7 @@ const DropdownField: React.FC<{
                         singleValue: (base) => ({
                             ...base,
                             color: isDisabled
-                                ? '#6b7280' // gray-500 for disabled text
+                                ? '#6b7280'
                                 : colors.textInputText,
                         }),
                         option: (base, state) => ({
@@ -264,7 +283,7 @@ const DropdownField: React.FC<{
                         }),
                         placeholder: (base) => ({
                             ...base,
-                            color: isDisabled ? '#9ca3af' : base.color, // gray-400 for disabled placeholder
+                            color: isDisabled ? '#9ca3af' : base.color,
                         }),
                     }}
                     onBlur={() => {
@@ -289,7 +308,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
     setFieldErrors,
     masterValues,
     setFormData,
-    setValidationModal
+    setValidationModal,
+    setDropDownOptions
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -436,6 +456,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             const tagName = tag.tagName;
                             const tagValue = tag.textContent;
                             setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                            setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error
                         });
                         setValidationModal({ isOpen: false, message: '', type: 'S' });
                     }
@@ -498,6 +519,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         handleBlur={() => handleBlur(field)}
                         isDisabled={!isEnabled}
                         handleDropDownChange={onDropdownChange}
+                        setDropDownOptions={setDropDownOptions}
                     />
                 );
 
@@ -625,7 +647,9 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     setValidationModal,
     viewAccess,
     isLoading,
-    setChildEntriesTable
+    setChildEntriesTable,
+    setDropDownOptions,
+
 }) => {
     if (!isOpen) return null;
 
@@ -724,6 +748,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                             setFieldErrors={setFieldErrors}
                             setFormData={setFormData}
                             setValidationModal={setValidationModal}
+                            setDropDownOptions={setDropDownOptions}
                         />
                     </>
                 )}
@@ -1331,7 +1356,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             .map(([key, value]) => `"${key}":"${value}"`)
             .join(',');
 
-        const jApi = Object.entries(entry.ChildEntry.J_Api)
+        const jApi = Object.entries(entry.MasterEntry.J_Api)
             .map(([key, value]) => `"${key}":"${value}"`)
             .join(',');
 
@@ -1475,6 +1500,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     formValues={masterFormValues}
                                     setFormValues={setMasterFormValues}
                                     dropdownOptions={masterDropdownOptions}
+                                    setDropDownOptions={setMasterDropdownOptions}
                                     loadingDropdowns={masterLoadingDropdowns}
                                     onDropdownChange={handleMasterDropdownChange}
                                     fieldErrors={fieldErrors} // Pass fieldErrors
@@ -1646,6 +1672,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     formValues={childFormValues}
                     setFormValues={setChildFormValues}
                     dropdownOptions={childDropdownOptions}
+                    setDropDownOptions={setChildDropdownOptions}
                     loadingDropdowns={childLoadingDropdowns}
                     onDropdownChange={handleChildDropdownChange}
                     fieldErrors={fieldErrors} // Pass fieldErrors
