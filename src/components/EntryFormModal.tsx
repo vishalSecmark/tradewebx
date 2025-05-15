@@ -1472,11 +1472,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return Array.from(allColumns);
     };
 
+
+    const handleFormSubmitWhenMasterOnly = () => {
+        const masterErrors = validateForm(masterFormData, masterFormValues);
+        if (Object.keys(masterErrors).length > 0) {
+            setFieldErrors({ ...masterErrors });
+            toast.error("Please fill all mandatory fields before submitting.");
+            return;
+        } else {
+            submitFormData()
+        }
+    }
+
     // In your component
     const dynamicColumns = getAllColumns(childEntriesTable);
 
     if (!isOpen) return null;
-
     return (
         <>
             {isOpen && (
@@ -1495,6 +1506,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             <div className="text-center py-4">Loading...</div>
                         ) : (
                             <>
+                                {isThereChildEntry && (
+                                    <div className="flex justify-end">
+                                        <button
+                                            className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                            onClick={handleFormSubmitWhenMasterOnly}
+                                            disabled={isFormInvalid || viewMode || isFormSubmit}
+                                        >
+                                            {isFormSubmit ? "Submitting..." : (
+                                                <>
+                                                    <FaSave /> Save Form
+                                                </>
+                                            )}
+
+                                        </button>
+                                    </div>
+                                )}
                                 <EntryForm
                                     formData={masterFormData}
                                     formValues={masterFormValues}
@@ -1510,131 +1537,140 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     setValidationModal={setValidationModal}
                                 />
                                 <div className="mt-8">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-lg font-semibold">Child Entries</h3>
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={handleAddChildEntry}
-                                                className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
-                                                    ? 'bg-gray-400 cursor-not-allowed'
-                                                    : 'bg-blue-500 hover:bg-blue-600'
-                                                    } text-white rounded-md`}
-                                                disabled={isFormInvalid || viewMode || isThereChildEntry || isFormSubmit}
-                                            >
-                                                {isFormSubmit ? "Submitting..." : (
-                                                    <>
-                                                        <FaPlus /> Add Entry
-                                                    </>
-                                                )}
-                                            </button>
-                                            <button
-                                                className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
-                                                onClick={() => {
-                                                    submitFormData();
-                                                }}
-                                                disabled={isFormInvalid || viewMode || isFormSubmit}
-                                            >
-                                                {isFormSubmit ? "Submitting..." : (
-                                                    <>
-                                                        <FaSave /> Save Form
-                                                    </>
-                                                )}
+                                    <div className="flex justify-between items-end mb-4">
 
-                                            </button>
-                                        </div>
+                                        {!isThereChildEntry && (
+                                            <>
+                                                <h3 className="text-lg font-semibold">Child Entries</h3>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={handleAddChildEntry}
+                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
+                                                            ? 'bg-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-500 hover:bg-blue-600'
+                                                            } text-white rounded-md`}
+                                                        disabled={isFormInvalid || viewMode || isThereChildEntry || isFormSubmit}
+                                                    >
+                                                        {isFormSubmit ? "Submitting..." : (
+                                                            <>
+                                                                <FaPlus /> Add Entry
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                                        onClick={() => {
+                                                            submitFormData();
+                                                        }}
+                                                        disabled={isFormInvalid || viewMode || isFormSubmit}
+                                                    >
+                                                        {isFormSubmit ? "Submitting..." : (
+                                                            <>
+                                                                <FaSave /> Save Form
+                                                            </>
+                                                        )}
+
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+
+
                                     </div>
+                                    {!isThereChildEntry && (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full bg-white border border-gray-200">
+                                                <thead>
+                                                    <tr>
+                                                        {/* Static headers */}
+                                                        <th className="px-4 py-2 border-b">Sr. No</th>
+                                                        <th className="px-4 py-2 border-b">Actions</th>
 
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full bg-white border border-gray-200">
-                                            <thead>
-                                                <tr>
-                                                    {/* Static headers */}
-                                                    <th className="px-4 py-2 border-b">Sr. No</th>
-                                                    <th className="px-4 py-2 border-b">Actions</th>
+                                                        {/* Dynamic headers - get all unique keys from the first entry */}
+                                                        {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
+                                                            key !== "SerialNo" && // Exclude SerialNo as it has its own column
+                                                            <th key={key} className="px-4 py-2 border-b capitalize">
+                                                                {key}
+                                                            </th>
+                                                        ))}
 
-                                                    {/* Dynamic headers - get all unique keys from the first entry */}
-                                                    {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
-                                                        key !== "SerialNo" && // Exclude SerialNo as it has its own column
-                                                        <th key={key} className="px-4 py-2 border-b capitalize">
-                                                            {key}
-                                                        </th>
-                                                    ))}
+                                                        {/* Static headers */}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {childEntriesTable.map((entry, index) => {
+                                                        // Create a safe entry object with all dynamic columns initialized
+                                                        const safeEntry = { ...entry };
+                                                        dynamicColumns.forEach(col => {
+                                                            if (!(col in safeEntry)) {
+                                                                safeEntry[col] = "";
+                                                            }
+                                                        });
 
-                                                    {/* Static headers */}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {childEntriesTable.map((entry, index) => {
-                                                    // Create a safe entry object with all dynamic columns initialized
-                                                    const safeEntry = { ...entry };
-                                                    dynamicColumns.forEach(col => {
-                                                        if (!(col in safeEntry)) {
-                                                            safeEntry[col] = "";
-                                                        }
-                                                    });
+                                                        return (
+                                                            <tr key={index}>
+                                                                {/* Serial number */}
+                                                                <td className="px-4 py-2 border-b text-center">{index + 1}</td>
 
-                                                    return (
-                                                        <tr key={index}>
-                                                            {/* Serial number */}
-                                                            <td className="px-4 py-2 border-b text-center">{index + 1}</td>
-
-                                                            {/* Actions */}
-                                                            <td className="flex gap-1 px-4 py-2 border-b text-center">
-                                                                {viewMode && (
+                                                                {/* Actions */}
+                                                                <td className="flex gap-1 px-4 py-2 border-b text-center">
+                                                                    {viewMode && (
+                                                                        <button
+                                                                            className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                            onClick={() => {
+                                                                                setChildFormValues(entry);
+                                                                                handleChildEditNonSavedData(entry);
+                                                                            }}
+                                                                        >
+                                                                            view
+                                                                        </button>
+                                                                    )}
                                                                     <button
-                                                                        className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                            : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
+                                                                            }`}
                                                                         onClick={() => {
                                                                             setChildFormValues(entry);
                                                                             handleChildEditNonSavedData(entry);
+
                                                                         }}
+                                                                        disabled={viewMode}
                                                                     >
-                                                                        view
+                                                                        Edit
                                                                     </button>
-                                                                )}
-                                                                <button
-                                                                    className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                        : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
-                                                                        }`}
-                                                                    onClick={() => {
-                                                                        setChildFormValues(entry);
-                                                                        handleChildEditNonSavedData(entry);
-
-                                                                    }}
-                                                                    disabled={viewMode}
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    className={`px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                        : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
-                                                                        }`}
-                                                                    onClick={() => {
-                                                                        setChildFormValues(entry);
-                                                                        setIsConfirmationModalOpen(true);
-                                                                    }}
-                                                                    disabled={viewMode}
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </td>
-
-                                                            {/* Dynamic values */}
-                                                            {dynamicColumns.map((key) => (
-                                                                <td key={key} className="px-4 py-2 border-b text-center">
-                                                                    {safeEntry[key] == null || safeEntry[key] === ""
-                                                                        ? "-"
-                                                                        : String(safeEntry[key])
-                                                                    }
+                                                                    <button
+                                                                        className={`px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                            : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
+                                                                            }`}
+                                                                        onClick={() => {
+                                                                            setChildFormValues(entry);
+                                                                            setIsConfirmationModalOpen(true);
+                                                                        }}
+                                                                        disabled={viewMode}
+                                                                    >
+                                                                        Delete
+                                                                    </button>
                                                                 </td>
-                                                            ))}
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
+
+                                                                {/* Dynamic values */}
+                                                                {dynamicColumns.map((key) => (
+                                                                    <td key={key} className="px-4 py-2 border-b text-center">
+                                                                        {safeEntry[key] == null || safeEntry[key] === ""
+                                                                            ? "-"
+                                                                            : String(safeEntry[key])
+                                                                        }
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
                                 </div>
                             </>
                         )}
