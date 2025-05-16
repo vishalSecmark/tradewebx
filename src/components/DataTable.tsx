@@ -29,6 +29,9 @@ interface DataTableProps {
     onRowClick?: (record: any) => void;
     tableRef?: React.RefObject<HTMLDivElement>;
     summary?: any;
+    isEntryForm?: boolean;
+    handleAction?: (action: string, record: any) => void;
+    fullHeight?: boolean;
 }
 
 interface DecimalColumn {
@@ -114,7 +117,6 @@ const useScreenSize = () => {
             } else {
                 newSize = 'web';
             }
-            console.log('Screen width:', width, 'Screen size:', newSize);
             setScreenSize(newSize);
         };
 
@@ -126,12 +128,12 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary }) => {
-    console.log(JSON.stringify(settings, null, 2), 'settings');
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
+
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
-    console.log(tableStyle);
+
     const rowHeight = tableStyle === 'small' ? 30 : tableStyle === 'medium' ? 40 : 50;
     const screenSize = useScreenSize();
     const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
@@ -266,12 +268,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
     const columns = useMemo(() => {
         if (!formattedData || formattedData.length === 0) return [];
 
-        console.log('Current screen size:', screenSize);
-        console.log('Settings:', settings);
-        console.log('Mobile columns:', settings?.mobileColumns);
-        console.log('Tablet columns:', settings?.tabletColumns);
-        console.log('Web columns:', settings?.webColumns);
-
         // Get columns to hide (if specified in settings)
         const columnsToHide = settings?.hideEntireColumn
             ? settings.hideEntireColumn.split(',').map((col: string) => col.trim())
@@ -284,6 +280,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         // Get columns to show based on screen size
         let columnsToShow: string[] = [];
+    
         if (settings?.mobileColumns && screenSize === 'mobile') {
             columnsToShow = settings.mobileColumns;
             console.log('Using mobile columns:', columnsToShow);
@@ -303,9 +300,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
-        console.log('Final columns to show:', columnsToShow);
-
-        return [
+        
+        const baseColumns: any = [
             {
                 key: '_expanded',
                 name: '',
@@ -381,6 +377,24 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                                                 </div>
                                             );
                                         })}
+                                    {isEntryForm && (
+                                        <div className="action-buttons">
+                                            <button
+                                                className="edit-button"
+                                                onClick={() => handleAction('edit', row)}
+                                                disabled={row?.isUpdated === "true" ? true : false}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="delete-button"
+                                                onClick={() => handleAction('delete', row)}
+                                                disabled={row?.isDeleted === "true" ? true : false}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -402,7 +416,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                             {row._expanded ? '▼' : '▶'}
                         </div>
                     );
-                }
+                },
             },
             ...columnsToShow.map((key: any) => {
                 const isLeftAligned = leftAlignedColumns.includes(key);
@@ -465,8 +479,48 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                         return value;
                     }
                 };
-            })
+            }),
         ];
+        if (isEntryForm) {
+            baseColumns.push(
+                {
+                    key: 'actions',
+                    name: 'Actions',
+                    minWidth: 170,
+                    maxWidth: 350,
+                    renderCell: ({ row }: any) => (
+                        isEntryForm && (
+                            <div className="action-buttons">
+                                <button
+                                    className="view-button"
+                                    style={{}}
+                                    onClick={() => handleAction('view', row)}
+                                    >
+                                        view
+                                </button>
+                                <button
+                                    className="edit-button"
+                                    style={{}}
+                                    onClick={() => handleAction('edit', row)}
+                                    disabled={row?.isUpdated === "true" ? true : false}
+                                >
+                                    Edit
+                                </button>
+                                <button
+                                    className="delete-button"
+                                    style={{}}
+                                    onClick={() => handleAction('delete', row)}
+                                    disabled={row?.isDeleted === "true" ? true : false}
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        )
+                    ),
+                }
+            )
+        }
+        return baseColumns;
     }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, expandedRows]);
 
     // Sort function
@@ -559,15 +613,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
         return [totals];
     }, [rows, summary?.columnsToShowTotal, settings?.valueBasedTextColor]);
 
-    console.log(rows, 'rows of fff');
-    console.log(columns, 'columns of ffff');
-
-
-
     return (
         <div
             ref={tableRef}
-            style={{ height: 'calc(100vh - 170px)', width: '100%' }}
+            style={{ height: fullHeight ? 'calc(100vh - 170px)' : 'auto', width: '100%' }}
         >
             <DataGrid
                 columns={columns}
@@ -584,7 +633,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 }}
                 bottomSummaryRows={summmaryRows}
                 onCellClick={(props: any) => {
-                    if (onRowClick && !props.column.key.startsWith('_')) {
+                    if (onRowClick && !props.column.key.startsWith('_') && !isEntryForm) {
                         const { _id, _expanded, ...rowData } = rows[props.rowIdx];
                         onRowClick(rowData);
                     }
@@ -720,6 +769,40 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
                 .expand-button:hover {
                     background-color: ${colors.color1};
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 8px;
+                }
+
+                .edit-button, .delete-button, .view-button {
+                    padding: 4px 10px;
+                    border: none;
+                    cursor: pointer;
+                    font-size: 12px;
+                    border-radius: 4px;
+                    transition: background-color 0.2s ease; 
+                }
+                
+                .edit-button:disabled, 
+                .delete-button:disabled {
+                    background-color: #e0e0e0;
+                    color: #a0a0a0;
+                    cursor: not-allowed;
+                }
+                .view-button {
+                    background-color: ${colors.primary};
+                    color: ${colors.buttonText};
+                }
+                .edit-button {
+                    background-color: ${colors.buttonBackground};
+                    color: ${colors.buttonText};
+                }
+
+                .delete-button {
+                    background-color: ${colors.errorText};
+                    color: ${colors.buttonText};
                 }
             `}</style>
         </div>
@@ -1043,7 +1126,6 @@ export const exportTableToPdf = async (
         });
     });
 
-    console.log(jsonData)
     const headers = Object.keys(allData[0]).filter(key => !columnsToHide.includes(key));
     const rightAlignedKeys: string[] = jsonData?.RightList?.[0] || [];
 
@@ -1074,7 +1156,6 @@ export const exportTableToPdf = async (
     totalColumns.forEach(col => (totals[col.key] = 0));
 
     const formatValue = (value: any, key: string) => {
-        console.log(key)
         if (key.toLowerCase() === 'date') {
             const date = new Date(value);
             return isNaN(date.getTime()) ? value : date.toLocaleDateString('en-GB');
@@ -1278,4 +1359,4 @@ export const exportTableToPdf = async (
         });
     }
 };
-export default DataTable; 
+export default DataTable;

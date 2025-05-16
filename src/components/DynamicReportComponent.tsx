@@ -13,6 +13,9 @@ import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import { useSearchParams } from 'next/navigation';
 import EntryFormModal from './EntryFormModal';
+import ConfirmationModal from './Modals/ConfirmationModal';
+import { parseStringPromise } from 'xml2js';
+
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
 interface DynamicReportComponentProps {
@@ -26,11 +29,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const clientCode = searchParams.get('clientCode');
     const [currentLevel, setCurrentLevel] = useState(0);
     const [apiData, setApiData] = useState<any>(null);
+    const [additionalTables, setAdditionalTables] = useState<Record<string, any[]>>({});
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState<Record<string, any>>({});
     const [primaryKeyFilters, setPrimaryKeyFilters] = useState<Record<string, any>>({});
     const [rs1Settings, setRs1Settings] = useState<any>(null);
     const [jsonData, setJsonData] = useState<any>(null);
+    const [jsonDataUpdated, setJsonDataUpdated] = useState<any>(null);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ field: string; direction: string }>({
@@ -43,6 +48,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
     const [autoFetch, setAutoFetch] = useState<boolean>(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+
+    const [entryFormData, setEntryFormData] = useState<any>(null);
+    const [entryAction, setEntryAction] = useState<'edit' | 'delete' | 'view' | null>(null);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
 
     const tableRef = useRef<HTMLDivElement>(null);
@@ -57,11 +66,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     })();
 
-
     const findPageData = () => {
         const searchInItems = (items: any[]): any => {
-            // console.log('items', items);
-            // console.log('componentName', componentName);
             for (const item of items) {
                 if (item.componentName.toLowerCase() === componentName.toLowerCase() && item.pageData) {
                     return item.pageData;
@@ -81,7 +87,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-    console.log('pageData', pageData);
+
     // Helper functions for parsing XML settings
     const parseXmlList = (xmlString: string, tag: string): string[] => {
         const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
@@ -100,12 +106,34 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return {};
     };
 
+
+
+
     function convertXmlToJson(xmlString) {
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
         const root = xmlDoc.documentElement;
         return xmlToJson(root);
     }
+
+    async function convertXmlToJsonUpdated(rawXml: string): Promise<any> {
+        try {
+            // Sanitize common unescaped characters (only & in this case)
+            const sanitizedXml = rawXml.replace(/&(?!amp;|lt;|gt;|quot;|apos;|#\d+;|#x[a-fA-F0-9]+;)/g, '&amp;');
+
+            const result = await parseStringPromise(sanitizedXml, {
+                explicitArray: false,
+                trim: true,
+                mergeAttrs: true,
+            });
+
+            return result;
+        } catch (error) {
+            console.error('Error parsing XML:', error);
+            throw error;
+        }
+    }
+
 
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
@@ -188,7 +216,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 defaultFilters['ClientCode'] = clientCode;
             }
 
-            // console.log('Setting default filters:', defaultFilters);
             setFilters(defaultFilters);
             setAreFiltersInitialized(true);
         } else {
@@ -293,6 +320,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             setApiData(response.data.data.rs0);
 
+            // Handle additional tables (rs3, rs4, etc.)
+            const additionalTablesData: Record<string, any[]> = {};
+            Object.entries(response.data.data).forEach(([key, value]) => {
+                if (key !== 'rs0' && key !== 'rs1' && Array.isArray(value)) {
+                    additionalTablesData[key] = value;
+                }
+            });
+            setAdditionalTables(additionalTablesData);
+
             // Parse RS1 Settings if available
             if (response.data.data.rs1?.[0]?.Settings) {
                 const xmlString = response.data.data.rs1[0].Settings;
@@ -321,7 +357,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 };
 
                 const json = convertXmlToJson(xmlString);
+                const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
+                
                 setJsonData(json);
+                setJsonDataUpdated(jsonUpdated);
                 setRs1Settings(settingsJson);
             }
 
@@ -405,6 +444,89 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
+
+
+    const deleteMasterRecord = async () => {
+        try {
+
+            const entry = pageData[0].Entry;
+            const masterEntry = entry.MasterEntry;
+            const pageName = pageData[0]?.wPage || "";
+
+            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
+            let X_Data = "";
+
+            const jUi = Object.entries(masterEntry.J_Ui)
+                .map(([key, value]) => {
+                    if (key === 'Option') {
+                        return `"${key}":"delete"`;
+                    }
+                    if (key === 'ActionName') {
+                        return `"${key}":"${pageName}"`;
+                    }
+                    return `"${key}":"${value}"`
+
+                })
+                .join(',');
+
+            const jApi = Object.entries(masterEntry.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            Object.entries(entryFormData).forEach(([key, value]) => {
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    !key.startsWith('_') // Skip internal fields
+                ) {
+                    X_Data += `<${key}>${value}</${key}>`;
+                }
+            });
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${sql}</Sql>
+                <X_Filter></X_Filter>
+                <X_Data>${X_Data}</X_Data>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            if (response?.data?.success) {
+                fetchData();
+            }
+            console.log("response of delete api", response)
+
+        } catch (error) {
+            console.error(`Error fetching options for   `);
+        } finally {
+            console.log("check delete record");
+        }
+    }
+
+    // function to handle table actions
+    const handleTableAction = (action: string, record: any) => {
+        setEntryFormData(record);
+        setEntryAction(action as 'edit' | 'delete' | 'view');
+        if (action === "edit" || action === "view") {
+            setIsEntryModalOpen(true);
+        } else {
+            setIsConfirmationModalOpen(true);
+        }
+    }
+
+    const handleConfirmDelete = () => {
+        deleteMasterRecord();
+        setIsConfirmationModalOpen(false);
+    };
+
+    const handleCancelDelete = () => {
+        setIsConfirmationModalOpen(false);
+    };
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
@@ -437,6 +559,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
+
                         {componentType === 'entry' && (
                             <button
                                 className="p-2 rounded"
@@ -474,7 +597,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaEnvelope size={20} />
                         </button>
+                        {Object.keys(additionalTables).length == 0 && (
+                            <>
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFileCsv size={20} />
+                                </button>
 
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData,filters,'download')}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFilePdf size={20} />
+                                </button>
+                            </>
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -512,6 +653,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isSortingAllowed={pageData[0].isShortAble !== "false"}
                 onApply={() => { }}
             />
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+            />
 
             {/* Download Modal */}
             <FilterModal
@@ -528,28 +674,49 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {/* Loading State */}
             {isLoading && <div>Loading...</div>}
 
+            {!apiData && !isLoading && <div>No Data Found</div>}
             {/* Data Display */}
             {!isLoading && apiData && (
                 <div className="space-y-0">
                     <div className="text-sm text-gray-500">
                         <div className="flex flex-col sm:flex-row justify-between">
-                            <div className="flex flex-wrap gap-2 my-1">
-                                {jsonData?.Headings?.map((headingObj, index) => (
-                                    <div key={index} className="flex flex-wrap gap-2 my-1">
-                                        {headingObj?.Heading?.map((headingText, i) => (
+                            <div className="flex flex-col gap-2 my-1">
+                                {/* Report Header */}
+                                {/* {jsonDataUpdated?.XmlData?.ReportHeader && (
+                                    <div className="text-lg font-bold mb-2" style={{ color: colors.text }}>
+                                        {jsonDataUpdated.XmlData.ReportHeader}
+                                    </div>
+                                )} */}
+
+                                {/* Headings */}
+                                <div className="flex flex-wrap gap-2">
+                                    {jsonDataUpdated?.XmlData?.Headings?.Heading ? (
+                                        Array.isArray(jsonDataUpdated.XmlData.Headings.Heading) ? (
+                                            jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                                <span
+                                                    key={index}
+                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                    style={{
+                                                        backgroundColor: colors.cardBackground,
+                                                        color: colors.text
+                                                    }}
+                                                >
+                                                    {headingText}
+                                                </span>
+                                            ))
+                                        ) : (
                                             <span
-                                                key={i}
                                                 className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                                 style={{
                                                     backgroundColor: colors.cardBackground,
                                                     color: colors.text
                                                 }}
                                             >
-                                                {headingText}
+                                                {jsonDataUpdated.XmlData.Headings.Heading}
                                             </span>
-                                        ))}
-                                    </div>
-                                ))}
+                                        )
+                                    ) : null}
+                                </div>
                             </div>
                             <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
                         </div>
@@ -572,14 +739,56 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
                         tableRef={tableRef}
+                        isEntryForm={componentType === "entry"}
+                        handleAction={handleTableAction}
+                        fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                     />
+                    {Object.keys(additionalTables).length > 0 && (
+                        <div>
+                            {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                // Get the title from jsonData based on the table key
+                                const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                return (
+                                    <div key={tableKey} className="mt-3">
+                                        <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                            {tableTitle}
+                                        </h3>
+                                        <DataTable
+                                            data={tableData}
+                                            settings={{
+                                                ...pageData[0].levels[currentLevel].settings,
+                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                // Add level-specific settings
+                                                ...(currentLevel > 0 ? {
+                                                    // Override responsive columns for second level if needed
+                                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                    webColumns: rs1Settings?.webColumns?.[0] || []
+                                                } : {})
+                                            }}
+                                            summary={pageData[0].levels[currentLevel].summary}
+                                            tableRef={tableRef}
+                                            fullHeight={false}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
+
             {componentType === 'entry' && (
                 <EntryFormModal
                     isOpen={isEntryModalOpen}
                     onClose={() => setIsEntryModalOpen(false)}
                     pageData={pageData}
+                    editData={entryFormData}
+                    action={entryAction}
+                    setEntryEditData={setEntryFormData}
+                    refreshFunction={() => fetchData()}
                 />
             )}
         </div>

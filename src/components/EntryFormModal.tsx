@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import DatePicker from 'react-datepicker';
@@ -7,13 +7,21 @@ import "react-datepicker/dist/react-datepicker.css";
 import Select from 'react-select';
 import moment from 'moment';
 import { useTheme } from '@/context/ThemeContext';
-import { FaPlus } from 'react-icons/fa';
+import { FaPlus, FaSave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import ConfirmationModal from './Modals/ConfirmationModal';
+import CaseConfirmationModal from './Modals/CaseConfirmationModal';
+
+import CreatableSelect from 'react-select/creatable';
 
 interface EntryFormModalProps {
     isOpen: boolean;
     onClose: () => void;
     pageData: any;
+    editData?: any;
+    action?: 'edit' | 'delete' | 'view' | null;
+    setEntryEditData?: React.Dispatch<React.SetStateAction<any>>;
+    refreshFunction?: () => void;
 }
 
 interface ApiResponse {
@@ -21,7 +29,6 @@ interface ApiResponse {
     message?: string;
     data?: any;
 }
-
 
 interface FormField {
     Srno: number;
@@ -68,14 +75,21 @@ interface EntryFormProps {
     fieldErrors: Record<string, string>;
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
     setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    setValidationModal: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
+    setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
 }
 
 interface ChildEntryModalProps {
     isOpen: boolean;
     onClose: () => void;
-    pageData: any;
     masterValues: Record<string, any>;
     formData: FormField[];
+    masterFormData: FormField[];
     formValues: Record<string, any>;
     setFormValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
     dropdownOptions: Record<string, any[]>;
@@ -85,7 +99,39 @@ interface ChildEntryModalProps {
     setFieldErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
     setFormData: React.Dispatch<React.SetStateAction<Record<string, any>>>;
     resetChildForm: () => void;
+    isEdit: boolean;
+    onChildFormSubmit: () => void;
+    setValidationModal: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
+    viewAccess: boolean;
+    isLoading: boolean;
+    setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
+    setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
 }
+
+const validateForm = (formData, formValues) => {
+    const errors = {};
+
+    formData.forEach(field => {
+        if (field.FieldEnabledTag === "Y" && field.isMandatory === "true" && field.type !== "WDisplayBox") {
+            if (!formValues[field.wKey] || formValues[field.wKey]?.toString()?.trim() === "") {
+                errors[field.wKey] = `${field.label} is required`;
+            }
+        }
+    });
+
+    return errors;
+};
+
+
+// Helper function to generate unique ID
+const generateUniqueId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -99,6 +145,7 @@ const DropdownField: React.FC<{
     handleBlur: (field: FormField) => void;
     isDisabled: boolean;
     handleDropDownChange: any;
+    setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
 }> = ({
     field,
     formValues,
@@ -110,7 +157,8 @@ const DropdownField: React.FC<{
     colors,
     handleBlur,
     isDisabled,
-    handleDropDownChange
+    handleDropDownChange,
+    setDropDownOptions
 }) => {
         const options = dropdownOptions[field.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
@@ -127,7 +175,7 @@ const DropdownField: React.FC<{
         }, [searchText, options]);
 
         const handleRemoveChildDropdownValue = (dependent: string[]) => {
-            if(dependent.length > 0 && dependent[0] !== "") {
+            if (dependent.length > 0 && dependent[0] !== "") {
                 dependent.forEach((fieldName: string) => {
                     setFormValues(prev => ({ ...prev, [fieldName]: '' }));
                     setFieldErrors(prev => ({ ...prev, [fieldName]: '' }));
@@ -161,7 +209,7 @@ const DropdownField: React.FC<{
                 </label>
                 <Select
                     options={visibleOptions}
-                    value={options.find((opt: any) => opt.value === formValues[field.wKey]) || null}
+                    value={options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()) || null}
                     onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
                     onInputChange={(inputValue, { action }) => {
                         if (action === 'input-change') setSearchText(inputValue);
@@ -169,26 +217,73 @@ const DropdownField: React.FC<{
                     }}
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
                     onFocus={() => handleDropDownChange(field)}
-                    placeholder="Select..."
+                    placeholder={(formValues[field.wKey]?.trim() !== "" && formValues[field.wKey]?.trim() !== " ") ? formValues[field.wKey] : "Select..."}
                     className="react-select-container"
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field.wKey]}
                     filterOption={() => true}
                     isDisabled={isDisabled}
+                    // onCreateOption={(inputValue) => {
+                    //     // Handle creation of new option
+                    //     const newOption = {
+                    //         label: inputValue,
+                    //         value: inputValue
+                    //     };
+                    //     setDropDownOptions(prev => ({
+                    //         ...prev,
+                    //         [field.wKey]: [...(prev[field.wKey] || []), newOption]
+                    //     }));
+                    //     // Set the form value to the new option
+                    //     handleInputChange(field.wKey, inputValue);
+                    // }}
                     styles={{
-                        control: (base) => ({
+                        control: (base, state) => ({
                             ...base,
-                            borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
-                            backgroundColor: colors.textInputBackground,
+                            borderColor: state.isFocused
+                                ? '#3b82f6'
+                                : !isDisabled
+                                    ? fieldErrors[field.wKey]
+                                        ? 'red'
+                                        : '#374151'
+                                    : '#d1d5db',
+                            boxShadow: state.isFocused
+                                ? '0 0 0 3px rgba(59, 130, 246, 0.5)'
+                                : 'none',
+                            backgroundColor: isDisabled
+                                ? '#f2f2f0'
+                                : colors.textInputBackground,
+                            '&:hover': {
+                                borderColor: state.isFocused
+                                    ? '#3b82f6'
+                                    : !isDisabled
+                                        ? fieldErrors[field.wKey]
+                                            ? 'red'
+                                            : '#374151'
+                                        : '#d1d5db',
+                            },
                         }),
                         singleValue: (base) => ({
                             ...base,
-                            color: colors.textInputText,
+                            color: isDisabled
+                                ? '#6b7280'
+                                : colors.textInputText,
                         }),
                         option: (base, state) => ({
                             ...base,
                             backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
                             color: state.isFocused ? colors.buttonText : colors.textInputText,
+                        }),
+                        input: (base) => ({
+                            ...base,
+                            color: colors.textInputText,
+                        }),
+                        menu: (base) => ({
+                            ...base,
+                            backgroundColor: colors.textInputBackground,
+                        }),
+                        placeholder: (base) => ({
+                            ...base,
+                            color: isDisabled ? '#9ca3af' : base.color,
                         }),
                     }}
                     onBlur={() => {
@@ -212,7 +307,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
     fieldErrors,
     setFieldErrors,
     masterValues,
-    setFormData
+    setFormData,
+    setValidationModal,
+    setDropDownOptions
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -302,7 +399,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             });
             // calling the function to  handle the flags 
             const columnData = response?.data?.data?.rs0[0]?.Column1
-            if(columnData){
+            if (columnData) {
                 handleValidationApiResponse(columnData, field.wKey);
             }
         } catch (error) {
@@ -315,70 +412,87 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     // this function is used to show the respected flags according to the response from the API
     const handleValidationApiResponse = (response, currFieldName) => {
-
         if (!response?.trim().startsWith("<root>")) {
-            response = `<root>${response}</root>`;  // Wrap in root tag
+            response = `<root>${response}</root>`;
         }
 
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
 
-        // Extract Flag and Message
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
-
-        // Extract all other dynamic tags
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
             (node) => node.tagName !== "Flag" && node.tagName !== "Message"
         );
 
         switch (flag) {
             case 'M':
-                const userConfirmed = window.confirm(message);
-                if (userConfirmed) {
-                    dynamicTags.forEach((tag) => {
-                        const tagName = tag.tagName;
-                        const tagValue = tag.textContent;
-                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                    });
-                } else {
-                    setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-                }
+                setValidationModal({
+                    isOpen: true,
+                    message: message || 'Are you sure you want to proceed?',
+                    type: 'M',
+                    callback: (confirmed) => {
+                        if (confirmed) {
+                            dynamicTags.forEach((tag) => {
+                                const tagName = tag.tagName;
+                                const tagValue = tag.textContent;
+                                setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                            });
+                        } else {
+                            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                        }
+                        setValidationModal({ isOpen: false, message: '', type: 'M' });
+                    }
+                });
                 break;
+
             case 'S':
-                if (message) {
-                    alert(message);
-                }
-                dynamicTags.forEach((tag) => {
-                    const tagName = tag.tagName;
-                    const tagValue = tag.textContent;
-                    setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                setValidationModal({
+                    isOpen: true,
+                    message: message || 'Please press ok to proceed',
+                    type: 'S',
+                    callback: () => {
+                        dynamicTags.forEach((tag) => {
+                            const tagName = tag.tagName;
+                            const tagValue = tag.textContent;
+                            setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                            setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error
+                        });
+                        setValidationModal({ isOpen: false, message: '', type: 'S' });
+                    }
                 });
                 break;
 
             case 'E':
-                alert(message); // Show error message
+                toast.warning(message);
                 setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
                 break;
 
             case 'D':
-        
+                let updatedFormData = formData;
                 dynamicTags.forEach((tag) => {
                     const tagName = tag.tagName;
                     const tagValue = tag.textContent;
+                    const tagFlag = tagValue.toLowerCase();
+                    const isDisabled = tagFlag === 'false';
 
-                    // Update FieldEnabledTag based on the tag value
-                    const isDisabled = tagValue.toLowerCase() === 'false';
-                    const updatedFormData = formData.map(field => {
+                    if (tagFlag === 'true' || tagFlag === 'false') {
+                        setFormValues(prev => ({ ...prev, [tagName]: "" }));
+                        if (isDisabled) {
+                            setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error for disabled fields
+                        }
+                    } else {
+                        setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                    }
+
+                    updatedFormData = updatedFormData.map(field => {
                         if (field.wKey === tagName) {
                             return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
                         }
                         return field;
                     });
-                    
-                    setFormData(updatedFormData);
-
                 });
+                setFormData(updatedFormData);
                 break;
 
             default:
@@ -393,7 +507,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             case 'WDropDownBox':
                 return (
                     <DropdownField
-                        key={field.Srno}
+                        key={`dropdown-${field.Srno}-${field.wKey}`}
                         field={field}
                         formValues={formValues}
                         setFormValues={setFormValues}
@@ -405,12 +519,15 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         handleBlur={() => handleBlur(field)}
                         isDisabled={!isEnabled}
                         handleDropDownChange={onDropdownChange}
+                        setDropDownOptions={setDropDownOptions}
                     />
                 );
 
             case 'WDateBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div
+                        key={`dateBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
@@ -418,7 +535,17 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
-                            className={`w-full px-3 py-1 border rounded-md ${fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-300'} bg-${colors.textInputBackground} text-${colors.textInputText}`}
+                            className={`
+                                w-full px-3 py-1 border rounded-md 
+                                focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                                ${!isEnabled
+                                    ? 'border-gray-300 bg-[#f2f2f0]'
+                                    : fieldErrors[field.wKey]
+                                        ? 'border-red-500'
+                                        : 'border-gray-700'
+                                }
+                                ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
+                            `}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
                             onBlur={() => handleBlur(field)}
@@ -432,16 +559,19 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WTextBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div
+                        key={`textBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
                         <input
                             type="text"
-                            className="w-full px-3 py-1 border rounded-md"
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
+                                }`}
                             style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : colors.textInputBorder,
-                                backgroundColor: colors.textInputBackground,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
+                                backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                 color: colors.textInputText
                             }}
                             value={formValues[field.wKey] || ''}
@@ -466,15 +596,17 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDisplayBox':
                 return (
-                    <div key={field.Srno} className={marginBottom}>
+                    <div
+                        key={`displayBox-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
                         <div
                             className="w-full px-3 py-1 border rounded-md"
                             style={{
-                                borderColor: colors.textInputBorder,
-                                backgroundColor: colors.textInputBackground,
+                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : colors.textInputBorder,
+                                backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                 color: colors.textInputText
                             }}
                         >
@@ -498,9 +630,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
     onClose,
-    pageData,
     masterValues,
     formData,
+    masterFormData,
     formValues,
     setFormValues,
     dropdownOptions,
@@ -509,76 +641,68 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     fieldErrors,
     setFieldErrors,
     setFormData,
-    resetChildForm
+    resetChildForm,
+    isEdit,
+    onChildFormSubmit,
+    setValidationModal,
+    viewAccess,
+    isLoading,
+    setChildEntriesTable,
+    setDropDownOptions,
+
 }) => {
     if (!isOpen) return null;
 
-    const submitFormData = async (masterValues, childEntries) => {
-        const jTag = { "ActionName": "OffMarketEntry", "Option": "add" };
+    const isChildInvalid = Object.values(fieldErrors).some(error => error);
+    const handleFormSubmit = () => {
+        const masterErrors = validateForm(masterFormData, masterValues);
+        const childErrors = validateForm(formData, formValues);
 
-        const entry = pageData[0].Entry;
-        const childEntry = entry.ChildEntry;
+        if (Object.keys(childErrors).length > 0) {
+            setFieldErrors({ ...masterErrors, ...childErrors });
+            toast.error("Please fill all mandatory fields before submitting.");
+            return;
+        }
+        else {
+            setChildEntriesTable(prev => {
+                let isUpdated = false;
 
-        // Construct J_Ui
-        const jUi = Object.entries(jTag)
-            .map(([key, value]) => `"${key}":"${value}"`)
-            .join(',');
+                const updatedEntries = prev.map(entry => {
+                    const isMatch = (entry.SerialNo && formValues.SerialNo && entry.SerialNo.toString() === formValues.SerialNo.toString())
+                        || (entry?.Id && formValues?.Id && entry.Id === formValues.Id);
 
-        // Construct J_Api
-        const jApi = Object.entries(childEntry.J_Api)
-            .map(([key, value]) => `"${key}":"${value}"`)
-            .join(',');
+                    if (isMatch) {
+                        isUpdated = true;
+                        return { ...entry, ...formValues };
+                    }
+                    return entry;
+                });
 
-        const createXmlTags = (data) => {
-            return Object.entries(data).map(([key, value]) => {
-                if (Array.isArray(value)) {
-                    return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
-                } else if (typeof value === 'object' && value !== null) {
-                    return `<${key}>${createXmlTags(value)}</${key}>`;
-                } else {
-                    return `<${key}>${value || ''}</${key}>`;
+                // If it was an update, return the modified list
+                if (isUpdated) {
+                    return updatedEntries;
                 }
-            }).join('');
-        };
 
-        const xData = createXmlTags({
-            ...masterValues,
-            items: { item: childEntries },
-            UserId: "ANUJ"
-        });
-
-        const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <X_Filter></X_Filter>
-            <X_Data>${xData}</X_Data>
-            <J_Api>${jApi}</J_Api>
-        </dsXml>`;
-
-        try {
-            const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
+                // Otherwise it's a new unsaved entry (add Id to track it)
+                const entryToAdd = {
+                    ...formValues,
+                    Id: generateUniqueId()
+                };
+                return [...updatedEntries, entryToAdd];
             });
-            if (response?.data?.success) {
-                console.log('Form submitted successfully:', response?.data?.data);
-            } else {
-                alert(response?.data?.message)
-            }
-            alert('Form submitted successfully!');
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            alert('Failed to submit the form. Please try again.');
+
+            onChildFormSubmit();
         }
     };
+
+
 
 
     return (
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Child Entry Form</h2>
+                    <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "} Child Entry Form</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700"
@@ -586,57 +710,84 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                         ✕
                     </button>
                 </div>
+                {isLoading ? (
+                    <div className="text-center py-4">Loading...</div>
+                ) : (
+                    <>
+                        <div className="text-end mt-5">
+                            <button
+                                onClick={resetChildForm}
+                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                    }`}
+                                disabled={viewAccess}
+                            >
+                                Reset
+                            </button>
+                            <button
+                                onClick={handleFormSubmit}
+                                disabled={viewAccess || isChildInvalid}
+                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-500 hover:bg-green-600 text-white'
+                                    }`}
+                            >
+                                Submit
+                            </button>
+                        </div>
+                        <EntryForm
+                            formData={formData}
+                            formValues={formValues}
+                            masterValues={masterValues}
+                            setFormValues={setFormValues}
+                            dropdownOptions={dropdownOptions}
+                            loadingDropdowns={loadingDropdowns}
+                            onDropdownChange={onDropdownChange}
+                            fieldErrors={fieldErrors}
+                            setFieldErrors={setFieldErrors}
+                            setFormData={setFormData}
+                            setValidationModal={setValidationModal}
+                            setDropDownOptions={setDropDownOptions}
+                        />
+                    </>
+                )}
 
-                <EntryForm
-                    formData={formData}
-                    formValues={formValues}
-                    masterValues={masterValues}
-                    setFormValues={setFormValues}
-                    dropdownOptions={dropdownOptions}
-                    loadingDropdowns={loadingDropdowns}
-                    onDropdownChange={onDropdownChange}
-                    fieldErrors={fieldErrors}
-                    setFieldErrors={setFieldErrors}
-                    setFormData={setFormData}
-                />
-
-                <div className="text-end mt-5">
-                    <button
-                        onClick={resetChildForm}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-                    >
-                        Reset
-                    </button>
-                    <button
-                        onClick={() => {
-                            submitFormData(masterValues, formValues)
-                        }
-                        }
-                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
-                    >
-                        Submit
-                    </button>
-                </div>
             </div>
         </div>
     );
 };
 
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData }) => {
+
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
     const [masterDropdownOptions, setMasterDropdownOptions] = useState<Record<string, any[]>>({});
     const [masterLoadingDropdowns, setMasterLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [isChildModalOpen, setIsChildModalOpen] = useState(false);
-    const [childEntries, setChildEntries] = useState<any[]>([]);
+    const [childEntriesTable, setChildEntriesTable] = useState<any[]>([]);
     const [childFormData, setChildFormData] = useState<FormField[]>([]);
     const [childFormValues, setChildFormValues] = useState<Record<string, any>>({});
     const [childDropdownOptions, setChildDropdownOptions] = useState<Record<string, any[]>>({});
     const [childLoadingDropdowns, setChildLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+    const [isEdit, setIsEdit] = useState<boolean>(false);
+    const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+    const [isFormSubmit, setIsFormSubmit] = useState<boolean>(false);
 
-    console.log('Master Form Data:', masterFormValues, childFormValues,childDropdownOptions);
+    const childEntryPresent = pageData[0].Entry.ChildEntry;
+    const isThereChildEntry = !childEntryPresent || Object.keys(childEntryPresent).length === 0;
+
+    const [validationModal, setValidationModal] = useState<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>({ isOpen: false, message: '', type: 'M' });
+
+    const [viewMode, setViewMode] = useState<boolean>(false);
+
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -669,7 +820,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            const options = response.data.data.rs0.map((item: any) => ({
+            const options = response.data?.data?.rs0?.map((item: any) => ({
                 label: item[field.wDropDownKey?.key || 'DisplayName'],
                 value: item[field.wDropDownKey?.value || 'Value']
             }));
@@ -687,9 +838,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const setLoadingDropdowns = isChild ? setChildLoadingDropdowns : setMasterLoadingDropdowns;
         const setDropdownOptions = isChild ? setChildDropdownOptions : setMasterDropdownOptions;
-
-        // adding this to remove the dependent field value when the parent field is changed 
-        const setDependentfieldEmpty = isChild ? setChildFormValues : setMasterFormValues;
 
         try {
             setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
@@ -732,7 +880,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            const options = response.data.data.rs0.map((item: any) => ({
+            const options = response.data?.data?.rs0?.map((item: any) => ({
                 label: item[field.wDropDownKey?.key || 'DisplayName'],
                 value: item[field.wDropDownKey?.value || 'Value']
             }));
@@ -751,7 +899,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const handleMasterDropdownChange = (field: any) => {
         // Find dependent fields and update them
-        console.log("check field", field);
         if (field.dependsOn) {
             if (Array.isArray(field.dependsOn.field)) {
                 fetchDependentOptions(field, "");
@@ -762,7 +909,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const handleChildDropdownChange = (field: any) => {
         // Find dependent fields and update them
-        console.log("check field", field);
         if (field.dependsOn) {
             if (Array.isArray(field.dependsOn.field)) {
                 fetchDependentOptions(field, "", true);
@@ -770,17 +916,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const fetchMasterEntryData = async () => {
+    const fetchMasterEntryData = async (editData?: any, viewMode: boolean = false) => {
         if (!pageData?.[0]?.Entry) return;
-
         setIsLoading(true);
         try {
             const entry = pageData[0].Entry;
             const masterEntry = entry.MasterEntry;
+            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
-            // Construct J_Ui
+            // Construct J_Ui - handle 'Option' key specially
             const jUi = Object.entries(masterEntry.J_Ui)
-                .map(([key, value]) => `"${key}":"${value}"`)
+                .map(([key, value]) => {
+                    if (key === 'Option' && editData) {
+                        return `"${key}":"Master_Edit"`;
+                    }
+                    return `"${key}":"${value}"`;
+                })
                 .join(',');
 
             // Construct J_Api
@@ -788,19 +939,38 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 .map(([key, value]) => `"${key}":"${value}"`)
                 .join(',');
 
-            // Construct X_Filter
+            // Construct X_Filter with edit data if available
             let xFilter = '';
             Object.entries(masterEntry.X_Filter).forEach(([key, value]) => {
-                if (value === '##InstrumentType##' || value === '##IntRefNo##') {
+                // If we have edit data and the key exists in it, use that value
+                if (editData && editData[key] !== undefined && editData[key] !== null) {
+                    xFilter += `<${key}>${editData[key]}</${key}>`;
+                }
+                // Otherwise use the default value from masterEntry
+                else if (value === '##InstrumentType##' || value === '##IntRefNo##') {
                     xFilter += `<${key}></${key}>`;
                 } else {
                     xFilter += `<${key}>${value}</${key}>`;
                 }
             });
 
+            // Add any additional fields from editData that aren't in masterEntry.X_Filter
+            if (editData) {
+                Object.entries(editData).forEach(([key, value]) => {
+                    if (
+                        value !== undefined &&
+                        value !== null &&
+                        !masterEntry.X_Filter.hasOwnProperty(key) &&
+                        !key.startsWith('_') // Skip internal fields
+                    ) {
+                        xFilter += `<${key}>${value}</${key}>`;
+                    }
+                });
+            }
+
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
-                <Sql>${masterEntry.Sql || ''}</Sql>
+                <Sql>${sql}</Sql>
                 <X_Filter>${xFilter}</X_Filter>
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
@@ -811,41 +981,65 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+            let formData = response?.data?.data?.rs0 || [];
+            // If in view mode, set all FieldEnabledTag to "N"
+            if (viewMode) {
+                formData = formData.map((field: any) => ({
+                    ...field,
+                    FieldEnabledTag: "N"
+                }));
+            }
 
-            setMasterFormData(response.data.data.rs0);
+            setMasterFormData(formData);
+            setChildEntriesTable(response?.data?.data?.rs1 || []);
 
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data.data.rs0.forEach((field: FormField) => {
+            formData.forEach((field: FormField) => {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
+                // If we have edit data, use it to pre-fill the form
+                else if (editData) {
+                    initialValues[field.wKey] = field.wValue;
+                }
             });
+
             setMasterFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data.data.rs0.forEach((field: FormField) => {
+            formData.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field);
                 }
+                // else if(field.type === 'WDropDownBox' && field.dependsOn && isEdit) {
+                //     handleMasterDropdownChange(field);
+                // }
             });
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
+            setIsLoading(false);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const fetchChildEntryData = async () => {
+    const fetchChildEntryData = async (editData?: any) => {
         if (!pageData?.[0]?.Entry) return;
-
+        setIsLoading(true)
         try {
             const entry = pageData[0].Entry;
             const childEntry = entry.ChildEntry;
+            const sql = Object.keys(childEntry?.sql || {}).length ? childEntry.sql : "";
 
-            // Construct J_Ui
+            // Construct J_Ui - handle 'Option' key specially
             const jUi = Object.entries(childEntry.J_Ui)
-                .map(([key, value]) => `"${key}":"${value}"`)
+                .map(([key, value]) => {
+                    if (key === 'Option' && editData && editData.SerialNo) {
+                        return `"${key}":"ChildEntry_Edit"`;
+                    }
+                    return `"${key}":"${value}"`;
+                })
                 .join(',');
 
             // Construct J_Api
@@ -853,21 +1047,38 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 .map(([key, value]) => `"${key}":"${value}"`)
                 .join(',');
 
-            // Construct X_Filter with values from master form
+            // Construct X_Filter with edit data if available
             let xFilter = '';
             Object.entries(childEntry.X_Filter).forEach(([key, value]) => {
-                if (value === '##SerialNo##') {
-                    xFilter += `<${key}></${key}>`;
-                } else if (value === '##InstrumentType##') {
+                // If we have edit data and the key exists in it, use that value
+                if (editData && editData.SerialNo && editData[key] !== undefined && editData[key] !== null) {
+                    xFilter += `<${key}>${editData[key]}</${key}>`;
+                }
+                // Otherwise use the default value from childEntry
+                else if (value === '##InstrumentType##') {
                     xFilter += `<${key}>${masterFormValues.InstrumentType || ''}</${key}>`;
                 } else {
                     xFilter += `<${key}>${value}</${key}>`;
                 }
             });
 
+            // Add any additional fields from editData that aren't in childEntry.X_Filter
+            if (editData && editData.SerialNo) {
+                Object.entries(editData).forEach(([key, value]) => {
+                    if (
+                        value !== undefined &&
+                        value !== null &&
+                        !childEntry.X_Filter.hasOwnProperty(key) &&
+                        !key.startsWith('_') // Skip internal fields
+                    ) {
+                        xFilter += `<${key}>${value}</${key}>`;
+                    }
+                });
+            }
+
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
-                <Sql>${childEntry.Sql || ''}</Sql>
+                <Sql>${sql}</Sql>
                 <X_Filter>${xFilter}</X_Filter>
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
@@ -878,39 +1089,222 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
-
-            setChildFormData(response.data.data.rs0);
+            let formData = response?.data?.data?.rs0 || [];
+            if (viewMode) {
+                formData = formData.map((field: any) => ({
+                    ...field,
+                    FieldEnabledTag: "N"
+                }));
+            }
+            setChildFormData(formData);
 
             // Initialize child form values with any preset values
             const initialValues: Record<string, any> = {};
-            response.data.data.rs0.forEach((field: FormField) => {
-                if (field.type === 'WDateBox' && field.wValue) {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
+                if (editData && editData.Id) {
+                    initialValues[field.wKey] = editData[field.wKey];
+                    initialValues['Id'] = editData['Id'];
+                }
+                else if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+                }
+                // If we have edit data, use it to pre-fill the form
+                else if (editData) {
+                    initialValues[field.wKey] = field.wValue;
                 }
             });
             setChildFormValues(initialValues);
 
             // Fetch initial dropdown options
-            response.data.data.rs0.forEach((field: FormField) => {
+            response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.wQuery) {
                     fetchDropdownOptions(field, true);
                 }
+                // else if(field.type === 'WDropDownBox' && field.dependsOn && isEdit) {
+                //     handleChildDropdownChange(field);
+                // }
             });
         } catch (error) {
             console.error('Error fetching ChildEntry data:', error);
+            setIsLoading(false);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !isEdit && (!editData || Object.keys(editData).length === 0)) {
             fetchMasterEntryData();
         }
     }, [isOpen, pageData]);
 
+    // useEffect(() => {
+    //     // Check if childFormValues has been updated with initial values
+    //     if (Object.keys(childFormValues).length > 0) {
+    //         childFormData.forEach((field) => {
+    //             if (field.type === 'WDropDownBox' && field.dependsOn) {
+    //                 handleChildDropdownChange(field);
+    //             }
+    //         });
+    //     }
+    // }, [childFormValues]);
+
+    // useEffect(() => {
+    //     // Check if childFormValues has been updated with initial values
+    //     if (Object.keys(masterFormValues).length > 0) {
+    //         masterFormData.forEach((field) => {
+    //             if (field.type === 'WDropDownBox' && field.dependsOn) {
+    //                 handleMasterDropdownChange(field);
+    //             }
+    //         });
+    //     }
+    // }, [masterFormValues]);
+
+
+
+    const deleteChildRecord = async () => {
+        try {
+
+            const entry = pageData[0].Entry;
+            const masterEntry = entry.MasterEntry;
+            const pageName = pageData[0]?.wPage || "";
+
+            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
+
+            const jUi = Object.entries(masterEntry.J_Ui)
+                .map(([key, value]) => {
+                    if (key === 'Option') {
+                        return `"${key}":"edit"`;
+                    }
+                    if (key === 'ActionName') {
+                        return `"${key}":"${pageName}"`;
+                    }
+                    return `"${key}":"${value}"`
+
+                })
+                .join(',');
+
+            const jApi = Object.entries(masterEntry.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const createXmlTags = (data) => {
+                const seenTags = new Set(); // Track seen tags to avoid duplicates
+
+                return Object.entries(data).map(([key, value]) => {
+                    if (seenTags.has(key)) {
+                        return ''; // Skip duplicate tags
+                    }
+                    seenTags.add(key);
+
+                    if (Array.isArray(value)) {
+                        return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
+                    } else if (typeof value === 'object' && value !== null) {
+                        return `<${key}>${createXmlTags(value)}</${key}>`;
+                    } else if (value) {
+                        return `<${key}>${value}</${key}>`;
+                    } else {
+                        return `<${key}></${key}>`; // Keep empty tag if no value
+                    }
+                }).filter(Boolean).join(''); // Remove any empty strings
+            };
+
+
+            const xData = createXmlTags({
+                ...masterFormValues,
+                items: { item: { ...childFormValues, IsDeleted: true } },
+                UserId: "ANUJ"
+            });
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${sql}</Sql>
+                <X_Filter></X_Filter>
+                <X_Data>${xData}</X_Data>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            if (response?.data?.success) {
+                fetchMasterEntryData(masterFormValues)
+                setIsConfirmationModalOpen(false);
+            }
+
+        } catch (error) {
+            console.error(`Error fetching options for   `);
+        } finally {
+            console.log("check delete record");
+        }
+
+
+    }
+
+    useEffect(() => {
+        if (action === 'edit' && editData) {
+            fetchMasterEntryData(editData);
+            setIsEdit(true);
+        } else if (action === 'view' && editData) {
+            setViewMode(true);
+            fetchMasterEntryData(editData, true);
+        }
+    }, [action, editData]);
+
+    const handleConfirmDelete = () => {
+        if (childFormValues && childFormValues?.Id) {
+            const filteredData = childEntriesTable.filter((item: any) => item.Id !== childFormValues?.Id);
+            setChildEntriesTable(filteredData);
+            setIsConfirmationModalOpen(false);
+
+        } else {
+            deleteChildRecord();
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setIsConfirmationModalOpen(false);
+    };
+
+    const handleChildEditData = (data: any) => {
+        setIsEdit(true);
+        setIsChildModalOpen(true);
+        fetchChildEntryData(data)
+    }
+
+    const handleChildEditNonSavedData = (data: any) => {
+        setIsChildModalOpen(true);
+        fetchChildEntryData(data)
+
+    }
+
+    const onChildFormSubmit = () => {
+        resetChildForm();
+        setIsChildModalOpen(false);
+        setChildDropdownOptions({});
+        setChildFormData([]);
+        setChildFormValues({});
+        // fetchMasterEntryData(masterFormValues);
+    };
+
+    // Updated handleAddChildEntry to validate master form before adding a child entry
     const handleAddChildEntry = () => {
+        const masterErrors = validateForm(masterFormData, masterFormValues);
+
+        if (Object.keys(masterErrors).length > 0) {
+            setFieldErrors(masterErrors);
+            toast.error("Please fill all mandatory fields in the master form before adding a child entry.");
+            return;
+        }
+
+        setIsEdit(false);
+        setChildFormValues({});
         setIsChildModalOpen(true);
         if (childFormData?.length > 0) {
-            return
+            return;
         } else {
             fetchChildEntryData();
         }
@@ -931,112 +1325,403 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
             return updatedErrors;
         });
-        //clear the child dependent dropdown options
-        // setChildDropdownOptions(prevOptions =>{
-        //     const updatedOptions = { ...prevOptions };
-        //     childFormData.forEach(field => {
-        //         if (field.dependsOn) {
-        //             delete updatedOptions[field.wKey];
-        //         }
-        //     });
-        //     return updatedOptions;
-        // })
+    };
+    const resetParentForm = () => {
+        setMasterFormValues({});
+        setFieldErrors({});
+        setChildEntriesTable([]);
+        setMasterDropdownOptions({});
+        setMasterFormData([]);
+        resetChildForm();
+        setIsEdit(false);
+        setEntryEditData(null);
+        onClose();
+        setViewMode(false);
+        refreshFunction()
+    }
+
+    const submitFormData = async () => {
+        const masterValues = structuredClone(masterFormValues);
+        const childEntry = structuredClone(childFormValues);
+        const childEntryTable = [...childEntriesTable].map(item => structuredClone(item));
+
+        setIsFormSubmit(true)
+        const entry = pageData[0].Entry;
+        const pageName = pageData[0]?.wPage || "";
+
+        const option = isEdit ? "edit" : "add";
+        const jTag = { "ActionName": pageName, "Option": option };
+
+        const jUi = Object.entries(jTag)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        const jApi = Object.entries(entry.MasterEntry.J_Api)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        const editedSerialNo = childEntry?.SerialNo?.toString();
+        const editedId = childEntry?.Id?.toString();
+
+        // Build a set to track processed SerialNo or Ids
+        const processedKeys = new Set();
+
+        // Add main childEntry with correct flags
+        const mainItem = {
+            ...childEntry,
+            IsEdit: editedSerialNo ? "true" : "false",
+            IsAdd: editedSerialNo ? "false" : "true"
+        };
+
+        if (editedSerialNo) processedKeys.add(`S-${editedSerialNo}`);
+        else if (editedId) processedKeys.add(`I-${editedId}`);
+
+        // Add rest of childEntryTable
+        const otherItems = childEntryTable
+            .filter(item => {
+                const serial = item.SerialNo?.toString();
+                const id = item.Id?.toString();
+                const key = serial ? `S-${serial}` : id ? `I-${id}` : null;
+                return key && !processedKeys.has(key);
+            })
+            .map(item => {
+                const serial = item.SerialNo?.toString();
+                const id = item.Id?.toString();
+                const isAdd = (!serial && id) ? "true" : "false";
+                const key = serial ? `S-${serial}` : id ? `I-${id}` : null;
+                if (key) processedKeys.add(key);
+
+                return {
+                    ...item,
+                    IsEdit: "false",
+                    IsAdd: isAdd
+                };
+            });
+
+        const checkIfEmpty = (obj: any) => {
+            const keys = Object.keys(obj);
+            return !(keys.length === 2 && keys.includes("IsEdit") && keys.includes("IsAdd") && Object.keys(childEntry).length === 0);
+        }
+
+        const finalItems = checkIfEmpty(mainItem) ? [mainItem, ...otherItems] : [...otherItems];
+
+        const itemsXml = finalItems.map(item => {
+            const itemTags = Object.entries(item)
+                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .join('');
+            return `<item>${itemTags}</item>`;
+        }).join('');
+
+        const masterXml = Object.entries(masterValues)
+            .map(([key, value]) => `<${key}>${value}</${key}>`)
+            .join('');
+
+        const xData = `<X_Data>
+        ${masterXml}
+        <items>
+            ${itemsXml}
+        </items>
+        <UserId>ANUJ</UserId>
+    </X_Data>`;
+
+        const xmlData = `<dsXml>
+        <J_Ui>${jUi}</J_Ui>
+        <X_Filter></X_Filter>
+        ${xData}
+        <J_Api>${jApi}</J_Api>
+    </dsXml>`;
+
+        try {
+            const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response?.data?.success) {
+                onChildFormSubmit();
+                toast.success('Form submitted successfully!');
+                setIsFormSubmit(false);
+                resetParentForm();
+            } else {
+                const message = response?.data?.message.replace(/<\/?Message>/g, '');
+                toast.warning(message);
+                setIsFormSubmit(false)
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            alert('Failed to submit the form. Please try again.');
+            setIsFormSubmit(false)
+        }
     };
 
+
+
+    const getAllColumns = (data: any[]): string[] => {
+        const allColumns = new Set<string>();
+        data.forEach(entry => {
+            if (entry && typeof entry === 'object') {
+                Object.keys(entry).forEach(key => {
+                    if (key !== "SerialNo" && key !== "Id") {
+                        allColumns.add(key);
+                    }
+                });
+            }
+        });
+        return Array.from(allColumns);
+    };
+
+
+    const handleFormSubmitWhenMasterOnly = () => {
+        const masterErrors = validateForm(masterFormData, masterFormValues);
+        if (Object.keys(masterErrors).length > 0) {
+            setFieldErrors({ ...masterErrors });
+            toast.error("Please fill all mandatory fields before submitting.");
+            return;
+        } else {
+            submitFormData()
+        }
+    }
+
+    // In your component
+    const dynamicColumns = getAllColumns(childEntriesTable);
+
     if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-100" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-            <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Entry Form</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        ✕
-                    </button>
-                </div>
-
-                {isLoading ? (
-                    <div className="text-center py-4">Loading...</div>
-                ) : (
-                    <>
-                        <EntryForm
-                            formData={masterFormData}
-                            formValues={masterFormValues}
-                            setFormValues={setMasterFormValues}
-                            dropdownOptions={masterDropdownOptions}
-                            loadingDropdowns={masterLoadingDropdowns}
-                            onDropdownChange={handleMasterDropdownChange}
-                            fieldErrors={fieldErrors} // Pass fieldErrors
-                            setFieldErrors={setFieldErrors} // Pass setFieldErrors
-                            masterValues={masterFormValues}
-                            setFormData={setMasterFormData}
-                        />
-
-                        <div className="mt-8">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-lg font-semibold">Child Entries</h3>
-                                <button
-                                    onClick={handleAddChildEntry}
-                                    className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
-                                    disabled={isFormInvalid}
-                                >
-                                    <FaPlus /> Add Entry
-                                </button>
-                            </div>
-
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full bg-white border border-gray-200">
-                                    <thead>
-                                        <tr>
-                                            <th className="px-4 py-2 border-b">Sr. No</th>
-                                            <th className="px-4 py-2 border-b">Instrument Type</th>
-                                            <th className="px-4 py-2 border-b">Serial No</th>
-                                            <th className="px-4 py-2 border-b">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {childEntries.map((entry, index) => (
-                                            <tr key={index}>
-                                                <td className="px-4 py-2 border-b">{index + 1}</td>
-                                                <td className="px-4 py-2 border-b">{entry.InstrumentType}</td>
-                                                <td className="px-4 py-2 border-b">{entry.SerialNo}</td>
-                                                <td className="px-4 py-2 border-b">
-                                                    <button className="text-red-500 hover:text-red-700">
-                                                        Delete
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+        <>
+            {isOpen && (
+                <div className="fixed inset-0 flex items-center justify-center z-100" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                    <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "}Entry Form</h2>
+                            <button
+                                onClick={() => { resetParentForm() }}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                ✕
+                            </button>
                         </div>
-                    </>
-                )}
-            </div>
+                        {isLoading ? (
+                            <div className="text-center py-4">Loading...</div>
+                        ) : (
+                            <>
+                                {isThereChildEntry && (
+                                    <div className="flex justify-end">
+                                        <button
+                                            className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                            onClick={handleFormSubmitWhenMasterOnly}
+                                            disabled={isFormInvalid || viewMode || isFormSubmit}
+                                        >
+                                            {isFormSubmit ? "Submitting..." : (
+                                                <>
+                                                    <FaSave /> Save Form
+                                                </>
+                                            )}
 
+                                        </button>
+                                    </div>
+                                )}
+                                <EntryForm
+                                    formData={masterFormData}
+                                    formValues={masterFormValues}
+                                    setFormValues={setMasterFormValues}
+                                    dropdownOptions={masterDropdownOptions}
+                                    setDropDownOptions={setMasterDropdownOptions}
+                                    loadingDropdowns={masterLoadingDropdowns}
+                                    onDropdownChange={handleMasterDropdownChange}
+                                    fieldErrors={fieldErrors} // Pass fieldErrors
+                                    setFieldErrors={setFieldErrors} // Pass setFieldErrors
+                                    masterValues={masterFormValues}
+                                    setFormData={setMasterFormData}
+                                    setValidationModal={setValidationModal}
+                                />
+                                <div className="mt-8">
+                                    <div className="flex justify-between items-end mb-4">
+
+                                        {!isThereChildEntry && (
+                                            <>
+                                                <h3 className="text-lg font-semibold">Child Entries</h3>
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={handleAddChildEntry}
+                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
+                                                            ? 'bg-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-500 hover:bg-blue-600'
+                                                            } text-white rounded-md`}
+                                                        disabled={isFormInvalid || viewMode || isThereChildEntry || isFormSubmit}
+                                                    >
+                                                        {isFormSubmit ? "Submitting..." : (
+                                                            <>
+                                                                <FaPlus /> Add Entry
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                                        onClick={() => {
+                                                            submitFormData();
+                                                        }}
+                                                        disabled={isFormInvalid || viewMode || isFormSubmit}
+                                                    >
+                                                        {isFormSubmit ? "Submitting..." : (
+                                                            <>
+                                                                <FaSave /> Save Form
+                                                            </>
+                                                        )}
+
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+
+
+                                    </div>
+                                    {!isThereChildEntry && (
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full bg-white border border-gray-200">
+                                                <thead>
+                                                    <tr>
+                                                        {/* Static headers */}
+                                                        <th className="px-4 py-2 border-b">Sr. No</th>
+                                                        <th className="px-4 py-2 border-b">Actions</th>
+
+                                                        {/* Dynamic headers - get all unique keys from the first entry */}
+                                                        {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
+                                                            key !== "SerialNo" && // Exclude SerialNo as it has its own column
+                                                            <th key={key} className="px-4 py-2 border-b capitalize">
+                                                                {key}
+                                                            </th>
+                                                        ))}
+
+                                                        {/* Static headers */}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {childEntriesTable.map((entry, index) => {
+                                                        // Create a safe entry object with all dynamic columns initialized
+                                                        const safeEntry = { ...entry };
+                                                        dynamicColumns.forEach(col => {
+                                                            if (!(col in safeEntry)) {
+                                                                safeEntry[col] = "";
+                                                            }
+                                                        });
+
+                                                        return (
+                                                            <tr key={index}>
+                                                                {/* Serial number */}
+                                                                <td className="px-4 py-2 border-b text-center">{index + 1}</td>
+
+                                                                {/* Actions */}
+                                                                <td className="flex gap-1 px-4 py-2 border-b text-center">
+                                                                    {viewMode && (
+                                                                        <button
+                                                                            className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                            onClick={() => {
+                                                                                setChildFormValues(entry);
+                                                                                handleChildEditNonSavedData(entry);
+                                                                            }}
+                                                                        >
+                                                                            view
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                            : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
+                                                                            }`}
+                                                                        onClick={() => {
+                                                                            setChildFormValues(entry);
+                                                                            handleChildEditNonSavedData(entry);
+
+                                                                        }}
+                                                                        disabled={viewMode}
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        className={`px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                            : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
+                                                                            }`}
+                                                                        onClick={() => {
+                                                                            setChildFormValues(entry);
+                                                                            setIsConfirmationModalOpen(true);
+                                                                        }}
+                                                                        disabled={viewMode}
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+
+                                                                {/* Dynamic values */}
+                                                                {dynamicColumns.map((key) => (
+                                                                    <td key={key} className="px-4 py-2 border-b text-center">
+                                                                        {safeEntry[key] == null || safeEntry[key] === ""
+                                                                            ? "-"
+                                                                            : String(safeEntry[key])
+                                                                        }
+                                                                    </td>
+                                                                ))}
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+            <ConfirmationModal
+                isOpen={isConfirmationModalOpen}
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
+            />
+            <CaseConfirmationModal
+                isOpen={validationModal.isOpen}
+                message={validationModal.message}
+                type={validationModal.type}
+                onConfirm={() => validationModal.callback?.(true)}
+                onCancel={() => validationModal.callback?.(false)}
+            />
+            <div>
+            </div>
             {isChildModalOpen && (
                 <ChildEntryModal
                     isOpen={isChildModalOpen}
-                    onClose={() => setIsChildModalOpen(false)}
-                    pageData={pageData}
+                    onClose={() => {
+                        setIsChildModalOpen(false);
+                        setChildDropdownOptions({});
+                        setChildFormData([]);
+                        setChildFormValues({});
+                    }}
+                    isLoading={isLoading}
+                    setChildEntriesTable={setChildEntriesTable}
                     masterValues={masterFormValues}
                     formData={childFormData}
+                    masterFormData={masterFormData}
                     formValues={childFormValues}
                     setFormValues={setChildFormValues}
                     dropdownOptions={childDropdownOptions}
+                    setDropDownOptions={setChildDropdownOptions}
                     loadingDropdowns={childLoadingDropdowns}
                     onDropdownChange={handleChildDropdownChange}
                     fieldErrors={fieldErrors} // Pass fieldErrors
                     setFieldErrors={setFieldErrors} // Pass setFieldErrors
                     setFormData={setChildFormData}
                     resetChildForm={resetChildForm}
+                    isEdit={isEdit}
+                    onChildFormSubmit={onChildFormSubmit}
+                    setValidationModal={setValidationModal}
+                    viewAccess={viewMode}
                 />
             )}
-        </div>
+        </>
     );
 };
 
