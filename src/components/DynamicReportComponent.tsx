@@ -358,7 +358,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                 const json = convertXmlToJson(xmlString);
                 const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
-                
+
                 setJsonData(json);
                 setJsonDataUpdated(jsonUpdated);
                 setRs1Settings(settingsJson);
@@ -576,20 +576,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaFileExcel size={20} />
                         </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFileCsv size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, 'download')}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFilePdf size={20} />
-                        </button>
+
                         <button
                             className="p-2 rounded"
                             onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, 'email')}
@@ -609,7 +596,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                                 <button
                                     className="p-2 rounded"
-                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData,filters,'download')}
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, 'download')}
                                     style={{ color: colors.text }}
                                 >
                                     <FaFilePdf size={20} />
