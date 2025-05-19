@@ -21,7 +21,7 @@ export interface FormField {
     childDependents?: string[];
     wKey: string;
     FieldSize: string;
-    isCreatable: string;
+    iscreatable: string;
     FieldType: string;
     ValidationAPI: any;
     FieldEnabledTag: string;

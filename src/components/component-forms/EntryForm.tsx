@@ -115,7 +115,7 @@ const DropdownField: React.FC<{
                     isLoading={loadingDropdowns[field.wKey]}
                     filterOption={() => true}
                     isDisabled={isDisabled}
-                    isValidNewOption={field.isCreatable === "true" ? undefined : () => false}
+                    isValidNewOption={field.iscreatable === "true" ? undefined : () => false}
                     onCreateOption={(inputValue) => {
                         // Handle creation of new option
                         const newOption = {
