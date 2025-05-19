@@ -8,13 +8,46 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import Link from "next/link";
 
 // Default options to use if JSON file is not available
 const DEFAULT_LOGIN_OPTIONS = [];
+
+const checkVersion = async () => {
+  try {
+    const xmlData = `
+      <dsXml>
+        <J_Ui>"ActionName":"TradeWeb","Option":"CheckVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
+        <Sql/>
+        <X_Filter>
+            <ApplicationName>TradeWeb</ApplicationName>
+            <LoginAs>C</LoginAs>
+            <Product>T</Product>
+            <Version>2.0.0.0</Version>
+        </X_Filter>
+        <J_Api>"UserId":"", "UserType":"User"</J_Api>
+      </dsXml>
+    `;
+
+    const response = await axios({
+      method: 'post',
+      url: BASE_URL + OTP_VERIFICATION_URL,
+      data: xmlData,
+      headers: {
+        'Content-Type': 'application/xml',
+      }
+    });
+
+    console.log('Version check response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Version check error:', error);
+    throw error;
+  }
+};
 
 export default function SignInForm() {
   const router = useRouter();
@@ -30,6 +63,19 @@ export default function SignInForm() {
   const [selectedName, setSelectedName] = useState("");
   const [selectedLoginAs, setSelectedLoginAs] = useState("");
   const [selectedLoginKey, setSelectedLoginKey] = useState("");
+
+  // Check version on component mount
+  useEffect(() => {
+    const performVersionCheck = async () => {
+      try {
+        await checkVersion();
+      } catch (error) {
+        console.error('Failed to check version:', error);
+      }
+    };
+
+    performVersionCheck();
+  }, []);
 
   // Load login options from JSON file with fallback
   useEffect(() => {
