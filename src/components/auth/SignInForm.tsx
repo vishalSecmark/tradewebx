@@ -3,7 +3,7 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,37 +16,63 @@ import Link from "next/link";
 // Default options to use if JSON file is not available
 const DEFAULT_LOGIN_OPTIONS = [];
 
-const checkVersion = async () => {
-  try {
-    const xmlData = `
-      <dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"CheckVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
-        <Sql/>
-        <X_Filter>
-            <ApplicationName>TradeWeb</ApplicationName>
-            <LoginAs>C</LoginAs>
-            <Product>T</Product>
-            <Version>2.0.0.0</Version>
-        </X_Filter>
-        <J_Api>"UserId":"", "UserType":"User"</J_Api>
-      </dsXml>
-    `;
+// Interface for version updates
+interface VersionItem {
+  Name: string;
+  Status: string;
+  Message: string;
+}
 
-    const response = await axios({
-      method: 'post',
-      url: BASE_URL + OTP_VERIFICATION_URL,
-      data: xmlData,
-      headers: {
-        'Content-Type': 'application/xml',
-      }
-    });
+// Component for the version update modal
+const VersionUpdateModal = ({
+  isOpen,
+  onClose,
+  updates,
+  onConfirm
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  updates: VersionItem[];
+  onConfirm: () => void;
+}) => {
+  if (!isOpen) return null;
 
-    console.log('Version check response:', response.data);
-    return response.data;
-  } catch (error) {
-    console.error('Version check error:', error);
-    throw error;
-  }
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]">
+        <h4 className="text-xl font-semibold mb-4 dark:text-white">
+          Update Available
+        </h4>
+        <div className="mb-6">
+          {updates.map((update, index) => (
+            <div key={index} className="mb-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
+              <div className="font-medium text-gray-800 dark:text-white">{update.Name}</div>
+              <div className="text-gray-600 dark:text-gray-300">{update.Message}</div>
+              <div className="text-sm mt-1">
+                <span className={`px-2 py-0.5 rounded-full ${update.Status === 'M' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                  {update.Status === 'M' ? 'Mandatory' : 'Optional'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-4">
+          <button
+            onClick={onClose}
+            className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md"
+          >
+            No
+          </button>
+          <button
+            onClick={onConfirm}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+          >
+            Update
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function SignInForm() {
@@ -64,18 +90,47 @@ export default function SignInForm() {
   const [selectedLoginAs, setSelectedLoginAs] = useState("");
   const [selectedLoginKey, setSelectedLoginKey] = useState("");
 
-  // Check version on component mount
-  useEffect(() => {
-    const performVersionCheck = async () => {
-      try {
-        await checkVersion();
-      } catch (error) {
-        console.error('Failed to check version:', error);
-      }
-    };
+  // State for version update modal
+  const [showVersionModal, setShowVersionModal] = useState(false);
+  const [versionUpdates, setVersionUpdates] = useState<VersionItem[]>([]);
+  const [version, setVersion] = useState("2.0.0.0"); // Default version
 
-    performVersionCheck();
-  }, []);
+  // Check version function inside component using useCallback to memoize
+  const checkVersion = useCallback(async () => {
+    try {
+      // Get login as value
+      const loginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
+
+      const xmlData = `
+        <dsXml>
+          <J_Ui>"ActionName":"TradeWeb","Option":"CheckVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
+          <Sql/>
+          <X_Filter>
+              <ApplicationName>TradeWeb</ApplicationName>
+              <LoginAs>${loginAs}</LoginAs>
+              <Product>${PRODUCT}</Product>
+              <Version>${LOGIN_AS}</Version>
+          </X_Filter>
+          <J_Api>"UserId":"", "UserType":"User"</J_Api>
+        </dsXml>
+      `;
+
+      const response = await axios({
+        method: 'post',
+        url: BASE_URL + OTP_VERIFICATION_URL,
+        data: xmlData,
+        headers: {
+          'Content-Type': 'application/xml',
+        }
+      });
+
+      console.log('Version check response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Version check error:', error);
+      throw error;
+    }
+  }, [loginAsOptions, selectedLoginAs, version]);
 
   // Load login options from JSON file with fallback
   useEffect(() => {
@@ -105,6 +160,62 @@ export default function SignInForm() {
 
     loadLoginOptions();
   }, []);
+
+  // Check version on component mount and after login options are loaded
+  useEffect(() => {
+    // Only check version if login options have been loaded
+    if ((loginAsOptions.length > 0 || LOGIN_AS) && selectedLoginAs) {
+      const performVersionCheck = async () => {
+        try {
+          const result = await checkVersion();
+          if (result.success && result.data?.rs0?.length > 0) {
+            setVersionUpdates(result.data.rs0);
+            setShowVersionModal(true);
+          }
+        } catch (error) {
+          console.error('Failed to check version:', error);
+        }
+      };
+
+      performVersionCheck();
+    }
+  }, [checkVersion, selectedLoginAs]);
+
+  // Handle the update confirmation
+  const handleUpdateConfirm = useCallback(async () => {
+    try {
+      // Create XML with the correct login as value
+      const loginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
+
+      const xmlData = `
+        <dsXml>
+          <J_Ui>"ActionName":"TradeWeb","Option":"UpdateVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
+          <Sql/>
+          <X_Filter>
+              <ApplicationName>TradeWeb</ApplicationName>
+              <LoginAs>${loginAs}</LoginAs>
+              <Product>${PRODUCT}</Product>
+              <Version>${LOGIN_AS}</Version>
+          </X_Filter>
+          <J_Api>"UserId":"", "UserType":"User"</J_Api>
+        </dsXml>
+      `;
+
+      const response = await axios({
+        method: 'post',
+        url: BASE_URL + OTP_VERIFICATION_URL,
+        data: xmlData,
+        headers: {
+          'Content-Type': 'application/xml',
+        }
+      });
+
+      console.log('Version update response:', response.data);
+      setShowVersionModal(false);
+    } catch (error) {
+      console.error('Failed to update version:', error);
+    }
+  }, [loginAsOptions, selectedLoginAs, version]);
 
   const handleLoginAsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedIndex = e.target.selectedIndex;
@@ -314,6 +425,14 @@ export default function SignInForm() {
           </a>
         </div>
       </div>
+
+      {/* Version Update Modal */}
+      <VersionUpdateModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+        updates={versionUpdates}
+        onConfirm={handleUpdateConfirm}
+      />
     </div>
   );
 }
