@@ -71,7 +71,6 @@ const DynamicEntryComponent: React.FC<DynamicEntryComponentProps> = ({ component
     };
 
     const pageData: any = findPageData();
-    console.log('pageData', pageData[0].Entry);
     // Helper functions for parsing XML settings
     const parseXmlList = (xmlString: string, tag: string): string[] => {
         const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
