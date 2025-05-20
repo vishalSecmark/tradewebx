@@ -103,6 +103,30 @@ function downloadFile(fileName: string, data: Blob) {
     URL.revokeObjectURL(url);
 }
 
+export function downloadPdf(fileName, base64Data) {
+    console.log(fileName)
+    // Decode Base64 into raw binary data held in a string
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    // Convert to Uint8Array
+    const byteArray = new Uint8Array(byteNumbers);
+    // Create a blob from the PDF bytes
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    // Create a link element, set URL and trigger download
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    // Cleanup
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
 const useScreenSize = () => {
     const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'web'>('web');
 
@@ -280,7 +304,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         // Get columns to show based on screen size
         let columnsToShow: string[] = [];
-    
+
         if (settings?.mobileColumns && screenSize === 'mobile') {
             columnsToShow = settings.mobileColumns;
             console.log('Using mobile columns:', columnsToShow);
@@ -300,7 +324,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
-        
+
         const baseColumns: any = [
             {
                 key: '_expanded',
@@ -495,8 +519,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                                     className="view-button"
                                     style={{}}
                                     onClick={() => handleAction('view', row)}
-                                    >
-                                        view
+                                >
+                                    view
                                 </button>
                                 <button
                                     className="edit-button"
@@ -1105,6 +1129,7 @@ export const exportTableToPdf = async (
     allData: any[],
     pageData: any,
     filters: any,
+    currentLevel: any,
     mode: 'download' | 'email',
 ) => {
     if (!allData || allData.length === 0) return;
@@ -1113,7 +1138,7 @@ export const exportTableToPdf = async (
         const confirmSend = window.confirm('Do you want to send mail?');
         if (!confirmSend) return;
     }
-    
+
     const decimalSettings = pageData[0]?.levels?.[0]?.settings?.decimalColumns || [];
     const columnsToHide = pageData[0]?.levels?.[0]?.settings?.hideEntireColumn?.split(',') || [];
     const totalColumns = pageData[0]?.levels?.[0]?.summary?.columnsToShowTotal || [];
@@ -1316,9 +1341,10 @@ export const exportTableToPdf = async (
                 else {
                     filterXml = `<ClientCode>${userId}</ClientCode>`;
                 }
+
                 const xmlData1 = `
                     <dsXml>
-                    <J_Ui>"ActionName":"TradeWeb", "Option":"EmailSend","RequestFrom":"W"</J_Ui>
+                    <J_Ui>"ActionName":${JSON.stringify(pageData[0].levels[currentLevel].J_Ui.ActionName)}, "Option":"EmailSend","RequestFrom":"W"</J_Ui>
                     <Sql></Sql>
                     <X_Filter>
                     ${filterXml}
@@ -1359,4 +1385,75 @@ export const exportTableToPdf = async (
         });
     }
 };
+
+export const downloadOption = async (
+    jsonData: any,
+    appMetadata: any,
+    allData: any[],
+    pageData: any,
+    filters: any,
+    currentLevel: any,
+) => {
+
+    const userId = localStorage.getItem('userId') || '';
+    const authToken = document.cookie.split('auth_token=')[1]?.split(';')[0] || '';
+    let filterXml;
+
+    if (filters && Object.keys(filters).length > 0) {
+        filterXml = Object.entries(filters).map(([key, value]) => {
+            if ((key === 'FromDate' || key === 'ToDate') && value) {
+                const date = new Date(String(value));
+                if (!isNaN(date.getTime())) {
+                    // Format as YYYYMMDD in local timezone
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const formatted = `${year}${month}${day}`;
+                    return `<${key}>${formatted}</${key}>`;
+                }
+            }
+            return `<${key}>${value}</${key}>`;
+        }).join('\n');
+    }
+
+    const xmlData1 = `
+    <dsXml>
+    <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)},"ReportDisplay":"D"</J_Ui>
+    <Sql></Sql>
+    <X_Filter>
+    ${filterXml}
+    </X_Filter>
+    <J_Api>"UserId":"${userId}","UserType":"${localStorage.getItem('userType')}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+    </dsXml>`;
+
+    console.log('Payload:', xmlData1);
+
+    try {
+        const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
+            headers: {
+                'Content-Type': 'application/xml',
+                Authorization: `Bearer ${authToken}`,
+            },
+            timeout: 300000,
+        });
+        console.log("final response", response)
+
+        // Pull out the first rs0 entry
+        const rs0 = response.data?.data?.rs0;
+        if (Array.isArray(rs0) && rs0.length > 0) {
+            const { PDFName, Base64PDF } = rs0[0];
+            if (PDFName && Base64PDF) {
+                // Kick off the download
+                downloadPdf(PDFName, Base64PDF);
+            } else {
+                console.error('Response missing PDFName or Base64PDF');
+            }
+        } else {
+            console.error('Unexpected response format:', response.data);
+        }
+    } catch (err) {
+       alert('Not available Donwload');
+    }
+
+}
 export default DataTable;
