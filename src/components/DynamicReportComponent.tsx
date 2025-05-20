@@ -358,7 +358,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                 const json = convertXmlToJson(xmlString);
                 const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
-                
+
                 setJsonData(json);
                 setJsonDataUpdated(jsonUpdated);
                 setRs1Settings(settingsJson);
@@ -578,20 +578,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         </button>
                         <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFileCsv size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters,currentLevel, 'download')}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFilePdf size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
                             onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email')}
                             style={{ color: colors.text }}
                         >
@@ -604,7 +590,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaDownload size={20} />
                         </button>
-{/*                         
+                        
                         {Object.keys(additionalTables).length == 0 && (
                             <>
                                 <button
@@ -617,13 +603,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                                 <button
                                     className="p-2 rounded"
-                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData,filters,'download')}
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters,currentLevel, 'download')}
                                     style={{ color: colors.text }}
                                 >
                                     <FaFilePdf size={20} />
                                 </button>
                             </>
-                        )} */}
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
