@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import Link from "next/link";
@@ -40,7 +40,7 @@ const VersionUpdateModal = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         <h4 className="text-xl font-semibold mb-4 dark:text-white">
           Update Available
         </h4>
@@ -109,13 +109,13 @@ export default function SignInForm() {
 
       const xmlData = `
         <dsXml>
-          <J_Ui>"ActionName":"TradeWeb","Option":"CheckVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
+          <J_Ui>"ActionName":"${ACTION_NAME}","Option":"CheckVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
           <Sql/>
           <X_Filter>
-              <ApplicationName>TradeWeb</ApplicationName>
+              <ApplicationName>${ACTION_NAME}</ApplicationName>
               <LoginAs>${loginAs}</LoginAs>
               <Product>${PRODUCT}</Product>
-              <Version>${LOGIN_AS}</Version>
+              <Version>${VERSION}</Version>
           </X_Filter>
           <J_Api>"UserId":"", "UserType":"User"</J_Api>
         </dsXml>
@@ -195,13 +195,13 @@ export default function SignInForm() {
 
       const xmlData = `
         <dsXml>
-          <J_Ui>"ActionName":"TradeWeb","Option":"UpdateVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
+          <J_Ui>"ActionName":"${ACTION_NAME}","Option":"UpdateVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
           <Sql/>
           <X_Filter>
-              <ApplicationName>TradeWeb</ApplicationName>
+              <ApplicationName>TradeWebDB</ApplicationName>
               <LoginAs>${loginAs}</LoginAs>
               <Product>${PRODUCT}</Product>
-              <Version>${LOGIN_AS}</Version>
+              <Version>${VERSION}</Version>
           </X_Filter>
           <J_Api>"UserId":"", "UserType":"User"</J_Api>
         </dsXml>
@@ -423,7 +423,11 @@ export default function SignInForm() {
           </div>
         </div>
       </div>
-      <div className="flex justify-end items-center p-4">
+
+      <div className="flex justify-between items-center p-4">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          Version {VERSION}
+        </div>
         <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 px-3 py-1.5 rounded-full shadow-sm">
           <span className="text-gray-500 dark:text-gray-400" style={{ fontSize: '11px' }}>Powered By:</span>
           <a href="https://www.secmark.in" target="_blank" rel="noopener noreferrer" className="transition hover:opacity-80">
