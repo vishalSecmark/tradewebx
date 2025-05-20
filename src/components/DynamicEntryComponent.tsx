@@ -422,7 +422,7 @@ const DynamicEntryComponent: React.FC<DynamicEntryComponentProps> = ({ component
                         </button>
                         <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData)}
+                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, {}, 'download')}
                             style={{ color: colors.text }}
                         >
                             <FaFilePdf size={20} />
