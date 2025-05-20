@@ -21,6 +21,7 @@ interface VersionItem {
   Name: string;
   Status: string;
   Message: string;
+  Remark?: string;
 }
 
 // Component for the version update modal
@@ -48,6 +49,11 @@ const VersionUpdateModal = ({
             <div key={index} className="mb-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
               <div className="font-medium text-gray-800 dark:text-white">{update.Name}</div>
               <div className="text-gray-600 dark:text-gray-300">{update.Message}</div>
+              {update?.Remark && (
+                <div className="mt-1 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 p-2 rounded">
+                  <span className="font-medium">Remarks:</span> {update.Remark}
+                </div>
+              )}
               <div className="text-sm mt-1">
                 <span className={`px-2 py-0.5 rounded-full ${update.Status === 'M' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
                   {update.Status === 'M' ? 'Mandatory' : 'Optional'}
