@@ -387,11 +387,37 @@ function Dashboard() {
             if (result && Array.isArray(result) && result.length > 0) {
                 console.log(result, 'userDashData');
                 setUserDashData(result);
-                // Set the first client as selected immediately
-                setSelectedClient({
-                    value: result[0].Value,
-                    label: result[0].DisplayName
-                });
+
+                // Check for saved client in localStorage
+                const savedClient = localStorage.getItem('selectedDashboardClient');
+                if (savedClient) {
+                    try {
+                        const parsedClient = JSON.parse(savedClient);
+                        // Verify the saved client exists in the current options
+                        const clientExists = result.some(item => item.Value === parsedClient.value);
+                        if (clientExists) {
+                            setSelectedClient(parsedClient);
+                        } else {
+                            // If saved client no longer exists, use the first one
+                            setSelectedClient({
+                                value: result[0].Value,
+                                label: result[0].DisplayName
+                            });
+                        }
+                    } catch (e) {
+                        // If parsing fails, use the first client
+                        setSelectedClient({
+                            value: result[0].Value,
+                            label: result[0].DisplayName
+                        });
+                    }
+                } else {
+                    // If no saved client, use the first one
+                    setSelectedClient({
+                        value: result[0].Value,
+                        label: result[0].DisplayName
+                    });
+                }
             } else {
                 console.warn('No dashboard data received or data format incorrect');
                 setUserDashData([]); // fallback empty array
@@ -451,6 +477,13 @@ function Dashboard() {
             dispatch(fetchInitializeLogin());
         }
     }, [dispatch, lastTradingDate, companyLogo]);
+
+    // Save selected client to localStorage whenever it changes
+    useEffect(() => {
+        if (selectedClient) {
+            localStorage.setItem('selectedDashboardClient', JSON.stringify(selectedClient));
+        }
+    }, [selectedClient]);
 
     // Keep only the useEffect for refetching dashboard data
     useEffect(() => {
@@ -520,7 +553,7 @@ function Dashboard() {
                         value={selectedClient}
                         onChange={(value) => setSelectedClient(value)}
                         placeholder="Select client..."
-                        resetOnOpen={true}
+                        resetOnOpen={false}
                         colors={{
                             text: colors.text,
                             primary: colors.primary,
