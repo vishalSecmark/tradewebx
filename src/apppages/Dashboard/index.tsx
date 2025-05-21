@@ -11,6 +11,7 @@ import { BASE_URL } from '@/utils/constants';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchLastTradingDate, fetchInitializeLogin } from '@/redux/features/common/commonSlice';
 import Select from 'react-select';
+import CommonCustomDropdown from '@/components/form/DropDown/CommonDropDown';
 
 const ReactApexChart = nextDynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -107,8 +108,8 @@ function Card({ cardData, onRefresh, selectedClient, auth }: any) {
             };
 
             const series = pieItems.map((item: any) => parseFloat(item.value.text) || 0);
-            
-            
+
+
 
             return (
                 <div
@@ -350,13 +351,16 @@ function Dashboard() {
     const [dashboardData, setDashboardData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
-    const [selectedClient, setSelectedClient] = useState(null);
     const dispatch = useAppDispatch();
     const lastTradingDate = useAppSelector(state => state.common.lastTradingDate);
     const companyLogo = useAppSelector(state => state.common.companyLogo);
     const [userDashData, setUserDashData] = useState([]);
     const auth = useAppSelector(state => state.auth);
+    const [selectedClient, setSelectedClient] = useState<{ value: string; label: string } | null>(null);
+
     console.log(auth.userType, 'auth');
+
+    console.log("user data", userDashData);
     const getUserDashboardData = async () => {
         try {
             const userId = localStorage.getItem('userId');
@@ -508,43 +512,26 @@ function Dashboard() {
         >
             {auth.userType === 'branch' && (
                 <div className="mb-4">
-                    <Select
+                    <CommonCustomDropdown
                         options={userDashData.map(item => ({
                             value: item.Value,
                             label: item.DisplayName
                         }))}
                         value={selectedClient}
-                        onChange={setSelectedClient}
-                        className="w-full max-w-md"
-                        styles={{
-                            control: (base) => ({
-                                ...base,
-                                backgroundColor: colors.cardBackground,
-                                borderColor: colors.color3,
-                                color: colors.text
-                            }),
-                            menu: (base) => ({
-                                ...base,
-                                backgroundColor: colors.cardBackground,
-                                color: colors.text
-                            }),
-                            option: (base, state) => ({
-                                ...base,
-                                backgroundColor: state.isSelected ? colors.primary : colors.cardBackground,
-                                color: state.isSelected ? colors.buttonText : colors.text,
-                                '&:hover': {
-                                    backgroundColor: colors.primary,
-                                    color: colors.buttonText
-                                }
-                            }),
-                            singleValue: (base) => ({
-                                ...base,
-                                color: colors.text
-                            })
+                        onChange={(value) => setSelectedClient(value)}
+                        placeholder="Select client..."
+                        resetOnOpen={true}
+                        colors={{
+                            text: colors.text,
+                            primary: colors.primary,
+                            buttonText: colors.buttonText,
+                            color3: colors.color3,
+                            cardBackground: colors.cardBackground,
                         }}
                     />
                 </div>
             )}
+
             <div className="space-y-4">
                 {dashboardData && dashboardData.map((cardData: any, index: number) => (
                     <Card
