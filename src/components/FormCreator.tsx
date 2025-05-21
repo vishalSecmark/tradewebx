@@ -8,8 +8,9 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { useTheme } from '@/context/ThemeContext';
 import { FaCalendarAlt } from 'react-icons/fa';
+import CustomDropdown from './form/CustomDropdown';
 
-interface FormElement {
+export interface FormElement {
     type: string;
     label: string;
     wKey: string | string[];
@@ -741,169 +742,29 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     const renderDropDownBox = (item: FormElement) => {
-        const options = item.options
-            ? item.options.map(opt => ({
-                label: opt.label,
-                value: opt.Value || opt.value
-            }))
-            : dropdownOptions[item.wKey as string] || [];
+  const options = item.options
+    ? item.options.map(opt => ({
+      label: opt.label,
+      value: opt.Value || opt.value
+    }))
+    : dropdownOptions[item.wKey as string] || [];
 
-        const selectedOption = item.isMultiple
-            ? options.filter(opt =>
-                Array.isArray(formValues[item.wKey as string])
-                    ? formValues[item.wKey as string].includes(String(opt.value))
-                    : false
-            )
-            : options.find(opt =>
-                String(opt.value) === String(formValues[item.wKey as string])
-            );
+  const isLoading = loadingDropdowns[item.wKey as string];
 
-        const isLoading = loadingDropdowns[item.wKey as string];
-
-        return (
-            <div className="mb-4">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
-                    {item.label}
-                    {isLoading && <span className="ml-2 inline-block animate-pulse">Loading...</span>}
-                </label>
-                <Select
-                    options={options}
-                    value={selectedOption}
-                    isMulti={item.isMultiple}
-                    closeMenuOnSelect={!item.isMultiple}
-                    blurInputOnSelect={!item.isMultiple}
-                    onChange={(selected) => {
-                        const newValues = { ...formValues };
-
-                        if (selected) {
-                            if (item.isMultiple) {
-                                // Ensure we're working with an array of values
-                                const selectedValues = Array.isArray(selected)
-                                    ? selected.map(opt => opt.value)
-                                    : [selected.value];
-                                newValues[item.wKey as string] = selectedValues;
-                            } else {
-                                newValues[item.wKey as string] = selected.value;
-                            }
-
-                            formData.flat().forEach(dependentItem => {
-                                if (dependentItem.dependsOn) {
-                                    const dependsOnField = dependentItem.dependsOn.field;
-                                    const isDependent = Array.isArray(dependsOnField)
-                                        ? dependsOnField.includes(item.wKey as string)
-                                        : dependsOnField === item.wKey;
-
-                                    if (isDependent) {
-                                        newValues[dependentItem.wKey as string] = undefined;
-
-                                        if (Array.isArray(dependsOnField)) {
-                                            const allDependenciesFilled = dependsOnField.every(field =>
-                                                newValues[field] !== undefined && newValues[field] !== null
-                                            );
-
-                                            if (allDependenciesFilled) {
-                                                const dependencyValues = dependsOnField.reduce((acc, field) => {
-                                                    const fieldElement = formData.flat().find(el => el.wKey === field);
-
-                                                    if (fieldElement?.type === 'WDateBox' && newValues[field]) {
-                                                        acc[field] = moment(newValues[field]).format('YYYYMMDD');
-                                                    } else if (fieldElement?.type === 'WDropDownBox' && fieldElement.isMultiple) {
-                                                        const values = Array.isArray(newValues[field]) ? newValues[field] : [newValues[field]];
-                                                        acc[field] = values.filter(Boolean).join('|');
-                                                    } else {
-                                                        acc[field] = newValues[field];
-                                                    }
-                                                    return acc;
-                                                }, {} as Record<string, any>);
-
-                                                fetchDependentOptions(dependentItem, dependencyValues);
-                                            }
-                                        } else {
-                                            const fieldElement = formData.flat().find(
-                                                el => el.wKey === dependentItem.dependsOn!.field
-                                            );
-
-                                            if (fieldElement?.type === 'WDateBox') {
-                                                const formattedDate = moment(selected.value).format('YYYYMMDD');
-                                                fetchDependentOptions(dependentItem, formattedDate);
-                                            } else if (fieldElement?.type === 'WDropDownBox' && fieldElement.isMultiple) {
-                                                const values = Array.isArray(selected)
-                                                    ? selected.map(opt => opt.value)
-                                                    : [selected.value];
-                                                const formattedValue = values.filter(Boolean).join('|');
-                                                fetchDependentOptions(dependentItem, formattedValue);
-                                            } else {
-                                                fetchDependentOptions(dependentItem, selected.value);
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                        } else {
-                            newValues[item.wKey as string] = item.isMultiple ? [] : undefined;
-
-                            formData.flat().forEach(dependentItem => {
-                                if (dependentItem.dependsOn) {
-                                    const dependsOnField = dependentItem.dependsOn.field;
-                                    const isDependent = Array.isArray(dependsOnField)
-                                        ? dependsOnField.includes(item.wKey as string)
-                                        : dependsOnField === item.wKey;
-
-                                    if (isDependent) {
-                                        newValues[dependentItem.wKey as string] = undefined;
-                                    }
-                                }
-                            });
-                        }
-
-                        handleFormChange(newValues);
-                    }}
-                    isDisabled={isLoading}
-                    placeholder={isLoading ? "Loading options..." : "Select..."}
-                    className="react-select-container"
-                    classNamePrefix="react-select"
-                    styles={{
-                        control: (base) => ({
-                            ...base,
-                            borderColor: colors.textInputBorder,
-                            backgroundColor: colors.textInputBackground,
-                            boxShadow: isLoading ? `0 0 0 1px ${colors.primary}` : base.boxShadow,
-                        }),
-                        singleValue: (base) => ({
-                            ...base,
-                            color: colors.textInputText,
-                        }),
-                        option: (base, state) => ({
-                            ...base,
-                            backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
-                            color: state.isFocused ? colors.buttonText : colors.textInputText,
-                        }),
-                        multiValue: (base) => ({
-                            ...base,
-                            backgroundColor: colors.primary,
-                        }),
-                        multiValueLabel: (base) => ({
-                            ...base,
-                            color: colors.buttonText,
-                        }),
-                        multiValueRemove: (base) => ({
-                            ...base,
-                            color: colors.buttonText,
-                            ':hover': {
-                                backgroundColor: colors.primary,
-                                color: colors.buttonText,
-                            },
-                        }),
-                    }}
-                />
-                {isLoading && (
-                    <div className="mt-1 text-xs text-right" style={{ color: colors.primary }}>
-                        Fetching options...
-                    </div>
-                )}
-            </div>
-        );
-    };
+  return (
+    <CustomDropdown
+      item={item}
+      value={formValues[item.wKey as string]}
+      onChange={(value) => handleInputChange(item.wKey as string, value)}
+      options={options}
+      isLoading={isLoading}
+      colors={colors}
+      formData={formData}
+      handleFormChange={handleFormChange}
+      formValues={formValues}
+    />
+  );
+};
 
     const renderCheckBox = (item: FormElement) => {
         return (
