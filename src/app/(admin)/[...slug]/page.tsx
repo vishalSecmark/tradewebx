@@ -3,7 +3,6 @@ import React from "react";
 import Dashboard from "@/apppages/Dashboard";
 import LogoutPage from "../(auth)/logout/page";
 import DynamicReportComponent from "@/components/DynamicReportComponent";
-import DynamicEntryComponent from "@/components/DynamicEntryComponent";
 import ChangePassword from "@/apppages/ChangePassword";
 import ThemePage from "@/apppages/ThemePage";
 import Downloads from "@/apppages/Downloads";
