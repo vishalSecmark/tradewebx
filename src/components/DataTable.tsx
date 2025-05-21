@@ -1344,7 +1344,7 @@ export const exportTableToPdf = async (
 
                 const xmlData1 = `
                     <dsXml>
-                    <J_Ui>"ActionName":${JSON.stringify(pageData[0].levels[currentLevel].J_Ui.ActionName)}, "Option":"EmailSend","RequestFrom":"W"</J_Ui>
+                    <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"EmailSend","RequestFrom":"W"</J_Ui>
                     <Sql></Sql>
                     <X_Filter>
                     ${filterXml}
@@ -1354,8 +1354,6 @@ export const exportTableToPdf = async (
                     </X_Filter>
                     <J_Api>"UserId":"${userId}","UserType":"Client","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
                     </dsXml>`;
-
-                console.log('Payload:', xmlData1);
 
                 const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
                     headers: {
@@ -1426,8 +1424,6 @@ export const downloadOption = async (
     <J_Api>"UserId":"${userId}","UserType":"${localStorage.getItem('userType')}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
     </dsXml>`;
 
-    console.log('Payload:', xmlData1);
-
     try {
         const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
             headers: {
@@ -1436,7 +1432,6 @@ export const downloadOption = async (
             },
             timeout: 300000,
         });
-        console.log("final response", response)
 
         // Pull out the first rs0 entry
         const rs0 = response.data?.data?.rs0;
