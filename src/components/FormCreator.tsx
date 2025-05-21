@@ -306,7 +306,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${item.wQuery?.Sql || ''}</Sql>
                 <X_Filter>${item.wQuery?.X_Filter || ''}</X_Filter>
-                <J_Api>${jApi}</J_Api>
+                <J_Api>${jApi},"UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
             console.log('Dropdown request XML:', xmlData);

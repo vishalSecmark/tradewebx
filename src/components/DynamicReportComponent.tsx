@@ -453,6 +453,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             const masterEntry = entry.MasterEntry;
             const pageName = pageData[0]?.wPage || "";
 
+            // console.log(masterEntry,'masterEntry')
+
             const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
             let X_Data = "";
 
