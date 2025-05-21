@@ -198,7 +198,7 @@ export default function SignInForm() {
           <J_Ui>"ActionName":"${ACTION_NAME}","Option":"UpdateVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
           <Sql/>
           <X_Filter>
-              <ApplicationName>TradeWebDB</ApplicationName>
+              <ApplicationName>TradeWeb</ApplicationName>
               <LoginAs>${loginAs}</LoginAs>
               <Product>${PRODUCT}</Product>
               <Version>${VERSION}</Version>
