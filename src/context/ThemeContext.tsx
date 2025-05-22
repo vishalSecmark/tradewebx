@@ -191,7 +191,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <X_Filter>
         </X_Filter>
         <X_GFilter/>
-        <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+        <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + PATH_URL, xmlData, {

@@ -423,7 +423,7 @@ function Dashboard() {
                 <J_Ui>"ActionName":"Common","Option":"Search","RequestFrom":"W"</J_Ui>
                 <Sql/>
                 <X_Filter></X_Filter>
-                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
             const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
