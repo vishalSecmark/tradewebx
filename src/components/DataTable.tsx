@@ -1352,7 +1352,7 @@ export const exportTableToPdf = async (
                         <FileName>${fileTitle}.PDF</FileName>
                         <Base64>${base64Data}</Base64>
                     </X_Filter>
-                    <J_Api>"UserId":"${userId}","UserType":"Client","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+                    <J_Api>"UserId":"${userId}","UserType":"Client","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined", "UserType":"${localStorage.getItem('userType')}"</J_Api>
                     </dsXml>`;
 
                 const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
