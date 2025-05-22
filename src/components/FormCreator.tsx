@@ -224,9 +224,35 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         });
 
         if (dependentFields.length > 0) {
-            dependentFields.forEach(dependentItem => {
-                newValues[dependentItem.wKey as string] = undefined;
+            // Clear all dependent fields and their dependent fields recursively
+            const clearDependentFields = (fields: FormElement[]) => {
+                if (fields.length === 0) return;
 
+                fields.forEach(dependentItem => {
+                    // Clear the dependent field value
+                    newValues[dependentItem.wKey as string] = undefined;
+
+                    // Find fields that depend on this field
+                    const nestedDependentFields = formData.flat().filter(nestedItem => {
+                        if (!nestedItem.dependsOn) return false;
+
+                        return Array.isArray(nestedItem.dependsOn.field)
+                            ? nestedItem.dependsOn.field.includes(dependentItem.wKey as string)
+                            : nestedItem.dependsOn.field === dependentItem.wKey;
+                    });
+
+                    // Recursively clear nested dependent fields
+                    if (nestedDependentFields.length > 0) {
+                        clearDependentFields(nestedDependentFields);
+                    }
+                });
+            };
+
+            // Start the recursive clearing process
+            clearDependentFields(dependentFields);
+
+            // Now fetch new options for the direct dependents
+            dependentFields.forEach(dependentItem => {
                 if (Array.isArray(dependentItem.dependsOn!.field)) {
                     const allDependenciesFilled = dependentItem.dependsOn!.field.every(field =>
                         newValues[field] !== undefined && newValues[field] !== null
@@ -689,48 +715,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     selected={formValues[item.wKey as string]}
                     onChange={(date: Date) => {
                         handleInputChange(item.wKey as string, date);
-
-                        const dependentFields = formData.flat().filter(dependentItem => {
-                            if (!dependentItem.dependsOn) return false;
-
-                            return Array.isArray(dependentItem.dependsOn.field)
-                                ? dependentItem.dependsOn.field.includes(item.wKey as string)
-                                : dependentItem.dependsOn.field === item.wKey;
-                        });
-
-                        if (dependentFields.length > 0) {
-                            const newValues = { ...formValues, [item.wKey as string]: date };
-
-                            dependentFields.forEach(dependentItem => {
-                                newValues[dependentItem.wKey as string] = undefined;
-
-                                if (Array.isArray(dependentItem.dependsOn!.field)) {
-                                    const allDependenciesFilled = dependentItem.dependsOn!.field.every(field =>
-                                        newValues[field] !== undefined && newValues[field] !== null
-                                    );
-
-                                    if (allDependenciesFilled) {
-                                        const dependencyValues = dependentItem.dependsOn!.field.reduce((acc, field) => {
-                                            const fieldElement = formData.flat().find(el => el.wKey === field);
-
-                                            if (fieldElement?.type === 'WDateBox' && newValues[field]) {
-                                                acc[field] = moment(newValues[field]).format('YYYYMMDD');
-                                            } else {
-                                                acc[field] = newValues[field];
-                                            }
-                                            return acc;
-                                        }, {} as Record<string, any>);
-
-                                        fetchDependentOptions(dependentItem, dependencyValues);
-                                    }
-                                } else {
-                                    const formattedDate = moment(date).format('YYYYMMDD');
-                                    fetchDependentOptions(dependentItem, formattedDate);
-                                }
-                            });
-
-                            handleFormChange(newValues);
-                        }
                     }}
                     dateFormat="dd/MM/yyyy"
                     className="w-full px-3 py-2 border rounded-md"
