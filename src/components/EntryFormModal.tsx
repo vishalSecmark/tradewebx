@@ -799,7 +799,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         <J_Ui>${jUi}</J_Ui>
         <X_Filter></X_Filter>
         ${xData}
-        <J_Api>${jApi}</J_Api>
+        <J_Api>${jApi}, "UserType":"${localStorage.getItem('userType')}"</J_Api>
     </dsXml>`;
 
         try {
