@@ -27,7 +27,11 @@ function Card({ cardData, onRefresh, selectedClient, auth }: any) {
                 <div className="text-center">
                     <p style={{ color: colors.text }} className="mb-4">Failed to load data</p>
                     <button
-                        onClick={onRefresh}
+                        onClick={() => {
+                            if (typeof onRefresh === 'function') {
+                                onRefresh();
+                            }
+                        }}
                         style={{
                             backgroundColor: colors.buttonBackground,
                             color: colors.buttonText
@@ -349,7 +353,7 @@ function Card({ cardData, onRefresh, selectedClient, auth }: any) {
 function Dashboard() {
     const { colors } = useTheme();
     const [dashboardData, setDashboardData] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
     const dispatch = useAppDispatch();
     const lastTradingDate = useAppSelector(state => state.common.lastTradingDate);
@@ -357,6 +361,8 @@ function Dashboard() {
     const [userDashData, setUserDashData] = useState([]);
     const auth = useAppSelector(state => state.auth);
     const [selectedClient, setSelectedClient] = useState<{ value: string; label: string } | null>(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [dropdownChanged, setDropdownChanged] = useState(false);
 
     console.log(auth.userType, 'auth');
 
@@ -366,12 +372,58 @@ function Dashboard() {
             const userId = localStorage.getItem('userId');
             const authToken = document.cookie.split('auth_token=')[1] || '';
 
+            // Try to get cached dropdown options first
+            const cachedOptions = localStorage.getItem('userDashboardOptions');
+            if (cachedOptions) {
+                try {
+                    const parsedOptions = JSON.parse(cachedOptions);
+                    if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
+                        setUserDashData(parsedOptions);
+
+                        // Handle client selection with cached options
+                        const savedClient = localStorage.getItem('selectedDashboardClient');
+                        if (savedClient) {
+                            try {
+                                const parsedClient = JSON.parse(savedClient);
+                                // Verify the saved client exists in the current options
+                                const clientExists = parsedOptions.some(item => item.Value === parsedClient.value);
+                                if (clientExists) {
+                                    setSelectedClient(parsedClient);
+                                } else {
+                                    setSelectedClient({
+                                        value: parsedOptions[0].Value,
+                                        label: parsedOptions[0].DisplayName
+                                    });
+                                }
+                            } catch (e) {
+                                setSelectedClient({
+                                    value: parsedOptions[0].Value,
+                                    label: parsedOptions[0].DisplayName
+                                });
+                            }
+                        } else {
+                            setSelectedClient({
+                                value: parsedOptions[0].Value,
+                                label: parsedOptions[0].DisplayName
+                            });
+                        }
+
+                        // Return early - no need to fetch options again
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error parsing cached dropdown options:', e);
+                    // Continue to fetch fresh data if parsing fails
+                }
+            }
+
+            // Fetch fresh dropdown options if no cache or cache failed
             const xmlData1 = `
             <dsXml>
                 <J_Ui>"ActionName":"Common","Option":"Search","RequestFrom":"W"</J_Ui>
                 <Sql/>
                 <X_Filter></X_Filter>
-                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
             const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
@@ -387,6 +439,9 @@ function Dashboard() {
             if (result && Array.isArray(result) && result.length > 0) {
                 console.log(result, 'userDashData');
                 setUserDashData(result);
+
+                // Cache the dropdown options
+                localStorage.setItem('userDashboardOptions', JSON.stringify(result));
 
                 // Check for saved client in localStorage
                 const savedClient = localStorage.getItem('selectedDashboardClient');
@@ -432,7 +487,11 @@ function Dashboard() {
     };
 
     const getDashboardData = async () => {
-        setLoading(true);
+        // Only show loader if data isn't already loaded or dropdown was changed
+        if (isInitialLoad || dropdownChanged) {
+            setLoading(true);
+        }
+
         setError(false);
         try {
             const xmlData = `<dsXml>
@@ -453,7 +512,17 @@ function Dashboard() {
                 timeout: 300000
             });
             console.log(response.data.data.rs0, 'response.data.data.rs0');
-            setDashboardData(response.data.data.rs0 || []);
+            const newData = response.data.data.rs0 || [];
+            setDashboardData(newData);
+
+            // Store the data in localStorage
+            if (selectedClient) {
+                localStorage.setItem(`dashboardData_${selectedClient.value}`, JSON.stringify(newData));
+            }
+
+            // Reset flags
+            setIsInitialLoad(false);
+            setDropdownChanged(false);
             setError(false);
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
@@ -468,8 +537,11 @@ function Dashboard() {
         if (auth.userType === 'branch') {
             getUserDashboardData();
         } else {
+            // For non-branch users, set initial load to true and get data
+            setIsInitialLoad(true);
             getDashboardData();
         }
+
         if (!lastTradingDate) {
             dispatch(fetchLastTradingDate());
         }
@@ -485,11 +557,51 @@ function Dashboard() {
         }
     }, [selectedClient]);
 
-    // Keep only the useEffect for refetching dashboard data
+    // Handle client selection changes and load data accordingly
     useEffect(() => {
         if (selectedClient && auth.userType === 'branch') {
-            getDashboardData();
+            // Check if we have persisted data for this client
+            const persistedDataKey = `dashboardData_${selectedClient.value}`;
+            const savedData = localStorage.getItem(persistedDataKey);
+
+            if (savedData && !dropdownChanged && !isInitialLoad) {
+                // Use persisted data if available and dropdown wasn't changed
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    setDashboardData(parsedData);
+                    setLoading(false);
+                } catch (e) {
+                    console.error('Error parsing persisted data:', e);
+                    // If parsing fails, fetch fresh data
+                    getDashboardData();
+                }
+            } else {
+                // Otherwise fetch fresh data
+                getDashboardData();
+            }
         }
+    }, [selectedClient]);
+
+    // Handler for dropdown change
+    const handleClientChange = (value) => {
+        if (value?.value !== selectedClient?.value) {
+            setDropdownChanged(true);
+            setSelectedClient(value);
+        }
+    };
+
+    // Create a dedicated refresh function that can be passed to Card components
+    const handleRefresh = useCallback(() => {
+        // Clear persisted data for the current client
+        if (selectedClient) {
+            localStorage.removeItem(`dashboardData_${selectedClient.value}`);
+        }
+
+        // Force new data fetch with loader
+        setIsInitialLoad(true);
+        setDropdownChanged(true);
+        setError(false);
+        getDashboardData();
     }, [selectedClient]);
 
     if (loading) {
@@ -522,7 +634,7 @@ function Dashboard() {
                         Failed to load dashboard data
                     </p>
                     <button
-                        onClick={getDashboardData}
+                        onClick={handleRefresh}
                         style={{
                             backgroundColor: colors.buttonBackground,
                             color: colors.buttonText
@@ -551,7 +663,7 @@ function Dashboard() {
                             label: item.DisplayName
                         }))}
                         value={selectedClient}
-                        onChange={(value) => setSelectedClient(value)}
+                        onChange={handleClientChange}
                         placeholder="Select client..."
                         resetOnOpen={false}
                         colors={{
@@ -571,9 +683,10 @@ function Dashboard() {
                         key={index}
                         cardData={{
                             ...cardData,
-                            onRefresh: getDashboardData,
+                            onRefresh: handleRefresh,
                             loading: loading
                         }}
+                        onRefresh={handleRefresh}
                         selectedClient={selectedClient}
                         auth={auth}
                     />

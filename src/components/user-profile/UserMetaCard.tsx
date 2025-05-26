@@ -28,7 +28,7 @@ export default function UserMetaCard() {
         <Sql></Sql>
         <X_Filter></X_Filter>
         <X_GFilter></X_GFilter>
-        <J_Api>"UserId":"${userData.userId}"</J_Api>
+        <J_Api>"UserId":"${userData.userId}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
     </dsXml>`;
 
     try {
