@@ -361,10 +361,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
             alert("Invalid base64 structure");
             return;
         }
-
         const mimeType = match[1];
         const base64 = match[2];
-
         try {
             const byteCharacters = atob(base64);
             const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
