@@ -345,6 +345,51 @@ const EntryForm: React.FC<EntryFormProps> = ({
         }
     };
 
+    //this error function is used to show file uploadation
+    const handleFieldError = (fieldKey: string, errorMessage: string) => {
+        setFieldErrors(prev => ({ ...prev, [fieldKey]: errorMessage }));
+    };
+
+    function handleViewFile(base64Data: string, fieldType: string = 'file') {
+        if (!base64Data?.startsWith('data:')) {
+            alert("Invalid file data");
+            return;
+        }
+
+        const match = base64Data.match(/^data:(.*);base64,(.*)$/);
+        if (!match) {
+            alert("Invalid base64 structure");
+            return;
+        }
+
+        const mimeType = match[1];
+        const base64 = match[2];
+
+        try {
+            const byteCharacters = atob(base64);
+            const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
+            const byteArray = new Uint8Array(byteNumbers);
+
+            const blob = new Blob([byteArray], { type: mimeType });
+            const blobUrl = URL.createObjectURL(blob);
+
+            const newTab = window.open(blobUrl, '_blank');
+
+            if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `uploaded-file.${fieldType || 'file'}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        } catch (error) {
+            alert("Unable to preview file.");
+        }
+    }
+
+
+
     const renderFormField = (field: FormField) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
 
@@ -457,6 +502,82 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         >
                             {formValues[field.wKey] || '-'}
                         </div>
+                    </div>
+                );
+
+            case 'WFile':
+                return (
+                    <div
+                        key={`fileInput-${field.Srno}-${field.wKey}`}
+                        className={marginBottom}
+                    >
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                            {field.label}
+                            {/* {field.isMandatory === "true" && <span className="text-red-500 ml-1">*</span>} */}
+                        </label>
+
+                        {/* === PREVIEW EXISTING FILE IN EDIT MODE === */}
+                        {formValues[field.wKey] && (
+                            <div className="mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleViewFile(formValues[field.wKey], field.FieldType)}
+                                    className="text-blue-600 underline"
+                                >
+                                    View uploaded file
+                                </button>
+
+                                {/* Optional: show preview for image types */}
+                                {['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(field.FieldType?.toLowerCase()) && (
+                                    <img
+                                        src={formValues[field.wKey]}
+                                        alt="Uploaded preview"
+                                        className="h-24 w-auto rounded border mt-2"
+                                    />
+                                )}
+                            </div>
+                        )}
+                        <input
+                            type="file"
+                            accept={field.FieldType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',')}
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled
+                                ? 'border-gray-300'
+                                : fieldErrors[field.wKey]
+                                    ? 'border-red-500'
+                                    : 'border-gray-700'
+                                }`}
+                            style={{
+                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : '#344054',
+                                backgroundColor: !isEnabled ? '#f2f2f0' : colors.textInputBackground,
+                                color: colors.textInputText,
+                                paddingTop: '0.5rem',
+                            }}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    const allowedTypes = field.FieldType.split(',').map(ext => ext.trim().toLowerCase());
+                                    const fileType = file.name.split('.').pop()?.toLowerCase();
+
+                                    if (!allowedTypes.includes(fileType)) {
+                                        handleFieldError(field.wKey, `Allowed file types: ${field.FieldType}`);
+                                        return;
+                                    }
+
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        const base64 = reader.result as string;
+                                        handleInputChange(field.wKey, base64);
+                                    };
+                                    reader.readAsDataURL(file);
+                                }
+                            }}
+                            onBlur={() => handleBlur(field)}
+                            disabled={!isEnabled}
+                        />
+
+                        {fieldErrors[field.wKey] && (
+                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                        )}
                     </div>
                 );
 
