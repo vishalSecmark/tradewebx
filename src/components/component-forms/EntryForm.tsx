@@ -9,6 +9,7 @@ import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { handleViewFile } from '../../utils/helper'
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -350,44 +351,6 @@ const EntryForm: React.FC<EntryFormProps> = ({
         setFieldErrors(prev => ({ ...prev, [fieldKey]: errorMessage }));
     };
 
-    function handleViewFile(base64Data: string, fieldType: string = 'file') {
-        if (!base64Data?.startsWith('data:')) {
-            alert("Invalid file data");
-            return;
-        }
-
-        const match = base64Data.match(/^data:(.*);base64,(.*)$/);
-        if (!match) {
-            alert("Invalid base64 structure");
-            return;
-        }
-        const mimeType = match[1];
-        const base64 = match[2];
-        try {
-            const byteCharacters = atob(base64);
-            const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
-            const byteArray = new Uint8Array(byteNumbers);
-
-            const blob = new Blob([byteArray], { type: mimeType });
-            const blobUrl = URL.createObjectURL(blob);
-
-            const newTab = window.open(blobUrl, '_blank');
-
-            if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = `uploaded-file.${fieldType || 'file'}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        } catch (error) {
-            alert("Unable to preview file.");
-        }
-    }
-
-
-
     const renderFormField = (field: FormField) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
 
@@ -519,7 +482,12 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             <div className="mb-2">
                                 <button
                                     type="button"
-                                    onClick={() => handleViewFile(formValues[field.wKey], field.FieldType)}
+                                    onClick={() =>
+                                        handleViewFile(
+                                          formValues[field.wKey],
+                                          field.FieldType?.split(',')[0] || 'file' // optional second param for extension
+                                        )
+                                    }
                                     className="text-blue-600 underline"
                                 >
                                     View uploaded file
