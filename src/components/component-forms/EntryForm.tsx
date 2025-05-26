@@ -9,7 +9,7 @@ import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
-import { handleViewFile } from '../../utils/helper'
+import { handleViewFile } from "@/utils/helper";
 
 const DropdownField: React.FC<{
     field: FormField;
