@@ -6,9 +6,9 @@ import React, { createContext, useContext, useState } from 'react';
 interface FormData {
   personal: any; // Replace with your actual personal info type
   nominee: any;
-  bank: any;
-  demat: any;
-  segment: any;
+  bankDetails: any;
+  dematAccounts: any;
+  segments: any;
   rekyc: any;
 }
 
@@ -29,18 +29,18 @@ export const EkycFormProvider = ({ children }: { children: React.ReactNode }) =>
       return saved ? JSON.parse(saved) : {
         personal: {},
         nominee: {},
-        bank: {},
-        demat: {},
-        segment: {},
+        bankDetails: {},
+        dematAccounts: {},
+        segments: {},
         rekyc: {},
       };
     }
     return {
       personal: {},
       nominee: {},
-      bank: {},
-      demat: {},
-      segment: {},
+      bankDetails: {},
+      dematAccounts: {},
+      segments: {},
       rekyc: {},
     };
   });
