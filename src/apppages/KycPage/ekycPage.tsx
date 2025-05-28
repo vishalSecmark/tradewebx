@@ -8,6 +8,9 @@ import KycDemat from "./components/demat";
 import Segment from "./components/segment";
 import KycFinalPage from "./components/rekyc";
 import KycBank from "./components/bank";
+import { useAppSelector } from "@/redux/hooks";
+import { selectAllMenuItems } from "@/redux/features/menuSlice";
+import { useSearchParams } from "next/navigation";
 
 interface TabData {
     id: string;
@@ -17,10 +20,37 @@ interface TabData {
 
 export default function Kyc() {
     const { colors, fonts } = useTheme();
+    const menuItems = useAppSelector(selectAllMenuItems);
+    
+     console.log("searchParams", menuItems)
+       
     console.log("check color", colors)
     const [activeTab, setActiveTab] = useState<string>("personal");
     const { formData, updateFormData } = useEkycFormContext();
 
+    const findPageData = () => {
+            const searchInItems = (items: any[]): any => {
+                for (const item of items) {
+                    if (item.componentName.toLowerCase() === "rekyc" && item.pageData) {
+                        return item.pageData;
+                    }
+    
+                    if (item.subItems && item.subItems.length > 0) {
+                        const foundInSubItems = searchInItems(item.subItems);
+                        if (foundInSubItems) {
+                            return foundInSubItems;
+                        }
+                    }
+                }
+                return null;
+            };
+    
+            return searchInItems(menuItems);
+        };
+    
+        const pageData: any = findPageData();
+        console.log("check page " ,pageData);
+    
 
     const handleSaveAndNext = () => {
         // Find the current tab index

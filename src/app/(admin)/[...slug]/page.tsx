@@ -17,7 +17,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   changepassword: <ChangePassword />,
   theme: <ThemePage />,
   downloads: <Downloads />,
-  kycpage: <KycPage />,
+  rekyc: <KycPage />,
 };
 
 // Define the type for params explicitly
@@ -33,8 +33,14 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
   const subSubRoute = unwrappedParams.slug[2];
 
   // Handle static routes
-  if (staticRoutes[route]) {
+  if (route in staticRoutes) {
     return staticRoutes[route];
+  }
+  if (subRoute in staticRoutes) {
+    return staticRoutes[subRoute];
+  }
+  if (subSubRoute in staticRoutes) {
+    return staticRoutes[subSubRoute];
   }
 
   // For dynamic routes, determine the actual componentName
@@ -74,7 +80,7 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   };
 
   const componentType = findComponentType(menuItems);
-  // console.log('componentType', componentType);
+  console.log('componentType', componentType);
   // console.log('componentName', componentName);
   // Show entry component if componentType is 'entry', otherwise show report component
   return (
