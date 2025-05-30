@@ -6,15 +6,16 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaFileExcel, FaEnvelope } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
-import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel,downloadOption } from './DataTable';
+import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import { useSearchParams } from 'next/navigation';
 import EntryFormModal from './EntryFormModal';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
+import EditTableRowModal from './EditTableRowModal';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -48,6 +49,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
     const [autoFetch, setAutoFetch] = useState<boolean>(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+    const [isEditTableRowModalOpen, setIsEditTableRowModalOpen] = useState<boolean>(false);
 
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [entryAction, setEntryAction] = useState<'edit' | 'delete' | 'view' | null>(null);
@@ -561,7 +563,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
-
+                        {apiData && pageData[0].levels[currentLevel].settings?.EditableColumn && (
+                            <button
+                                className="p-2 rounded"
+                                onClick={() => setIsEditTableRowModalOpen(true)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaEdit size={20} />
+                            </button>
+                        )}
                         {componentType === 'entry' && (
                             <button
                                 className="p-2 rounded"
@@ -587,12 +597,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         </button>
                         <button
                             className="p-2 rounded"
-                            onClick={() => downloadOption( jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
+                            onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
                             style={{ color: colors.text }}
                         >
                             <FaDownload size={20} />
                         </button>
-                        
+
                         {Object.keys(additionalTables).length == 0 && (
                             <>
                                 <button
@@ -605,7 +615,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                                 <button
                                     className="p-2 rounded"
-                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters,currentLevel, 'download')}
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
                                     style={{ color: colors.text }}
                                 >
                                     <FaFilePdf size={20} />
@@ -666,6 +676,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isDownload={true}
                 onApply={() => { }}
             />
+
+            {isEditTableRowModalOpen && <EditTableRowModal
+                isOpen={isEditTableRowModalOpen}
+                onClose={() => setIsEditTableRowModalOpen(false)}
+                title="Edit Record"
+                tableData={apiData}
+                editableColumns={pageData[0].levels[currentLevel].settings?.EditableColumn ?? []}
+            />}
 
             {/* Loading State */}
             {isLoading && <div>Loading...</div>}
