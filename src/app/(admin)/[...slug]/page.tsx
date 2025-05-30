@@ -9,6 +9,7 @@ import Downloads from "@/apppages/Downloads";
 import { useAppSelector } from "@/redux/hooks";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import KycPage from "@/apppages/KycPage";
+import MarginPledgeOnline from "@/apppages/MarginPledgeOnline";
 
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
@@ -18,6 +19,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   theme: <ThemePage />,
   downloads: <Downloads />,
   kycpage: <KycPage />,
+  marginPledge:<MarginPledgeOnline/>
 };
 
 // Define the type for params explicitly
