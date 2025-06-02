@@ -43,6 +43,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         field: '',
         direction: 'asc'
     });
+    const [selectedRows, setSelectedRows] = useState<any[]>([]);
     const [downloadFilters, setDownloadFilters] = useState<Record<string, any>>({});
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
@@ -319,8 +320,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             const endTime = performance.now();
             setApiResponseTime(Math.round(endTime - startTime));
-
-            setApiData(response.data.data.rs0);
+            const rawData = response.data.data.rs0 || [];
+            const dataWithId = rawData.map((row: any, index: number) => ({
+                ...row,
+                _id: index
+            }));
+            setApiData(dataWithId);
 
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
@@ -400,6 +405,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setCurrentLevel(nextLevel);
         }
     };
+
+    const handleRowSelect = (record: any[]) => {
+        const cleaned = record.map(({ _id, _select, _expanded, ...rest }) => rest);
+        setSelectedRows(cleaned);
+    }
+
+
     const [pageLoaded, setPageLoaded] = useState(false);
     // Add useEffect to handle data fetching when level changes
     useEffect(() => {
@@ -563,7 +575,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
-                        {apiData && pageData[0].levels[currentLevel].settings?.EditableColumn && (
+                        {selectedRows.length > 0 && pageData[0].levels[currentLevel].settings?.EditableColumn && (
                             <button
                                 className="p-2 rounded"
                                 onClick={() => setIsEditTableRowModalOpen(true)}
@@ -681,7 +693,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isOpen={isEditTableRowModalOpen}
                 onClose={() => setIsEditTableRowModalOpen(false)}
                 title="Edit Record"
-                tableData={apiData}
+                tableData={selectedRows}
                 editableColumns={pageData[0].levels[currentLevel].settings?.EditableColumn ?? []}
             />}
 
@@ -752,6 +764,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         }}
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
+                        onRowSelect={handleRowSelect}
                         tableRef={tableRef}
                         isEntryForm={componentType === "entry"}
                         handleAction={handleTableAction}

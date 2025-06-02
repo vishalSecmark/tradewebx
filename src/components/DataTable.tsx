@@ -27,6 +27,7 @@ interface DataTableProps {
         [key: string]: any;
     };
     onRowClick?: (record: any) => void;
+    onRowSelect?: (selectedRows: any[]) => void;
     tableRef?: React.RefObject<HTMLDivElement>;
     summary?: any;
     isEntryForm?: boolean;
@@ -152,9 +153,10 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
+    const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
 
@@ -282,11 +284,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
             return {
                 ...newRow,
+                _select: selectedRows.some((r) => r._id === rowId),
                 _expanded: expandedRows.has(rowId),
                 _id: rowId
             };
         });
-    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows]);
+    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows]);
 
     // Dynamically create columns from the first data item
     const columns = useMemo(() => {
@@ -327,13 +330,55 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
         const baseColumns: any = [
             {
+                key: "_select",
+                name: "",
+                minWidth: 30,
+                width: 30,
+                renderHeaderCell: () => {
+                    const allIds = rows.map(r => r._id);
+                    const selectedIds = selectedRows.map(r => r._id);
+
+                    const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
+
+                    return (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            <input
+                                type="checkbox"
+                                checked={allSelected}
+                                onChange={(e) => {
+                                    const newSelection = e.target.checked ? [...rows] : [];
+                                    setSelectedRows(newSelection);
+                                    onRowSelect?.(newSelection);
+                                }}
+                            />
+                        </div>
+                    );
+                },
+                renderCell: ({ row }) => (
+                    <input
+                        type="checkbox"
+                        checked={selectedRows.some(r => r._id === row._id)}
+                        onChange={(e) => {
+                            const exists = selectedRows.some(r => r._id === row._id);
+                            const updated = exists
+                                ? selectedRows.filter(r => r._id !== row._id)
+                                : [...selectedRows, row];
+
+                            setSelectedRows(updated);
+                            onRowSelect?.(updated);
+                        }}
+                        style={{ cursor: "pointer" }}
+                    />
+                )
+            },
+            {
                 key: '_expanded',
                 name: '',
                 minWidth: 30,
                 width: 30,
                 colSpan: (props: any) => {
                     if (props.type === 'ROW' && props.row._expanded) {
-                        return columnsToShow.length + 1;
+                        return columnsToShow.length;
                     }
                     return undefined;
                 },
@@ -677,6 +722,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     background-color: ${colors.primary};
                     color: ${colors.buttonText};
                     font-weight: 600;
+                }
+
+                .rdg-cell:first-child {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
                 .rdg-cell {
@@ -1447,7 +1498,7 @@ export const downloadOption = async (
             console.error('Unexpected response format:', response.data);
         }
     } catch (err) {
-       alert('Not available Donwload');
+        alert('Not available Donwload');
     }
 
 }
