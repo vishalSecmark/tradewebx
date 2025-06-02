@@ -284,7 +284,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
             return {
                 ...newRow,
-                _select: selectedRows.some((r) => r._id === rowId),
+                ...settings?.EditableColumn ? { _select: selectedRows.some((r) => r._id === rowId) } : {},
                 _expanded: expandedRows.has(rowId),
                 _id: rowId
             };
@@ -329,48 +329,49 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
         const baseColumns: any = [
-            {
-                key: "_select",
-                name: "",
-                minWidth: 30,
-                width: 30,
-                renderHeaderCell: () => {
-                    const allIds = rows.map(r => r._id);
-                    const selectedIds = selectedRows.map(r => r._id);
+            ...(settings?.EditableColumn
+                ? [{
+                    key: "_select",
+                    name: "",
+                    minWidth: 30,
+                    width: 30,
+                    renderHeaderCell: () => {
+                        const allIds = rows.map(r => r._id);
+                        const selectedIds = selectedRows.map(r => r._id);
+                        const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
 
-                    const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
+                        return (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={allSelected}
+                                    onChange={(e) => {
+                                        const newSelection = e.target.checked ? [...rows] : [];
+                                        setSelectedRows(newSelection);
+                                        onRowSelect?.(newSelection);
+                                    }}
+                                />
+                            </div>
+                        );
+                    },
+                    renderCell: ({ row }) => (
+                        <input
+                            type="checkbox"
+                            checked={selectedRows.some(r => r._id === row._id)}
+                            onChange={(e) => {
+                                const exists = selectedRows.some(r => r._id === row._id);
+                                const updated = exists
+                                    ? selectedRows.filter(r => r._id !== row._id)
+                                    : [...selectedRows, row];
 
-                    return (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                            <input
-                                type="checkbox"
-                                checked={allSelected}
-                                onChange={(e) => {
-                                    const newSelection = e.target.checked ? [...rows] : [];
-                                    setSelectedRows(newSelection);
-                                    onRowSelect?.(newSelection);
-                                }}
-                            />
-                        </div>
-                    );
-                },
-                renderCell: ({ row }) => (
-                    <input
-                        type="checkbox"
-                        checked={selectedRows.some(r => r._id === row._id)}
-                        onChange={(e) => {
-                            const exists = selectedRows.some(r => r._id === row._id);
-                            const updated = exists
-                                ? selectedRows.filter(r => r._id !== row._id)
-                                : [...selectedRows, row];
-
-                            setSelectedRows(updated);
-                            onRowSelect?.(updated);
-                        }}
-                        style={{ cursor: "pointer" }}
-                    />
-                )
-            },
+                                setSelectedRows(updated);
+                                onRowSelect?.(updated);
+                            }}
+                            style={{ cursor: "pointer" }}
+                        />
+                    )
+                }]
+                : []),
             {
                 key: '_expanded',
                 name: '',
