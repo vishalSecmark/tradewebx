@@ -92,7 +92,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
                     <div className="overflow-visible">
                         {/* Form Creator */}
                         <div className='h-20'></div>
-                        <div>{title}</div>
+                        <div className="mb-4 text-xl font-bold">{title}</div>
                         <FormCreator
                             key={resetKey}
                             formData={filters || [[]]}
