@@ -53,12 +53,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     editableColumns = [],
 }) => {
     const [localData, setLocalData] = useState<RowData[]>([]);
-    const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
     const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
-        console.log("Table data received in modal:", localData, selectedRows);
         setLocalData(tableData || []);
     }, [tableData]);
 
@@ -107,19 +105,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-    const toggleRowSelection = (rowIndex: number) => {
-        const newSet = new Set(selectedRows);
-        if (newSet.has(rowIndex)) {
-            newSet.delete(rowIndex);
-        } else {
-            newSet.add(rowIndex);
-        }
-        setSelectedRows(newSet);
-    };
 
     const handleSave = () => {
-        const selectedData = localData.filter((_, idx) => selectedRows.has(idx));
-        console.log("Selected edited data:", selectedData);
+        console.log("Selected edited data:", localData);
         onClose(); // optionally send selectedData to parent
     };
 
@@ -357,7 +345,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             <table className="min-w-full table-auto border text-sm">
                                 <thead>
                                     <tr>
-                                        <th className="border px-2 py-1">Select</th>
                                         {Object.keys(localData[0]).map((key) => (
                                             <th key={key} className="border px-2 py-1">
                                                 {key}
@@ -368,13 +355,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 <tbody>
                                     {localData.map((row, rowIndex) => (
                                         <tr key={rowIndex}>
-                                            <td className="border px-2 py-1 text-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedRows.has(rowIndex)}
-                                                    onChange={() => toggleRowSelection(rowIndex)}
-                                                />
-                                            </td>
                                             {Object.entries(row).map(([key, value]) => {
                                                 const editable = getEditableColumn(key);
 
