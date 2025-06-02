@@ -349,11 +349,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         <Dialog open={isOpen} onClose={onClose} className="relative z-50">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
-                <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6">
+                <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] flex flex-col">
                     <Dialog.Title className="text-lg font-semibold mb-4">{title}</Dialog.Title>
 
                     {localData.length > 0 ? (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-auto flex-1">
                             <table className="min-w-full table-auto border text-sm">
                                 <thead>
                                     <tr>

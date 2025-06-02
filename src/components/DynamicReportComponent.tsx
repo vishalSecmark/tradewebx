@@ -89,7 +89,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-
+    console.log(pageData, 'pageData')
     // Helper functions for parsing XML settings
     const parseXmlList = (xmlString: string, tag: string): string[] => {
         const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
