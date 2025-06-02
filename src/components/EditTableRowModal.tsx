@@ -5,6 +5,8 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
+import CustomDropdown from './form/CustomDropdown';
+import { useTheme } from '@/context/ThemeContext';
 
 interface RowData {
     [key: string]: any;
@@ -52,6 +54,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     tableData,
     editableColumns = [],
 }) => {
+    const { colors } = useTheme();
     const [localData, setLocalData] = useState<RowData[]>([]);
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
     const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -337,7 +340,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         <Dialog open={isOpen} onClose={onClose} className="relative z-50">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
-                <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] flex flex-col">
+                <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] min-h-[70vh] flex flex-col">
                     <Dialog.Title className="text-lg font-semibold mb-4">{title}</Dialog.Title>
 
                     {localData.length > 0 ? (
@@ -374,60 +377,59 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                             ) : editable.type === "WDropDownBox" ? (
                                                                 <div>
                                                                     {editable.options ? (
-                                                                        <select
+                                                                        <CustomDropdown
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false
+                                                                            } as any}
                                                                             value={value ?? ""}
-                                                                            onChange={(e) =>
-                                                                                handleInputChange(rowIndex, key, e.target.value)
+                                                                            onChange={(newValue) =>
+                                                                                handleInputChange(rowIndex, key, newValue)
                                                                             }
-                                                                            className="w-full border border-gray-300 rounded px-2 py-1"
-                                                                        >
-                                                                            <option value="">Select...</option>
-                                                                            {editable.options?.map((opt) => (
-                                                                                <option key={opt.Value} value={opt.Value}>
-                                                                                    {opt.label}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
+                                                                            options={editable.options.map(opt => ({
+                                                                                label: opt.label,
+                                                                                value: opt.Value
+                                                                            }))}
+                                                                            isLoading={false}
+                                                                            colors={colors}
+                                                                            formData={[]}
+                                                                            handleFormChange={() => { }}
+                                                                            formValues={row}
+                                                                        />
                                                                     ) : editable.dependsOn ? (
-                                                                        <select
+                                                                        <CustomDropdown
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false
+                                                                            } as any}
                                                                             value={value ?? ""}
-                                                                            onChange={(e) =>
-                                                                                handleInputChange(rowIndex, key, e.target.value)
+                                                                            onChange={(newValue) =>
+                                                                                handleInputChange(rowIndex, key, newValue)
                                                                             }
-                                                                            className="w-full border border-gray-300 rounded px-2 py-1"
-                                                                            disabled={loadingDropdowns[`${key}_${rowIndex}`]}
-                                                                        >
-                                                                            <option value="">
-                                                                                {loadingDropdowns[`${key}_${rowIndex}`]
-                                                                                    ? "Loading..."
-                                                                                    : "Select..."}
-                                                                            </option>
-                                                                            {dropdownOptions[`${key}_${rowIndex}`]?.map((opt) => (
-                                                                                <option key={opt.value} value={opt.value}>
-                                                                                    {opt.label}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
+                                                                            options={dropdownOptions[`${key}_${rowIndex}`] || []}
+                                                                            isLoading={loadingDropdowns[`${key}_${rowIndex}`] || false}
+                                                                            colors={colors}
+                                                                            formData={[]}
+                                                                            handleFormChange={() => { }}
+                                                                            formValues={row}
+                                                                        />
                                                                     ) : (
-                                                                        <select
+                                                                        <CustomDropdown
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false
+                                                                            } as any}
                                                                             value={value ?? ""}
-                                                                            onChange={(e) =>
-                                                                                handleInputChange(rowIndex, key, e.target.value)
+                                                                            onChange={(newValue) =>
+                                                                                handleInputChange(rowIndex, key, newValue)
                                                                             }
-                                                                            className="w-full border border-gray-300 rounded px-2 py-1"
-                                                                            disabled={loadingDropdowns[key]}
-                                                                        >
-                                                                            <option value="">
-                                                                                {loadingDropdowns[key]
-                                                                                    ? "Loading..."
-                                                                                    : "Select..."}
-                                                                            </option>
-                                                                            {dropdownOptions[key]?.map((opt) => (
-                                                                                <option key={opt.value} value={opt.value}>
-                                                                                    {opt.label}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
+                                                                            options={dropdownOptions[key] || []}
+                                                                            isLoading={loadingDropdowns[key] || false}
+                                                                            colors={colors}
+                                                                            formData={[]}
+                                                                            handleFormChange={() => { }}
+                                                                            formValues={row}
+                                                                        />
                                                                     )}
                                                                 </div>
                                                             ) : editable.type === "WDateBox" ? (
