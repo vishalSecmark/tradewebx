@@ -18,6 +18,8 @@ export interface FormField {
     Srno: number;
     type: string;
     label: string;
+    redirectUrl: string;
+    ThirdPartyAPI: any;
     childDependents?: string[];
     wKey: string;
     FieldSize: string;
@@ -103,4 +105,5 @@ export interface EkycComponentProps {
     formFields: any[];
     tableData: any[];
     fieldErrors?: Record<string, string>;
+    setFieldData?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
 }

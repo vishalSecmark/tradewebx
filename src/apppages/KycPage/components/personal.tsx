@@ -4,14 +4,16 @@ import React, { useEffect, useState } from 'react'
 import { fetchEkycDropdownOptions } from '../ekychelper';
 
 
-const Personal = ({ formFields, tableData, fieldErrors }: EkycComponentProps) => {
+const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycComponentProps) => {
     console.log('personal tab', formFields, tableData);
-     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
+    const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
+    const [fieldVlaues, setFieldValues] = useState<Record<string, any>>({});
     
     console.log('personalDropdownOptions', personalDropdownOptions);
     console.log('personalLoadingDropdowns', personalLoadingDropdowns);
     
+    console.log('FieldValue', fieldVlaues);
 
     useEffect(()=>{
         if (formFields && formFields.length > 0) {
@@ -24,13 +26,33 @@ const Personal = ({ formFields, tableData, fieldErrors }: EkycComponentProps) =>
         }
     },[])
 
+    // Handler to update the 0th index of personalTabData.tableData in dynamicData
+    const handleFieldChange = (updateFn: (prev: any) => any) => {
+        setFieldData((prevState: any) => {
+            const prevTableData = prevState.personalTabData.tableData || [];
+            const updatedRow = updateFn(prevTableData[0] || {});
+            return {
+                ...prevState,
+                personalTabData: {
+                    ...prevState.personalTabData,
+                    tableData: [
+                        updatedRow,
+                        ...prevTableData.slice(1)
+                    ]
+                }
+            };
+        });
+        setFieldValues((prev: any) => updateFn(prev));
+    };
+
     return (
         <div className="w-full p-5 bg-white rounded-lg shadow-md">
             <EkycEntryForm
                 formData={formFields}
                 formValues={tableData[0] || {}}
                 masterValues={{}}
-                setFormValues={() => { }}
+                setFormValues={handleFieldChange}
+                onDropdownChange={() => { }}
                 dropdownOptions={personalDropdownOptions}
                 loadingDropdowns={personalLoadingDropdowns}
                 fieldErrors={fieldErrors}

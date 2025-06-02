@@ -2,7 +2,6 @@
 import { useTheme } from "@/context/ThemeContext";
 import React, { useEffect, useState } from "react";
 import Personal from './components/personal';
-import { useEkycFormContext } from "@/context/EkycFormContext";
 import Nominee from "./components/nominee";
 import KycDemat from "./components/demat";
 import Segment from "./components/segment";
@@ -26,8 +25,6 @@ export default function Kyc() {
     const menuItems = useAppSelector(selectAllMenuItems);
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>("personal");
-    const { formData, updateFormData } = useEkycFormContext();
-
 
     const [dynamicData, setDynamicData] = useState<any>({
         personalTabData: {
@@ -76,9 +73,9 @@ export default function Kyc() {
     };
 
     const handleSubmit = () => {
-        console.log("Form data to submit:", formData);
-        // Here you would typically send the data to your API
-        alert("Form submitted successfully!");
+        // console.log("Form data to submit:", formData);
+        // // Here you would typically send the data to your API
+        // alert("Form submitted successfully!");
     };
 
     // Example tab data - you can replace this with your JSON data
@@ -90,6 +87,7 @@ export default function Kyc() {
                 formFields={dynamicData.personalTabData.formFields}
                 tableData={dynamicData.personalTabData.tableData}
                 fieldErrors={dynamicData.personalTabData.fieldsErrors}
+                setFieldData={setDynamicData}
 
             />
         },
