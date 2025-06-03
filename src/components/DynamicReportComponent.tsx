@@ -692,9 +692,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {isEditTableRowModalOpen && <EditTableRowModal
                 isOpen={isEditTableRowModalOpen}
                 onClose={() => setIsEditTableRowModalOpen(false)}
-                title="Edit Record"
+                title={pageData[0].levels[currentLevel].name}
                 tableData={selectedRows}
-                editableColumns={pageData[0].levels[currentLevel].settings?.EditableColumn ?? []}
+                wPage={pageData[0].wPage}
+                settings={pageData[0].levels[currentLevel].settings}
             />}
 
             {/* Loading State */}

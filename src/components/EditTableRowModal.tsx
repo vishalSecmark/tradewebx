@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Dialog } from "@headlessui/react";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from 'axios';
@@ -13,6 +13,7 @@ interface RowData {
 }
 
 interface EditableColumn {
+    ValidationAPI: any;
     Srno: number;
     type: "WTextBox" | "WDropDownBox" | "WDateBox";
     label: string;
@@ -44,7 +45,10 @@ interface EditTableRowModalProps {
     onClose: () => void;
     title: string;
     tableData: RowData[];
-    editableColumns?: EditableColumn[];
+    wPage: string;
+    settings: {
+        EditableColumn: EditableColumn[];
+    }
 }
 
 const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
@@ -52,12 +56,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     onClose,
     title,
     tableData,
-    editableColumns = [],
+    wPage,
+    settings,
 }) => {
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const [localData, setLocalData] = useState<RowData[]>([]);
+    const [previousValues, setPreviousValues] = useState<Record<string, any>>({});
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
     const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
+    const editableColumns = settings.EditableColumn || [];
 
     useEffect(() => {
         setLocalData(tableData || []);
@@ -108,10 +115,141 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
+    const handleInputBlur = async (rowIndex: number, key: string, previousValue: any) => {
+        const field = editableColumns.find(col => col.wKey === key);
+        if (!field?.ValidationAPI?.dsXml) return;
+        const rowValues = localData[rowIndex] || {};
+        const { J_Ui, Sql, X_Filter, X_Filter_Multiple, J_Api } = field.ValidationAPI.dsXml;
+        let xFilter = '';
+        let xFilterMultiple = '';
+        let shouldCallApi = true;
+        const missingFields: string[] = [];
+        if (X_Filter_Multiple) {
+            Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
+                let fieldValue: any;
 
-    const handleSave = () => {
-        console.log("Selected edited data:", localData);
-        onClose(); // optionally send selectedData to parent
+                if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
+                    const lookupKey = placeholder.slice(2, -2);
+                    fieldValue = rowValues[lookupKey];
+                } else {
+                    fieldValue = placeholder;
+                }
+
+                if (!fieldValue) {
+                    missingFields.push(key);
+                    shouldCallApi = false;
+                } else {
+                    xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+                }
+            });
+        } else if (X_Filter) {
+            let filterKey = '';
+            let fieldValue: any;
+
+            if (X_Filter.startsWith('##') && X_Filter.endsWith('##')) {
+                filterKey = X_Filter.slice(2, -2);
+                fieldValue = rowValues[filterKey];
+            } else {
+                filterKey = X_Filter;
+                fieldValue = X_Filter;
+            }
+
+            if (!fieldValue) {
+                missingFields.push(filterKey);
+                shouldCallApi = false;
+            } else {
+                xFilter = `<${filterKey}>${fieldValue}</${filterKey}>`;
+            }
+        }
+        if (!shouldCallApi) {
+            console.warn(`Missing required fields: ${missingFields.join(', ')}`);
+            return;
+        }
+        const jUi = Object.entries(J_Ui || {}).map(([k, v]) => `"${k}":"${v}"`).join(',');
+        const jApi = Object.entries({
+            ...(J_Api || {}),
+            UserId: (J_Api?.UserId === '<<USERID>>') ? localStorage.getItem('userId') || '' : J_Api?.UserId
+        })
+            .map(([k, v]) => `"${k}":"${v}"`)
+            .join(',');
+        const xmlData = `<dsXml>
+        <J_Ui>${jUi}</J_Ui>
+        <Sql>${Sql || ''}</Sql>
+        <X_Filter>${xFilter}</X_Filter>
+        <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+        <J_Api>${jApi}</J_Api>
+    </dsXml>`;
+        try {
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            const result = response?.data?.data?.rs0?.[0]?.Column1;
+            if (result) {
+                const messageMatch = result.match(/<Message>(.*?)<\/Message>/);
+                const message = messageMatch ? messageMatch[1] : 'Validation failed.';
+                alert(message);
+                setLocalData(prev => {
+                    const updated = [...prev];
+                    updated[rowIndex] = {
+                        ...updated[rowIndex],
+                        [key]: previousValue
+                    };
+                    return updated;
+                });
+            }
+        } catch (error) {
+            console.error('Validation API failed:', error);
+        }
+    };
+
+    const generateDsXml = (data: RowData[]) => {
+        const itemsXml = data
+            .map(item => {
+                const itemFields = Object.entries(item)
+                    .map(([key, value]) => `<${key.trim()}>${value}</${key.trim()}>`)
+                    .join('');
+                return `<item>${itemFields}</item>`;
+            })
+            .join('');
+        const userId = localStorage.getItem('userId') || 'ADMIN';
+        const userType = localStorage.getItem('userType') || 'Branch';
+        return `<dsXml>
+                    <J_Ui>"ActionName":"${wPage}","Option":"Edit","RequestFrom":"W"</J_Ui>
+                    <Sql/>
+                    <X_Filter/>
+                    <X_Filter_Multiple></X_Filter_Multiple>
+                    <X_Data>
+                        <items>
+                        ${itemsXml}
+                        </items>
+                    </X_Data>
+                    <J_Api>"UserId":"${userId}","UserType":"${userType}"</J_Api>
+                </dsXml>`;
+    };
+
+
+    const handleSave = async () => {
+        const xmlData = generateDsXml(localData);
+        try {
+            const response = await axios.post(
+                BASE_URL + PATH_URL,
+                xmlData,
+                {
+                    headers: {
+                        'Content-Type': 'application/xml',
+                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
+                    }
+                }
+            );
+            console.log('Save response:', response.data);
+        } catch (error) {
+            console.error('Error saving data:', error);
+        } finally {
+            onClose();
+        }
     };
 
     const getEditableColumn = (key: string) => {
@@ -337,19 +475,26 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     return (
-        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+        <Dialog open={isOpen} onClose={onClose} className="relative z-999">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
-                <Dialog.Panel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] min-h-[70vh] flex flex-col">
-                    <Dialog.Title className="text-lg font-semibold mb-4">{title}</Dialog.Title>
-
+                <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] min-h-[70vh] flex flex-col">
+                    <DialogTitle className="text-lg font-semibold mb-4">{title}</DialogTitle>
                     {localData.length > 0 ? (
                         <div className="overflow-auto flex-1">
                             <table className="min-w-full table-auto border text-sm">
                                 <thead>
                                     <tr>
                                         {Object.keys(localData[0]).map((key) => (
-                                            <th key={key} className="border px-2 py-1">
+                                            <th
+                                                key={key}
+                                                className="border px-2 py-2 text-left"
+                                                style={{
+                                                    backgroundColor: colors.primary,
+                                                    color: colors.text,
+                                                    fontFamily: fonts.content,
+                                                }}
+                                            >
                                                 {key}
                                             </th>
                                         ))}
@@ -357,12 +502,21 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 </thead>
                                 <tbody>
                                     {localData.map((row, rowIndex) => (
-                                        <tr key={rowIndex}>
+                                        <tr
+                                            key={rowIndex}
+                                            style={{
+                                                backgroundColor:
+                                                    rowIndex % 2 === 0
+                                                        ? colors.evenCardBackground
+                                                        : colors.oddCardBackground,
+                                                color: colors.text,
+                                                fontFamily: fonts.content,
+                                            }}
+                                        >
                                             {Object.entries(row).map(([key, value]) => {
                                                 const editable = getEditableColumn(key);
-
                                                 return (
-                                                    <td key={key} className="border px-2 py-1">
+                                                    <td key={key} className="border px-2 py-2">
                                                         {editable ? (
                                                             editable.type === "WTextBox" ? (
                                                                 <input
@@ -371,79 +525,77 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                     onChange={(e) =>
                                                                         handleInputChange(rowIndex, key, e.target.value)
                                                                     }
+                                                                    onFocus={() =>
+                                                                        setPreviousValues(prev => ({
+                                                                            ...prev,
+                                                                            [`${rowIndex}_${key}`]: value
+                                                                        }))
+                                                                    }
+                                                                    onBlur={() => {
+                                                                        handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                        setPreviousValues(prev => {
+                                                                            const updated = { ...prev };
+                                                                            delete updated[`${rowIndex}_${key}`];
+                                                                            return updated;
+                                                                        });
+                                                                    }}
                                                                     placeholder={editable.wPlaceholder}
                                                                     className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                    style={{
+                                                                        fontFamily: fonts.content,
+                                                                        color: colors.text,
+                                                                        backgroundColor: colors.textInputBackground,
+                                                                        borderColor: colors.textInputBorder,
+                                                                    }}
                                                                 />
                                                             ) : editable.type === "WDropDownBox" ? (
-                                                                <div>
-                                                                    {editable.options ? (
-                                                                        <CustomDropdown
-                                                                            item={{
-                                                                                ...editable,
-                                                                                isMultiple: false
-                                                                            } as any}
-                                                                            value={value ?? ""}
-                                                                            onChange={(newValue) =>
-                                                                                handleInputChange(rowIndex, key, newValue)
-                                                                            }
-                                                                            options={editable.options.map(opt => ({
-                                                                                label: opt.label,
-                                                                                value: opt.Value
-                                                                            }))}
-                                                                            isLoading={false}
-                                                                            colors={colors}
-                                                                            formData={[]}
-                                                                            handleFormChange={() => { }}
-                                                                            formValues={row}
-                                                                        />
-                                                                    ) : editable.dependsOn ? (
-                                                                        <CustomDropdown
-                                                                            item={{
-                                                                                ...editable,
-                                                                                isMultiple: false
-                                                                            } as any}
-                                                                            value={value ?? ""}
-                                                                            onChange={(newValue) =>
-                                                                                handleInputChange(rowIndex, key, newValue)
-                                                                            }
-                                                                            options={dropdownOptions[`${key}_${rowIndex}`] || []}
-                                                                            isLoading={loadingDropdowns[`${key}_${rowIndex}`] || false}
-                                                                            colors={colors}
-                                                                            formData={[]}
-                                                                            handleFormChange={() => { }}
-                                                                            formValues={row}
-                                                                        />
-                                                                    ) : (
-                                                                        <CustomDropdown
-                                                                            item={{
-                                                                                ...editable,
-                                                                                isMultiple: false
-                                                                            } as any}
-                                                                            value={value ?? ""}
-                                                                            onChange={(newValue) =>
-                                                                                handleInputChange(rowIndex, key, newValue)
-                                                                            }
-                                                                            options={dropdownOptions[key] || []}
-                                                                            isLoading={loadingDropdowns[key] || false}
-                                                                            colors={colors}
-                                                                            formData={[]}
-                                                                            handleFormChange={() => { }}
-                                                                            formValues={row}
-                                                                        />
-                                                                    )}
-                                                                </div>
-                                                            ) : editable.type === "WDateBox" ? (
-                                                                <DatePicker
-                                                                    selected={value ? new Date(value) : null}
-                                                                    onChange={(date: Date | null) =>
-                                                                        handleInputChange(rowIndex, key, date)
+                                                                <CustomDropdown
+                                                                    item={{ ...editable, isMultiple: false } as any}
+                                                                    value={value ?? ""}
+                                                                    onChange={(newValue) =>
+                                                                        handleInputChange(rowIndex, key, newValue)
                                                                     }
-                                                                    dateFormat="dd/MM/yyyy"
-                                                                    className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                    options={
+                                                                        editable.options
+                                                                            ? editable.options.map(opt => ({
+                                                                                label: opt.label,
+                                                                                value: opt.Value,
+                                                                            }))
+                                                                            : editable.dependsOn
+                                                                                ? dropdownOptions[`${key}_${rowIndex}`] || []
+                                                                                : dropdownOptions[key] || []
+                                                                    }
+                                                                    isLoading={
+                                                                        editable.dependsOn
+                                                                            ? loadingDropdowns[`${key}_${rowIndex}`] || false
+                                                                            : loadingDropdowns[key] || false
+                                                                    }
+                                                                    colors={colors}
+                                                                    formData={[]}
+                                                                    handleFormChange={() => { }}
+                                                                    formValues={row}
                                                                 />
+                                                            ) : editable.type === "WDateBox" ? (
+                                                                <div
+                                                                    style={{
+                                                                        fontFamily: fonts.content,
+                                                                        color: colors.text,
+                                                                        backgroundColor: colors.textInputBackground,
+                                                                        borderColor: colors.textInputBorder,
+                                                                    }}
+                                                                >
+                                                                    <DatePicker
+                                                                        selected={value ? new Date(value) : null}
+                                                                        onChange={(date: Date | null) =>
+                                                                            handleInputChange(rowIndex, key, date)
+                                                                        }
+                                                                        dateFormat="dd/MM/yyyy"
+                                                                        className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                    />
+                                                                </div>
                                                             ) : null
                                                         ) : (
-                                                            <span>{value}</span>
+                                                            <span style={{ fontFamily: fonts.content }}>{value}</span>
                                                         )}
                                                     </td>
                                                 );
@@ -451,6 +603,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                         </tr>
                                     ))}
                                 </tbody>
+
                             </table>
                         </div>
                     ) : (
@@ -471,7 +624,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             Close
                         </button>
                     </div>
-                </Dialog.Panel>
+                </DialogPanel>
             </div>
         </Dialog>
     );
