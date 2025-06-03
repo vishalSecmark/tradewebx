@@ -1,5 +1,6 @@
 import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeContext";
 import { APP_METADATA_KEY } from "./constants";
+import { toast } from "react-toastify";
 
 export const clearLocalStorage = () => {
     const appMetadata = localStorage.getItem(APP_METADATA_KEY);
@@ -48,3 +49,23 @@ export function handleViewFile(base64Data: string, fieldType: string = 'file') {
         alert("Unable to preview file.");
     }
 }
+
+//Dynamic XML Payload
+export const buildFilterXml = (filters: Record<string, any>, userId: string): string => {
+    if (filters && Object.keys(filters).length > 0) {
+        return Object.entries(filters).map(([key, value]) => {
+            if ((key === 'FromDate' || key === 'ToDate') && value) {
+                const date = new Date(String(value));
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `<${key}>${year}${month}${day}</${key}>`;
+                }
+            }
+            return `<${key}>${value}</${key}>`;
+        }).join('\n');
+    } else {
+        return `<ClientCode>${userId}</ClientCode>`;
+    }
+};

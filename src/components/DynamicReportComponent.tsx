@@ -8,13 +8,14 @@ import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaFileExcel, FaEnvelope } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
-import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel,downloadOption } from './DataTable';
+import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
 import { APP_METADATA_KEY } from "@/utils/constants";
 import { useSearchParams } from 'next/navigation';
 import EntryFormModal from './EntryFormModal';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
+import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -53,6 +54,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [entryAction, setEntryAction] = useState<'edit' | 'delete' | 'view' | null>(null);
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [pdfParams, setPdfParams] = useState<
+    [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
+  >();
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -533,6 +538,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return <div>Loading report data...</div>;
     }
 
+    const showTypeList = pageData[0]?.levels[0]?.settings?.showTypstFlag || false
     return (
         <div className=""
             style={{
@@ -580,19 +586,21 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         </button>
                         <button
                             className="p-2 rounded"
-                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email')}
+                            onClick={() => {setPdfParams([tableRef.current,jsonData,appMetadata,apiData,pageData,filters,currentLevel,'email']);
+                                setIsConfirmModalOpen(true);}}
                             style={{ color: colors.text }}
                         >
                             <FaEnvelope size={20} />
                         </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => downloadOption( jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaDownload size={20} />
-                        </button>
-                        
+                        {showTypeList && (
+                            <button
+                                className="p-2 rounded"
+                                onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaDownload size={20} />
+                            </button>
+                        )}
                         {Object.keys(additionalTables).length == 0 && (
                             <>
                                 <button
@@ -605,7 +613,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                                 <button
                                     className="p-2 rounded"
-                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters,currentLevel, 'download')}
+                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
                                     style={{ color: colors.text }}
                                 >
                                     <FaFilePdf size={20} />
@@ -653,6 +661,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isOpen={isConfirmationModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
+            />
+
+            <CaseConfirmationModal
+                isOpen={isConfirmModalOpen}
+                type="M"
+                message="Do you want to send mail?"
+                onConfirm={() => {
+                    exportTableToPdf(...pdfParams);
+                    setIsConfirmModalOpen(false);
+                }}
+                onCancel={() => setIsConfirmModalOpen(false)}
             />
 
             {/* Download Modal */}
