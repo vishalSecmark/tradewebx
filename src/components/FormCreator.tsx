@@ -748,13 +748,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
         const isLoading = loadingDropdowns[item.wKey as string];
 
-        // Pre-select value if there's only one option and no value is currently selected
-        useEffect(() => {
-            if (options.length === 1 && !formValues[item.wKey as string]) {
-                handleInputChange(item.wKey as string, options[0].value);
-            }
-        }, [options]);
-
         return (
             <CustomDropdown
                 item={item}
@@ -837,6 +830,24 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             handleFormChange(updatedValues);
         }
     }, [sortedFormData, formValues, handleFormChange]); // Run when formData or formValues change
+
+    useEffect(() => {
+        // Handle single option pre-selection for dropdowns
+        sortedFormData?.flat().forEach(item => {
+            if (item.type === 'WDropDownBox') {
+                const options = item.options
+                    ? item.options.map(opt => ({
+                        label: opt.label,
+                        value: opt.Value || opt.value
+                    }))
+                    : dropdownOptions[item.wKey as string] || [];
+
+                if (options.length === 1 && !formValues[item.wKey as string]) {
+                    handleInputChange(item.wKey as string, options[0].value);
+                }
+            }
+        });
+    }, [dropdownOptions, sortedFormData, formValues]);
 
     return (
         <div className="p-4" style={{ backgroundColor: colors.filtersBackground }}>
