@@ -9,6 +9,8 @@ import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { useSearchParams, useRouter } from 'next/navigation';
+
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -155,6 +157,13 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     setDropDownOptions
 }) => {
     const { colors } = useTheme();
+     const searchParams = useSearchParams();
+     const router = useRouter();
+     const success = searchParams.get('success');
+     const id = searchParams.get('id');
+     const scope = searchParams.get('scope');
+     console.log('searchParams', searchParams,scope, success, id);
+   
     const marginBottom = 'mb-1';
 
     const handleInputChange = (key: string, value: any) => {
@@ -249,9 +258,9 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     };
 
     // Function to handle Modify button click for redirectUrl fields
-    const handleThirdPartyApi = async (field: FormField) => {
+    const handleThirdPartyApi = async (field: FormField, type: any) => {
         // Use field.ThirdPartyAPI if present, else fallback to field.ValidationAPI for demo/testing
-        const apiConfig = field.ValidationAPI;
+        const apiConfig = type === "thirdparty"?  field.ThirdPartyAPI : field.ValidationAPI;
         if (!apiConfig || !apiConfig.dsXml) {
             toast.error('ThirdPartyAPI config missing!');
             return;
@@ -322,7 +331,10 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
             });
             // Extract and parse the XML from response
             const columnData = response?.data?.data?.rs0?.[0]?.Column1;
-            if (columnData) {
+            if (type === "thirdparty" && columnData) {
+                handleValidationApiResponse(columnData, field.wKey);
+            }
+            else if(columnData) {
                 // Ensure the XML is wrapped in a root tag
                 let xmlString = columnData.trim().startsWith('<root>') ? columnData : `<root>${columnData}</root>`;
                 try {
@@ -330,6 +342,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
                     const urlNode = xmlDoc.getElementsByTagName('url')[0];
                     const url = urlNode?.textContent;
+                    console.log("check url",url)
                     if (url) {
                         window.open(url, '_blank');
                         toast.success('Redirecting to third party URL...');
@@ -533,7 +546,10 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                         borderBottomLeftRadius: 0,
                                         height: '35px' // match input height
                                     }}
-                                    onClick={() => handleThirdPartyApi(field)}
+                                    onClick={() => {
+                                        handleThirdPartyApi(field);
+                                        router.replace(window.location.pathname); // Clear query params from URL
+                                    }}
                                 >
                                     Modify
                                 </button>
@@ -623,6 +639,18 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 return null;
         }
     };
+
+    useEffect(() => {
+        if (scope && scope.includes("ADHAR") && success === "True") {
+            // Find the field related to ADHAR (by wKey or label containing ADHAR) right now i am passing CorrAddress1 ad default
+            const adharField = formData.find(f => (f.wKey && f.wKey === "CorrAddress1"));
+            if (adharField) {
+                handleThirdPartyApi(adharField, "thirdparty");
+            }
+            // Clear query params from URL
+            router.replace(window.location.pathname);
+        }
+    }, [scope, success, formData])
 
     return (
         <div className="grid grid-cols-3 gap-4">

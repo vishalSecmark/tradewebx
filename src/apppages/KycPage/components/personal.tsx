@@ -2,6 +2,7 @@ import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react'
 import { fetchEkycDropdownOptions } from '../ekychelper';
+import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 
 
 const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycComponentProps) => {
@@ -9,6 +10,14 @@ const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCom
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldVlaues, setFieldValues] = useState<Record<string, any>>({});
+    const [validationModal, setValidationModal] = useState<{
+            isOpen: boolean;
+            message: string;
+            type: 'M' | 'S' | 'E' | 'D';
+            callback?: (confirmed: boolean) => void;
+        }>({ isOpen: false, message: '', type: 'M' });
+    
+
     
     console.log('personalDropdownOptions', personalDropdownOptions);
     console.log('personalLoadingDropdowns', personalLoadingDropdowns);
@@ -45,8 +54,29 @@ const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCom
         setFieldValues((prev: any) => updateFn(prev));
     };
 
+    const handleErrorChange = (updateFn: (prev: any) => any) => {
+        setFieldData((prevState: any) => {
+            const prevFieldErrors = prevState.personalTabData.fieldErrors || {};
+            const updatedErrors = updateFn(prevFieldErrors);
+            return {
+                ...prevState,
+                personalTabData: {
+                    ...prevState.personalTabData,
+                    fieldErrors: updatedErrors
+                }
+            };
+        });
+    }
+
     return (
         <div className="w-full p-5 bg-white rounded-lg shadow-md">
+             <CaseConfirmationModal
+                            isOpen={validationModal.isOpen}
+                            message={validationModal.message}
+                            type={validationModal.type}
+                            onConfirm={() => validationModal.callback?.(true)}
+                            onCancel={() => validationModal.callback?.(false)}
+                        />
             <EkycEntryForm
                 formData={formFields}
                 formValues={tableData[0] || {}}
@@ -56,9 +86,9 @@ const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCom
                 dropdownOptions={personalDropdownOptions}
                 loadingDropdowns={personalLoadingDropdowns}
                 fieldErrors={fieldErrors}
-                setFieldErrors={() => { }}
+                setFieldErrors={handleErrorChange}
                 setFormData={() => { }}
-                setValidationModal={() => { }}
+                setValidationModal={setValidationModal}
                 setDropDownOptions={() => { }}
             />
         </div>

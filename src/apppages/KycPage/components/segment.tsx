@@ -13,8 +13,8 @@ const Segment = ({ formFields, tableData, fieldErrors }: EkycComponentProps) => 
         <h2 className="text-xl font-semibold mb-6">Select Segments</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {tableData.map((segment) => (
-            <div key={segment.SegmentValue} className="flex items-center">
+          {tableData.map((segment,index) => (
+            <div key={segment.SegmentValue + index} className="flex items-center">
               <input
                 type="checkbox"
                 id={segment.SegmentValue}

@@ -24,35 +24,62 @@ export default function Kyc() {
     const { colors, fonts } = useTheme();
     const menuItems = useAppSelector(selectAllMenuItems);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [activeTab, setActiveTab] = useState<string>("personal");
-
-    const [dynamicData, setDynamicData] = useState<any>({
-        personalTabData: {
-            formFields: [],
-            tableData: [],
-            fieldsErrors: {}
-        },
-        bankTabData: {
-            formFields: [],
-            tableData: [],
-            fieldsErrors: {}
-        },
-        dematTabData: {
-            formFields: [],
-            tableData: [],
-            fieldsErrors: {}
-        },
-        nomineeTabData: {
-            formFields: [],
-            tableData: [],
-            fieldsErrors: {}
-        },
-        segmentTabData: {
-            formFields: [],
-            tableData: [],
-            fieldsErrors: {}
+    const [activeTab, setActiveTab] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const savedTab = localStorage.getItem('ekyc_activeTab');
+            if (savedTab) return savedTab;
         }
+        return 'personal';
     });
+
+    const [dynamicData, setDynamicData] = useState<any>(() => {
+        // Try to load from localStorage first
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ekyc_dynamicData');
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    // fallback to default if parse fails
+                }
+            }
+        }
+        return {
+            personalTabData: {
+                formFields: [],
+                tableData: [],
+                fieldsErrors: {}
+            },
+            bankTabData: {
+                formFields: [],
+                tableData: [],
+                fieldsErrors: {}
+            },
+            dematTabData: {
+                formFields: [],
+                tableData: [],
+                fieldsErrors: {}
+            },
+            nomineeTabData: {
+                formFields: [],
+                tableData: [],
+                fieldsErrors: {}
+            },
+            segmentTabData: {
+                formFields: [],
+                tableData: [],
+                fieldsErrors: {}
+            }
+        };
+    });
+
+    // Persist dynamicData and activeTab to localStorage whenever they change
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ekyc_dynamicData', JSON.stringify(dynamicData));
+            localStorage.setItem('ekyc_activeTab', activeTab);
+        }
+    }, [dynamicData, activeTab]);
 
     console.log("check tabs data", dynamicData)
     const pageData: any = findPageData(menuItems, "rekyc");
@@ -264,10 +291,46 @@ export default function Kyc() {
         }
     };
 
+    // Only fetch if no localStorage data exists or if the data is empty
     useEffect(() => {
-        fetchFormData();
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('ekyc_dynamicData');
+            let shouldFetch = false;
+            if (!saved) {
+                shouldFetch = true;
+            } else {
+                try {
+                    const parsed = JSON.parse(saved);
+                    // Check if all tab arrays are empty
+                    const isEmpty = [
+                        'personalTabData',
+                        'bankTabData',
+                        'dematTabData',
+                        'nomineeTabData',
+                        'segmentTabData'
+                    ].every(tab =>
+                        Array.isArray(parsed?.[tab]?.formFields) && parsed[tab].formFields.length === 0 &&
+                        Array.isArray(parsed?.[tab]?.tableData) && parsed[tab].tableData.length === 0
+                    );
+                    if (isEmpty) shouldFetch = true;
+                } catch (e) {
+                    shouldFetch = true;
+                }
+            }
+            if (shouldFetch) {
+                fetchFormData();
+            }
+        }
     }, [])
 
+
+    // When changing tab, also update localStorage
+    const handleSetActiveTab = (tabId: string) => {
+        setActiveTab(tabId);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('ekyc_activeTab', tabId);
+        }
+    };
 
     return (
         <div className="p-4" style={{ fontFamily: fonts.content }}>
@@ -277,8 +340,7 @@ export default function Kyc() {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() =>
-                            setActiveTab(tab.id)}
+                        onClick={() => handleSetActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`
