@@ -189,16 +189,21 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             const result = response?.data?.data?.rs0?.[0]?.Column1;
             if (result) {
                 const messageMatch = result.match(/<Message>(.*?)<\/Message>/);
+                const flagMatch = result.match(/<Flag>(.*?)<\/Flag>/);
                 const message = messageMatch ? messageMatch[1] : 'Validation failed.';
-                alert(message);
-                setLocalData(prev => {
-                    const updated = [...prev];
-                    updated[rowIndex] = {
-                        ...updated[rowIndex],
-                        [key]: previousValue
-                    };
-                    return updated;
-                });
+                const flag = flagMatch ? flagMatch[1] : '';
+
+                if (flag !== 'S') {
+                    alert(message);
+                    setLocalData(prev => {
+                        const updated = [...prev];
+                        updated[rowIndex] = {
+                            ...updated[rowIndex],
+                            [key]: previousValue
+                        };
+                        return updated;
+                    });
+                }
             }
         } catch (error) {
             console.error('Validation API failed:', error);
@@ -475,7 +480,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     return (
-        <Dialog open={isOpen} onClose={onClose} className="relative z-999">
+        <Dialog open={isOpen} onClose={() => console.log("close")} className="relative z-999" >
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
                 <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] min-h-[70vh] flex flex-col">
