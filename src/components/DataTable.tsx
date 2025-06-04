@@ -29,6 +29,7 @@ interface DataTableProps {
         [key: string]: any;
     };
     onRowClick?: (record: any) => void;
+    onRowSelect?: (selectedRows: any[]) => void;
     tableRef?: React.RefObject<HTMLDivElement>;
     summary?: any;
     isEntryForm?: boolean;
@@ -154,9 +155,10 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
+    const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
 
@@ -284,11 +286,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
             return {
                 ...newRow,
+                ...settings?.EditableColumn ? { _select: selectedRows.some((r) => r._id === rowId) } : {},
                 _expanded: expandedRows.has(rowId),
                 _id: rowId
             };
         });
-    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows]);
+    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows]);
 
     // Dynamically create columns from the first data item
     const columns = useMemo(() => {
@@ -328,6 +331,49 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
         const baseColumns: any = [
+            ...(settings?.EditableColumn
+                ? [{
+                    key: "_select",
+                    name: "",
+                    minWidth: 30,
+                    width: 30,
+                    renderHeaderCell: () => {
+                        const allIds = rows.map(r => r._id);
+                        const selectedIds = selectedRows.map(r => r._id);
+                        const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
+
+                        return (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={allSelected}
+                                    onChange={(e) => {
+                                        const newSelection = e.target.checked ? [...rows] : [];
+                                        setSelectedRows(newSelection);
+                                        onRowSelect?.(newSelection);
+                                    }}
+                                />
+                            </div>
+                        );
+                    },
+                    renderCell: ({ row }) => (
+                        <input
+                            type="checkbox"
+                            checked={selectedRows.some(r => r._id === row._id)}
+                            onChange={(e) => {
+                                const exists = selectedRows.some(r => r._id === row._id);
+                                const updated = exists
+                                    ? selectedRows.filter(r => r._id !== row._id)
+                                    : [...selectedRows, row];
+
+                                setSelectedRows(updated);
+                                onRowSelect?.(updated);
+                            }}
+                            style={{ cursor: "pointer" }}
+                        />
+                    )
+                }]
+                : []),
             {
                 key: '_expanded',
                 name: '',
@@ -335,7 +381,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 width: 30,
                 colSpan: (props: any) => {
                     if (props.type === 'ROW' && props.row._expanded) {
-                        return columnsToShow.length + 1;
+                        return columnsToShow.length;
                     }
                     return undefined;
                 },
@@ -679,6 +725,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     background-color: ${colors.primary};
                     color: ${colors.buttonText};
                     font-weight: 600;
+                }
+
+                .rdg-cell:first-child {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
                 .rdg-cell {
@@ -1317,14 +1369,14 @@ export const exportTableToPdf = async (
         pdfMake.createPdf(docDefinition).download(`${fileTitle}.pdf`);
 
     } else if (mode === 'email') {
-        const showTypes = pageData[0]?.levels[0]?.settings?.showTypstFlag || false ; 
+        const showTypes = pageData[0]?.levels[0]?.settings?.showTypstFlag || false;
         const currentLevelData = pageData[0]?.levels[currentLevel];
         const userId = localStorage.getItem('userId') || '';
         const userType = localStorage.getItem('userType') || '';
         const authToken = document?.cookie?.split('auth_token=')[1]?.split(';')[0] || '';
-    
+
         const filterXml = buildFilterXml(filters, userId);
-    
+
         const sendEmail = async (base64Data: string, pdfName: string) => {
             const emailXml = `
                 <dsXml>
@@ -1338,7 +1390,7 @@ export const exportTableToPdf = async (
                     </X_Filter>
                     <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
                 </dsXml>`;
-    
+
             const emailResponse = await axios.post(BASE_URL + PATH_URL, emailXml, {
                 headers: {
                     'Content-Type': 'application/xml',
@@ -1346,10 +1398,10 @@ export const exportTableToPdf = async (
                 },
                 timeout: 300000,
             });
-    
+
             const result = emailResponse?.data;
             const columnMsg = result?.data?.rs0?.[0]?.Column1 || '';
-    
+
             if (result?.success) {
                 if (columnMsg.toLowerCase().includes('mail template not define')) {
                     toast.error('Mail Template Not Defined');
@@ -1360,7 +1412,7 @@ export const exportTableToPdf = async (
                 toast.error(columnMsg || result?.message);
             }
         };
-    
+
         try {
             if (showTypes) {
                 const fetchXml = `
@@ -1372,7 +1424,7 @@ export const exportTableToPdf = async (
                         </X_Filter>
                         <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
                     </dsXml>`;
-    
+
                 const fetchResponse = await axios.post(BASE_URL + PATH_URL, fetchXml, {
                     headers: {
                         'Content-Type': 'application/xml',
@@ -1380,13 +1432,13 @@ export const exportTableToPdf = async (
                     },
                     timeout: 300000,
                 });
-    
+
                 const rs0 = fetchResponse?.data?.data?.rs0;
                 if (!Array.isArray(rs0) || rs0.length === 0 || !rs0[0]?.Base64PDF) {
                     toast.error('Failed to fetch PDF for email.');
                     return;
                 }
-    
+
                 const { PDFName, Base64PDF } = rs0[0];
                 await sendEmail(Base64PDF, PDFName);
             } else {
@@ -1397,14 +1449,14 @@ export const exportTableToPdf = async (
                         toast.error('Failed to send email.');
                     }
                 });
-    
+
                 return; // Skip the rest of the block
             }
         } catch (err) {
             toast.error('Failed to send email.');
         }
     }
-    
+
 };
 
 export const downloadOption = async (

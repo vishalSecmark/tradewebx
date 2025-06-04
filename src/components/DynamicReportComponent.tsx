@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaFileExcel, FaEnvelope } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -16,6 +16,7 @@ import EntryFormModal from './EntryFormModal';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
+import EditTableRowModal from './EditTableRowModal';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -43,12 +44,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         field: '',
         direction: 'asc'
     });
+    const [selectedRows, setSelectedRows] = useState<any[]>([]);
     const [downloadFilters, setDownloadFilters] = useState<Record<string, any>>({});
     const [levelStack, setLevelStack] = useState<number[]>([0]); // Track navigation stack
     const [areFiltersInitialized, setAreFiltersInitialized] = useState(false);
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
     const [autoFetch, setAutoFetch] = useState<boolean>(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+    const [isEditTableRowModalOpen, setIsEditTableRowModalOpen] = useState<boolean>(false);
 
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [entryAction, setEntryAction] = useState<'edit' | 'delete' | 'view' | null>(null);
@@ -56,8 +59,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [pdfParams, setPdfParams] = useState<
-    [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
-  >();
+        [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
+    >();
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -92,7 +95,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-
+    console.log(pageData, 'pageData')
     // Helper functions for parsing XML settings
     const parseXmlList = (xmlString: string, tag: string): string[] => {
         const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
@@ -322,8 +325,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             const endTime = performance.now();
             setApiResponseTime(Math.round(endTime - startTime));
-
-            setApiData(response.data.data.rs0);
+            const rawData = response.data.data.rs0 || [];
+            const dataWithId = rawData.map((row: any, index: number) => ({
+                ...row,
+                _id: index
+            }));
+            setApiData(dataWithId);
 
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
@@ -403,6 +410,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setCurrentLevel(nextLevel);
         }
     };
+
+    const handleRowSelect = (record: any[]) => {
+        const cleaned = record.map(({ _id, _select, _expanded, ...rest }) => rest);
+        setSelectedRows(cleaned);
+    }
+
+
     const [pageLoaded, setPageLoaded] = useState(false);
     // Add useEffect to handle data fetching when level changes
     useEffect(() => {
@@ -567,7 +581,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         ))}
                     </div>
                     <div className="flex gap-2">
-
+                        {selectedRows.length > 0 && pageData[0].levels[currentLevel].settings?.EditableColumn && (
+                            <button
+                                className="p-2 rounded"
+                                onClick={() => setIsEditTableRowModalOpen(true)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaEdit size={20} />
+                            </button>
+                        )}
                         {componentType === 'entry' && (
                             <button
                                 className="p-2 rounded"
@@ -586,8 +608,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         </button>
                         <button
                             className="p-2 rounded"
-                            onClick={() => {setPdfParams([tableRef.current,jsonData,appMetadata,apiData,pageData,filters,currentLevel,'email']);
-                                setIsConfirmModalOpen(true);}}
+                            onClick={() => {
+                                setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
+                                setIsConfirmModalOpen(true);
+                            }}
                             style={{ color: colors.text }}
                         >
                             <FaEnvelope size={20} />
@@ -686,6 +710,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onApply={() => { }}
             />
 
+            {isEditTableRowModalOpen && <EditTableRowModal
+                isOpen={isEditTableRowModalOpen}
+                onClose={() => setIsEditTableRowModalOpen(false)}
+                title={pageData[0].levels[currentLevel].name}
+                tableData={selectedRows}
+                wPage={pageData[0].wPage}
+                settings={pageData[0].levels[currentLevel].settings}
+            />}
+
             {/* Loading State */}
             {isLoading && <div>Loading...</div>}
 
@@ -753,6 +786,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         }}
                         summary={pageData[0].levels[currentLevel].summary}
                         onRowClick={handleRecordClick}
+                        onRowSelect={handleRowSelect}
                         tableRef={tableRef}
                         isEntryForm={componentType === "entry"}
                         handleAction={handleTableAction}
