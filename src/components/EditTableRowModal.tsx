@@ -66,6 +66,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
     const editableColumns = settings.EditableColumn || [];
 
+    const isNumeric = (value: any): boolean => {
+        if (value === null || value === undefined) return false;
+        return !isNaN(Number(value)) && typeof value !== 'boolean';
+    };
+
     useEffect(() => {
         setLocalData(tableData || []);
     }, [tableData]);
@@ -520,8 +525,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                         >
                                             {Object.entries(row).map(([key, value]) => {
                                                 const editable = getEditableColumn(key);
+                                                const isValueNumeric = isNumeric(value);
                                                 return (
-                                                    <td key={key} className="border px-2 py-2">
+                                                    <td
+                                                        key={key}
+                                                        className="border px-2 py-2"
+                                                        style={{
+                                                            textAlign: isValueNumeric ? 'right' : 'left'
+                                                        }}
+                                                    >
                                                         {editable ? (
                                                             editable.type === "WTextBox" ? (
                                                                 <input
