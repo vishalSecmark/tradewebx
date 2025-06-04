@@ -16,7 +16,8 @@ const Downloads = () => {
     const [filterValues, setFilterValues] = useState({
         fromDate: moment().subtract(1, 'month').format('YYYY-MM-DD'),
         toDate: moment().format('YYYY-MM-DD'),
-        segment: 'Equity/Derivative'
+        segment: 'Equity/Derivative',
+        DocumentType: ''
     });
     const [headings, setHeadings] = useState([]);
     const [isDownloading, setIsDownloading] = useState(false);
@@ -41,7 +42,7 @@ const Downloads = () => {
                 <FromDate>${fromDateStr}</FromDate>
                 <ToDate>${toDateStr}</ToDate>
                 <RepType></RepType>
-                <DocumentType>Digital Ledger</DocumentType>
+                <DocumentType>${filterValues.DocumentType || ''}</DocumentType>
                 <DocumentNo></DocumentNo>
                 <Segment>${filterValues.segment}</Segment>
             </X_Filter>
@@ -222,6 +223,33 @@ const Downloads = () => {
                     { label: 'Equity/Derivative', value: 'Equity/Derivative' },
                     { label: 'Commodity', value: 'Commodity' }
                 ]
+            },
+            {
+                Srno: 4,
+                type: 'WDropDownBox',
+                label: 'DocumentType',
+                wKey: 'DocumentType',
+                wQuery: {
+                    Sql: "",
+                    J_Ui: {
+                        ActionName: "Download",
+                        Option: "DocumentType",
+                        RequestFrom: "W"
+                    },
+                    X_Filter: "${value}",
+                    J_Api: {
+                        UserId: "ADMIN",
+                        AccYear: 24,
+                        MyDbPrefix: "SVVS",
+                        MemberCode: "undefined",
+                        SecretKey: "undefined",
+                        MenuCode: 7
+                    }
+                },
+                wDropDownKey: {
+                    key: "DisplayName",
+                    value: "Value"
+                }
             }
         ]
     ];
