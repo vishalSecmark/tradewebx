@@ -8,6 +8,7 @@ import DataTable from '@/components/DataTable';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { RootState } from '@/redux/store';
 import FilterModal from '@/components/FilterModal';
+import { FaFilter, FaSync } from 'react-icons/fa';
 
 const Downloads = () => {
     const [downloads, setDownloads] = useState([]);
@@ -255,7 +256,7 @@ const Downloads = () => {
     ];
 
     return (
-        <div className="p-4">
+        <div className="px-1">
             {/* Headings Section */}
             {headings.length > 0 && (
                 <div className="mb-4">
@@ -277,18 +278,14 @@ const Downloads = () => {
                     {loading ? (
                         <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
                     ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
+                        <FaSync size={20} />
                     )}
                 </button>
                 <button
                     className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     onClick={() => setFilterModalVisible(true)}
                 >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
+                    <FaFilter size={20} />
                 </button>
             </div>
 
