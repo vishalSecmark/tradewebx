@@ -71,6 +71,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         return !isNaN(Number(value)) && typeof value !== 'boolean';
     };
 
+    const hasCharacterField = (columnKey: string): boolean => {
+        return localData.some(row => {
+            const value = row[columnKey];
+            if (value === null || value === undefined) return false;
+            // Check if the value is a string and not a number
+            return typeof value === 'string' && value.trim() !== '' && isNaN(Number(value));
+        });
+    };
+
     useEffect(() => {
         setLocalData(tableData || []);
     }, [tableData]);
@@ -526,12 +535,13 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                             {Object.entries(row).map(([key, value]) => {
                                                 const editable = getEditableColumn(key);
                                                 const isValueNumeric = isNumeric(value);
+                                                const hasChar = hasCharacterField(key);
                                                 return (
                                                     <td
                                                         key={key}
                                                         className="border px-2 py-2"
                                                         style={{
-                                                            textAlign: isValueNumeric ? 'right' : 'left'
+                                                            textAlign: hasChar ? 'left' : 'right'
                                                         }}
                                                     >
                                                         {editable ? (
