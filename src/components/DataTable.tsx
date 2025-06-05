@@ -926,7 +926,7 @@ export const exportTableToExcel = async (
 
     const headers = Object.keys(apiData[0] || {});
     const hiddenColumns = settings.hideEntireColumn?.split(",") || [];
-    const filteredHeaders = headers.filter(header => !hiddenColumns.includes(header.trim()));
+    const filteredHeaders = headers.filter(header => !hiddenColumns.includes(header.trim()) && header !== '_id');
 
     const decimalColumnsMap: Record<string, number> = {};
     (settings.decimalColumns || []).forEach((col: { key: string; decimalPlaces: number }) => {
@@ -1063,7 +1063,7 @@ export const exportTableToCsv = (
 
     // **2. Remove columns mentioned in hideEntireColumn**
     const hiddenColumns = settings.hideEntireColumn?.split(",") || [];
-    const filteredHeaders = headers.filter(header => !hiddenColumns.includes(header.trim()));
+    const filteredHeaders = headers.filter(header => !hiddenColumns.includes(header.trim()) && header !== '_id');
 
     // **3. Decimal Formatting Logic (Bind Dynamically)**
 
@@ -1205,7 +1205,8 @@ export const exportTableToPdf = async (
         });
     });
 
-    const headers = Object.keys(allData[0]).filter(key => !columnsToHide.includes(key));
+    const headers = Object.keys(allData[0])
+        .filter(key => !columnsToHide.includes(key) && key !== '_id');
     const rightAlignedKeys: string[] = jsonData?.RightList?.[0] || [];
 
     const reportHeader = (jsonData?.ReportHeader?.[0] || '').replace(/\\n/g, '\n');
