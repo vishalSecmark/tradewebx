@@ -27,14 +27,16 @@ const Downloads = () => {
 
     const { colors } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
-    console.log('userData', userData);
-    const getDownloads = async (isReload = false) => {
+    // console.log('userData', userData);
+    const getDownloads = async (isReload = false, values?: any) => {
         if (isReload) {
             setLoading(true);
         }
+        // console.log('filterValues', filterValues);
+        const filterValuesLocal = values || filterValues;
 
-        const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
-        const toDateStr = moment(filterValues.toDate).format('YYYYMMDD');
+        const fromDateStr = moment(filterValuesLocal.fromDate).format('YYYYMMDD');
+        const toDateStr = moment(filterValuesLocal.toDate).format('YYYYMMDD');
 
         const xmlData = `<dsXml>
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
@@ -43,9 +45,9 @@ const Downloads = () => {
                 <FromDate>${fromDateStr}</FromDate>
                 <ToDate>${toDateStr}</ToDate>
                 <RepType></RepType>
-                <DocumentType>${filterValues.DocumentType || ''}</DocumentType>
+                <DocumentType>${filterValuesLocal.DocumentType || ''}</DocumentType>
                 <DocumentNo></DocumentNo>
-                <Segment>${filterValues.segment}</Segment>
+                <Segment>${filterValuesLocal.segment}</Segment>
             </X_Filter>
             <X_GFilter></X_GFilter>
             <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
@@ -59,6 +61,9 @@ const Downloads = () => {
                 }
             });
 
+            if (response.data?.datarows.length == 0) {
+                setDownloads([])
+            }
             if (response.data?.data?.rs0) {
                 setDownloads(response.data.data.rs0);
             }
@@ -82,65 +87,10 @@ const Downloads = () => {
     };
 
     useEffect(() => {
-        getDownloads();
+        getDownloads(true);
     }, []);
 
-    const handleFileDownload = async (fileId: string, fileName: string) => {
-        setIsDownloading(true);
-        setDownloadError(null);
-        setDownloadProgress(0);
 
-        try {
-            // Create a CancelToken source for axios
-            const source = axios.CancelToken.source();
-
-            // Set up a timer to update progress (simulated if actual progress isn't available)
-            const progressInterval = setInterval(() => {
-                setDownloadProgress(prev => {
-                    // Cap at 95% until we actually complete
-                    return prev < 95 ? prev + 5 : 95;
-                });
-            }, 1000);
-
-            // Make the API call with extended timeout
-            const response = await axios({
-                url: `${BASE_URL}/api/downloads/${fileId}`,
-                method: 'GET',
-                responseType: 'blob', // Important for file downloads
-                headers: {
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 600000, // 10 minutes timeout
-                cancelToken: source.token,
-                onDownloadProgress: (progressEvent) => {
-                    if (progressEvent.total) {
-                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        setDownloadProgress(percentCompleted);
-                    }
-                }
-            });
-
-            // Clear the progress interval
-            clearInterval(progressInterval);
-            setDownloadProgress(100);
-
-            // Create a download link and trigger the download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-            console.error('Download error:', error);
-            setDownloadError(error.message || 'Download failed. Please try again later.');
-        } finally {
-            setIsDownloading(false);
-        }
-    };
 
     const handleDownload = async (record) => {
         const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
@@ -189,13 +139,22 @@ const Downloads = () => {
 
     const handleFilterChange = (values) => {
         console.log('values', values);
-        handleApplyFilters();
-        setFilterValues(values);
-
+        // Format dates if they are in ISO format
+        const formattedValues = {
+            ...values,
+            fromDate: values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : values.fromDate,
+            toDate: values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : values.toDate
+        };
+        handleApplyFilters(formattedValues);
+        setFilterValues(formattedValues);
     };
 
-    const handleApplyFilters = () => {
-        getDownloads();
+    const handleApplyFilters = (values?: any) => {
+        console.log('values FOR FILTER', values);
+        // setFilterValues(values);
+        setTimeout(() => {
+            getDownloads(true, values);
+        }, 300);
     };
 
     // Define filter fields for the FilterModal

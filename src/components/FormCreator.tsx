@@ -348,7 +348,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 <J_Api>${jApi},"UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
-            console.log('Dropdown request XML:', xmlData);
+            // console.log('Dropdown request XML:', xmlData);
 
             const response = await axios.post(
                 BASE_URL + PATH_URL,
@@ -419,7 +419,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 [item.wKey as string]: true
             }));
 
-            console.log(`Fetching dependent options for ${item.wKey} based on:`, parentValue);
+            // console.log(`Fetching dependent options for ${item.wKey} based on:`, parentValue);
 
             let jUi, jApi;
 
@@ -448,32 +448,32 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     xmlFilterContent = item.dependsOn.wQuery.X_Filter_Multiple;
 
                     item.dependsOn.field.forEach(field => {
-                        console.log('field_multiple', field);
+                        // console.log('field_multiple', field);
                         const value = typeof parentValue === 'object' ? parentValue[field] : '';
                         const fieldElement = sortedFormData.flat().find(el => el.wKey === field);
-                        console.log('fieldElement', fieldElement);
+                        // console.log('fieldElement', fieldElement);
                         // Format date values for both WDateBox and WDateRangeBox
                         let formattedValue = value instanceof Date ? moment(value).format('YYYYMMDD') : value;
                         if (fieldElement?.type === 'WDateBox' && value instanceof Date) {
-                            console.log('formattedValue_CHK1', formattedValue);
+                            // console.log('formattedValue_CHK1', formattedValue);
                         } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
                             const [fromKey, toKey] = fieldElement.wKey;
                             if (field === fromKey || field === toKey) {
-                                console.log('formattedValue_CHK2', formattedValue);
+                                // console.log('formattedValue_CHK2', formattedValue);
                             }
                         } else if (fieldElement?.type === 'WDropDownBox' && fieldElement.isMultiple) {
                             // For multiple select dropdowns, ensure we're working with an array
                             const values = Array.isArray(value) ? value : [value];
                             // Join with pipe and ensure no extra spaces
                             formattedValue = values.filter(Boolean).join('|');
-                            console.log('Multiple select formatted value:', formattedValue);
+                            // console.log('Multiple select formatted value:', formattedValue);
                         }
                         xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, formattedValue);
                     });
                 } else {
                     xmlFilterContent = item.dependsOn.wQuery.X_Filter || '';
                     item.dependsOn.field.forEach(field => {
-                        console.log('field', field);
+                        // console.log('field', field);
                         const value = typeof parentValue === 'object' ? parentValue[field] : '';
                         const fieldElement = sortedFormData.flat().find(el => el.wKey === field);
 
@@ -538,7 +538,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
 
-            console.log('Dependent dropdown request XML:', xmlData);
+            // console.log('Dependent dropdown request XML:', xmlData);
 
             const response = await axios.post(
                 BASE_URL + PATH_URL,
@@ -551,7 +551,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 }
             );
 
-            console.log('Dependent dropdown response:', response.data);
+            // console.log('Dependent dropdown response:', response.data);
 
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
@@ -571,7 +571,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 value: dataItem[valueField]
             }));
 
-            console.log(`Got ${options.length} options for ${item.wKey}:`, options);
+            // console.log(`Got ${options.length} options for ${item.wKey}:`, options);
 
             setDropdownOptions(prev => ({
                 ...prev,
@@ -799,9 +799,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         }
     };
 
-    useEffect(() => {
-        console.log('Current form values:', formValues);
-    }, [formValues]);
+
 
     useEffect(() => {
         sortedFormData?.flat().forEach(item => {
