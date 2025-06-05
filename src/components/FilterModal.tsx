@@ -55,6 +55,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
     const handleApply = () => {
         onFilterChange(localFilterValues); // Send final values to parent
         onClose(); // Close the modal
+        onApply();
     };
 
     // Handle clear button click
