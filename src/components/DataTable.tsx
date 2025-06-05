@@ -1208,7 +1208,7 @@ export const exportTableToPdf = async (
     const headers = Object.keys(allData[0])
         .filter(key => !columnsToHide.includes(key) && key !== '_id');
     const rightAlignedKeys: string[] = jsonData?.RightList?.[0] || [];
-
+    const normalizedRightAlignedKeys = rightAlignedKeys.map(k => k.replace(/\s+/g, ''));
     const reportHeader = (jsonData?.ReportHeader?.[0] || '').replace(/\\n/g, '\n');
     let fileTitle = 'Report';
     let dateRange = '';
@@ -1261,7 +1261,7 @@ export const exportTableToPdf = async (
                 text: key,
                 bold: true,
                 fillColor: '#eeeeee',
-                alignment: rightAlignedKeys.includes(normalizedKey) ? 'right' : 'left',
+                alignment: normalizedRightAlignedKeys.includes(normalizedKey) ? 'right' : 'left',
             };
         })
     );
@@ -1273,7 +1273,7 @@ export const exportTableToPdf = async (
             const normalizedKey = key.replace(/\s+/g, '');
             return {
                 text: formatValue(row[key], key),
-                alignment: rightAlignedKeys.includes(normalizedKey) ? 'right' : 'left',
+                alignment: normalizedRightAlignedKeys.includes(normalizedKey) ? 'right' : 'left',
             };
         });
         tableBody.push(rowData);
@@ -1285,7 +1285,7 @@ export const exportTableToPdf = async (
         return {
             text: isTotalCol ? totals[key].toFixed(decimalMap[key] || 2) : '',
             bold: true,
-            alignment: rightAlignedKeys.includes(normalizedKey) ? 'right' : 'left',
+            alignment: normalizedRightAlignedKeys.includes(normalizedKey) ? 'right' : 'left',
         };
     });
     tableBody.push(totalRow);
