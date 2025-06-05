@@ -10,7 +10,6 @@ import { useAppSelector } from "@/redux/hooks";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import KycPage from "@/apppages/KycPage";
 import MarginPledgeOnline from "@/apppages/MarginPledgeOnline";
-
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,

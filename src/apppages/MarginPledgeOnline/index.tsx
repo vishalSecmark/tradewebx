@@ -1,7 +1,7 @@
 'use client';
 import { useTheme } from '@/context/ThemeContext';
 import React, { useEffect, useState } from 'react';
-import { decimalFormat, dropDownApiCall, pledgeRedirectApiCall, rightAlignKeys, tableApiCall } from './marginConst';
+import { decimalFormat, dropDownApiCall, rightAlignKeys, tableApiCall } from './marginConst';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 
@@ -22,7 +22,8 @@ export default function MarginPledgeOnline() {
   const [tableHeaders, setTableHeaders] = useState<string[]>([]);
   const [tableRows, setTableRows] = useState<any[]>([]);
   const [tableVisible, setTableVisible] = useState<boolean>(false);
-  const [pledgeRedirectData,setPledgeRedirectData] = useState<any>([])
+  const [pledgeRedirectData, setPledgeRedirectData] = useState<any>([]);
+  const [buttonDisable, setButtonDisable] = useState<boolean>(true);
 
   useEffect(() => {
     dropDownApiCall(setDematId);
@@ -40,7 +41,6 @@ export default function MarginPledgeOnline() {
         setTableData(enrichedRows);
       });
     };
-
     if (selectedDemat) fetchTableBody();
   }, [selectedDemat]);
 
@@ -64,7 +64,7 @@ export default function MarginPledgeOnline() {
       updateReqValue(rowIndex, '', '');
       return;
     }
-    if (!/^\d*\.?\d*$/.test(val)) return;
+    if (!/^[\d]*\.?[\d]*$/.test(val)) return;
     updateReqValue(rowIndex, val, '');
   };
 
@@ -92,19 +92,12 @@ export default function MarginPledgeOnline() {
   const handleSelectAll = () => {
     const newState = !selectAll;
     const updated = tableData.map((row) => {
-      if (!newState) {
-        return { ...row, ReqValue: '', Value: '' };
-      }
+      if (!newState) return { ...row, ReqValue: '', Value: '' };
       const TotalQty = parseNumber(row.TotalQty);
       const closingPrice = parseNumber(row.ClosingPrice);
       const haircut = parseNumber(row.Haircut);
-      const effective = (100 - haircut) / 100;
-      const value = (TotalQty * closingPrice * effective).toFixed(2);
-      return {
-        ...row,
-        ReqValue: String(TotalQty),
-        Value: value,
-      };
+      const value = (TotalQty * closingPrice * ((100 - haircut) / 100)).toFixed(2);
+      return { ...row, ReqValue: String(TotalQty), Value: value };
     });
     setTableData(updated);
     setSelectAll(newState);
@@ -117,155 +110,99 @@ export default function MarginPledgeOnline() {
   if (!extendedHeaders.includes('ReqValue')) extendedHeaders.push('ReqValue');
   if (!extendedHeaders.includes('Value')) extendedHeaders.push('Value');
 
-  const tableAllData = async() => {
+  useEffect(() => {
+    const pos = tableData.filter((ele) => ele.ReqValue);
+    setButtonDisable(pos.length === 0);
+  }, [tableData]);
+
+  const tableAllData = async () => {
     const tableDataPost = `
       <dsXml>
-        <J_Ui>"ActionName":"Tradeweb", "Option":"PostData","RequestFrom" :"W"</J_Ui>
+        <J_Ui>"ActionName":"Tradeweb", "Option":"PostData","RequestFrom":"W"</J_Ui>
         <Sql/>
-      	<X_Filter>
-        <ClientCode>${localStorage.getItem('userId')}</ClientCode>
-        <DematActNo>${selectedDemat.DPAccountNo}</DematActNo>
-        <DPType>${selectedDemat.DPType}</DPType>
-      	</X_Filter>
+        <X_Filter>
+          <ClientCode>${localStorage.getItem('userId')}</ClientCode>
+          <DematActNo>${selectedDemat?.DPAccountNo}</DematActNo>
+          <DPType>${selectedDemat?.DPType}</DPType>
+        </X_Filter>
         <X_Data>
-          ${tableData
-            .filter(table => parseFloat(table.ReqValue) > 0)
-            .map(table => 
-              ` 
-              <HOLDING>
+          ${tableData.filter(t => parseFloat(t.ReqValue) > 0).map(t => `
+            <HOLDING>
               <ClientCode>${localStorage.getItem('userId')}</ClientCode>
-              <ScripCode>${table.ScripCode}</ScripCode>
-              <ISIN>${table.ISIN}</ISIN>
-              <ISINName>${table.ScripName}</ISINName>
-              <Qty>${table.ReqValue}</Qty>
-              <Value>${table.Value}</Value>
+              <ScripCode>${t.ScripCode}</ScripCode>
+              <ISIN>${t.ISIN}</ISIN>
+              <ISINName>${t.ScripName}</ISINName>
+              <Qty>${t.ReqValue}</Qty>
+              <Value>${t.Value}</Value>
               <DPAccountNo>${selectedDemat?.DPAccountNo}</DPAccountNo>
-              </HOLDING>
-              `
-              )
-            .join('')}
+            </HOLDING>
+          `).join('')}
         </X_Data>
         <J_Api>"UserId":"${localStorage.getItem('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
       </dsXml>
     `;
     try {
-        
       const request = await axios.post(BASE_URL + PATH_URL, tableDataPost, {
-          headers: {
-            'Content-Type': 'application/xml',
-            'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-          }
-        }) 
-
-        console.log(request,'requestpppp');
-        
-
-        if(request.data.success === true){
-          setPledgeRedirectData(request.data.data.rs0)
+        headers: {
+          'Content-Type': 'application/xml',
+          'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
-        
-
-        
-      } catch (error) {
-        console.log(error)
-        }
+      });
+      if (request.data.success === true) {
+        setPledgeRedirectData(request.data.data.rs0);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  // pledgeRedirectApiCall(pledgeRedirectData)
-  // console.log(pledgeRedirectData[0].DATA.Param.APIUrl,'pledgeRedirectData');
+  const pledgeRedirectApiCall = () => {
+    try {
+      const redirectData = pledgeRedirectData?.[0]?.DATA;
+      if (!redirectData) return;
 
+      const { APIUrl, DPId, ReqId, Version } = redirectData.Param;
+      const pledgedtls = redirectData.JsonOutput;
 
-  // const pledgeRedirectApiCall = async () => {
-  //   try {
-  //     const redirectData = pledgeRedirectData?.[0]?.DATA;
-  //     if (!redirectData) {
-  //       console.error("No pledgeRedirectData found.");
-  //       return;
-  //     }
-  
-  //     const URL = redirectData.Param.APIUrl;
-  //     const body = redirectData.JsonOutput;
-  
-  //     const headers = {
-  //       'Content-Type': 'application/json',
-  //       // 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`,
-  //       'DPId': redirectData.Param.DPId,
-  //       'ReqId': redirectData.Param.ReqId,
-  //       'Version': redirectData.Param.Version
-  //     };
-  
-  //     const response = await axios.post('/api/pledge-setup', body);
-  //     console.log(response, 'Pledge API response');
-  //   } catch (error) {
-  //     console.error("Pledge API Error:", error);
-  //   }
-  // };
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = APIUrl;
+      form.target = '_blank';
+      form.style.display = 'none';
 
-//new 
+      const addHiddenField = (name: string, value: string) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      };
 
-const pledgeRedirectApiCall = () => {
-  try {
-    const redirectData = pledgeRedirectData?.[0]?.DATA;
-    if (!redirectData) {
-      console.error("No pledgeRedirectData found.");
-      return;
+      addHiddenField('DPId', DPId);
+      addHiddenField('ReqId', ReqId);
+      addHiddenField('Version', Version);
+      addHiddenField('pledgedtls', pledgedtls);
+
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(() => document.body.removeChild(form), 1000);
+    } catch (error) {
+      console.error("Pledge API Error:", error);
     }
+  };
 
-    const { APIUrl, DPId, ReqId, Version } = redirectData.Param;
-    const pledgedtls = redirectData.JsonOutput;
-
-    // Create the form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = APIUrl;
-    form.target = '_blank'; // Open in new tab
-    form.style.display = 'none';
-
-    // Helper to add fields
-    const addHiddenField = (name: string, value: string) => {
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      input.value = value;
-      form.appendChild(input);
-    };
-
-    // Add required fields
-    addHiddenField('DPId', DPId);
-    addHiddenField('ReqId', ReqId);
-    addHiddenField('Version', Version);
-    addHiddenField('pledgedtls', pledgedtls);
-
-    // Append and submit
-    document.body.appendChild(form);
-    form.submit();
-
-    // Optional: Remove form after submit
-    setTimeout(() => {
-      document.body.removeChild(form);
-    }, 1000);
-  } catch (error) {
-    console.error("Pledge API Error:", error);
-  }
-};
-
-  
-  
   useEffect(() => {
-    if (pledgeRedirectData.length > 0) {
-      pledgeRedirectApiCall();
-    }
+    if (pledgeRedirectData.length > 0) pledgeRedirectApiCall();
   }, [pledgeRedirectData]);
-  
-  
 
   return (
-    <div>
+    <div className="px-2 sm:px-4">
       <h1 className="text-center text-lg font-semibold mb-4">Pledge For Margin (Online)</h1>
 
-      <div className="flex items-center justify-center">
+      <div className="flex justify-center mb-4">
         <select
-          className="font-sans border border-gray-500 rounded px-2 h-[30px] my-2 w-[265px] appearance-none"
+          className="border border-gray-500 rounded px-2 h-[30px] my-2 w-full max-w-xs appearance-none"
+          style={{ backgroundColor: colors.textInputBackground }}
           value={selectedDemat ? selectedDemat.DPAccountNo : ''}
           onChange={(e) => {
             const selected = dematId.find(d => d.DPAccountNo === e.target.value);
@@ -283,12 +220,9 @@ const pledgeRedirectApiCall = () => {
       </div>
 
       {tableVisible && (
-        <>
-          <div className="flex items-center justify-center mt-4">
-            <table
-              className="w-[80%] text-sm border-collapse"
-              style={{ border: `1px solid ${colors?.color1 || '#f0f0f0'}` }}
-            >
+        <div className="flex justify-center">
+          <div className="overflow-auto sm:overflow-visible w-full max-w-[80%]">
+            <table className="min-w-full text-sm border-collapse" style={{ border: `1px solid ${colors?.color1 || '#f0f0f0'}`, backgroundColor: colors.textInputBackground }}>
               <thead>
                 <tr>
                   {extendedHeaders.map((key, index) => (
@@ -334,7 +268,6 @@ const pledgeRedirectApiCall = () => {
                     ))}
                   </tr>
                 ))}
-
                 <tr className="font-semibold">
                   {extendedHeaders.map((header, index) => {
                     const totalKeys = ['TotalQty', 'NetValue', 'ReqValue', 'Value'];
@@ -353,24 +286,26 @@ const pledgeRedirectApiCall = () => {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
 
-          <div className="flex justify-end w-[80%] mx-auto mt-2">
+      {tableVisible && (
+        <>
+          <div className="flex justify-end w-full max-w-[80%] mx-auto mt-2">
             <label className="text-sm">
-              <input
-                type="checkbox"
-                className="mr-2"
-                checked={selectAll}
-                onChange={handleSelectAll}
-              />
+              <input type="checkbox" className="mr-2" checked={selectAll} onChange={handleSelectAll} />
               Select All
             </label>
           </div>
-
           <div className="flex justify-center items-center mt-4">
             <button
               onClick={tableAllData}
-              style={{ backgroundColor: colors.primary }}
-              className="text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 font-medium"
+              disabled={buttonDisable}
+              style={{
+                backgroundColor: buttonDisable ? '#ccc' : colors.primary,
+                cursor: buttonDisable ? 'not-allowed' : 'pointer',
+              }}
+              className={`text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out font-medium ${buttonDisable ? 'opacity-50' : 'active:scale-90'}`}
             >
               OK
             </button>
@@ -380,6 +315,3 @@ const pledgeRedirectApiCall = () => {
     </div>
   );
 }
-
-
-

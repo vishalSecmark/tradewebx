@@ -48,8 +48,6 @@ export const dropDownApiCall = async (setDematId) => {
   };
   
   export const tableApiCall = async(selectedDemat,setTableHeaders,setTableRows) => {
-
-    console.log(selectedDemat,'selectedDemat22');
     
 
     const xmlDataTable = `
@@ -75,7 +73,6 @@ export const dropDownApiCall = async (setDematId) => {
           })
 
           const result = request.data?.data?.rs0?.[0]?.DATA || [];
-          console.log(result,'result2');
           const headers = Object.keys(result[0]);
          setTableHeaders(headers)
 
@@ -98,22 +95,22 @@ export const dropDownApiCall = async (setDematId) => {
                     return formattedRow;
                   });
 
-                  console.log(rows,'rows');
                   
 
                   setTableRows(rows)
 
     } catch (error) {
+        console.error(error)
         
     }
   }
 
 
+  //this func will be used when futur process get completed by Backend
   export const pledgeRedirectApiCall = async(pledgeRedirectApiCall) => {
 
     const URL = `${pledgeRedirectApiCall}`
 
-    console.log(URL,'URL');
     
 
     try {
