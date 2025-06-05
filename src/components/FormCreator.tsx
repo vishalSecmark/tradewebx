@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import Select from 'react-select';
@@ -38,6 +38,7 @@ export interface FormElement {
     };
     wValue?: string;
     isMultiple?: boolean;
+    Srno?: number;
 }
 
 interface FormCreatorProps {
@@ -56,6 +57,18 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const [dropdownOptions, setDropdownOptions] = useState<Record<string, any[]>>({});
     const [loadingDropdowns, setLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [showDatePresets, setShowDatePresets] = useState<Record<string, boolean>>({});
+
+    // Sort filters by Srno
+    const sortedFormData = useMemo(() => {
+        if (!formData) return [];
+        return formData.map(filterGroup => {
+            return [...filterGroup].sort((a, b) => {
+                const srnoA = a.Srno || 0;
+                const srnoB = b.Srno || 0;
+                return srnoA - srnoB;
+            });
+        });
+    }, [formData]);
 
     const contextMenuItems = [
         { id: "today", text: "Today" },
@@ -131,7 +144,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     }, [initialValues]);
 
     useEffect(() => {
-        formData?.flat().forEach(item => {
+        sortedFormData?.flat().forEach(item => {
             if (item.type === 'WDateRangeBox') {
                 const [fromKey, toKey] = item.wKey as string[];
                 if (!formValues[fromKey] && !formValues[toKey]) {
@@ -150,7 +163,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 setFormValues(defaultValues);
             }
         });
-    }, [formData, formValues]);
+    }, [sortedFormData, formValues]);
 
     useEffect(() => {
         // Reset everything when initialValues changes
@@ -163,14 +176,14 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         setLoadingDropdowns({});
 
         // Re-fetch dropdown options if needed
-        if (formData) {
-            formData.flat().forEach(item => {
+        if (sortedFormData) {
+            sortedFormData.flat().forEach(item => {
                 if (item.type === 'WDropDownBox' && !item.options && item.wQuery) {
                     fetchDropdownOptions(item);
                 }
             });
         }
-    }, [initialValues, formData]);
+    }, [initialValues, sortedFormData]);
 
     const handleFormChange = useCallback((newValues: any) => {
         const cleanedValues = Object.fromEntries(
@@ -187,7 +200,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         const newValues = { ...formValues };
 
         // Find if this key belongs to a WDateRangeBox
-        const dateRangeField = formData.flat().find(item =>
+        const dateRangeField = sortedFormData.flat().find(item =>
             item.type === 'WDateRangeBox' &&
             Array.isArray(item.wKey) &&
             item.wKey.includes(key)
@@ -215,7 +228,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         }
 
         // Find dependent fields that need to be updated
-        const dependentFields = formData.flat().filter(dependentItem => {
+        const dependentFields = sortedFormData.flat().filter(dependentItem => {
             if (!dependentItem.dependsOn) return false;
 
             return Array.isArray(dependentItem.dependsOn.field)
@@ -233,7 +246,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     newValues[dependentItem.wKey as string] = undefined;
 
                     // Find fields that depend on this field
-                    const nestedDependentFields = formData.flat().filter(nestedItem => {
+                    const nestedDependentFields = sortedFormData.flat().filter(nestedItem => {
                         if (!nestedItem.dependsOn) return false;
 
                         return Array.isArray(nestedItem.dependsOn.field)
@@ -260,7 +273,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
                     if (allDependenciesFilled) {
                         const dependencyValues = dependentItem.dependsOn!.field.reduce((acc, field) => {
-                            const fieldElement = formData.flat().find(el => el.wKey === field);
+                            const fieldElement = sortedFormData.flat().find(el => el.wKey === field);
 
                             if (fieldElement?.type === 'WDateBox' && newValues[field]) {
                                 acc[field] = moment(newValues[field]).format('YYYYMMDD');
@@ -278,7 +291,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         fetchDependentOptions(dependentItem, dependencyValues);
                     }
                 } else {
-                    const fieldElement = formData.flat().find(el => el.wKey === dependentItem.dependsOn!.field);
+                    const fieldElement = sortedFormData.flat().find(el => el.wKey === dependentItem.dependsOn!.field);
                     if (fieldElement?.type === 'WDateBox' && newValues[dependentItem.dependsOn!.field]) {
                         const formattedDate = moment(newValues[dependentItem.dependsOn!.field]).format('YYYYMMDD');
                         fetchDependentOptions(dependentItem, formattedDate);
@@ -437,7 +450,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     item.dependsOn.field.forEach(field => {
                         console.log('field_multiple', field);
                         const value = typeof parentValue === 'object' ? parentValue[field] : '';
-                        const fieldElement = formData.flat().find(el => el.wKey === field);
+                        const fieldElement = sortedFormData.flat().find(el => el.wKey === field);
                         console.log('fieldElement', fieldElement);
                         // Format date values for both WDateBox and WDateRangeBox
                         let formattedValue = value instanceof Date ? moment(value).format('YYYYMMDD') : value;
@@ -462,7 +475,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     item.dependsOn.field.forEach(field => {
                         console.log('field', field);
                         const value = typeof parentValue === 'object' ? parentValue[field] : '';
-                        const fieldElement = formData.flat().find(el => el.wKey === field);
+                        const fieldElement = sortedFormData.flat().find(el => el.wKey === field);
 
                         // Format date values for both WDateBox and WDateRangeBox
                         let formattedValue = value;
@@ -479,7 +492,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     });
                 }
             } else {
-                const fieldElement = formData.flat().find(el => el.wKey === item.dependsOn.field);
+                const fieldElement = sortedFormData.flat().find(el => el.wKey === item.dependsOn.field);
                 if (fieldElement?.type === 'WDateBox' && parentValue instanceof Date) {
                     xmlFilterContent = moment(parentValue).format('YYYYMMDD');
                 } else if (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey)) {
@@ -497,7 +510,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             // Format dates in X_Filter_Multiple
             if (item.dependsOn.wQuery.X_Filter_Multiple) {
                 const formattedXmlFilter = xmlFilterContent.replace(/<([^>]+)>([^<]+)<\/\1>/g, (match, tag, value) => {
-                    const fieldElement = formData.flat().find(el => el.wKey === tag);
+                    const fieldElement = sortedFormData.flat().find(el => el.wKey === tag);
                     if (fieldElement?.type === 'WDateBox' ||
                         (fieldElement?.type === 'WDateRangeBox' && Array.isArray(fieldElement.wKey) &&
                             (fieldElement.wKey.includes(tag)))) {
@@ -582,7 +595,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     useEffect(() => {
-        formData?.flat().forEach(item => {
+        sortedFormData?.flat().forEach(item => {
             if (item.dependsOn) {
                 if (Array.isArray(item.dependsOn.field)) {
                     const allDependenciesFilled = item.dependsOn.field.every(field =>
@@ -591,7 +604,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
                     if (allDependenciesFilled) {
                         const dependencyValues = item.dependsOn.field.reduce((acc, field) => {
-                            const fieldElement = formData.flat().find(el => el.wKey === field);
+                            const fieldElement = sortedFormData.flat().find(el => el.wKey === field);
 
                             if (fieldElement?.type === 'WDateBox' && formValues[field]) {
                                 acc[field] = moment(formValues[field]).format('YYYYMMDD');
@@ -604,7 +617,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         fetchDependentOptions(item, dependencyValues);
                     }
                 } else if (formValues[item.dependsOn.field]) {
-                    const fieldElement = formData.flat().find(el => el.wKey === item.dependsOn.field);
+                    const fieldElement = sortedFormData.flat().find(el => el.wKey === item.dependsOn.field);
 
                     if (fieldElement?.type === 'WDateBox') {
                         const formattedDate = moment(formValues[item.dependsOn.field]).format('YYYYMMDD');
@@ -615,7 +628,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 }
             }
         });
-    }, [formData, formValues]);
+    }, [sortedFormData, formValues]);
 
     const renderDateRangeBox = (item: FormElement) => {
         const [fromKey, toKey] = item.wKey as string[];
@@ -743,7 +756,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 options={options}
                 isLoading={isLoading}
                 colors={colors}
-                formData={formData}
+                formData={sortedFormData}
                 handleFormChange={handleFormChange}
                 formValues={formValues}
             />
@@ -791,16 +804,16 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     }, [formValues]);
 
     useEffect(() => {
-        formData?.flat().forEach(item => {
+        sortedFormData?.flat().forEach(item => {
             if (item.type === 'WDropDownBox' && !item.options && item.wQuery) {
                 fetchDropdownOptions(item);
             }
         });
-    }, [formData]);
+    }, [sortedFormData]);
 
     useEffect(() => {
         // Initialize all WDateBox fields with wValue on component mount
-        const dateFieldsWithValue = formData?.flat().filter(
+        const dateFieldsWithValue = sortedFormData?.flat().filter(
             item => item.type === 'WDateBox' && item.wValue && !formValues[item.wKey as string]
         );
 
@@ -816,11 +829,29 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
             handleFormChange(updatedValues);
         }
-    }, [formData, formValues, handleFormChange]); // Run when formData or formValues change
+    }, [sortedFormData, formValues, handleFormChange]); // Run when formData or formValues change
+
+    useEffect(() => {
+        // Handle single option pre-selection for dropdowns
+        sortedFormData?.flat().forEach(item => {
+            if (item.type === 'WDropDownBox') {
+                const options = item.options
+                    ? item.options.map(opt => ({
+                        label: opt.label,
+                        value: opt.Value || opt.value
+                    }))
+                    : dropdownOptions[item.wKey as string] || [];
+
+                if (options.length === 1 && !formValues[item.wKey as string]) {
+                    handleInputChange(item.wKey as string, options[0].value);
+                }
+            }
+        });
+    }, [dropdownOptions, sortedFormData, formValues]);
 
     return (
         <div className="p-4" style={{ backgroundColor: colors.filtersBackground }}>
-            {formData?.map((filterGroup, groupIndex) => (
+            {sortedFormData?.map((filterGroup, groupIndex) => (
                 <div key={groupIndex} className="mb-4">
                     {filterGroup.map((item, itemIndex) => (
                         <div key={`${groupIndex}-${itemIndex}`}>

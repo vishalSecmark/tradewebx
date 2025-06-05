@@ -371,6 +371,7 @@ function Dashboard() {
         try {
             const userId = localStorage.getItem('userId');
             const authToken = document.cookie.split('auth_token=')[1] || '';
+            const userType = localStorage.getItem('userType') || '';
 
             // Try to get cached dropdown options first
             const cachedOptions = localStorage.getItem('userDashboardOptions');
@@ -534,7 +535,7 @@ function Dashboard() {
     };
 
     useEffect(() => {
-        if (auth.userType === 'branch') {
+        if (auth.userType === 'branch' || auth.userType === 'user') {
             getUserDashboardData();
         } else {
             // For non-branch users, set initial load to true and get data
@@ -559,7 +560,7 @@ function Dashboard() {
 
     // Handle client selection changes and load data accordingly
     useEffect(() => {
-        if (selectedClient && auth.userType === 'branch') {
+        if (selectedClient && (auth.userType === 'branch' || auth.userType === 'user' )) {
             // Check if we have persisted data for this client
             const persistedDataKey = `dashboardData_${selectedClient.value}`;
             const savedData = localStorage.getItem(persistedDataKey);
@@ -655,7 +656,7 @@ function Dashboard() {
             className="container mx-auto p-4"
             style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}
         >
-            {auth.userType === 'branch' && (
+            {(auth.userType === 'branch' || auth.userType === 'user') && (
                 <div className="mb-4">
                     <CommonCustomDropdown
                         options={userDashData.map(item => ({

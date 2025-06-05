@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
-import  CreatableSelect from "react-select/creatable"; 
+import CreatableSelect from "react-select/creatable";
 import { ActionMeta, InputActionMeta, StylesConfig } from 'react-select';
 
 interface DropdownOption {
@@ -74,9 +74,9 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
     const currentLength = visibleOptions.length;
     const filteredOptions = searchText
       ? options.filter(opt =>
-          opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
-          opt.value.toLowerCase().includes(searchText.toLowerCase())
-        )
+        opt.label.toLowerCase().includes(searchText.toLowerCase()) ||
+        opt.value.toLowerCase().includes(searchText.toLowerCase())
+      )
       : options;
 
     if (currentLength < filteredOptions.length) {
@@ -92,8 +92,8 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
       borderColor: error
         ? '#dc2626'
         : state.isFocused
-        ? colors.primary || '#2563eb'
-        : colors.color3 || '#d1d5db',
+          ? colors.primary || '#2563eb'
+          : colors.color3 || '#d1d5db',
       boxShadow: state.isFocused
         ? `0 0 0 1px ${colors.primary || '#2563eb'}`
         : 'none',
@@ -109,8 +109,8 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
       backgroundColor: state.isSelected
         ? colors.primary || '#2563eb'
         : state.isFocused
-        ? (colors.cardBackground ? `${colors.cardBackground}80` : '#f3f4f6')
-        : colors.cardBackground || '#ffffff',
+          ? (colors.cardBackground ? `${colors.cardBackground}80` : '#f3f4f6')
+          : colors.cardBackground || '#ffffff',
       color: state.isSelected
         ? colors.buttonText || '#ffffff'
         : colors.text || '#333333',
@@ -153,7 +153,13 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
         isDisabled={isDisabled}
         className="react-select-container"
         classNamePrefix="react-select"
-        styles={customStyles}
+        styles={{
+          ...customStyles,
+          menuPortal: base => ({
+            ...base,
+            zIndex: 99999 
+          })
+        }}
         filterOption={() => true} // Custom filtering handled manually
         onMenuOpen={() => {
           if (resetOnOpen) {
