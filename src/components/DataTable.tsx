@@ -14,6 +14,8 @@ import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
+import { buildFilterXml } from '@/utils/helper';
+import { toast } from "react-toastify";
 
 interface DataTableProps {
     data: any[];
@@ -27,6 +29,7 @@ interface DataTableProps {
         [key: string]: any;
     };
     onRowClick?: (record: any) => void;
+    onRowSelect?: (selectedRows: any[]) => void;
     tableRef?: React.RefObject<HTMLDivElement>;
     summary?: any;
     isEntryForm?: boolean;
@@ -152,9 +155,10 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
+    const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
 
@@ -282,11 +286,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
 
             return {
                 ...newRow,
+                ...settings?.EditableColumn ? { _select: selectedRows.some((r) => r._id === rowId) } : {},
                 _expanded: expandedRows.has(rowId),
                 _id: rowId
             };
         });
-    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows]);
+    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows]);
 
     // Dynamically create columns from the first data item
     const columns = useMemo(() => {
@@ -326,6 +331,49 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
         const baseColumns: any = [
+            ...(settings?.EditableColumn
+                ? [{
+                    key: "_select",
+                    name: "",
+                    minWidth: 30,
+                    width: 30,
+                    renderHeaderCell: () => {
+                        const allIds = rows.map(r => r._id);
+                        const selectedIds = selectedRows.map(r => r._id);
+                        const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
+
+                        return (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={allSelected}
+                                    onChange={(e) => {
+                                        const newSelection = e.target.checked ? [...rows] : [];
+                                        setSelectedRows(newSelection);
+                                        onRowSelect?.(newSelection);
+                                    }}
+                                />
+                            </div>
+                        );
+                    },
+                    renderCell: ({ row }) => (
+                        <input
+                            type="checkbox"
+                            checked={selectedRows.some(r => r._id === row._id)}
+                            onChange={(e) => {
+                                const exists = selectedRows.some(r => r._id === row._id);
+                                const updated = exists
+                                    ? selectedRows.filter(r => r._id !== row._id)
+                                    : [...selectedRows, row];
+
+                                setSelectedRows(updated);
+                                onRowSelect?.(updated);
+                            }}
+                            style={{ cursor: "pointer" }}
+                        />
+                    )
+                }]
+                : []),
             {
                 key: '_expanded',
                 name: '',
@@ -333,7 +381,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                 width: 30,
                 colSpan: (props: any) => {
                     if (props.type === 'ROW' && props.row._expanded) {
-                        return columnsToShow.length + 1;
+                        return columnsToShow.length;
                     }
                     return undefined;
                 },
@@ -677,6 +725,12 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, table
                     background-color: ${colors.primary};
                     color: ${colors.buttonText};
                     font-weight: 600;
+                }
+
+                .rdg-cell:first-child {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
 
                 .rdg-cell {
@@ -1134,10 +1188,10 @@ export const exportTableToPdf = async (
 ) => {
     if (!allData || allData.length === 0) return;
 
-    if (mode === 'email') {
-        const confirmSend = window.confirm('Do you want to send mail?');
-        if (!confirmSend) return;
-    }
+    // if (mode === 'email') {
+    //     const confirmSend = window.confirm('Do you want to send mail?');
+    //     if (!confirmSend) return;
+    // }
 
     const decimalSettings = pageData[0]?.levels?.[0]?.settings?.decimalColumns || [];
     const columnsToHide = pageData[0]?.levels?.[0]?.settings?.hideEntireColumn?.split(',') || [];
@@ -1315,73 +1369,94 @@ export const exportTableToPdf = async (
         pdfMake.createPdf(docDefinition).download(`${fileTitle}.pdf`);
 
     } else if (mode === 'email') {
-        pdfMake.createPdf(docDefinition).getBase64(async (base64Data: string) => {
-            try {
-                const userId = localStorage.getItem('userId') || '';
-                const authToken = document.cookie.split('auth_token=')[1]?.split(';')[0] || '';
+        const showTypes = pageData[0]?.levels[0]?.settings?.showTypstFlag || false;
+        const currentLevelData = pageData[0]?.levels[currentLevel];
+        const userId = localStorage.getItem('userId') || '';
+        const userType = localStorage.getItem('userType') || '';
+        const authToken = document?.cookie?.split('auth_token=')[1]?.split(';')[0] || '';
 
-                let filterXml;
+        const filterXml = buildFilterXml(filters, userId);
 
-                if (filters && Object.keys(filters).length > 0) {
-                    filterXml = Object.entries(filters).map(([key, value]) => {
-                        if ((key === 'FromDate' || key === 'ToDate') && value) {
-                            const date = new Date(String(value));
-                            if (!isNaN(date.getTime())) {
-                                // Format as YYYYMMDD in local timezone
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                const formatted = `${year}${month}${day}`;
-                                return `<${key}>${formatted}</${key}>`;
-                            }
-                        }
-                        return `<${key}>${value}</${key}>`;
-                    }).join('\n');
-                }
-                else {
-                    filterXml = `<ClientCode>${userId}</ClientCode>`;
-                }
-
-                const xmlData1 = `
-                    <dsXml>
+        const sendEmail = async (base64Data: string, pdfName: string) => {
+            const emailXml = `
+                <dsXml>
                     <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"EmailSend","RequestFrom":"W"</J_Ui>
                     <Sql></Sql>
                     <X_Filter>
-                    ${filterXml}
+                        ${filterXml}
                         <ReportName>${fileTitle}</ReportName>
-                        <FileName>${fileTitle}.PDF</FileName>
+                        <FileName>${pdfName}</FileName>
                         <Base64>${base64Data}</Base64>
                     </X_Filter>
-                    <J_Api>"UserId":"${userId}","UserType":"Client","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+                    <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+                </dsXml>`;
+
+            const emailResponse = await axios.post(BASE_URL + PATH_URL, emailXml, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${authToken}`,
+                },
+                timeout: 300000,
+            });
+
+            const result = emailResponse?.data;
+            const columnMsg = result?.data?.rs0?.[0]?.Column1 || '';
+
+            if (result?.success) {
+                if (columnMsg.toLowerCase().includes('mail template not define')) {
+                    toast.error('Mail Template Not Defined');
+                } else {
+                    toast.success(columnMsg);
+                }
+            } else {
+                toast.error(columnMsg || result?.message);
+            }
+        };
+
+        try {
+            if (showTypes) {
+                const fetchXml = `
+                    <dsXml>
+                        <J_Ui>${JSON.stringify(currentLevelData?.J_Ui).slice(1, -1)},"ReportDisplay":"D"</J_Ui>
+                        <Sql></Sql>
+                        <X_Filter>
+                            ${filterXml}
+                        </X_Filter>
+                        <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
                     </dsXml>`;
 
-                const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
+                const fetchResponse = await axios.post(BASE_URL + PATH_URL, fetchXml, {
                     headers: {
                         'Content-Type': 'application/xml',
                         Authorization: `Bearer ${authToken}`,
                     },
                     timeout: 300000,
                 });
-                // Handle based on success and specific message content
-                const result = response?.data;
-                // Get Column1 message if present
-                const columnMsg = result?.data?.rs0?.[0]?.Column1 || '';
-                if (result?.success) {
-                    if (columnMsg.toLowerCase().includes('mail template not define')) {
-                        alert('Mail Template Not Defined');
-                    } else {
-                        alert(columnMsg);
-                    }
-                } else {
-                    // Show error message if available, fallback to default
-                    alert(columnMsg || result?.message);
+
+                const rs0 = fetchResponse?.data?.data?.rs0;
+                if (!Array.isArray(rs0) || rs0.length === 0 || !rs0[0]?.Base64PDF) {
+                    toast.error('Failed to fetch PDF for email.');
+                    return;
                 }
-            } catch (err) {
-                console.error(err);
-                alert('Failed to send email.');
+
+                const { PDFName, Base64PDF } = rs0[0];
+                await sendEmail(Base64PDF, PDFName);
+            } else {
+                pdfMake.createPdf(docDefinition).getBase64(async (base64Data: string) => {
+                    try {
+                        await sendEmail(base64Data, `${fileTitle}.PDF`);
+                    } catch (err) {
+                        toast.error('Failed to send email.');
+                    }
+                });
+
+                return; // Skip the rest of the block
             }
-        });
+        } catch (err) {
+            toast.error('Failed to send email.');
+        }
     }
+
 };
 
 export const downloadOption = async (
@@ -1395,24 +1470,8 @@ export const downloadOption = async (
 
     const userId = localStorage.getItem('userId') || '';
     const authToken = document.cookie.split('auth_token=')[1]?.split(';')[0] || '';
-    let filterXml;
 
-    if (filters && Object.keys(filters).length > 0) {
-        filterXml = Object.entries(filters).map(([key, value]) => {
-            if ((key === 'FromDate' || key === 'ToDate') && value) {
-                const date = new Date(String(value));
-                if (!isNaN(date.getTime())) {
-                    // Format as YYYYMMDD in local timezone
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const formatted = `${year}${month}${day}`;
-                    return `<${key}>${formatted}</${key}>`;
-                }
-            }
-            return `<${key}>${value}</${key}>`;
-        }).join('\n');
-    }
+    const filterXml = buildFilterXml(filters, userId);
 
     const xmlData1 = `
     <dsXml>
@@ -1441,13 +1500,13 @@ export const downloadOption = async (
                 // Kick off the download
                 downloadPdf(PDFName, Base64PDF);
             } else {
-                console.error('Response missing PDFName or Base64PDF');
+                toast.error('Response missing PDFName or Base64PDF');
             }
         } else {
-            console.error('Unexpected response format:', response.data);
+            toast.error('Unexpected response format:', response.data);
         }
     } catch (err) {
-       alert('Not available Donwload');
+        toast.error('Not available Donwload');
     }
 
 }
