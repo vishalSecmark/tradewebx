@@ -17,7 +17,7 @@ interface FilterModalProps {
     currentSort?: { field: string; direction: string };
     onSortChange?: (sortConfig: { field: string; direction: string }) => void;
     isSortingAllowed?: boolean;
-    onApply: () => void;
+    onApply?: (values?: any) => void;
     isDownload?: boolean;
 }
 
@@ -47,7 +47,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
 
     // Handle local form changes
     const handleLocalFilterChange = (values: any) => {
-        console.log('Local filter change in modal:', values);
+        // console.log('Local filter change in modal:', values);
         setLocalFilterValues(values);
     };
 
@@ -55,6 +55,7 @@ const FilterModal: React.FC<FilterModalProps> = ({
     const handleApply = () => {
         onFilterChange(localFilterValues); // Send final values to parent
         onClose(); // Close the modal
+        onApply(localFilterValues);
     };
 
     // Handle clear button click

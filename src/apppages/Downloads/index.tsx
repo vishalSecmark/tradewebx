@@ -8,6 +8,7 @@ import DataTable from '@/components/DataTable';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { RootState } from '@/redux/store';
 import FilterModal from '@/components/FilterModal';
+import { FaFilter, FaSync } from 'react-icons/fa';
 
 const Downloads = () => {
     const [downloads, setDownloads] = useState([]);
@@ -26,14 +27,16 @@ const Downloads = () => {
 
     const { colors } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
-    console.log('userData', userData);
-    const getDownloads = async (isReload = false) => {
+    // console.log('userData', userData);
+    const getDownloads = async (isReload = false, values?: any) => {
         if (isReload) {
             setLoading(true);
         }
+        // console.log('filterValues', filterValues);
+        const filterValuesLocal = values || filterValues;
 
-        const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
-        const toDateStr = moment(filterValues.toDate).format('YYYYMMDD');
+        const fromDateStr = moment(filterValuesLocal.fromDate).format('YYYYMMDD');
+        const toDateStr = moment(filterValuesLocal.toDate).format('YYYYMMDD');
 
         const xmlData = `<dsXml>
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
@@ -42,9 +45,9 @@ const Downloads = () => {
                 <FromDate>${fromDateStr}</FromDate>
                 <ToDate>${toDateStr}</ToDate>
                 <RepType></RepType>
-                <DocumentType>${filterValues.DocumentType || ''}</DocumentType>
+                <DocumentType>${filterValuesLocal.DocumentType || ''}</DocumentType>
                 <DocumentNo></DocumentNo>
-                <Segment>${filterValues.segment}</Segment>
+                <Segment>${filterValuesLocal.segment}</Segment>
             </X_Filter>
             <X_GFilter></X_GFilter>
             <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
@@ -58,6 +61,9 @@ const Downloads = () => {
                 }
             });
 
+            if (response.data?.datarows.length == 0) {
+                setDownloads([])
+            }
             if (response.data?.data?.rs0) {
                 setDownloads(response.data.data.rs0);
             }
@@ -81,65 +87,10 @@ const Downloads = () => {
     };
 
     useEffect(() => {
-        getDownloads();
+        getDownloads(true);
     }, []);
 
-    const handleFileDownload = async (fileId: string, fileName: string) => {
-        setIsDownloading(true);
-        setDownloadError(null);
-        setDownloadProgress(0);
 
-        try {
-            // Create a CancelToken source for axios
-            const source = axios.CancelToken.source();
-
-            // Set up a timer to update progress (simulated if actual progress isn't available)
-            const progressInterval = setInterval(() => {
-                setDownloadProgress(prev => {
-                    // Cap at 95% until we actually complete
-                    return prev < 95 ? prev + 5 : 95;
-                });
-            }, 1000);
-
-            // Make the API call with extended timeout
-            const response = await axios({
-                url: `${BASE_URL}/api/downloads/${fileId}`,
-                method: 'GET',
-                responseType: 'blob', // Important for file downloads
-                headers: {
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 600000, // 10 minutes timeout
-                cancelToken: source.token,
-                onDownloadProgress: (progressEvent) => {
-                    if (progressEvent.total) {
-                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                        setDownloadProgress(percentCompleted);
-                    }
-                }
-            });
-
-            // Clear the progress interval
-            clearInterval(progressInterval);
-            setDownloadProgress(100);
-
-            // Create a download link and trigger the download
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-
-        } catch (error) {
-            console.error('Download error:', error);
-            setDownloadError(error.message || 'Download failed. Please try again later.');
-        } finally {
-            setIsDownloading(false);
-        }
-    };
 
     const handleDownload = async (record) => {
         const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
@@ -188,13 +139,22 @@ const Downloads = () => {
 
     const handleFilterChange = (values) => {
         console.log('values', values);
-        handleApplyFilters();
-        setFilterValues(values);
-
+        // Format dates if they are in ISO format
+        const formattedValues = {
+            ...values,
+            fromDate: values.fromDate ? moment(values.fromDate).format('YYYY-MM-DD') : values.fromDate,
+            toDate: values.toDate ? moment(values.toDate).format('YYYY-MM-DD') : values.toDate
+        };
+        handleApplyFilters(formattedValues);
+        setFilterValues(formattedValues);
     };
 
-    const handleApplyFilters = () => {
-        getDownloads();
+    const handleApplyFilters = (values?: any) => {
+        console.log('values FOR FILTER', values);
+        // setFilterValues(values);
+        setTimeout(() => {
+            getDownloads(true, values);
+        }, 300);
     };
 
     // Define filter fields for the FilterModal
@@ -255,7 +215,7 @@ const Downloads = () => {
     ];
 
     return (
-        <div className="p-4">
+        <div className="px-1">
             {/* Headings Section */}
             {headings.length > 0 && (
                 <div className="mb-4">
@@ -277,18 +237,14 @@ const Downloads = () => {
                     {loading ? (
                         <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
                     ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
+                        <FaSync size={20} />
                     )}
                 </button>
                 <button
                     className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     onClick={() => setFilterModalVisible(true)}
                 >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
+                    <FaFilter size={20} />
                 </button>
             </div>
 
