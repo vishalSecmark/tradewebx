@@ -24,8 +24,9 @@ const Downloads = () => {
     const [isDownloading, setIsDownloading] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [downloadError, setDownloadError] = useState<string | null>(null);
+    const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
 
-    const { colors } = useTheme();
+    const { colors, fonts } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
     // console.log('userData', userData);
     const getDownloads = async (isReload = false, values?: any) => {
@@ -34,6 +35,7 @@ const Downloads = () => {
         }
         // console.log('filterValues', filterValues);
         const filterValuesLocal = values || filterValues;
+        const startTime = performance.now();
 
         const fromDateStr = moment(filterValuesLocal.fromDate).format('YYYYMMDD');
         const toDateStr = moment(filterValuesLocal.toDate).format('YYYYMMDD');
@@ -61,6 +63,9 @@ const Downloads = () => {
                 }
             });
 
+            const endTime = performance.now();
+            setApiResponseTime(Math.round(endTime - startTime));
+
             if (response.data?.datarows.length == 0) {
                 setDownloads([])
             }
@@ -81,6 +86,7 @@ const Downloads = () => {
             }
         } catch (error) {
             console.error('Error fetching downloads:', error);
+            setApiResponseTime(undefined);
         } finally {
             setLoading(false);
         }
@@ -216,9 +222,42 @@ const Downloads = () => {
 
     return (
         <div className="px-1">
+            {/* Tabs Section */}
+            <div className="flex border-b border-gray-200">
+                <div className="flex flex-1 gap-2">
+                    <button
+                        style={{ backgroundColor: colors.cardBackground }}
+                        className={`px-4 py-2 text-sm rounded-t-lg font-bold bg-${colors.primary} text-${colors.buttonText}`}
+                    >
+                        Downloads
+                    </button>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        className="p-2 rounded"
+                        onClick={() => getDownloads(true)}
+                        disabled={loading}
+                        style={{ color: colors.text }}
+                    >
+                        {loading ? (
+                            <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                        ) : (
+                            <FaSync size={20} />
+                        )}
+                    </button>
+                    <button
+                        className="p-2 rounded"
+                        onClick={() => setFilterModalVisible(true)}
+                        style={{ color: colors.text }}
+                    >
+                        <FaFilter size={20} />
+                    </button>
+                </div>
+            </div>
+
             {/* Headings Section */}
             {headings.length > 0 && (
-                <div className="mb-4">
+                <div className="mb-0">
                     {headings.map((heading, index) => (
                         <div key={index} className="text-sm" style={{ color: colors.text }}>
                             {heading}
@@ -227,25 +266,57 @@ const Downloads = () => {
                 </div>
             )}
 
-            {/* Actions Bar */}
-            <div className="flex justify-end gap-2 mb-4">
-                <button
-                    className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    onClick={() => getDownloads(true)}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
-                    ) : (
-                        <FaSync size={20} />
-                    )}
-                </button>
-                <button
-                    className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    onClick={() => setFilterModalVisible(true)}
-                >
-                    <FaFilter size={20} />
-                </button>
+            {/* Records Info */}
+            <div className="text-sm text-gray-500 mb-0">
+                <div className="flex flex-col sm:flex-row justify-between">
+                    <div className="flex flex-col gap-2 my-1">
+                        <div className="flex flex-row">
+                            {/* Headings */}
+                            <div className="flex flex-wrap gap-2 ">
+                                {headings.map((heading, index) => (
+                                    <span
+                                        key={index}
+                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            color: colors.text
+                                        }}
+                                    >
+                                        {heading}
+                                    </span>
+                                ))}
+                            </div>
+                            {/* Selected Filters */}
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(filterValues).map(([key, value]) => {
+                                    if (!value || value === '') return null;
+
+                                    let displayValue = value;
+                                    if (key === 'fromDate' || key === 'toDate') {
+                                        displayValue = moment(value).format('DD-MMM-YYYY');
+                                    }
+
+                                    return (
+                                        <span
+                                            key={key}
+                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                            style={{
+                                                backgroundColor: colors.cardBackground,
+                                                color: colors.text
+                                            }}
+                                        >
+                                            {key === 'fromDate' ? 'From' :
+                                                key === 'toDate' ? 'To' :
+                                                    key === 'DocumentType' ? 'Document Type' :
+                                                        key.charAt(0).toUpperCase() + key.slice(1)}: {displayValue}
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-xs">Total Records: {downloads.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
+                </div>
             </div>
 
             {/* Data Table */}
