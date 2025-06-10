@@ -5,7 +5,6 @@ import Personal from './components/personal';
 import Nominee from "./components/nominee";
 import KycDemat from "./components/demat";
 import Segment from "./components/segment";
-import KycFinalPage from "./components/rekyc";
 import KycBank from "./components/bank";
 import { useAppSelector } from "@/redux/hooks";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
@@ -13,6 +12,7 @@ import axios from "axios";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import moment from "moment";
 import { findPageData } from "@/utils/helper";
+import Documents from "./components/documents";
 
 interface TabData {
     id: string;
@@ -69,9 +69,16 @@ export default function Kyc() {
                 formFields: [],
                 tableData: [],
                 fieldsErrors: {}
-            }
+            },
+            attachments : {
+                formFields: [],
+                tableData: [],
+                fieldsErrors: {}
+        }
         };
     });
+
+    console.log("check dynamic data", dynamicData);
 
     // Persist dynamicData and activeTab to localStorage whenever they change
     useEffect(() => {
@@ -156,13 +163,18 @@ export default function Kyc() {
                 fieldErrors={dynamicData.segmentTabData.fieldsErrors}
 
             />
-        }, {
-            id: "rekyc",
-            label: "ReKyc",
-            content: <KycFinalPage />
         },
+        {
+            id: "attachments",
+            label: "Documents",
+            content: <Documents
+                formFields={dynamicData.attachments?.formFields}
+                tableData={dynamicData.attachments?.tableData}
+                fieldErrors={dynamicData.attachments?.fieldsErrors}
+                setFieldData={setDynamicData}
 
-
+            />
+        }
     ];
 
     console.log("check active tab", activeTab)
@@ -233,6 +245,10 @@ export default function Kyc() {
                 segmentTabData: {
                     formFields: [],
                     tableData: []
+                },
+                attachments : {
+                    formFields: [],
+                    tableData: []
                 }
             };
 
@@ -264,6 +280,12 @@ export default function Kyc() {
                         break;
                     case "SegmentDetails":
                         transformedData.segmentTabData = {
+                            formFields: tab.Data,
+                            tableData: tab.tableData
+                        };
+                        break;
+                    case "Attachments":
+                        transformedData.attachments = {
                             formFields: tab.Data,
                             tableData: tab.tableData
                         };
@@ -307,7 +329,8 @@ export default function Kyc() {
                         'bankTabData',
                         'dematTabData',
                         'nomineeTabData',
-                        'segmentTabData'
+                        'segmentTabData',
+                        'attachments'
                     ].every(tab =>
                         Array.isArray(parsed?.[tab]?.formFields) && parsed[tab].formFields.length === 0 &&
                         Array.isArray(parsed?.[tab]?.tableData) && parsed[tab].tableData.length === 0
@@ -380,7 +403,3 @@ export default function Kyc() {
 
     );
 }
-
-
-
-// formData={formData.personal} updateFormData={(data) => updateFormData("personal", data)}

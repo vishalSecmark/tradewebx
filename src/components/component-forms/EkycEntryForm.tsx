@@ -10,6 +10,9 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { useSearchParams, useRouter } from 'next/navigation';
+import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
+import { handleViewFile } from "@/utils/helper";
+import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
 
 
 const DropdownField: React.FC<{
@@ -105,11 +108,11 @@ const DropdownField: React.FC<{
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
                     onFocus={() => handleDropDownChange(field)}
                     placeholder={
-                        formValues[field?.wKey] !== undefined && 
-                        formValues[field?.wKey] !== null && 
-                        String(formValues[field?.wKey]).trim() !== "" 
-                          ? String(formValues[field?.wKey]) 
-                          : "Select..."
+                        formValues[field?.wKey] !== undefined &&
+                            formValues[field?.wKey] !== null &&
+                            String(formValues[field?.wKey]).trim() !== ""
+                            ? String(formValues[field?.wKey])
+                            : "Select..."
                     }
                     className="react-select-container"
                     classNamePrefix="react-select"
@@ -157,13 +160,17 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     setDropDownOptions
 }) => {
     const { colors } = useTheme();
-     const searchParams = useSearchParams();
-     const router = useRouter();
-     const success = searchParams.get('success');
-     const id = searchParams.get('id');
-     const scope = searchParams.get('scope');
-     console.log('searchParams', searchParams,scope, success, id);
-   
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const success = searchParams.get('success');
+    const id = searchParams.get('id');
+    const scope = searchParams.get('scope');
+    console.log('searchParams', searchParams, scope, success, id);
+
+    const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
+    const [showMobileOtpModal, setShowMobileOtpModal] = useState(false);
+    const [currentOtpField, setCurrentOtpField] = useState<any>(null);
+
     const marginBottom = 'mb-1';
 
     const handleInputChange = (key: string, value: any) => {
@@ -247,7 +254,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
-            
+
             const columnData = response?.data?.data?.rs0?.[0]?.Column1;
             if (columnData) {
                 handleValidationApiResponse(columnData, field.wKey);
@@ -258,9 +265,9 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     };
 
     // Function to handle Modify button click for redirectUrl fields
-    const handleThirdPartyApi = async (field: FormField, type: any) => {
+    const handleThirdPartyApi = async (field: FormField, type?: any) => {
         // Use field.ThirdPartyAPI if present, else fallback to field.ValidationAPI for demo/testing
-        const apiConfig = type === "thirdparty"?  field.ThirdPartyAPI : field.ValidationAPI;
+        const apiConfig = type === "thirdparty" ? field.ThirdPartyAPI : field.ValidationAPI;
         if (!apiConfig || !apiConfig.dsXml) {
             toast.error('ThirdPartyAPI config missing!');
             return;
@@ -334,7 +341,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
             if (type === "thirdparty" && columnData) {
                 handleValidationApiResponse(columnData, field.wKey);
             }
-            else if(columnData) {
+            else if (columnData) {
                 // Ensure the XML is wrapped in a root tag
                 let xmlString = columnData.trim().startsWith('<root>') ? columnData : `<root>${columnData}</root>`;
                 try {
@@ -342,7 +349,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
                     const urlNode = xmlDoc.getElementsByTagName('url')[0];
                     const url = urlNode?.textContent;
-                    console.log("check url",url)
+                    console.log("check url", url)
                     if (url) {
                         window.open(url, '_blank');
                         toast.success('Redirecting to third party URL...');
@@ -453,9 +460,27 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         }
     };
 
+    //this error function is used to show file uploadation
+    const handleFieldError = (fieldKey: string, errorMessage: string) => {
+        setFieldErrors(prev => ({ ...prev, [fieldKey]: errorMessage }));
+    };
+
+    const handleThirdActions = (field: any) => {
+        if (field.redirectUrl === "true") {
+            handleThirdPartyApi(field);
+            router.replace(window.location.pathname);
+        } else if (field.OTPRequire) {
+            setCurrentOtpField(field);
+            if (field.wKey.toLowerCase().includes('email')) {
+                setShowEmailOtpModal(true);
+            } else if (field.wKey.toLowerCase().includes('mobile')) {
+                setShowMobileOtpModal(true);
+            }
+        }
+    };
     const renderFormField = (field: FormField) => {
         if (!field) return null;
-        
+
         const isEnabled = field.FieldEnabledTag === 'Y';
         const hasError = fieldErrors && fieldErrors[field.wKey];
 
@@ -514,7 +539,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 );
 
             case 'WTextBox':
-                if (field.redirectUrl === "true") {
+                if (field.redirectUrl === "true" || field.OTPRequire) {
                     return (
                         <div key={`textBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                             <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
@@ -523,19 +548,17 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <input
                                     type="text"
-                                    className={`rounded-r-none w-full px-3 py-1 border border-r-0 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                        !isEnabled ? 'border-gray-300' : hasError ? 'border-red-500' : 'border-gray-700'
-                                    }`}
+                                    className={`rounded-r-none w-full px-3 py-1 border border-r-0 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${hasError ? 'border-red-500' : 'border-gray-300'}`}
                                     style={{
-                                        borderColor: hasError ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
-                                        backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
+                                        borderColor: hasError ? 'red' : '#d1d5db',
+                                        backgroundColor: "#f2f2f0",
                                         color: colors.textInputText,
                                         borderTopRightRadius: 0,
                                         borderBottomRightRadius: 0
                                     }}
                                     value={formValues[field.wKey] || ''}
                                     readOnly
-                                    disabled={!isEnabled}
+                                    disabled={true}
                                     placeholder={field.label}
                                 />
                                 <button
@@ -547,8 +570,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                         height: '35px' // match input height
                                     }}
                                     onClick={() => {
-                                        handleThirdPartyApi(field);
-                                        router.replace(window.location.pathname); // Clear query params from URL
+                                        handleThirdActions(field)
                                     }}
                                 >
                                     Modify
@@ -567,9 +589,8 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         </label>
                         <input
                             type="text"
-                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                !isEnabled ? 'border-gray-300' : hasError ? 'border-red-500' : 'border-gray-700'
-                            }`}
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : hasError ? 'border-red-500' : 'border-gray-700'
+                                }`}
                             style={{
                                 borderColor: hasError ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
@@ -635,6 +656,103 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     </div>
                 );
 
+            case 'WFile':
+                if (field.isResizable === "true") {
+                    return (
+                        <FileUploadWithCrop
+                            key={`fileUpload-${field.Srno}-${field.wKey}`}
+                            field={field}
+                            formValues={formValues}
+                            setFormValues={setFormValues}
+                            fieldErrors={fieldErrors}
+                            setFieldErrors={setFieldErrors}
+                            colors={colors}
+                            handleBlur={handleBlur}
+                            isDisabled={!isEnabled}
+                        />
+                    );
+                } else {
+                    return (
+                        <div
+                            key={`fileInput-${field.Srno}-${field.wKey}`}
+                            className={marginBottom}
+                        >
+                            <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                                {field.label}
+                                {/* {field.isMandatory === "true" && <span className="text-red-500 ml-1">*</span>} */}
+                            </label>
+
+                            {/* === PREVIEW EXISTING FILE IN EDIT MODE === */}
+                            {formValues[field.wKey] && (
+                                <div className="mb-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            handleViewFile(
+                                                formValues[field.wKey],
+                                                field.FieldType?.split(',')[0] || 'file' // optional second param for extension
+                                            )
+                                        }
+                                        className="text-blue-600 underline"
+                                    >
+                                        View uploaded file
+                                    </button>
+
+                                    {/* Optional: show preview for image types */}
+                                    {['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(field.FieldType?.toLowerCase()) && (
+                                        <img
+                                            src={formValues[field.wKey]}
+                                            alt="Uploaded preview"
+                                            className="h-24 w-auto rounded border mt-2"
+                                        />
+                                    )}
+                                </div>
+                            )}
+                            <input
+                                type="file"
+                                accept={field.FieldType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',')}
+                                className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled
+                                    ? 'border-gray-300'
+                                    : fieldErrors[field.wKey]
+                                        ? 'border-red-500'
+                                        : 'border-gray-700'
+                                    }`}
+                                style={{
+                                    borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : '#344054',
+                                    backgroundColor: !isEnabled ? '#f2f2f0' : colors.textInputBackground,
+                                    color: colors.textInputText,
+                                    paddingTop: '0.5rem',
+                                }}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const allowedTypes = field.FieldType.split(',').map(ext => ext.trim().toLowerCase());
+                                        const fileType = file.name.split('.').pop()?.toLowerCase();
+
+                                        if (!allowedTypes.includes(fileType)) {
+                                            handleFieldError(field.wKey, `Allowed file types: ${field.FieldType}`);
+                                            return;
+                                        }
+
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            const base64 = reader.result as string;
+                                            handleInputChange(field.wKey, base64);
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                                onBlur={() => handleBlur(field)}
+                                disabled={!isEnabled}
+                            />
+
+                            {fieldErrors[field.wKey] && (
+                                <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                            )}
+                        </div>
+                    );
+
+                }
             default:
                 return null;
         }
@@ -655,8 +773,44 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     return (
         <div className="grid grid-cols-3 gap-4">
             {formData.map((field) => renderFormField(field))}
+            {
+                showEmailOtpModal && currentOtpField && (
+                    <OtpVerificationModal
+                        isOpen={showEmailOtpModal}
+                        onClose={() => setShowEmailOtpModal(false)}
+                        onSuccess={(verifiedValue) => {
+                            handleInputChange(currentOtpField.wKey, verifiedValue);
+                            setShowEmailOtpModal(false);
+                        }}
+                        field={currentOtpField}
+                        formValues={formValues}
+                        masterValues={masterValues}
+                        type="email"
+                        oldValue={currentOtpField.OlddataValue || ''}
+                    />
+                )
+            }
+            {
+                showMobileOtpModal && currentOtpField && (
+                    <OtpVerificationModal
+                        isOpen={showMobileOtpModal}
+                        onClose={() => setShowMobileOtpModal(false)}
+                        onSuccess={(verifiedValue) => {
+                            handleInputChange(currentOtpField.wKey, verifiedValue);
+                            setShowMobileOtpModal(false);
+                        }}
+                        field={currentOtpField}
+                        formValues={formValues}
+                        masterValues={masterValues}
+                        type="mobile"
+                        oldValue={currentOtpField.OlddataValue || ''}
+                    />
+                )
+            }
         </div>
     );
+
+
 };
 
 export default EkycEntryForm;

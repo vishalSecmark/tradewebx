@@ -278,6 +278,8 @@ export default function SignInForm() {
         localStorage.setItem('clientName', data.data[0].ClientName);
         localStorage.setItem('userType', data.data[0].UserType);
         localStorage.setItem('loginType', data.data[0].LoginType);
+        localStorage.removeItem("ekyc_dynamicData");
+        localStorage.removeItem("ekyc_activeTab");
 
         if (data.data[0].LoginType === "2FA") {
 
