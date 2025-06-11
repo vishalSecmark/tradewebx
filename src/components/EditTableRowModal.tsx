@@ -238,6 +238,34 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         };
                         return updated;
                     });
+                } else {
+                    // Validation successful - extract additional column values
+                    // Find all XML tags except Flag and Message
+                    const xmlTagRegex = /<(\w+)>(.*?)<\/\1>/g;
+                    const columnUpdates: Record<string, any> = {};
+                    let match;
+
+                    while ((match = xmlTagRegex.exec(result)) !== null) {
+                        const tagName = match[1];
+                        const tagValue = match[2];
+
+                        // Skip Flag and Message tags, extract all other values
+                        if (tagName !== 'Flag' && tagName !== 'Message') {
+                            columnUpdates[tagName] = tagValue;
+                        }
+                    }
+
+                    // Update the row data with any additional column values returned
+                    if (Object.keys(columnUpdates).length > 0) {
+                        setLocalData(prev => {
+                            const updated = [...prev];
+                            updated[rowIndex] = {
+                                ...updated[rowIndex],
+                                ...columnUpdates
+                            };
+                            return updated;
+                        });
+                    }
                 }
             }
         } catch (error) {
