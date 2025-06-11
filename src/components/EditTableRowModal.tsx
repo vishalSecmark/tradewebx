@@ -48,6 +48,8 @@ interface EditTableRowModalProps {
     wPage: string;
     settings: {
         EditableColumn: EditableColumn[];
+        leftAlignedColumns?: string;
+        leftAlignedColums?: string;
     }
 }
 
@@ -621,12 +623,20 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
                                                     const hasChar = hasCharacterField(key);
+
+                                                    // Get columns that should be left-aligned even if they contain numbers
+                                                    const leftAlignedColumns = settings?.leftAlignedColumns || settings?.leftAlignedColums
+                                                        ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
+                                                        : [];
+
+                                                    const isLeftAligned = leftAlignedColumns.includes(key);
+
                                                     return (
                                                         <td
                                                             key={key}
                                                             className="border px-2 py-2"
                                                             style={{
-                                                                textAlign: hasChar ? 'left' : 'right'
+                                                                textAlign: isLeftAligned ? 'left' : (hasChar ? 'left' : 'right')
                                                             }}
                                                         >
                                                             {editable ? (
