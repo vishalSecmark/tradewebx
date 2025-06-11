@@ -307,6 +307,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
             : [];
 
+        // Get available columns from the actual data
+        const availableColumns = formattedData.length > 0 ? Object.keys(formattedData[0]).filter(key => !key.startsWith('_')) : [];
+
         // Get columns to show based on screen size
         let columnsToShow: string[] = [];
 
@@ -323,9 +326,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
         // If no responsive columns are defined, show all columns
         if (columnsToShow.length === 0) {
-            columnsToShow = Object.keys(formattedData[0]).filter(key => !key.startsWith('_'));
+            columnsToShow = availableColumns;
             console.log('No responsive columns defined, using all columns:', columnsToShow);
         }
+
+        // Filter out columns that don't exist in the actual data
+        columnsToShow = columnsToShow.filter(key => availableColumns.includes(key));
+        console.log('Filtered columns to only include existing ones:', columnsToShow);
 
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
