@@ -285,11 +285,45 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                     }
                 }
             );
+
             console.log('Save response:', response.data);
+
+            // Check if the response indicates failure
+            if (response.data && response.data.success === false) {
+                let errorMessage = response.data.message || 'An error occurred while saving';
+
+                // Extract message from XML format if present
+                const messageMatch = errorMessage.match(/<Message>(.*?)<\/Message>/);
+                if (messageMatch) {
+                    errorMessage = messageMatch[1];
+                }
+
+                // Show error message using existing validation modal
+                showValidationMessage(errorMessage, 'E');
+                return; // Don't close the modal on error
+            }
+
+            // If we get here, the save was successful
+            onClose();
+
         } catch (error) {
             console.error('Error saving data:', error);
-        } finally {
-            onClose();
+
+            // Handle network errors or other exceptions
+            let errorMessage = 'An error occurred while saving. Please try again.';
+
+            // Check if the error response has our expected structure
+            if (error.response?.data?.success === false) {
+                errorMessage = error.response.data.message || errorMessage;
+
+                // Extract message from XML format if present
+                const messageMatch = errorMessage.match(/<Message>(.*?)<\/Message>/);
+                if (messageMatch) {
+                    errorMessage = messageMatch[1];
+                }
+            }
+
+            showValidationMessage(errorMessage, 'E');
         }
     };
 
