@@ -13,6 +13,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
 import { handleViewFile } from "@/utils/helper";
 import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
+import LoadingSpinner from '../Loaders/LoadingSpinner';
 
 
 const DropdownField: React.FC<{
@@ -165,11 +166,10 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     const success = searchParams.get('success');
     const id = searchParams.get('id');
     const scope = searchParams.get('scope');
-    console.log('searchParams', searchParams, scope, success, id);
-
-    const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
+    console.log('searchParams', searchParams, scope, success, id); const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
     const [showMobileOtpModal, setShowMobileOtpModal] = useState(false);
     const [currentOtpField, setCurrentOtpField] = useState<any>(null);
+    const [isThirdPartyLoading, setIsThirdPartyLoading] = useState(false);
 
     const marginBottom = 'mb-1';
 
@@ -262,9 +262,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         } catch (error) {
             console.error('Validation API error:', error);
         }
-    };
-
-    // Function to handle Modify button click for redirectUrl fields
+    };    // Function to handle Modify button click for redirectUrl fields
     const handleThirdPartyApi = async (field: FormField, type?: any) => {
         // Use field.ThirdPartyAPI if present, else fallback to field.ValidationAPI for demo/testing
         const apiConfig = type === "thirdparty" ? field.ThirdPartyAPI : field.ValidationAPI;
@@ -330,12 +328,18 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         const xmlData = `<dsXml>\n            <J_Ui>${jUi}</J_Ui>\n            <Sql>${Sql || ''}</Sql>\n            <X_Filter>${xFilter}</X_Filter>\n            <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>\n            <J_Api>${jApi}</J_Api>\n        </dsXml>`;
 
         try {
+            // Set loading state when type is thirdparty
+            if (type === "thirdparty") {
+                setIsThirdPartyLoading(true);
+            }
+
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
                 headers: {
                     'Content-Type': 'application/xml',
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+
             // Extract and parse the XML from response
             const columnData = response?.data?.data?.rs0?.[0]?.Column1;
             if (type === "thirdparty" && columnData) {
@@ -364,6 +368,11 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         } catch (error) {
             console.error('ThirdPartyAPI error:', error);
             toast.error('ThirdPartyAPI error!');
+        } finally {
+            // Reset loading state when type is thirdparty
+            if (type === "thirdparty") {
+                setIsThirdPartyLoading(false);
+            }
         }
     };
 
@@ -468,6 +477,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     const handleThirdActions = (field: any) => {
         if (field.redirectUrl === "true") {
             handleThirdPartyApi(field);
+            localStorage.setItem('redirectedField', field.wKey);
             router.replace(window.location.pathname);
         } else if (field.OTPRequire) {
             setCurrentOtpField(field);
@@ -757,56 +767,62 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 return null;
         }
     };
-
     useEffect(() => {
         if (scope && scope.includes("ADHAR") && success === "True") {
-            // Find the field related to ADHAR (by wKey or label containing ADHAR) right now i am passing CorrAddress1 ad default
-            const adharField = formData.find(f => (f.wKey && f.wKey === "CorrAddress1"));
-            if (adharField) {
+            let redirectedField = localStorage.getItem('redirectedField')
+            // Find the field related to ADHAR (by wKey or label containing ADHAR)
+            const adharField = formData.find(f => (f.wKey && f.wKey === redirectedField));
+            if (adharField && redirectedField) {
                 handleThirdPartyApi(adharField, "thirdparty");
+                // Clean up localStorage after processing
+                localStorage.removeItem('redirectedField');
             }
             // Clear query params from URL
             router.replace(window.location.pathname);
         }
-    }, [scope, success, formData])
+    }, [scope, success, formData]);
 
     return (
         <div className="grid grid-cols-3 gap-4">
-            {formData.map((field) => renderFormField(field))}
-            {
-                showEmailOtpModal && currentOtpField && (
-                    <OtpVerificationModal
-                        isOpen={showEmailOtpModal}
-                        onClose={() => setShowEmailOtpModal(false)}
-                        onSuccess={(verifiedValue) => {
-                            handleInputChange(currentOtpField.wKey, verifiedValue);
-                            setShowEmailOtpModal(false);
-                        }}
-                        field={currentOtpField}
-                        formValues={formValues}
-                        masterValues={masterValues}
-                        type="email"
-                        oldValue={currentOtpField.OlddataValue || ''}
-                    />
-                )
-            }
-            {
-                showMobileOtpModal && currentOtpField && (
-                    <OtpVerificationModal
-                        isOpen={showMobileOtpModal}
-                        onClose={() => setShowMobileOtpModal(false)}
-                        onSuccess={(verifiedValue) => {
-                            handleInputChange(currentOtpField.wKey, verifiedValue);
-                            setShowMobileOtpModal(false);
-                        }}
-                        field={currentOtpField}
-                        formValues={formValues}
-                        masterValues={masterValues}
-                        type="mobile"
-                        oldValue={currentOtpField.OlddataValue || ''}
-                    />
-                )
-            }
+            {!isThirdPartyLoading && (
+                <>
+                    {formData.map((field) => renderFormField(field))}
+                    {showEmailOtpModal && currentOtpField && (
+                        <OtpVerificationModal
+                            isOpen={showEmailOtpModal}
+                            onClose={() => setShowEmailOtpModal(false)}
+                            onSuccess={(verifiedValue) => {
+                                handleInputChange(currentOtpField.wKey, verifiedValue);
+                                setShowEmailOtpModal(false);
+                            }}
+                            field={currentOtpField}
+                            formValues={formValues}
+                            masterValues={masterValues}
+                            type="email"
+                            oldValue={currentOtpField.OlddataValue || ''}
+                        />
+                    )}
+                    {showMobileOtpModal && currentOtpField && (
+                        <OtpVerificationModal
+                            isOpen={showMobileOtpModal}
+                            onClose={() => setShowMobileOtpModal(false)}
+                            onSuccess={(verifiedValue) => {
+                                handleInputChange(currentOtpField.wKey, verifiedValue);
+                                setShowMobileOtpModal(false);
+                            }}
+                            field={currentOtpField}
+                            formValues={formValues}
+                            masterValues={masterValues}
+                            type="mobile"
+                            oldValue={currentOtpField.OlddataValue || ''}
+                        />
+                    )}
+                </>
+            )}
+            <LoadingSpinner
+                isLoading={isThirdPartyLoading}
+                loadingText="Processing your request..."
+            />
         </div>
     );
 
