@@ -251,7 +251,7 @@ export default function MarginPledgeOnline() {
 </div>
 
     {/* Added logic for excel dwn */}
-    <div>
+    {/* <div>
     <button
                             className="p-2 rounded"
                             onClick={() => exportTableToExcel('')}
@@ -259,7 +259,7 @@ export default function MarginPledgeOnline() {
                         >
                             <FaFileExcel size={20} />
                         </button>
-    </div>
+    </div> */}
 
 </div>
 
