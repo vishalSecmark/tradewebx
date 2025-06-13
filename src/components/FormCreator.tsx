@@ -637,7 +637,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
         return (
             <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
                 <div className="flex gap-4">
@@ -701,7 +701,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const renderTextBox = (item: FormElement) => {
         return (
             <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
                 <input
@@ -723,7 +723,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     const renderDateBox = (item: FormElement) => {
         return (
             <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
                 <DatePicker
@@ -778,7 +778,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         accentColor: colors.primary
                     }}
                 />
-                <label className="ml-2 text-sm font-medium" style={{ color: colors.text }}>
+                <label className={`ml-2 text-sm ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
             </div>
@@ -801,8 +801,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return null;
         }
     };
-
-
 
     useEffect(() => {
         sortedFormData?.flat().forEach(item => {
@@ -862,7 +860,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     {filterGroup.map((item, itemIndex) => (
                         <div
                             key={`${groupIndex}-${itemIndex}`}
-                            className={isHorizontal ? "min-w-[200px]" : ""}
+                            className={isHorizontal ? "min-w-[250px]" : ""}
                         >
                             {renderFormElement(item)}
                         </div>

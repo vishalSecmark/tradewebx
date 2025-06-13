@@ -121,7 +121,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
   return (
     <div className={isHorizontal ? "mb-2" : "mb-4"}>
-      <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+      <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
         {item.label}
         {isLoading && <span className="ml-2 inline-block animate-pulse">Loading...</span>}
       </label>
@@ -148,6 +148,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             borderColor: colors.textInputBorder,
             backgroundColor: colors.textInputBackground,
             boxShadow: isLoading ? `0 0 0 1px ${colors.primary}` : base.boxShadow,
+            minWidth: isHorizontal ? '250px' : 'auto',
           }),
           singleValue: (base) => ({
             ...base,
@@ -157,6 +158,19 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             ...base,
             backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
             color: state.isFocused ? colors.buttonText : colors.textInputText,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }),
+          menu: (base) => ({
+            ...base,
+            minWidth: isHorizontal ? '250px' : 'auto',
+            width: 'max-content',
+            maxWidth: '400px',
+          }),
+          menuList: (base) => ({
+            ...base,
+            maxHeight: '200px',
           }),
           multiValue: (base) => ({
             ...base,
