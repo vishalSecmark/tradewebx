@@ -745,6 +745,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             />
                         </div>
                         <div className="flex gap-2">
+
+                            <button
+                                className="px-3 py-1 text-sm rounded"
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText
+                                }}
+                                onClick={() => fetchData(filters)}
+                            >
+                                Apply
+                            </button>
                             <button
                                 className="px-3 py-1 text-sm rounded"
                                 style={{
@@ -758,16 +769,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 }}
                             >
                                 Clear
-                            </button>
-                            <button
-                                className="px-3 py-1 text-sm rounded"
-                                style={{
-                                    backgroundColor: colors.buttonBackground,
-                                    color: colors.buttonText
-                                }}
-                                onClick={() => fetchData(filters)}
-                            >
-                                Apply
                             </button>
                         </div>
                     </div>
