@@ -16,6 +16,7 @@ export interface ApiResponse {
 
 export interface FormField {
     isResizable: string;
+    GetResponseFlag: string;
     OTPRequire: string;
     Srno: number;
     type: string;

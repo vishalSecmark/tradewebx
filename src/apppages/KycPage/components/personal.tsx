@@ -5,26 +5,26 @@ import { fetchEkycDropdownOptions } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 
 
-const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycComponentProps) => {
+const Personal = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
     console.log('personal tab', formFields, tableData);
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldVlaues, setFieldValues] = useState<Record<string, any>>({});
     const [validationModal, setValidationModal] = useState<{
-            isOpen: boolean;
-            message: string;
-            type: 'M' | 'S' | 'E' | 'D';
-            callback?: (confirmed: boolean) => void;
-        }>({ isOpen: false, message: '', type: 'M' });
-    
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>({ isOpen: false, message: '', type: 'M' });
 
-    
+
+
     console.log('personalDropdownOptions', personalDropdownOptions);
     console.log('personalLoadingDropdowns', personalLoadingDropdowns);
-    
+
     console.log('FieldValue', fieldVlaues);
 
-    useEffect(()=>{
+    useEffect(() => {
         if (formFields && formFields.length > 0) {
             formFields.forEach((field) => {
                 if (field.wQuery && field.wKey) {
@@ -33,7 +33,7 @@ const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCom
                 }
             })
         }
-    },[])
+    }, [])
 
     // Handler to update the 0th index of personalTabData.tableData in dynamicData
     const handleFieldChange = (updateFn: (prev: any) => any) => {
@@ -70,13 +70,13 @@ const Personal = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCom
 
     return (
         <div className="w-full p-5 bg-white rounded-lg shadow-md">
-             <CaseConfirmationModal
-                            isOpen={validationModal.isOpen}
-                            message={validationModal.message}
-                            type={validationModal.type}
-                            onConfirm={() => validationModal.callback?.(true)}
-                            onCancel={() => validationModal.callback?.(false)}
-                        />
+            <CaseConfirmationModal
+                isOpen={validationModal.isOpen}
+                message={validationModal.message}
+                type={validationModal.type}
+                onConfirm={() => validationModal.callback?.(true)}
+                onCancel={() => validationModal.callback?.(false)}
+            />
             <EkycEntryForm
                 formData={formFields}
                 formValues={tableData[0] || {}}

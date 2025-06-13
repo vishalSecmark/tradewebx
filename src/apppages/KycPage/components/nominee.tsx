@@ -57,7 +57,7 @@ const Nominee = ({ formFields, tableData, fieldErrors }: EkycComponentProps) => 
       />
       {openAddBank && (
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl">
             <h4 className="text-xl font-semibold mb-4">Add Nominee Details</h4>
 
             <EkycEntryForm

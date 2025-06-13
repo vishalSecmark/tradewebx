@@ -132,7 +132,7 @@ export default function Kyc() {
                 formFields={dynamicData.nomineeTabData.formFields}
                 tableData={dynamicData.nomineeTabData.tableData}
                 fieldErrors={dynamicData.nomineeTabData.fieldsErrors}
-
+                setFieldData={setDynamicData}
 
             />
         },
@@ -143,6 +143,7 @@ export default function Kyc() {
                 formFields={dynamicData.bankTabData.formFields}
                 tableData={dynamicData.bankTabData.tableData}
                 fieldErrors={dynamicData.bankTabData.fieldsErrors}
+                setFieldData={setDynamicData}
             />
         },
         {
@@ -152,6 +153,7 @@ export default function Kyc() {
                 formFields={dynamicData.dematTabData.formFields}
                 tableData={dynamicData.dematTabData.tableData}
                 fieldErrors={dynamicData.dematTabData.fieldsErrors}
+                setFieldData={setDynamicData}
             />
         },
         {
@@ -161,7 +163,7 @@ export default function Kyc() {
                 formFields={dynamicData.segmentTabData.formFields}
                 tableData={dynamicData.segmentTabData.tableData}
                 fieldErrors={dynamicData.segmentTabData.fieldsErrors}
-
+                setFieldData={setDynamicData}
             />
         },
         {
@@ -172,7 +174,6 @@ export default function Kyc() {
                 tableData={dynamicData.attachments?.tableData}
                 fieldErrors={dynamicData.attachments?.fieldsErrors}
                 setFieldData={setDynamicData}
-
             />
         }
     ];

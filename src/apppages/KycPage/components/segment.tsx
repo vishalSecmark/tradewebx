@@ -2,44 +2,81 @@
 import React from 'react';
 import { useTheme } from "@/context/ThemeContext";
 import { EkycComponentProps } from '@/types/EkycFormTypes';
+import { DataGrid } from 'react-data-grid';
 
-const Segment = ({ formFields, tableData, fieldErrors }: EkycComponentProps) => {
+const Segment = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
+
+  // Handler to update the segment tableData
+  const handleSegmentUpdate = (id: string, fieldKey: string, value: string) => {
+    setFieldData((prevState: any) => {
+      // Create a copy of the previous state
+      const newState = { ...prevState };
+      
+      // Find and update the specific row in segmentTabData
+      newState.segmentTabData = {
+        ...newState.segmentTabData,
+        tableData: newState.segmentTabData.tableData.map((row: any) => 
+          row.SegmentValue === id ? { ...row, [fieldKey]: value } : row
+        )
+      };
+      
+      return newState;
+    });
+  };
+
+  // Dynamically create columns from formFields
+  const columns = formFields.map((field) => {
+    const baseColumn = {
+      key: field.wKey,
+      name: field.label,
+      sortable: true,
+    };
+
+    // Special handling for checkbox fields
+    if (field.type === 'WCheckBox') {
+      return {
+        ...baseColumn,
+        renderCell: ({ row }: any) => (
+          <input
+            type="checkbox"
+            checked={row[field.wKey] === "true"}
+            onChange={(e) => {
+              const newValue = e.target.checked ? "true" : "false";
+              handleSegmentUpdate(row.SegmentValue, field.wKey, newValue);
+            }}
+            className="h-4 w-4"
+          />
+        )
+      };
+    }
+
+    return baseColumn;
+  });
+
+  // Add unique IDs to rows based on SegmentValue
+  const rows = tableData.map((item) => ({
+    ...item,
+    id: item.SegmentValue // Using SegmentValue as unique identifier
+  }));
 
   return (
     <div className="w-full p-5 bg-white rounded-lg shadow-md">
-
-      <div className="p-4" style={{ fontFamily: fonts.content, color: colors.text }}>
-        <h2 className="text-xl font-semibold mb-6">Select Segments</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {tableData.map((segment,index) => (
-            <div key={segment.SegmentValue + index} className="flex items-center">
-              <input
-                type="checkbox"
-                id={segment.SegmentValue}
-                checked={segment.IsSelect === "true"}
-                onChange={() => { }}
-                className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-                disabled // Disabled since we're not implementing the change handler
-              />
-              <label htmlFor={segment.SegmentValue} className="ml-2 text-sm font-medium">
-                {segment.SegmentExch}
-              </label>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            onClick={() => { }}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            style={{ backgroundColor: colors.primary }}
-          >
-            Save
-          </button>
-        </div>
-      </div>
+      <h2 className="text-xl font-semibold mb-6">Select Segments</h2>
+      
+      <DataGrid
+        columns={columns}
+        rows={rows}
+        className="rdg-light"
+        rowHeight={40}
+        headerRowHeight={40}
+        style={{
+          backgroundColor: colors.background,
+          color: colors.text,
+          fontFamily: fonts.content,
+        }}
+        rowKeyGetter={(row) => row.id}
+      />
     </div>
   );
 };

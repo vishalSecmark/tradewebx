@@ -585,7 +585,19 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                 >
                                     Modify
                                 </button>
+
                             </div>
+                            {field.GetResponseFlag === "true" && (
+                                <span
+                                    className="text-blue-500 underline cursor-pointer hover:text-blue-700 mt-1 inline-block"
+                                    style={{ height: '35px', lineHeight: '35px' }}
+                                    onClick={() => {
+                                        handleThirdPartyApi(field, "thirdparty")
+                                    }}
+                                >
+                                    Get bank status
+                                </span>
+                            )}
                             {hasError && (
                                 <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
                             )}
@@ -628,7 +640,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
             case 'WCheckBox':
                 return (
-                    <div key={`checkbox-${field.Srno}-${field.wKey}`} className={marginBottom}>
+                    <div key={`checkbox-${field.Srno}-${field.wKey}`} className={marginBottom} style={{ marginTop: "30px" }}>
                         <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text }}>
                             <input
                                 type="checkbox"
@@ -784,45 +796,44 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
     return (
         <div className="grid grid-cols-3 gap-4">
-            {!isThirdPartyLoading && (
-                <>
-                    {formData.map((field) => renderFormField(field))}
-                    {showEmailOtpModal && currentOtpField && (
-                        <OtpVerificationModal
-                            isOpen={showEmailOtpModal}
-                            onClose={() => setShowEmailOtpModal(false)}
-                            onSuccess={(verifiedValue) => {
-                                handleInputChange(currentOtpField.wKey, verifiedValue);
-                                setShowEmailOtpModal(false);
-                            }}
-                            field={currentOtpField}
-                            formValues={formValues}
-                            masterValues={masterValues}
-                            type="email"
-                            oldValue={currentOtpField.OlddataValue || ''}
-                        />
-                    )}
-                    {showMobileOtpModal && currentOtpField && (
-                        <OtpVerificationModal
-                            isOpen={showMobileOtpModal}
-                            onClose={() => setShowMobileOtpModal(false)}
-                            onSuccess={(verifiedValue) => {
-                                handleInputChange(currentOtpField.wKey, verifiedValue);
-                                setShowMobileOtpModal(false);
-                            }}
-                            field={currentOtpField}
-                            formValues={formValues}
-                            masterValues={masterValues}
-                            type="mobile"
-                            oldValue={currentOtpField.OlddataValue || ''}
-                        />
-                    )}
-                </>
-            )}
-            <LoadingSpinner
+            <>
+                {formData.map((field) => renderFormField(field))}
+                {showEmailOtpModal && currentOtpField && (
+                    <OtpVerificationModal
+                        isOpen={showEmailOtpModal}
+                        onClose={() => setShowEmailOtpModal(false)}
+                        onSuccess={(verifiedValue) => {
+                            handleInputChange(currentOtpField.wKey, verifiedValue);
+                            setShowEmailOtpModal(false);
+                        }}
+                        field={currentOtpField}
+                        formValues={formValues}
+                        masterValues={masterValues}
+                        type="email"
+                        oldValue={currentOtpField.OlddataValue || ''}
+                    />
+                )}
+                {showMobileOtpModal && currentOtpField && (
+                    <OtpVerificationModal
+                        isOpen={showMobileOtpModal}
+                        onClose={() => setShowMobileOtpModal(false)}
+                        onSuccess={(verifiedValue) => {
+                            handleInputChange(currentOtpField.wKey, verifiedValue);
+                            setShowMobileOtpModal(false);
+                        }}
+                        field={currentOtpField}
+                        formValues={formValues}
+                        masterValues={masterValues}
+                        type="mobile"
+                        oldValue={currentOtpField.OlddataValue || ''}
+                    />
+                )}
+            </>
+
+            {/* <LoadingSpinner
                 isLoading={isThirdPartyLoading}
                 loadingText="Processing your request..."
-            />
+            /> */}
         </div>
     );
 
