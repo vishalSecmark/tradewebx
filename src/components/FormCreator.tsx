@@ -45,12 +45,14 @@ interface FormCreatorProps {
     formData: FormElement[][];
     onFilterChange: (values: any) => void;
     initialValues?: Record<string, any>;
+    isHorizontal?: boolean;
 }
 
 const FormCreator: React.FC<FormCreatorProps> = ({
     formData,
     onFilterChange,
-    initialValues = {}
+    initialValues = {},
+    isHorizontal = false
 }) => {
     const { colors } = useTheme();
     const [formValues, setFormValues] = useState(initialValues);
@@ -634,7 +636,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         const [fromKey, toKey] = item.wKey as string[];
 
         return (
-            <div className="mb-4">
+            <div className={isHorizontal ? "mb-2" : "mb-4"}>
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {item.label}
                 </label>
@@ -698,7 +700,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderTextBox = (item: FormElement) => {
         return (
-            <div className="mb-4">
+            <div className={isHorizontal ? "mb-2" : "mb-4"}>
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {item.label}
                 </label>
@@ -720,7 +722,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderDateBox = (item: FormElement) => {
         return (
-            <div className="mb-4">
+            <div className={isHorizontal ? "mb-2" : "mb-4"}>
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {item.label}
                 </label>
@@ -759,13 +761,14 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 formData={sortedFormData}
                 handleFormChange={handleFormChange}
                 formValues={formValues}
+                isHorizontal={isHorizontal}
             />
         );
     };
 
     const renderCheckBox = (item: FormElement) => {
         return (
-            <div className="mb-4 flex items-center">
+            <div className={`${isHorizontal ? "mb-2" : "mb-4"} flex items-center`}>
                 <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300"
@@ -848,11 +851,19 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     }, [dropdownOptions, sortedFormData, formValues]);
 
     return (
-        <div className="p-4" style={{ backgroundColor: colors.filtersBackground }}>
+        <div
+            className={isHorizontal ? "flex flex-wrap gap-4 items-start" : "p-4"}
+            style={{
+                backgroundColor: isHorizontal ? 'transparent' : colors.filtersBackground
+            }}
+        >
             {sortedFormData?.map((filterGroup, groupIndex) => (
-                <div key={groupIndex} className="mb-4">
+                <div key={groupIndex} className={isHorizontal ? "contents" : "mb-4"}>
                     {filterGroup.map((item, itemIndex) => (
-                        <div key={`${groupIndex}-${itemIndex}`}>
+                        <div
+                            key={`${groupIndex}-${itemIndex}`}
+                            className={isHorizontal ? "min-w-[200px]" : ""}
+                        >
                             {renderFormElement(item)}
                         </div>
                     ))}
