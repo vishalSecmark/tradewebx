@@ -17,6 +17,7 @@ import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import EditTableRowModal from './EditTableRowModal';
+import FormCreator from './FormCreator';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -553,6 +554,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     const showTypeList = pageData[0]?.levels[0]?.settings?.showTypstFlag || false
+    const showFilterHorizontally = pageData[0]?.filterType === "onPage";
     return (
         <div className=""
             style={{
@@ -651,7 +653,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaSync size={20} />
                         </button>
-                        {pageData[0].filters && pageData[0].filters.length > 0 && (
+                        {!showFilterHorizontally && pageData[0].filters && pageData[0].filters.length > 0 && (
                             <button
                                 className="p-2 rounded"
                                 onClick={() => setIsFilterModalOpen(true)}
@@ -722,8 +724,61 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {/* Loading State */}
             {isLoading && <div>Loading...</div>}
 
+            {/* Horizontal Filters */}
+            {showFilterHorizontally && pageData[0].filters && pageData[0].filters.length > 0 && (
+                <div className="mb-2 px-3 py-1 rounded-lg border" style={{
+                    backgroundColor: colors.cardBackground,
+                    borderColor: '#e5e7eb'
+                }}>
+                    <div className="flex items-center justify-between mb-0">
+                        <div
+                            className="flex flex-wrap gap-4 items-start"
+                            style={{
+                                background: 'none'
+                            }}
+                        >
+                            <FormCreator
+                                formData={pageData[0].filters || [[]]}
+                                onFilterChange={handleFilterChange}
+                                initialValues={filters}
+                                isHorizontal={true}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+
+                            <button
+                                className="px-3 py-1 text-sm rounded"
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText
+                                }}
+                                onClick={() => fetchData(filters)}
+                            >
+                                Apply
+                            </button>
+                            <button
+                                className="px-3 py-1 text-sm rounded"
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText
+                                }}
+                                onClick={() => {
+                                    const emptyValues = {};
+                                    setFilters(emptyValues);
+                                    handleFilterChange(emptyValues);
+                                }}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            )}
+
             {!apiData && !isLoading && <div>No Data Found</div>}
             {/* Data Display */}
+
             {!isLoading && apiData && (
                 <div className="space-y-0">
                     <div className="text-sm text-gray-500">
