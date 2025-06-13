@@ -726,14 +726,24 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Horizontal Filters */}
             {showFilterHorizontally && pageData[0].filters && pageData[0].filters.length > 0 && (
-                <div className="mb-4 p-4 rounded-lg border" style={{
+                <div className="mb-2 px-3 py-1 rounded-lg border" style={{
                     backgroundColor: colors.cardBackground,
                     borderColor: '#e5e7eb'
                 }}>
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-lg font-semibold" style={{ color: colors.text }}>
-                            Filters
-                        </h3>
+                    <div className="flex items-center justify-between mb-0">
+                        <div
+                            className="flex flex-wrap gap-4 items-start"
+                            style={{
+                                background: 'none'
+                            }}
+                        >
+                            <FormCreator
+                                formData={pageData[0].filters || [[]]}
+                                onFilterChange={handleFilterChange}
+                                initialValues={filters}
+                                isHorizontal={true}
+                            />
+                        </div>
                         <div className="flex gap-2">
                             <button
                                 className="px-3 py-1 text-sm rounded"
@@ -761,19 +771,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             </button>
                         </div>
                     </div>
-                    <div
-                        className="flex flex-wrap gap-4 items-start"
-                        style={{
-                            background: 'none'
-                        }}
-                    >
-                        <FormCreator
-                            formData={pageData[0].filters || [[]]}
-                            onFilterChange={handleFilterChange}
-                            initialValues={filters}
-                            isHorizontal={true}
-                        />
-                    </div>
+
                 </div>
             )}
 
