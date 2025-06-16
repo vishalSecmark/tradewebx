@@ -168,8 +168,23 @@ export default function SignInForm() {
     loadLoginOptions();
   }, []);
 
+  // Function to proceed with navigation after version check
+  const proceedAfterVersionCheck = useCallback((dataToUse?: any) => {
+    const currentLoginData = dataToUse || loginData;
+    if (!currentLoginData) return;
+
+    if (currentLoginData.LoginType === "2FA") {
+      router.push('/otp-verification');
+    } else {
+      // Set cookie
+      document.cookie = `auth_token=${currentLoginData.token}; path=/; expires=${new Date(currentLoginData.tokenExpireTime).toUTCString()}`;
+      localStorage.removeItem('temp_token');
+      router.push('/dashboard');
+    }
+  }, [loginData, router]);
+
   // Function to perform version check after successful login
-  const performVersionCheckAfterLogin = useCallback(async () => {
+  const performVersionCheckAfterLogin = useCallback(async (currentLoginData: any) => {
     try {
       const result = await checkVersion();
       if (result.success && result.data?.rs0?.length > 0) {
@@ -177,28 +192,14 @@ export default function SignInForm() {
         setShowVersionModal(true);
       } else {
         // No updates available, proceed with navigation
-        proceedAfterVersionCheck();
+        proceedAfterVersionCheck(currentLoginData);
       }
     } catch (error) {
       console.error('Failed to check version:', error);
       // Proceed with navigation even if version check fails
-      proceedAfterVersionCheck();
+      proceedAfterVersionCheck(currentLoginData);
     }
-  }, [checkVersion]);
-
-  // Function to proceed with navigation after version check
-  const proceedAfterVersionCheck = useCallback(() => {
-    if (!loginData) return;
-
-    if (loginData.LoginType === "2FA") {
-      router.push('/otp-verification');
-    } else {
-      // Set cookie
-      document.cookie = `auth_token=${loginData.token}; path=/; expires=${new Date(loginData.tokenExpireTime).toUTCString()}`;
-      localStorage.removeItem('temp_token');
-      router.push('/dashboard');
-    }
-  }, [loginData, router]);
+  }, [checkVersion, proceedAfterVersionCheck]);
 
   // Handle the update confirmation
   const handleUpdateConfirm = useCallback(async () => {
@@ -231,14 +232,14 @@ export default function SignInForm() {
 
       console.log('Version update response:', response.data);
       setShowVersionModal(false);
-      proceedAfterVersionCheck();
+      proceedAfterVersionCheck(loginData);
     } catch (error) {
       console.error('Failed to update version:', error);
       // Still proceed even if update fails
       setShowVersionModal(false);
-      proceedAfterVersionCheck();
+      proceedAfterVersionCheck(loginData);
     }
-  }, [loginAsOptions, selectedLoginAs, version]);
+  }, [loginAsOptions, selectedLoginAs, version, loginData, proceedAfterVersionCheck]);
 
   const handleLoginAsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedIndex = e.target.selectedIndex;
@@ -297,14 +298,16 @@ export default function SignInForm() {
         localStorage.setItem('loginType', data.data[0].LoginType);
 
         // Store login data for navigation after version check
-        setLoginData({
+        const currentLoginData = {
           token: data.token,
           tokenExpireTime: data.tokenExpireTime,
           LoginType: data.data[0].LoginType
-        });
+        };
+
+        setLoginData(currentLoginData);
 
         // Check for version updates after successful login
-        await performVersionCheckAfterLogin();
+        await performVersionCheckAfterLogin(currentLoginData);
       } else {
         dispatch(setAuthError(data.message || 'Login failed'));
         setError(data.message || 'Login failed');
@@ -458,7 +461,7 @@ export default function SignInForm() {
         isOpen={showVersionModal}
         onClose={() => {
           setShowVersionModal(false);
-          proceedAfterVersionCheck();
+          proceedAfterVersionCheck(loginData);
         }}
         updates={versionUpdates}
         onConfirm={handleUpdateConfirm}
