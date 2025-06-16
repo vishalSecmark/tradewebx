@@ -436,6 +436,23 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }, 1000);
     }, [currentLevel, primaryKeyFilters]);
 
+    // Auto-open filter modal when autoFetch is false and filterType is not "onPage"
+    useEffect(() => {
+        if (pageData && pageLoaded && areFiltersInitialized && currentLevel === 0) {
+            const autoFetchSetting = pageData[0]?.autoFetch;
+            const filterType = pageData[0]?.filterType;
+            const hasFilters = pageData[0]?.filters?.length > 0;
+
+            // Check if autoFetch is false and filterType is not "onPage" and has filters
+            if (autoFetchSetting === "false" && filterType !== "onPage" && hasFilters && !clientCode) {
+                // Only auto-open if we haven't manually opened it yet
+                if (!isFilterModalOpen) {
+                    setIsFilterModalOpen(true);
+                }
+            }
+        }
+    }, [pageData, pageLoaded, areFiltersInitialized, currentLevel, clientCode]);
+
     // Add handleTabClick function
     const handleTabClick = (level: number, index: number) => {
         const newStack = levelStack.slice(0, index + 1);

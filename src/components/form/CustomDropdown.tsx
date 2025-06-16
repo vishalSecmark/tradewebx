@@ -158,15 +158,16 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             ...base,
             backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
             color: state.isFocused ? colors.buttonText : colors.textInputText,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
+
+
           }),
-          menu: (base) => ({
-            ...base,
-            minWidth: isHorizontal ? '250px' : 'auto',
-            width: 'max-content',
-            maxWidth: '400px',
+          ...(isHorizontal && {
+            menu: (base) => ({
+              ...base,
+              minWidth: '250px',
+              width: 'max-content',
+              maxWidth: '400px',
+            }),
           }),
           menuList: (base) => ({
             ...base,
