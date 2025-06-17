@@ -121,7 +121,7 @@ const VersionUpdateModal = ({
                 : 'bg-red-500 hover:bg-red-600'
                 } text-white`}
             >
-              OK, I Understand
+              OK
             </button>
           ) : (
             <>
@@ -135,7 +135,7 @@ const VersionUpdateModal = ({
                     : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200'
                     }`}
                 >
-                  Skip for Now
+                  {userType === "C" ? "OK" : "Skip for Now"}
                 </button>
               )}
 
