@@ -13,6 +13,7 @@ interface OtpVerificationModalProps {
   masterValues: Record<string, any>;
   type: 'email' | 'mobile';
   oldValue: string;
+  setFieldErrors: (errors: Record<string, string>) => void;
 }
 
 const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
@@ -23,7 +24,8 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   formValues,
   masterValues,
   type,
-  oldValue
+  oldValue,
+  setFieldErrors
 }) => {
   const [currentStep, setCurrentStep] = useState<'enterNewValue' | 'verifyOldOtp' | 'verifyNewOtp'>('enterNewValue');
   const [newValue, setNewValue] = useState('');
@@ -48,14 +50,18 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     const messageMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
     return messageMatch ? messageMatch[1] : '';
   };
-
   const handleSendOtp = async () => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPSend.dsXml;
-      
+
+      // Check for missing fields and collect errors
+      const errors: string[] = [];
+      const fieldErrors: Record<string, string> = {};
+      let shouldCallApi = true;
+
       let xFilterMultiple = `<OTPRequire>${field.OTPRequire}</OTPRequire>`;
       Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
         let fieldValue;
@@ -65,8 +71,24 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         } else {
           fieldValue = newValue;
         }
-        xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+
+        // Check if field value is missing
+        if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+          fieldErrors[key] = `Please fill the required field: ${key}`;
+          shouldCallApi = false;
+          errors.push(key);
+        } else {
+          xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+        }
       });
+
+      // If there are missing fields, set errors and show toast
+      if (errors.length > 0) {
+        // setFieldErrors(fieldErrors);
+        toast.error(`Please fill the required fields: ${errors.join(', ')}`);
+        setIsLoading(false);
+        return;
+      }
 
       const jUi = Object.entries(J_Ui).map(([key, val]) => `"${key}":"${val}"`).join(',');
       const jApi = Object.entries(J_Api).map(([key, val]) => `"${key}":"${val}"`).join(',');
@@ -88,7 +110,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       if (responseData?.includes("<Flag>S</Flag>")) {
         toast.success(`OTP sent to ${requiresOldVerification ? `old ${type} ${oldValue}` : ''} ${requiresOldVerification && requiresNewVerification ? 'and ' : ''} ${requiresNewVerification ? `new ${type} ${newValue}` : ''}`);
         setOtpSent(true);
-        
+
         // Determine next step based on requirements
         if (requiresOldVerification) {
           setCurrentStep('verifyOldOtp');
@@ -106,15 +128,19 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleVerifyOldOtp = async () => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPValidate.dsXml;
-      
-      let xFilterMultiple = '<Type>OLD</Type>';
+
+      // Check for missing fields and collect errors
+      const errors: string[] = [];
+      const fieldErrors: Record<string, string> = {};
+      let shouldCallApi = true;
+
+      let xFilterMultiple = '';
       Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
         let fieldValue;
         if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
@@ -123,14 +149,33 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
             fieldValue = oldOtp;
           } else if (key === 'Value') {
             fieldValue = oldValue;
-          } else {
+          } else if (key === "Type") {
+            fieldValue = "OLD";
+          }
+          else {
             fieldValue = formValues[formKey] || masterValues[formKey];
           }
         } else {
           fieldValue = placeholder;
         }
-        xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+
+        // Check if field value is missing
+        if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+          fieldErrors[key] = `Please fill the required field: ${key}`;
+          shouldCallApi = false;
+          errors.push(key);
+        } else {
+          xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+        }
       });
+
+      // If there are missing fields, set errors and show toast
+      if (errors.length > 0) {
+        // setFieldErrors(fieldErrors);
+        toast.error(`Please fill the required fields: ${errors.join(', ')}`);
+        setIsLoading(false);
+        return;
+      }
 
       const jUi = Object.entries(J_Ui).map(([key, val]) => `"${key}":"${val}"`).join(',');
       const jApi = Object.entries(J_Api).map(([key, val]) => `"${key}":"${val}"`).join(',');
@@ -147,11 +192,12 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           'Content-Type': 'application/xml',
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
-      });      const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      });
+      const responseData = response.data?.data?.rs0?.[0]?.Column1;
       if (responseData?.includes("<Flag>S</Flag>")) {
         const message = extractMessageFromResponse(responseData);
         toast.success(message || `Old ${type} OTP verified successfully!`);
-        
+
         // Determine next step based on requirements
         if (requiresNewVerification) {
           setCurrentStep('verifyNewOtp');
@@ -173,15 +219,19 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       setIsLoading(false);
     }
   };
-
   const handleVerifyNewOtp = async () => {
     setIsLoading(true);
     setError('');
-    
+
     try {
       const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPValidate.dsXml;
-      
-      let xFilterMultiple = '<Type>NEW</Type>';
+
+      // Check for missing fields and collect errors
+      const errors: string[] = [];
+      const fieldErrors: Record<string, string> = {};
+      let shouldCallApi = true;
+
+      let xFilterMultiple = '';
       Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
         let fieldValue;
         if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
@@ -190,14 +240,35 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
             fieldValue = newOtp;
           } else if (key === 'Value') {
             fieldValue = newValue;
-          } else {
+          } else if (key === "Type") {
+            fieldValue = "NEW";
+          } else if (key === "Email" || key === "Mobile") {
+            fieldValue = newValue;
+          }
+          else {
             fieldValue = formValues[formKey] || masterValues[formKey];
           }
         } else {
           fieldValue = placeholder;
         }
-        xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+
+        // Check if field value is missing
+        if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+          fieldErrors[key] = `Please fill the required field: ${key}`;
+          shouldCallApi = false;
+          errors.push(key);
+        } else {
+          xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+        }
       });
+
+      // If there are missing fields, set errors and show toast
+      if (errors.length > 0) {
+        // setFieldErrors(fieldErrors);
+        toast.error(`Please fill the required fields: ${errors.join(', ')}`);
+        setIsLoading(false);
+        return;
+      }
 
       const jUi = Object.entries(J_Ui).map(([key, val]) => `"${key}":"${val}"`).join(',');
       const jApi = Object.entries(J_Api).map(([key, val]) => `"${key}":"${val}"`).join(',');
@@ -208,14 +279,14 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         <J_Api>${jApi}</J_Api>
         <X_Filter></X_Filter>
         <X_GFilter></X_GFilter>
-      </dsXml>`;
-
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+      </dsXml>`; const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
         headers: {
           'Content-Type': 'application/xml',
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
-      });      const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      });
+
+      const responseData = response.data?.data?.rs0?.[0]?.Column1;
       if (responseData?.includes("<Flag>S</Flag>")) {
         const message = extractMessageFromResponse(responseData);
         toast.success(message || `New ${type} OTP verified successfully!`);
@@ -244,7 +315,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         <h2 className="text-xl font-bold mb-4">
           {type === 'email' ? 'Email' : 'Mobile'} Verification
         </h2>
-        
+
         {/* Stepper indicator - dynamic based on requirements */}
         <div className="flex justify-between mb-6">
           {/* Step 1: Enter New Value */}
@@ -254,7 +325,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
             </div>
             <span className="text-xs mt-1">Enter New</span>
           </div>
-          
+
           {/* Step 2: Verify Old OTP (only shown if required) */}
           {requiresOldVerification && (
             <div className={`flex flex-col items-center ${currentStep === 'verifyOldOtp' ? 'text-blue-500' : currentStep === 'verifyNewOtp' ? 'text-green-500' : 'text-gray-500'}`}>
@@ -264,7 +335,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
               <span className="text-xs mt-1">Verify Old OTP</span>
             </div>
           )}
-          
+
           {/* Step 3: Verify New OTP (only shown if required) */}
           {requiresNewVerification && (
             <div className={`flex flex-col items-center ${currentStep === 'verifyNewOtp' ? 'text-green-500' : 'text-gray-500'}`}>
@@ -292,7 +363,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 />
               </div>
             )}
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">
                 New {type === 'email' ? 'Email' : 'Mobile'}
@@ -305,9 +376,9 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 placeholder={`Enter new ${type}`}
               />
             </div>
-            
+
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            
+
             <div className="flex justify-end space-x-2">
               <button
                 onClick={onClose}
@@ -332,9 +403,9 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           <div>
             <div className="mb-4">
               <p className="text-sm mb-4">
-                We've sent an OTP to your old {type}: <span className="font-semibold">{formValues[field.wKey] ||  oldValue}</span>
+                We've sent an OTP to your old {type}: <span className="font-semibold">{formValues[field.wKey] || oldValue}</span>
               </p>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">
                   Enter OTP from old {type}
@@ -348,9 +419,9 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 />
               </div>
             </div>
-            
+
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            
+
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setCurrentStep('enterNewValue')}
@@ -377,7 +448,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
               <p className="text-sm mb-4">
                 We've sent an OTP to your new {type}: <span className="font-semibold">{newValue}</span>
               </p>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">
                   Enter OTP from new {type}
@@ -391,9 +462,9 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 />
               </div>
             </div>
-            
+
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            
+
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setCurrentStep(requiresOldVerification ? 'verifyOldOtp' : 'enterNewValue')}

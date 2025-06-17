@@ -806,6 +806,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             setShowEmailOtpModal(false);
                         }}
                         field={currentOtpField}
+                        setFieldErrors={setFieldErrors}
                         formValues={formValues}
                         masterValues={masterValues}
                         type="email"
@@ -821,6 +822,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             setShowMobileOtpModal(false);
                         }}
                         field={currentOtpField}
+                        setFieldErrors={setFieldErrors}
                         formValues={formValues}
                         masterValues={masterValues}
                         type="mobile"
