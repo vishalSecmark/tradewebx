@@ -364,7 +364,6 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 }
             }
             console.log('ThirdPartyAPI response:', response?.data);
-            toast.success('ThirdPartyAPI called! Check console for response.');
         } catch (error) {
             console.error('ThirdPartyAPI error:', error);
             toast.error('ThirdPartyAPI error!');

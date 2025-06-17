@@ -1,5 +1,5 @@
 // components/OtpVerificationModal.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
@@ -25,37 +25,40 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   type,
   oldValue
 }) => {
-  // Stepper states
-  const [currentStep, setCurrentStep] = useState<'old' | 'new' | 'complete'>('old');
+  const [currentStep, setCurrentStep] = useState<'enterNewValue' | 'verifyOldOtp' | 'verifyNewOtp'>('enterNewValue');
   const [newValue, setNewValue] = useState('');
   const [oldOtp, setOldOtp] = useState('');
   const [newOtp, setNewOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [otpSent, setOtpSent] = useState({
-    old: false,
-    new: false
-  });
+  const [otpSent, setOtpSent] = useState(false);
+  const [requiresOldVerification, setRequiresOldVerification] = useState(false);
+  const [requiresNewVerification, setRequiresNewVerification] = useState(false);
 
-  // Check if we need to verify new value based on OTPRequire field
-  const needsNewVerification = field.OTPRequire?.includes('NEW');
-  const needsOldVerification = field.OTPRequire?.includes('OLD');
+  // Parse OTPRequire field on component mount
+  useEffect(() => {
+    if (field.OTPRequire) {
+      const otpRequirements = field.OTPRequire.split('|');
+      setRequiresOldVerification(otpRequirements.includes('OLD'));
+      setRequiresNewVerification(otpRequirements.includes('NEW'));
+    }
+  }, [field.OTPRequire]);
 
-  const handleSendOtp = async (value: string, isOld: boolean) => {
+  const handleSendOtp = async () => {
     setIsLoading(true);
     setError('');
     
     try {
       const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPSend.dsXml;
       
-      let xFilterMultiple = '';
+      let xFilterMultiple = `<OTPRequire>${field.OTPRequire}</OTPRequire>`;
       Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
         let fieldValue;
         if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
           const formKey = placeholder.slice(2, -2);
           fieldValue = formValues[formKey] || masterValues[formKey];
         } else {
-          fieldValue = value;
+          fieldValue = newValue;
         }
         xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
       });
@@ -67,6 +70,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         <J_Ui>${jUi}</J_Ui>
         <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
         <J_Api>${jApi}</J_Api>
+        <X_Filter></X_Filter>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
@@ -77,8 +81,15 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       });
 
       if (response.data?.data?.rs0?.[0]?.Column1?.includes("<Flag>S</Flag>")) {
-        toast.success(`OTP sent to ${type} ${isOld ? oldValue : newValue}`);
-        setOtpSent(prev => ({ ...prev, [isOld ? 'old' : 'new']: true }));
+        toast.success(`OTP sent to ${requiresOldVerification ? `old ${type} ${oldValue}` : ''} ${requiresOldVerification && requiresNewVerification ? 'and ' : ''} ${requiresNewVerification ? `new ${type} ${newValue}` : ''}`);
+        setOtpSent(true);
+        
+        // Determine next step based on requirements
+        if (requiresOldVerification) {
+          setCurrentStep('verifyOldOtp');
+        } else if (requiresNewVerification) {
+          setCurrentStep('verifyNewOtp');
+        }
       } else {
         setError(`Failed to send OTP. Please try again.`);
       }
@@ -90,22 +101,24 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     }
   };
 
-  const handleVerifyOtp = async (otpValue: string, isOld: boolean) => {
+  const handleVerifyOldOtp = async () => {
     setIsLoading(true);
     setError('');
     
     try {
       const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPValidate.dsXml;
       
-      let xFilterMultiple = '';
+      let xFilterMultiple = '<Type>OLD</Type>';
       Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
         let fieldValue;
         if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
           const formKey = placeholder.slice(2, -2);
           if (key === 'OTP') {
-            fieldValue = otpValue;
+            fieldValue = oldOtp;
+          } else if (key === 'Value') {
+            fieldValue = oldValue;
           } else {
-            fieldValue = isOld ? oldValue : newValue;
+            fieldValue = formValues[formKey] || masterValues[formKey];
           }
         } else {
           fieldValue = placeholder;
@@ -120,6 +133,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         <J_Ui>${jUi}</J_Ui>
         <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
         <J_Api>${jApi}</J_Api>
+        <X_Filter></X_Filter>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
@@ -131,12 +145,13 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
       const responseData = response.data?.data?.rs0?.[0]?.Column1;
       if (responseData?.includes("<Flag>S</Flag>")) {
-        toast.success(`${isOld ? 'Old' : 'New'} ${type} verified successfully!`);
+        toast.success(`Old ${type} OTP verified successfully!`);
         
-        if (isOld && needsNewVerification) {
-          setCurrentStep('new');
+        // Determine next step based on requirements
+        if (requiresNewVerification) {
+          setCurrentStep('verifyNewOtp');
         } else {
-          onSuccess(newValue || oldValue);
+          onSuccess(newValue);
           onClose();
         }
       } else {
@@ -151,12 +166,63 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     }
   };
 
-  const handleNextStep = () => {
-    if (currentStep === 'old' && needsNewVerification) {
-      setCurrentStep('new');
-    } else {
-      onSuccess(newValue || oldValue);
-      onClose();
+  const handleVerifyNewOtp = async () => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPValidate.dsXml;
+      
+      let xFilterMultiple = '<Type>NEW</Type>';
+      Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
+        let fieldValue;
+        if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
+          const formKey = placeholder.slice(2, -2);
+          if (key === 'OTP') {
+            fieldValue = newOtp;
+          } else if (key === 'Value') {
+            fieldValue = newValue;
+          } else {
+            fieldValue = formValues[formKey] || masterValues[formKey];
+          }
+        } else {
+          fieldValue = placeholder;
+        }
+        xFilterMultiple += `<${key}>${fieldValue}</${key}>`;
+      });
+
+      const jUi = Object.entries(J_Ui).map(([key, val]) => `"${key}":"${val}"`).join(',');
+      const jApi = Object.entries(J_Api).map(([key, val]) => `"${key}":"${val}"`).join(',');
+
+      const xmlData = `<dsXml>
+        <J_Ui>${jUi}</J_Ui>
+        <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+        <J_Api>${jApi}</J_Api>
+        <X_Filter></X_Filter>
+        <X_GFilter></X_GFilter>
+      </dsXml>`;
+
+      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+        headers: {
+          'Content-Type': 'application/xml',
+          'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+        }
+      });
+
+      const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      if (responseData?.includes("<Flag>S</Flag>")) {
+        toast.success(`New ${type} OTP verified successfully!`);
+        onSuccess(newValue);
+        onClose();
+      } else {
+        const errorMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
+        setError(errorMatch ? errorMatch[1] : 'Invalid OTP. Please try again.');
+      }
+    } catch (err) {
+      console.error('OTP verification error:', err);
+      setError('Failed to verify OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -169,96 +235,54 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           {type === 'email' ? 'Email' : 'Mobile'} Verification
         </h2>
         
-        {/* Stepper indicator */}
+        {/* Stepper indicator - dynamic based on requirements */}
         <div className="flex justify-between mb-6">
-          <div className={`flex flex-col items-center ${currentStep === 'old' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'old' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+          {/* Step 1: Enter New Value */}
+          <div className={`flex flex-col items-center ${currentStep === 'enterNewValue' ? 'text-blue-500' : 'text-gray-500'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'enterNewValue' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
               1
             </div>
-            <span className="text-xs mt-1">Verify Old</span>
+            <span className="text-xs mt-1">Enter New</span>
           </div>
           
-          {needsNewVerification && (
-            <div className={`flex flex-col items-center ${currentStep === 'new' ? 'text-blue-500' : 'text-gray-500'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'new' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+          {/* Step 2: Verify Old OTP (only shown if required) */}
+          {requiresOldVerification && (
+            <div className={`flex flex-col items-center ${currentStep === 'verifyOldOtp' ? 'text-blue-500' : currentStep === 'verifyNewOtp' ? 'text-green-500' : 'text-gray-500'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'verifyOldOtp' ? 'bg-blue-500 text-white' : currentStep === 'verifyNewOtp' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
                 2
               </div>
-              <span className="text-xs mt-1">Verify New</span>
+              <span className="text-xs mt-1">Verify Old OTP</span>
             </div>
           )}
           
-          <div className={`flex flex-col items-center ${currentStep === 'complete' ? 'text-blue-500' : 'text-gray-500'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'complete' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-              {needsNewVerification ? 3 : 2}
+          {/* Step 3: Verify New OTP (only shown if required) */}
+          {requiresNewVerification && (
+            <div className={`flex flex-col items-center ${currentStep === 'verifyNewOtp' ? 'text-green-500' : 'text-gray-500'}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'verifyNewOtp' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}>
+                {requiresOldVerification ? 3 : 2}
+              </div>
+              <span className="text-xs mt-1">Verify New OTP</span>
             </div>
-            <span className="text-xs mt-1">Complete</span>
-          </div>
+          )}
         </div>
 
-        {/* Step 1: Old Value Verification */}
-        {currentStep === 'old' && needsOldVerification && (
+        {/* Step 1: Enter New Value */}
+        {currentStep === 'enterNewValue' && (
           <div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">
-                Current {type === 'email' ? 'Email' : 'Mobile'}
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border rounded-md"
-                value={oldValue}
-                readOnly
-              />
-            </div>
-            
-            {otpSent.old ? (
+            {requiresOldVerification && (
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">
-                  Enter OTP sent to {oldValue}
+                  Current {type === 'email' ? 'Email' : 'Mobile'}
                 </label>
                 <input
                   type="text"
                   className="w-full px-3 py-2 border rounded-md"
-                  value={oldOtp}
-                  onChange={(e) => setOldOtp(e.target.value)}
-                  placeholder="Enter OTP"
+                  value={oldValue}
+                  readOnly
                 />
               </div>
-            ) : (
-              <button
-                onClick={() => handleSendOtp(oldValue, true)}
-                className="w-full mb-4 px-4 py-2 bg-blue-500 text-white rounded-md"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Sending...' : 'Send OTP to Old'}
-              </button>
             )}
             
-            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            
-            <div className="flex justify-end space-x-2">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 border rounded-md"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              {otpSent.old && (
-                <button
-                  onClick={() => handleVerifyOtp(oldOtp, true)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md"
-                  disabled={isLoading || !oldOtp}
-                >
-                  {isLoading ? 'Verifying...' : 'Verify OTP'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: New Value Verification */}
-        {currentStep === 'new' && needsNewVerification && (
-          <div>
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">
                 New {type === 'email' ? 'Email' : 'Mobile'}
@@ -272,10 +296,81 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
               />
             </div>
             
-            {otpSent.new ? (
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border rounded-md"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendOtp}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md"
+                disabled={isLoading || !newValue}
+              >
+                {isLoading ? 'Sending OTPs...' : 'Send OTPs'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Verify Old OTP */}
+        {currentStep === 'verifyOldOtp' && (
+          <div>
+            <div className="mb-4">
+              <p className="text-sm mb-4">
+                We've sent an OTP to your old {type}: <span className="font-semibold">{oldValue}</span>
+              </p>
+              
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">
-                  Enter OTP sent to {newValue}
+                  Enter OTP from old {type}
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={oldOtp}
+                  onChange={(e) => setOldOtp(e.target.value)}
+                  placeholder="Enter OTP"
+                />
+              </div>
+            </div>
+            
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+            
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setCurrentStep('enterNewValue')}
+                className="px-4 py-2 border rounded-md"
+                disabled={isLoading}
+              >
+                Back
+              </button>
+              <button
+                onClick={handleVerifyOldOtp}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md"
+                disabled={isLoading || !oldOtp}
+              >
+                {isLoading ? 'Verifying...' : 'Verify OTP'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Verify New OTP */}
+        {currentStep === 'verifyNewOtp' && (
+          <div>
+            <div className="mb-4">
+              <p className="text-sm mb-4">
+                We've sent an OTP to your new {type}: <span className="font-semibold">{newValue}</span>
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-1">
+                  Enter OTP from new {type}
                 </label>
                 <input
                   type="text"
@@ -285,49 +380,24 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                   placeholder="Enter OTP"
                 />
               </div>
-            ) : (
-              <button
-                onClick={() => handleSendOtp(newValue, false)}
-                className="w-full mb-4 px-4 py-2 bg-blue-500 text-white rounded-md"
-                disabled={isLoading || !newValue}
-              >
-                {isLoading ? 'Sending...' : 'Send OTP to New'}
-              </button>
-            )}
+            </div>
             
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             
             <div className="flex justify-end space-x-2">
               <button
-                onClick={() => setCurrentStep('old')}
+                onClick={() => setCurrentStep(requiresOldVerification ? 'verifyOldOtp' : 'enterNewValue')}
                 className="px-4 py-2 border rounded-md"
                 disabled={isLoading}
               >
                 Back
               </button>
-              {otpSent.new && (
-                <button
-                  onClick={() => handleVerifyOtp(newOtp, false)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md"
-                  disabled={isLoading || !newOtp}
-                >
-                  {isLoading ? 'Verifying...' : 'Verify OTP'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Completion Step (if needed) */}
-        {currentStep === 'complete' && (
-          <div>
-            <p className="mb-4">Verification completed successfully!</p>
-            <div className="flex justify-end">
               <button
-                onClick={handleNextStep}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md"
+                onClick={handleVerifyNewOtp}
+                className="px-4 py-2 bg-green-500 text-white rounded-md"
+                disabled={isLoading || !newOtp}
               >
-                Done
+                {isLoading ? 'Verifying...' : 'Complete Verification'}
               </button>
             </div>
           </div>
