@@ -843,6 +843,30 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return Array.from(allColumns);
     };
 
+    // Create column width mapping from pageData settings
+    const getColumnWidthMap = (): Record<string, number> => {
+        const columnWidthMap: Record<string, number> = {};
+        const settings = pageData?.[0]?.Entry?.settings;
+
+        if (settings?.columnWidth && Array.isArray(settings.columnWidth)) {
+            settings.columnWidth.forEach((widthConfig: { key: string; width: number }) => {
+                if (widthConfig.key && widthConfig.width) {
+                    // Handle comma-separated column names
+                    const columnNames = widthConfig.key.split(',').map((name: string) => name.trim());
+                    columnNames.forEach((columnName: string) => {
+                        if (columnName) {
+                            columnWidthMap[columnName] = widthConfig.width;
+                        }
+                    });
+                }
+            });
+        }
+
+        return columnWidthMap;
+    };
+
+    const columnWidthMap = getColumnWidthMap();
+
 
     const handleFormSubmitWhenMasterOnly = () => {
         const masterErrors = validateForm(masterFormData, masterFormValues);
@@ -954,13 +978,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 <thead>
                                                     <tr>
                                                         {/* Static headers */}
-                                                        <th className="px-4 py-2 border-b">Sr. No</th>
-                                                        <th className="px-4 py-2 border-b">Actions</th>
+                                                        <th className="px-4 py-2 border-b" style={{ width: columnWidthMap['Sr. No'] || 'auto', minWidth: columnWidthMap['Sr. No'] ? '50px' : '80px' }}>Sr. No</th>
+                                                        <th className="px-4 py-2 border-b" style={{ width: columnWidthMap['Actions'] || 'auto', minWidth: columnWidthMap['Actions'] ? '50px' : '120px' }}>Actions</th>
 
                                                         {/* Dynamic headers - get all unique keys from the first entry */}
                                                         {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
                                                             key !== "SerialNo" && // Exclude SerialNo as it has its own column
-                                                            <th key={key} className="px-4 py-2 border-b capitalize">
+                                                            <th
+                                                                key={key}
+                                                                className="px-4 py-2 border-b capitalize"
+                                                                style={{
+                                                                    width: columnWidthMap[key] || 'auto',
+                                                                    minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
+                                                                    maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px'
+                                                                }}
+                                                            >
                                                                 {key}
                                                             </th>
                                                         ))}
@@ -981,10 +1013,24 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         return (
                                                             <tr key={index}>
                                                                 {/* Serial number */}
-                                                                <td className="px-4 py-2 border-b text-center">{index + 1}</td>
+                                                                <td
+                                                                    className="px-4 py-2 border-b text-center"
+                                                                    style={{
+                                                                        width: columnWidthMap['Sr. No'] || 'auto',
+                                                                        minWidth: columnWidthMap['Sr. No'] ? '50px' : '80px'
+                                                                    }}
+                                                                >
+                                                                    {index + 1}
+                                                                </td>
 
                                                                 {/* Actions */}
-                                                                <td className="flex gap-1 px-4 py-2 border-b text-center">
+                                                                <td
+                                                                    className="flex gap-1 px-4 py-2 border-b text-center"
+                                                                    style={{
+                                                                        width: columnWidthMap['Actions'] || 'auto',
+                                                                        minWidth: columnWidthMap['Actions'] ? '50px' : '120px'
+                                                                    }}
+                                                                >
                                                                     {viewMode && (
                                                                         <button
                                                                             className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
@@ -1027,7 +1073,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                                                 {/* Dynamic values */}
                                                                 {dynamicColumns.map((key) => (
-                                                                    <td key={key} className="px-4 py-2 border-b text-center">
+                                                                    <td
+                                                                        key={key}
+                                                                        className="px-4 py-2 border-b text-center"
+                                                                        style={{
+                                                                            width: columnWidthMap[key] || 'auto',
+                                                                            minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
+                                                                            maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px'
+                                                                        }}
+                                                                    >
                                                                         {safeEntry[key] == null || safeEntry[key] === ""
                                                                             ? "-"
                                                                             : String(safeEntry[key])
