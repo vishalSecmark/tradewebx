@@ -75,6 +75,16 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         message: '',
         type: 'E'
     });
+    const [viewModal, setViewModal] = useState<{
+        isOpen: boolean;
+        rowData: RowData | null;
+        rowIndex: number | null;
+    }>({
+        isOpen: false,
+        rowData: null,
+        rowIndex: null
+    });
+    const [viewModalData, setViewModalData] = useState<RowData>({});
     const editableColumns = settings.EditableColumn || [];
 
     const showValidationMessage = (message: string, type: 'M' | 'S' | 'E' | 'D' = 'E') => {
@@ -87,6 +97,34 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     const handleValidationClose = () => {
         setValidationModal(prev => ({ ...prev, isOpen: false }));
+    };
+
+    const handleViewRow = (rowData: RowData, rowIndex: number) => {
+        setViewModal({
+            isOpen: true,
+            rowData,
+            rowIndex
+        });
+        setViewModalData({ ...rowData });
+    };
+
+    const handleViewModalClose = () => {
+        setViewModal({
+            isOpen: false,
+            rowData: null,
+            rowIndex: null
+        });
+        setViewModalData({});
+    };
+
+    const handleViewModalSave = () => {
+        if (viewModal.rowIndex !== null) {
+            // Update the main table data
+            const updated = [...localData];
+            updated[viewModal.rowIndex] = { ...viewModalData };
+            setLocalData(updated);
+            handleViewModalClose();
+        }
     };
 
     const isNumeric = (value: any): boolean => {
@@ -119,10 +157,16 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         });
     }, [editableColumns]);
 
-    const handleInputChange = (rowIndex: number, key: string, value: any) => {
-        const updated = [...localData];
-        updated[rowIndex] = { ...updated[rowIndex], [key]: value };
-        setLocalData(updated);
+    const handleInputChange = (rowIndex: number | string, key: string, value: any) => {
+        let updated: RowData[];
+
+        if (rowIndex === "viewModal") {
+            setViewModalData(prev => ({ ...prev, [key]: value }));
+        } else {
+            updated = [...localData];
+            updated[rowIndex as number] = { ...updated[rowIndex as number], [key]: value };
+            setLocalData(updated);
+        }
 
         // Check if any dropdown depends on this field
         const dependentColumns = editableColumns.filter(column =>
@@ -135,27 +179,41 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         // Update dependent dropdowns
         if (dependentColumns.length > 0) {
             dependentColumns.forEach(column => {
-                // For each row, fetch the dependent options
-                updated.forEach((_, idx) => {
+                if (rowIndex === "viewModal") {
+                    // Handle view modal dependent dropdowns
                     if (Array.isArray(column.dependsOn!.field)) {
                         const allFieldValues = column.dependsOn!.field.reduce((acc, field) => {
-                            acc[field] = updated[idx][field];
+                            acc[field] = field === key ? value : viewModalData[field];
                             return acc;
                         }, {} as Record<string, any>);
 
-                        fetchDependentOptions(column, allFieldValues, idx);
+                        fetchDependentOptions(column, allFieldValues, "viewModal");
                     } else {
-                        fetchDependentOptions(column, updated[idx][key], idx);
+                        fetchDependentOptions(column, value, "viewModal");
                     }
-                });
+                } else {
+                    // Handle table rows
+                    updated!.forEach((_, idx) => {
+                        if (Array.isArray(column.dependsOn!.field)) {
+                            const allFieldValues = column.dependsOn!.field.reduce((acc, field) => {
+                                acc[field] = updated![idx][field];
+                                return acc;
+                            }, {} as Record<string, any>);
+
+                            fetchDependentOptions(column, allFieldValues, idx);
+                        } else {
+                            fetchDependentOptions(column, updated![idx][key], idx);
+                        }
+                    });
+                }
             });
         }
     };
 
-    const handleInputBlur = async (rowIndex: number, key: string, previousValue: any) => {
+    const handleInputBlur = async (rowIndex: number | string, key: string, previousValue: any) => {
         const field = editableColumns.find(col => col.wKey === key);
         if (!field?.ValidationAPI?.dsXml) return;
-        const rowValues = localData[rowIndex] || {};
+        const rowValues = rowIndex === "viewModal" ? viewModalData : (localData[rowIndex as number] || {});
         const { J_Ui, Sql, X_Filter, X_Filter_Multiple, J_Api } = field.ValidationAPI.dsXml;
         let xFilter = '';
         let xFilterMultiple = '';
@@ -232,14 +290,21 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                 if (flag !== 'S') {
                     showValidationMessage(message);
-                    setLocalData(prev => {
-                        const updated = [...prev];
-                        updated[rowIndex] = {
-                            ...updated[rowIndex],
+                    if (rowIndex === "viewModal") {
+                        setViewModalData(prev => ({
+                            ...prev,
                             [key]: previousValue
-                        };
-                        return updated;
-                    });
+                        }));
+                    } else {
+                        setLocalData(prev => {
+                            const updated = [...prev];
+                            updated[rowIndex as number] = {
+                                ...updated[rowIndex as number],
+                                [key]: previousValue
+                            };
+                            return updated;
+                        });
+                    }
                 } else {
                     // Validation successful - extract additional column values
                     // Find all XML tags except Flag and Message
@@ -259,14 +324,21 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                     // Update the row data with any additional column values returned
                     if (Object.keys(columnUpdates).length > 0) {
-                        setLocalData(prev => {
-                            const updated = [...prev];
-                            updated[rowIndex] = {
-                                ...updated[rowIndex],
+                        if (rowIndex === "viewModal") {
+                            setViewModalData(prev => ({
+                                ...prev,
                                 ...columnUpdates
-                            };
-                            return updated;
-                        });
+                            }));
+                        } else {
+                            setLocalData(prev => {
+                                const updated = [...prev];
+                                updated[rowIndex as number] = {
+                                    ...updated[rowIndex as number],
+                                    ...columnUpdates
+                                };
+                                return updated;
+                            });
+                        }
                     }
                 }
             }
@@ -449,7 +521,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-    const fetchDependentOptions = async (column: EditableColumn, parentValue: string | Record<string, any>, rowIndex: number) => {
+    const fetchDependentOptions = async (column: EditableColumn, parentValue: string | Record<string, any>, rowIndex: number | string) => {
         try {
             if (!column.dependsOn) return [];
 
@@ -591,6 +663,17 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 <table className="min-w-full table-auto border text-sm">
                                     <thead>
                                         <tr>
+                                            <th
+                                                className="border px-2 py-2 text-left"
+                                                style={{
+                                                    backgroundColor: colors.primary,
+                                                    color: colors.text,
+                                                    fontFamily: fonts.content,
+                                                    minWidth: '100px'
+                                                }}
+                                            >
+                                                Actions
+                                            </th>
                                             {Object.keys(localData[0]).map((key) => (
                                                 <th
                                                     key={key}
@@ -619,6 +702,17 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     fontFamily: fonts.content,
                                                 }}
                                             >
+                                                <td className="border px-2 py-2">
+                                                    <button
+                                                        onClick={() => handleViewRow(row, rowIndex)}
+                                                        className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
+                                                        style={{
+                                                            fontFamily: fonts.content,
+                                                        }}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </td>
                                                 {Object.entries(row).map(([key, value]) => {
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
@@ -775,6 +869,156 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                     } text-white px-4 py-2 rounded-md`}
                             >
                                 {validationModal.type === 'M' ? 'Yes' : 'OK'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View Modal */}
+            {viewModal.isOpen && viewModal.rowData && (
+                <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                    <div className="bg-white rounded-lg p-6 w-full max-w-[600px] shadow-xl max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-xl font-semibold" style={{ fontFamily: fonts.content, color: colors.text }}>
+                                View Record {viewModal.rowIndex !== null ? `#${viewModal.rowIndex + 1}` : ''}
+                            </h4>
+                            <button
+                                onClick={handleViewModalClose}
+                                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {Object.entries(viewModalData).map(([key, value]) => {
+                                const editable = getEditableColumn(key);
+                                return (
+                                    <div key={key} className="border-b pb-3">
+                                        <label
+                                            className="block text-sm font-medium text-gray-700 mb-1"
+                                            style={{ fontFamily: fonts.content }}
+                                        >
+                                            {key}
+                                        </label>
+                                        {editable ? (
+                                            editable.type === "WTextBox" ? (
+                                                <input
+                                                    type="text"
+                                                    value={value ?? ""}
+                                                    onChange={(e) => handleInputChange("viewModal", key, e.target.value)}
+                                                    onFocus={() =>
+                                                        setPreviousValues(prev => ({
+                                                            ...prev,
+                                                            [`viewModal_${key}`]: value
+                                                        }))
+                                                    }
+                                                    onBlur={() => {
+                                                        handleInputBlur("viewModal", key, previousValues[`viewModal_${key}`]);
+                                                        setPreviousValues(prev => {
+                                                            const updated = { ...prev };
+                                                            delete updated[`viewModal_${key}`];
+                                                            return updated;
+                                                        });
+                                                    }}
+                                                    placeholder={editable.wPlaceholder}
+                                                    className="w-full border border-gray-300 rounded px-3 py-2"
+                                                    style={{
+                                                        fontFamily: fonts.content,
+                                                        color: colors.text,
+                                                        backgroundColor: colors.textInputBackground,
+                                                        borderColor: colors.textInputBorder,
+                                                    }}
+                                                />
+                                            ) : editable.type === "WDropDownBox" ? (
+                                                <CustomDropdown
+                                                    item={{ ...editable, isMultiple: false } as any}
+                                                    value={value ?? ""}
+                                                    onChange={(newValue) => handleInputChange("viewModal", key, newValue)}
+                                                    options={
+                                                        editable.options
+                                                            ? editable.options.map(opt => ({
+                                                                label: opt.label,
+                                                                value: opt.Value,
+                                                            }))
+                                                            : editable.dependsOn
+                                                                ? dropdownOptions[`${key}_viewModal`] || []
+                                                                : dropdownOptions[key] || []
+                                                    }
+                                                    isLoading={
+                                                        editable.dependsOn
+                                                            ? loadingDropdowns[`${key}_viewModal`] || false
+                                                            : loadingDropdowns[key] || false
+                                                    }
+                                                    colors={colors}
+                                                    formData={[]}
+                                                    handleFormChange={() => { }}
+                                                    formValues={viewModalData}
+                                                />
+                                            ) : editable.type === "WDateBox" ? (
+                                                <div
+                                                    style={{
+                                                        fontFamily: fonts.content,
+                                                        color: colors.text,
+                                                        backgroundColor: colors.textInputBackground,
+                                                        borderColor: colors.textInputBorder,
+                                                    }}
+                                                >
+                                                    <DatePicker
+                                                        selected={value ? new Date(value) : null}
+                                                        onChange={(date: Date | null) =>
+                                                            handleInputChange("viewModal", key, date)
+                                                        }
+                                                        dateFormat="dd/MM/yyyy"
+                                                        className="w-full border border-gray-300 rounded px-3 py-2"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="w-full p-3 bg-gray-50 border rounded-md"
+                                                    style={{
+                                                        fontFamily: fonts.content,
+                                                        color: colors.text,
+                                                        backgroundColor: colors.evenCardBackground,
+                                                        borderColor: colors.textInputBorder,
+                                                    }}
+                                                >
+                                                    {value != null && value !== '' ? String(value) : '-'}
+                                                </div>
+                                            )
+                                        ) : (
+                                            <div
+                                                className="w-full p-3 bg-gray-50 border rounded-md"
+                                                style={{
+                                                    fontFamily: fonts.content,
+                                                    color: colors.text,
+                                                    backgroundColor: colors.evenCardBackground,
+                                                    borderColor: colors.textInputBorder,
+                                                }}
+                                            >
+                                                {value != null && value !== '' ? String(value) : '-'}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-4">
+                            <button
+                                onClick={handleViewModalSave}
+                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                style={{ fontFamily: fonts.content }}
+                            >
+                                Save Changes
+                            </button>
+                            <button
+                                onClick={handleViewModalClose}
+                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                style={{ fontFamily: fonts.content }}
+                            >
+                                Close
                             </button>
                         </div>
                     </div>
