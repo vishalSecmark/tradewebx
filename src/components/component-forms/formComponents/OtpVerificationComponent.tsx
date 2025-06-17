@@ -34,7 +34,6 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [requiresOldVerification, setRequiresOldVerification] = useState(false);
   const [requiresNewVerification, setRequiresNewVerification] = useState(false);
-
   // Parse OTPRequire field on component mount
   useEffect(() => {
     if (field.OTPRequire) {
@@ -43,6 +42,12 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       setRequiresNewVerification(otpRequirements.includes('NEW'));
     }
   }, [field.OTPRequire]);
+
+  // Helper function to extract message from XML response
+  const extractMessageFromResponse = (responseData: string): string => {
+    const messageMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
+    return messageMatch ? messageMatch[1] : '';
+  };
 
   const handleSendOtp = async () => {
     setIsLoading(true);
@@ -56,7 +61,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         let fieldValue;
         if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
           const formKey = placeholder.slice(2, -2);
-          fieldValue = formValues[formKey] || masterValues[formKey];
+          fieldValue = newValue
         } else {
           fieldValue = newValue;
         }
@@ -79,8 +84,8 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
       });
-
-      if (response.data?.data?.rs0?.[0]?.Column1?.includes("<Flag>S</Flag>")) {
+      const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      if (responseData?.includes("<Flag>S</Flag>")) {
         toast.success(`OTP sent to ${requiresOldVerification ? `old ${type} ${oldValue}` : ''} ${requiresOldVerification && requiresNewVerification ? 'and ' : ''} ${requiresNewVerification ? `new ${type} ${newValue}` : ''}`);
         setOtpSent(true);
         
@@ -91,7 +96,8 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           setCurrentStep('verifyNewOtp');
         }
       } else {
-        setError(`Failed to send OTP. Please try again.`);
+        const errorMessage = extractMessageFromResponse(responseData);
+        setError(errorMessage || `Failed to send OTP. Please try again.`);
       }
     } catch (err) {
       console.error('OTP send error:', err);
@@ -141,11 +147,10 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           'Content-Type': 'application/xml',
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
-      });
-
-      const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      });      const responseData = response.data?.data?.rs0?.[0]?.Column1;
       if (responseData?.includes("<Flag>S</Flag>")) {
-        toast.success(`Old ${type} OTP verified successfully!`);
+        const message = extractMessageFromResponse(responseData);
+        toast.success(message || `Old ${type} OTP verified successfully!`);
         
         // Determine next step based on requirements
         if (requiresNewVerification) {
@@ -155,8 +160,11 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           onClose();
         }
       } else {
-        const errorMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
-        setError(errorMatch ? errorMatch[1] : 'Invalid OTP. Please try again.');
+        const errorMessage = extractMessageFromResponse(responseData);
+        setError(errorMessage || 'Invalid OTP. Please try again.');
+        if (errorMessage) {
+          toast.error(errorMessage);
+        }
       }
     } catch (err) {
       console.error('OTP verification error:', err);
@@ -207,16 +215,18 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           'Content-Type': 'application/xml',
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
-      });
-
-      const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      });      const responseData = response.data?.data?.rs0?.[0]?.Column1;
       if (responseData?.includes("<Flag>S</Flag>")) {
-        toast.success(`New ${type} OTP verified successfully!`);
+        const message = extractMessageFromResponse(responseData);
+        toast.success(message || `New ${type} OTP verified successfully!`);
         onSuccess(newValue);
         onClose();
       } else {
-        const errorMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
-        setError(errorMatch ? errorMatch[1] : 'Invalid OTP. Please try again.');
+        const errorMessage = extractMessageFromResponse(responseData);
+        setError(errorMessage || 'Invalid OTP. Please try again.');
+        if (errorMessage) {
+          toast.error(errorMessage);
+        }
       }
     } catch (err) {
       console.error('OTP verification error:', err);
@@ -277,7 +287,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 <input
                   type="text"
                   className="w-full px-3 py-2 border rounded-md"
-                  value={oldValue}
+                  value={formValues[field.wKey] || oldValue}
                   readOnly
                 />
               </div>
@@ -322,7 +332,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           <div>
             <div className="mb-4">
               <p className="text-sm mb-4">
-                We've sent an OTP to your old {type}: <span className="font-semibold">{oldValue}</span>
+                We've sent an OTP to your old {type}: <span className="font-semibold">{formValues[field.wKey] ||  oldValue}</span>
               </p>
               
               <div className="mb-4">
