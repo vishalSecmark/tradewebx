@@ -5,14 +5,20 @@ import { DataGrid } from 'react-data-grid';
 import { useTheme } from "@/context/ThemeContext";
 import { fetchEkycDropdownOptions } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
+import moment from 'moment';
+import { useAppSelector } from '@/redux/hooks';
+import { selectAllMenuItems } from '@/redux/features/menuSlice';
+import { findPageData } from '@/utils/helper';
+import axios from 'axios';
+import { BASE_URL, PATH_URL } from '@/utils/constants';
 
-const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
+const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddNominee, setOpenAddNominee] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [nomineeDropdownOptions, setNomineeDropdownOptions] = useState<Record<string, any[]>>({});
   const [nomineeLoadingDropdowns, setNomineeLoadingDropdowns] = useState<Record<string, boolean>>({});
-  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [validationModal, setValidationModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -21,6 +27,16 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
   }>({ isOpen: false, message: '', type: 'M' });
   const [isEditing, setIsEditing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [isMinor, setIsMinor] = useState(false);
+  const [showGuardianForm, setShowGuardianForm] = useState(false); 
+   const [guardianFormData, setGuardianFormData] = useState<any>({});
+  const [gurdianFileds, setGurdianFields] = useState<any>([]);
+  const [guardianDropdownOptions, setGuardianDropdownOptions] = useState<Record<string, any[]>>({});
+  const [guardianLoadingDropdowns, setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
+  const menuItems = useAppSelector(selectAllMenuItems);
+  const pageData: any = findPageData(menuItems, "rekyc");
+
+  console.log("current gurdian form data--->", guardianFormData);
 
   // Function to create a new empty nominee entry
   const createNewNomineeEntry = () => {
@@ -35,72 +51,121 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
     return {};
   };
 
-  console.log('Nominee current form data', currentFormData);
   const handleAddNomineeClick = () => {
     const newNomineeEntry = createNewNomineeEntry();
     setCurrentFormData(newNomineeEntry);
     setIsEditing(false);
     setEditIndex(null);
     setOpenAddNominee(true);
+    setShowGuardianForm(false);
+    setIsMinor(false);
   };
 
   const handleEditNomineeClick = (row: any, rowIndex: number) => {
     setCurrentFormData({ ...row });
+    setGuardianFormData(row.GuardianDetails);
     setIsEditing(true);
     setEditIndex(rowIndex);
     setOpenAddNominee(true);
+    setShowGuardianForm(!!row.GuardianDetails);
+    checkIfMinor(row.NomineeDOB);
   };
 
-  // Handler to add new nominee entry to the end of tableData
-  const handleAddNewNominee = () => {
-    setFieldData((prevState: any) => {
-      const prevTableData = prevState.nomineeTabData.tableData || [];
-      return {
-        ...prevState,
-        nomineeTabData: {
-          ...prevState.nomineeTabData,
-          tableData: [
-            ...prevTableData,
-            currentFormData
-          ]
-        }
-      };
+  // Check if nominee is minor based on DOB using moment.js
+  const checkIfMinor = (dob: string) => {
+    if (!dob) {
+      setIsMinor(false);
+      return false;
+    }
+    
+    const birthDate = moment(dob, 'YYYYMMDD');
+    if (!birthDate.isValid()) {
+      setIsMinor(false);
+      return false;
+    }
+    
+    const age = moment().diff(birthDate, 'years');
+    const minor = age < 18;
+    setIsMinor(minor);
+    return minor;
+  };
+
+  // Validate mandatory fields
+  const validateMandatoryFields = (formData: any) => {
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    formFields.forEach((field) => {
+      if (field.isMandatory === "true" && !formData[field.wKey]) {
+        errors[field.wKey] = `${field.label} is required`;
+        isValid = false;
+      }
     });
+
+    return { isValid, errors };
+  };
+
+  // Handler to add/update nominee entry
+  const handleSaveNominee = () => {
+    const { isValid, errors } = validateMandatoryFields(currentFormData);
+    setFieldErrors(errors);
+
+    if (!isValid) return;
+
+    const isMinorNominee = checkIfMinor(currentFormData.NomineeDOB);
+    
+    if (isMinorNominee && !showGuardianForm) {
+      return;
+    }
+
+    const nomineeData = {
+      ...currentFormData,
+      GuardianDetails: showGuardianForm ? guardianFormData : null
+    };
+
+    if (isEditing && editIndex !== null) {
+      setFieldData((prevState: any) => {
+        const prevTableData = [...(prevState.nomineeTabData.tableData || [])];
+        prevTableData[editIndex] = nomineeData;
+
+        return {
+          ...prevState,
+          nomineeTabData: {
+            ...prevState.nomineeTabData,
+            tableData: prevTableData
+          }
+        };
+      });
+    } else {
+      setFieldData((prevState: any) => {
+        const prevTableData = prevState.nomineeTabData.tableData || [];
+        return {
+          ...prevState,
+          nomineeTabData: {
+            ...prevState.nomineeTabData,
+            tableData: [
+              ...prevTableData,
+              nomineeData
+            ]
+          }        };
+      });
+    }
+    clearFormAndCloseModal();
+  };
+  const toggleGuardianForm = () => {
+    setShowGuardianForm(!showGuardianForm);
+  };
+
+  // Function to clear all form values and reset modal state
+  const clearFormAndCloseModal = () => {
+    setCurrentFormData({});
+    setGuardianFormData({});
+    setFieldErrors({});
+    setShowGuardianForm(false);
+    setIsMinor(false);
+    setIsEditing(false);
+    setEditIndex(null);
     setOpenAddNominee(false);
-  };
-
-  // Handler to update existing nominee entry
-  const handleUpdateNominee = () => {
-    if (editIndex === null) return;
-
-    setFieldData((prevState: any) => {
-      const prevTableData = [...(prevState.nomineeTabData.tableData || [])];
-      prevTableData[editIndex] = currentFormData;
-
-      return {
-        ...prevState,
-        nomineeTabData: {
-          ...prevState.nomineeTabData,
-          tableData: prevTableData
-        }
-      };
-    });
-    setOpenAddNominee(false);
-  };
-
-
-  const handleErrorChange = (updateFn: (prev: any) => any) => {
-    setFieldData((prevState: any) => {
-      const prevFieldErrors = prevState.nomineeTabData.fieldErrors || {};
-      const updatedErrors = updateFn(prevFieldErrors);
-      return {
-        ...prevState,
-        nomineeTabData: {
-          ...prevState.nomineeTabData,
-          fieldErrors: updatedErrors
-        }
-      };
-    });
   };
 
   const columns = [
@@ -111,7 +176,12 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
     { key: 'NomRelation', name: 'Relation', sortable: false },
     { key: 'NomPercentage', name: 'Percentage', sortable: false },
     { key: 'NomMobile', name: 'Mobile', sortable: false },
-    { key: 'NomineeDOB', name: 'Date of Birth', sortable: false },
+    { 
+      key: 'NomineeDOB', 
+      name: 'Date of Birth', 
+      sortable: false,
+      renderCell: ({ row }: any) => moment(row.NomineeDOB, 'YYYYMMDD').format('DD/MM/YYYY')
+    },
     { key: 'NomineePAN', name: 'PAN', sortable: false },
     { key: 'NomineeUID', name: 'UID', sortable: false },
     {
@@ -130,6 +200,72 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
     },
   ];
 
+    const fetchFormData = async () => {
+        if (!pageData?.[0]?.Entry) return;
+        try {
+            const entry = pageData[0].Entry;
+            const childEntry = entry.ChildEntry;
+            console.log("childEntry", childEntry);
+            const sql = Object.keys(childEntry?.sql || {}).length ? childEntry.sql : "";
+
+            // Construct J_Ui - handle 'Option' key specially
+            const jUi = Object.entries(childEntry.J_Ui)
+                .map(([key, value]) => {
+                    return `"${key}":"${value}"`;
+                })
+                .join(',');
+
+            // Construct J_Api
+            const jApi = Object.entries(childEntry.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            // Construct X_Filter with edit data if available
+            let xFilter = '';
+            Object.entries(childEntry.X_Filter).forEach(([key, value]) => {
+               if (key === 'NomSerial') {
+                 xFilter += `<${key}></${key}>`;
+               }else {
+                 xFilter += `<${key}>${value}</${key}>`;
+               }
+            });
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${sql}</Sql>
+                <X_Filter>${xFilter}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            let formData = response?.data?.data?.rs0[0].Data || [];
+            console.log("Fetched form data:", formData);
+            setGurdianFields(formData)
+            // Initialize form values with any preset values
+            const initialValues: Record<string, any> = {};
+            formData.forEach((field: any) => {
+                if (field.type === 'WDateBox' && field.wValue) {
+                    initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+                }else{
+                  initialValues[field.wKey] = '';
+                }
+
+            });
+           setGuardianFormData(initialValues);
+            console.log("initial vaues", initialValues);
+        } catch (error) {
+            console.error('Error fetching childEntry data:', error);
+        
+        } finally {
+            
+        }
+    };
+
   useEffect(() => {
     if (formFields && formFields.length > 0) {
       formFields.forEach((field) => {
@@ -138,7 +274,24 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
         }
       });
     }
-  }, []);
+  }, [formFields]);
+
+  // useEffect to fetch dropdown options for guardian fields
+  useEffect(() => {
+    if (gurdianFileds && gurdianFileds.length > 0) {
+      gurdianFileds.forEach((field: any) => {
+        if (field.wQuery && field.wKey) {
+          fetchEkycDropdownOptions(field, setGuardianDropdownOptions, setGuardianLoadingDropdowns);
+        }
+      });
+    }
+  }, [gurdianFileds]);
+
+  useEffect(()=>{
+    if (pageData?.[0]?.Entry){
+      fetchFormData()
+    }
+  },[pageData])
 
   return (
     <div className="w-full p-5 bg-white rounded-lg shadow-md">
@@ -162,12 +315,35 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
           fontFamily: fonts.content,
         }}
       />
+
       {openAddNominee && (
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <h4 className="text-xl font-semibold mb-4">
-              {isEditing ? 'Edit Nominee Details' : 'Add Nominee Details'}
-            </h4>
+            <div className="flex justify-between items-center gap-4 mt-2 mb-4">
+              <h4 className="text-xl font-semibold">
+                {isEditing ? 'Edit Nominee Details' : 'Add Nominee Details'}
+              </h4>              <div className="flex gap-4">
+                <button
+                  onClick={clearFormAndCloseModal}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveNominee}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                >
+                  {isEditing ? 'Update' : 'Save'}
+                </button>
+              </div>
+            </div>
+
+            {isMinor && !showGuardianForm && (
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                <p>Nominee is a minor. Please add guardian details.</p>
+              </div>
+            )}
+
             <CaseConfirmationModal
               isOpen={validationModal.isOpen}
               message={validationModal.message}
@@ -175,37 +351,54 @@ const Nominee = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
               onConfirm={() => validationModal.callback?.(true)}
               onCancel={() => validationModal.callback?.(false)}
             />
+
             <EkycEntryForm
               formData={formFields}
               formValues={currentFormData}
               masterValues={{}}
               setFormValues={(newValues) => {
-                // Directly update the local state only
                 setCurrentFormData(newValues);
               }}
               onDropdownChange={() => { }}
               dropdownOptions={nomineeDropdownOptions}
               loadingDropdowns={nomineeLoadingDropdowns}
               fieldErrors={fieldErrors}
-              setFieldErrors={handleErrorChange}
+              setFieldErrors={setFieldErrors}
               setFormData={() => { }}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
             />
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                onClick={() => setOpenAddNominee(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={isEditing ? handleUpdateNominee : handleAddNewNominee}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-              >
-                {isEditing ? 'Update' : 'Save'}
-              </button>
-            </div>
+
+            {isMinor && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold">Guardian Details</h4>
+                  <button
+                    onClick={toggleGuardianForm}
+                    className={`px-4 py-2 rounded-md ${showGuardianForm ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
+                  >
+                    {showGuardianForm ? 'Remove Guardian' : 'Add Guardian'}
+                  </button>
+                </div>                {showGuardianForm && (
+                  <div className="border-t pt-4">
+                    <EkycEntryForm
+                      formData={gurdianFileds}
+                      formValues={guardianFormData}
+                      masterValues={{}}
+                      setFormValues={setGuardianFormData}
+                      onDropdownChange={() => { }}
+                      dropdownOptions={guardianDropdownOptions}
+                      loadingDropdowns={guardianLoadingDropdowns}
+                      fieldErrors={{}}
+                      setFieldErrors={() => {}}
+                      setFormData={() => { }}
+                      setValidationModal={setValidationModal}
+                      setDropDownOptions={setGuardianDropdownOptions}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
