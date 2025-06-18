@@ -13,7 +13,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
 
-const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) => {
+const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddNominee, setOpenAddNominee] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
@@ -27,7 +27,7 @@ const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) =>
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
   const [isEditing, setIsEditing] = useState(false);
-  const [editIndex, setEditIndex] = useState<number | null>(null); 
+  const [editIndex, setEditIndex] = useState<number | null>(null);
   const [isMinor, setIsMinor] = useState(false);
   const [showGuardianForm, setShowGuardianForm] = useState(false);
   const [guardianFormData, setGuardianFormData] = useState<any>({});
@@ -235,7 +235,7 @@ const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) =>
         </div>
       )
     },
-];
+  ];
   const fetchFormData = async () => {
     if (!pageData?.[0]?.Entry) return;
     try {
@@ -329,6 +329,11 @@ const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) =>
     }
   }, [pageData])
 
+  const handleSaveAndNext = () => {
+    // Perform validation checks here   
+    setActiveTab("bank")
+  }
+
   return (
     <div className="w-full p-5 bg-white rounded-lg shadow-md">
       <div className="text-end">
@@ -337,6 +342,16 @@ const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) =>
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-3"
         >
           Add Nominee
+        </button>
+        <button
+          className="rounded-lg ml-4"
+          style={{
+            backgroundColor: colors.background,
+            padding: "10px"
+          }}
+          onClick={handleSaveAndNext}
+        >
+          Save and Next
         </button>
       </div>
       <DataGrid

@@ -4,7 +4,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import { DataGrid } from 'react-data-grid';
 
-const Segment = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
+const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
 
   // Handler to update the segment tableData
@@ -12,15 +12,15 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
     setFieldData((prevState: any) => {
       // Create a copy of the previous state
       const newState = { ...prevState };
-      
+
       // Find and update the specific row in segmentTabData
       newState.segmentTabData = {
         ...newState.segmentTabData,
-        tableData: newState.segmentTabData.tableData.map((row: any) => 
+        tableData: newState.segmentTabData.tableData.map((row: any) =>
           row.SegmentValue === id ? { ...row, [fieldKey]: value } : row
         )
       };
-      
+
       return newState;
     });
   };
@@ -60,10 +60,27 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
     id: item.SegmentValue // Using SegmentValue as unique identifier
   }));
 
+
+  const handleSaveAndNext = () => {
+    // Perform validation checks here   
+    setActiveTab("attachments")
+  }
+
   return (
     <div className="w-full p-5 bg-white rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-6">Select Segments</h2>
-      
+      <div className="text-end mb-2">
+
+        <button
+          className="rounded-lg ml-4"
+          style={{
+            backgroundColor: colors.background,
+            padding: "10px"
+          }}
+          onClick={handleSaveAndNext}
+        >
+          Save and Next
+        </button>
+      </div>
       <DataGrid
         columns={columns}
         rows={rows}

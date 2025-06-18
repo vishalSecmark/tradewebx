@@ -3,10 +3,12 @@ import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react'
 import { fetchEkycDropdownOptions } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
+import { useTheme } from '@/context/ThemeContext';
 
 
-const Personal = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
+const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab }: EkycComponentProps) => {
     console.log('personal tab', formFields, tableData);
+    const { colors, fonts } = useTheme();
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldVlaues, setFieldValues] = useState<Record<string, any>>({});
@@ -68,8 +70,24 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComp
         });
     }
 
+    const handleSaveAndNext = ()     => {
+        // Perform validation checks here   
+    setActiveTab("nominee")
+    }
     return (
         <div className="w-full p-5 bg-white rounded-lg shadow-md">
+             <div className="text-end">
+                <button
+                    className="rounded-lg"
+                    style={{
+                        backgroundColor: colors.background,
+                        padding: "10px"
+                    }}
+                    onClick={handleSaveAndNext}
+                >
+                    Save and Next
+                </button>
+            </div>
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}
                 message={validationModal.message}

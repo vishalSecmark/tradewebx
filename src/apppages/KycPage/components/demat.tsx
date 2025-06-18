@@ -7,7 +7,7 @@ import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { fetchEkycDropdownOptions } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 
-const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
+const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddDemat, setOpenAddDemat] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
@@ -132,6 +132,11 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComp
     }
   }, []);
 
+   const handleSaveAndNext = ()     => {
+          // Perform validation checks here   
+      setActiveTab("segment")
+      }
+     
   return (
     <div className="w-full p-5 bg-white rounded-lg shadow-md">
       <div className="text-end">
@@ -141,6 +146,16 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComp
         >
           Add Demat
         </button>
+        <button
+                  className="rounded-lg ml-4"
+                  style={{
+                    backgroundColor: colors.background,
+                    padding: "10px"
+                  }}
+                  onClick={handleSaveAndNext}
+                >
+                  Save and Next
+                </button>
       </div>
       <DataGrid
         columns={columns}

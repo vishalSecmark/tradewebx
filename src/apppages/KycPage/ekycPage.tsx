@@ -23,6 +23,7 @@ interface TabData {
 export default function Kyc() {
     const { colors, fonts } = useTheme();
     const menuItems = useAppSelector(selectAllMenuItems);
+    const pageData: any = findPageData(menuItems, "rekyc");
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>(() => {
         if (typeof window !== 'undefined') {
@@ -78,8 +79,7 @@ export default function Kyc() {
         };
     });
 
-    console.log("check dynamic data", dynamicData);
-
+   
     // Persist dynamicData and activeTab to localStorage whenever they change
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -88,29 +88,9 @@ export default function Kyc() {
         }
     }, [dynamicData, activeTab]);
 
-    console.log("check tabs data", dynamicData)
-    const pageData: any = findPageData(menuItems, "rekyc");
-    console.log("check page ", pageData);
+    
 
 
-    const handleSaveAndNext = () => {
-        // Find the current tab index
-        const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
-
-        // If there's a next tab, go to it
-        if (currentIndex < tabs.length - 1) {
-            setActiveTab(tabs[currentIndex + 1].id);
-        } else {
-            // On last tab, submit the form
-            handleSubmit();
-        }
-    };
-
-    const handleSubmit = () => {
-        // console.log("Form data to submit:", formData);
-        // // Here you would typically send the data to your API
-        // alert("Form submitted successfully!");
-    };
 
     // Example tab data - you can replace this with your JSON data
     const tabs: TabData[] = [
@@ -122,6 +102,7 @@ export default function Kyc() {
                 tableData={dynamicData.personalTabData.tableData}
                 fieldErrors={dynamicData.personalTabData.fieldsErrors}
                 setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
 
             />
         },
@@ -133,6 +114,7 @@ export default function Kyc() {
                 tableData={dynamicData.nomineeTabData.tableData}
                 fieldErrors={dynamicData.nomineeTabData.fieldsErrors}
                 setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
 
             />
         },
@@ -144,6 +126,7 @@ export default function Kyc() {
                 tableData={dynamicData.bankTabData.tableData}
                 fieldErrors={dynamicData.bankTabData.fieldsErrors}
                 setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
             />
         },
         {
@@ -154,6 +137,7 @@ export default function Kyc() {
                 tableData={dynamicData.dematTabData.tableData}
                 fieldErrors={dynamicData.dematTabData.fieldsErrors}
                 setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
             />
         },
         {
@@ -164,6 +148,7 @@ export default function Kyc() {
                 tableData={dynamicData.segmentTabData.tableData}
                 fieldErrors={dynamicData.segmentTabData.fieldsErrors}
                 setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
             />
         },
         {
@@ -174,11 +159,10 @@ export default function Kyc() {
                 tableData={dynamicData.attachments?.tableData}
                 fieldErrors={dynamicData.attachments?.fieldsErrors}
                 setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
             />
         }
     ];
-
-    console.log("check active tab", activeTab)
 
     const fetchFormData = async () => {
         if (!pageData?.[0]?.Entry) return;
@@ -223,8 +207,7 @@ export default function Kyc() {
                 }
             });
             let formData = response?.data?.data?.rs0 || [];
-            // If in view mode, set all FieldEnabledTag to "N"
-
+         
             // Transform the API data into your state structure
             const transformedData = {
                 personalTabData: {
@@ -364,7 +347,7 @@ export default function Kyc() {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => handleSetActiveTab(tab.id)}
+                        // onClick={() => handleSetActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`
@@ -377,18 +360,6 @@ export default function Kyc() {
                         {tab.label}
                     </button>
                 ))}
-            </div>
-            <div className="text-end mt-2">
-                <button
-                    className="rounded-lg"
-                    style={{
-                        backgroundColor: colors.background,
-                        padding: "10px"
-                    }}
-                    onClick={handleSaveAndNext}
-                >
-                    {activeTab === "rekyc" ? "Submit" : "Save & Next"}
-                </button>
             </div>
             {isLoading ? (
                 <div className="text-center py-4">Loading...</div>

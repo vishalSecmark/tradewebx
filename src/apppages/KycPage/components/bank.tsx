@@ -6,7 +6,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { fetchEkycDropdownOptions } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 
-const KycBank = ({ formFields, tableData, fieldErrors, setFieldData }: EkycComponentProps) => {
+const KycBank = ({ formFields, tableData, fieldErrors, setFieldData,setActiveTab }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddBank, setOpenAddBank] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
@@ -131,6 +131,11 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
     }
   }, [])
 
+   const handleSaveAndNext = ()     => {
+          // Perform validation checks here   
+      setActiveTab("demat")
+      }
+
   return (
     <div className="w-full p-5 bg-white rounded-lg shadow-md">
       <div className="text-end">
@@ -140,6 +145,16 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData }: EkycCompo
         >
           Add Bank
         </button>
+        <button
+                          className="rounded-lg ml-4"
+                          style={{
+                            backgroundColor: colors.background,
+                            padding: "10px"
+                          }}
+                          onClick={handleSaveAndNext}
+                        >
+                          Save and Next
+                        </button>
       </div>
       <DataGrid
         columns={columns}
