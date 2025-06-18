@@ -224,10 +224,10 @@ const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) =>
     {
       key: 'actions',
       name: 'Actions',
-      renderCell: ({ row, rowIndex }: any) => (
+      renderCell: (props: any) => (
         <div className="flex gap-2">
           <button
-            onClick={() => handleEditNomineeClick(row, rowIndex)}
+            onClick={() => handleEditNomineeClick(props.row, props.rowIdx)}
             className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
           >
             Edit
@@ -235,8 +235,7 @@ const Nominee = ({ formFields, tableData, setFieldData }: EkycComponentProps) =>
         </div>
       )
     },
-  ];
-
+];
   const fetchFormData = async () => {
     if (!pageData?.[0]?.Entry) return;
     try {
