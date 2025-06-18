@@ -4,9 +4,10 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
+import EntryFormModal from './EntryFormModal';
 
 interface RowData {
     [key: string]: any;
@@ -75,16 +76,13 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         message: '',
         type: 'E'
     });
-    const [viewModal, setViewModal] = useState<{
-        isOpen: boolean;
-        rowData: RowData | null;
-        rowIndex: number | null;
-    }>({
-        isOpen: false,
-        rowData: null,
-        rowIndex: null
-    });
-    const [viewModalData, setViewModalData] = useState<RowData>({});
+
+    // EntryFormModal states
+    const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+    const [entryFormData, setEntryFormData] = useState<any>(null);
+    const [pageData, setPageData] = useState<any>(null);
+    const [isLoadingPageData, setIsLoadingPageData] = useState(false);
+
     const editableColumns = settings.EditableColumn || [];
 
     const showValidationMessage = (message: string, type: 'M' | 'S' | 'E' | 'D' = 'E') => {
@@ -99,32 +97,79 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         setValidationModal(prev => ({ ...prev, isOpen: false }));
     };
 
-    const handleViewRow = (rowData: RowData, rowIndex: number) => {
-        setViewModal({
-            isOpen: true,
-            rowData,
-            rowIndex
-        });
-        setViewModalData({ ...rowData });
-    };
+    // New function to fetch page data for EntryFormModal
+    const fetchPageDataForView = async (rowData: RowData) => {
+        setIsLoadingPageData(true);
+        try {
+            // Create X_Filter from all row data
+            const xFilterTags = Object.entries(rowData)
+                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .join('');
 
-    const handleViewModalClose = () => {
-        setViewModal({
-            isOpen: false,
-            rowData: null,
-            rowIndex: null
-        });
-        setViewModalData({});
-    };
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Master_Edit"</J_Ui>
+                <Sql></Sql>
+                <X_Filter>${xFilterTags}</X_Filter>
+                <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || ''}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || ''}","ModuleID":"${localStorage.getItem('moduleID') || ''}","MyDb":"${localStorage.getItem('myDb') || ''}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
+            </dsXml>`;
 
-    const handleViewModalSave = () => {
-        if (viewModal.rowIndex !== null) {
-            // Update the main table data
-            const updated = [...localData];
-            updated[viewModal.rowIndex] = { ...viewModalData };
-            setLocalData(updated);
-            handleViewModalClose();
+            console.log('Fetching page data for EntryFormModal:', xmlData);
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
+                }
+            });
+
+            console.log('Page data response:', response.data);
+
+            // Create a mock pageData structure that EntryFormModal expects
+            const mockPageData = [{
+                wPage: wPage,
+                Entry: {
+                    MasterEntry: {
+                        J_Ui: {
+                            ActionName: wPage,
+                            Option: "Master_Edit"
+                        },
+                        J_Api: {
+                            UserId: localStorage.getItem('userId') || 'ADMIN',
+                            AccYear: localStorage.getItem('accYear') || '24',
+                            MyDbPrefix: localStorage.getItem('myDbPrefix') || '',
+                            MemberCode: localStorage.getItem('memberCode') || '',
+                            SecretKey: localStorage.getItem('secretKey') || '',
+                            MenuCode: localStorage.getItem('menuCode') || '',
+                            ModuleID: localStorage.getItem('moduleID') || '',
+                            MyDb: localStorage.getItem('myDb') || '',
+                            DenyRights: localStorage.getItem('denyRights') || ''
+                        },
+                        X_Filter: rowData,
+                        sql: {}
+                    },
+                    ChildEntry: {} // Empty child entry
+                }
+            }];
+
+            setPageData(mockPageData);
+            setEntryFormData(rowData);
+            setIsEntryModalOpen(true);
+
+        } catch (error) {
+            console.error('Error fetching page data:', error);
+            showValidationMessage('Failed to load form configuration. Please try again.');
+        } finally {
+            setIsLoadingPageData(false);
         }
+    };
+
+    const handleViewRow = (rowData: RowData, rowIndex: number) => {
+        console.log('=== View Row Clicked ===');
+        console.log('Row Data:', rowData);
+        console.log('Row Index:', rowIndex);
+        console.log('wPage:', wPage);
+
+        fetchPageDataForView(rowData);
     };
 
     const isNumeric = (value: any): boolean => {
@@ -157,11 +202,33 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         });
     }, [editableColumns]);
 
+    // Console log EntryFormModal data when modal opens
+    useEffect(() => {
+        if (isEntryModalOpen && pageData) {
+            console.log('=== EntryFormModal Data from EditTableRowModal ===', {
+                isOpen: isEntryModalOpen,
+                pageData: pageData,
+                editData: entryFormData,
+                action: 'view',
+                wPage: wPage,
+                timestamp: new Date().toISOString()
+            });
+
+            console.log('isEntryModalOpen:', isEntryModalOpen);
+            console.log('pageData:', pageData);
+            console.log('entryFormData:', entryFormData);
+            console.log('action: view');
+            console.log('wPage:', wPage);
+            console.log('pageData[0]?.Entry:', pageData?.[0]?.Entry);
+        }
+    }, [isEntryModalOpen, pageData, entryFormData, wPage]);
+
     const handleInputChange = (rowIndex: number | string, key: string, value: any) => {
         let updated: RowData[];
 
         if (rowIndex === "viewModal") {
-            setViewModalData(prev => ({ ...prev, [key]: value }));
+            // Skip view modal handling since we removed it
+            return;
         } else {
             updated = [...localData];
             updated[rowIndex as number] = { ...updated[rowIndex as number], [key]: value };
@@ -180,17 +247,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         if (dependentColumns.length > 0) {
             dependentColumns.forEach(column => {
                 if (rowIndex === "viewModal") {
-                    // Handle view modal dependent dropdowns
-                    if (Array.isArray(column.dependsOn!.field)) {
-                        const allFieldValues = column.dependsOn!.field.reduce((acc, field) => {
-                            acc[field] = field === key ? value : viewModalData[field];
-                            return acc;
-                        }, {} as Record<string, any>);
-
-                        fetchDependentOptions(column, allFieldValues, "viewModal");
-                    } else {
-                        fetchDependentOptions(column, value, "viewModal");
-                    }
+                    // Skip view modal handling since we removed it
+                    return;
                 } else {
                     // Handle table rows
                     updated!.forEach((_, idx) => {
@@ -213,7 +271,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const handleInputBlur = async (rowIndex: number | string, key: string, previousValue: any) => {
         const field = editableColumns.find(col => col.wKey === key);
         if (!field?.ValidationAPI?.dsXml) return;
-        const rowValues = rowIndex === "viewModal" ? viewModalData : (localData[rowIndex as number] || {});
+        if (rowIndex === "viewModal") {
+            // Skip view modal handling since we removed it
+            return;
+        }
+        const rowValues = localData[rowIndex as number] || {};
         const { J_Ui, Sql, X_Filter, X_Filter_Multiple, J_Api } = field.ValidationAPI.dsXml;
         let xFilter = '';
         let xFilterMultiple = '';
@@ -291,10 +353,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 if (flag !== 'S') {
                     showValidationMessage(message);
                     if (rowIndex === "viewModal") {
-                        setViewModalData(prev => ({
-                            ...prev,
-                            [key]: previousValue
-                        }));
+                        // Skip view modal handling since we removed it
+                        return;
                     } else {
                         setLocalData(prev => {
                             const updated = [...prev];
@@ -325,10 +385,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                     // Update the row data with any additional column values returned
                     if (Object.keys(columnUpdates).length > 0) {
                         if (rowIndex === "viewModal") {
-                            setViewModalData(prev => ({
-                                ...prev,
-                                ...columnUpdates
-                            }));
+                            // Skip view modal handling since we removed it
+                            return;
                         } else {
                             setLocalData(prev => {
                                 const updated = [...prev];
@@ -663,7 +721,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 <table className="min-w-full table-auto border text-sm">
                                     <thead>
                                         <tr>
-                                            <th
+                                            {/* <th
                                                 className="border px-2 py-2 text-left"
                                                 style={{
                                                     backgroundColor: colors.primary,
@@ -673,7 +731,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                 }}
                                             >
                                                 Actions
-                                            </th>
+                                            </th> */}
                                             {Object.keys(localData[0]).map((key) => (
                                                 <th
                                                     key={key}
@@ -702,7 +760,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     fontFamily: fonts.content,
                                                 }}
                                             >
-                                                <td className="border px-2 py-2">
+                                                {/* <td className="border px-2 py-2">
                                                     <button
                                                         onClick={() => handleViewRow(row, rowIndex)}
                                                         className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
@@ -712,7 +770,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     >
                                                         View
                                                     </button>
-                                                </td>
+                                                </td> */}
                                                 {Object.entries(row).map(([key, value]) => {
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
@@ -875,154 +933,28 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 </div>
             )}
 
-            {/* View Modal */}
-            {viewModal.isOpen && viewModal.rowData && (
-                <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg p-6 w-full max-w-[600px] shadow-xl max-h-[80vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-xl font-semibold" style={{ fontFamily: fonts.content, color: colors.text }}>
-                                View Record {viewModal.rowIndex !== null ? `#${viewModal.rowIndex + 1}` : ''}
-                            </h4>
-                            <button
-                                onClick={handleViewModalClose}
-                                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {Object.entries(viewModalData).map(([key, value]) => {
-                                const editable = getEditableColumn(key);
-                                return (
-                                    <div key={key} className="border-b pb-3">
-                                        <label
-                                            className="block text-sm font-medium text-gray-700 mb-1"
-                                            style={{ fontFamily: fonts.content }}
-                                        >
-                                            {key}
-                                        </label>
-                                        {editable ? (
-                                            editable.type === "WTextBox" ? (
-                                                <input
-                                                    type="text"
-                                                    value={value ?? ""}
-                                                    onChange={(e) => handleInputChange("viewModal", key, e.target.value)}
-                                                    onFocus={() =>
-                                                        setPreviousValues(prev => ({
-                                                            ...prev,
-                                                            [`viewModal_${key}`]: value
-                                                        }))
-                                                    }
-                                                    onBlur={() => {
-                                                        handleInputBlur("viewModal", key, previousValues[`viewModal_${key}`]);
-                                                        setPreviousValues(prev => {
-                                                            const updated = { ...prev };
-                                                            delete updated[`viewModal_${key}`];
-                                                            return updated;
-                                                        });
-                                                    }}
-                                                    placeholder={editable.wPlaceholder}
-                                                    className="w-full border border-gray-300 rounded px-3 py-2"
-                                                    style={{
-                                                        fontFamily: fonts.content,
-                                                        color: colors.text,
-                                                        backgroundColor: colors.textInputBackground,
-                                                        borderColor: colors.textInputBorder,
-                                                    }}
-                                                />
-                                            ) : editable.type === "WDropDownBox" ? (
-                                                <CustomDropdown
-                                                    item={{ ...editable, isMultiple: false } as any}
-                                                    value={value ?? ""}
-                                                    onChange={(newValue) => handleInputChange("viewModal", key, newValue)}
-                                                    options={
-                                                        editable.options
-                                                            ? editable.options.map(opt => ({
-                                                                label: opt.label,
-                                                                value: opt.Value,
-                                                            }))
-                                                            : editable.dependsOn
-                                                                ? dropdownOptions[`${key}_viewModal`] || []
-                                                                : dropdownOptions[key] || []
-                                                    }
-                                                    isLoading={
-                                                        editable.dependsOn
-                                                            ? loadingDropdowns[`${key}_viewModal`] || false
-                                                            : loadingDropdowns[key] || false
-                                                    }
-                                                    colors={colors}
-                                                    formData={[]}
-                                                    handleFormChange={() => { }}
-                                                    formValues={viewModalData}
-                                                />
-                                            ) : editable.type === "WDateBox" ? (
-                                                <div
-                                                    style={{
-                                                        fontFamily: fonts.content,
-                                                        color: colors.text,
-                                                        backgroundColor: colors.textInputBackground,
-                                                        borderColor: colors.textInputBorder,
-                                                    }}
-                                                >
-                                                    <DatePicker
-                                                        selected={value ? new Date(value) : null}
-                                                        onChange={(date: Date | null) =>
-                                                            handleInputChange("viewModal", key, date)
-                                                        }
-                                                        dateFormat="dd/MM/yyyy"
-                                                        className="w-full border border-gray-300 rounded px-3 py-2"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className="w-full p-3 bg-gray-50 border rounded-md"
-                                                    style={{
-                                                        fontFamily: fonts.content,
-                                                        color: colors.text,
-                                                        backgroundColor: colors.evenCardBackground,
-                                                        borderColor: colors.textInputBorder,
-                                                    }}
-                                                >
-                                                    {value != null && value !== '' ? String(value) : '-'}
-                                                </div>
-                                            )
-                                        ) : (
-                                            <div
-                                                className="w-full p-3 bg-gray-50 border rounded-md"
-                                                style={{
-                                                    fontFamily: fonts.content,
-                                                    color: colors.text,
-                                                    backgroundColor: colors.evenCardBackground,
-                                                    borderColor: colors.textInputBorder,
-                                                }}
-                                            >
-                                                {value != null && value !== '' ? String(value) : '-'}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        <div className="mt-6 flex justify-end gap-4">
-                            <button
-                                onClick={handleViewModalSave}
-                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                                style={{ fontFamily: fonts.content }}
-                            >
-                                Save Changes
-                            </button>
-                            <button
-                                onClick={handleViewModalClose}
-                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                                style={{ fontFamily: fonts.content }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {/* Entry Form Modal */}
+            {isEntryModalOpen && pageData && (
+                <EntryFormModal
+                    isOpen={isEntryModalOpen}
+                    onClose={() => {
+                        console.log('EntryFormModal onClose called from EditTableRowModal');
+                        setIsEntryModalOpen(false);
+                        setEntryFormData(null);
+                        setPageData(null);
+                    }}
+                    pageData={pageData}
+                    editData={entryFormData}
+                    action="view"
+                    setEntryEditData={(data) => {
+                        console.log('setEntryEditData called from EditTableRowModal with:', data);
+                        setEntryFormData(data);
+                    }}
+                    refreshFunction={() => {
+                        console.log('EntryFormModal refreshFunction called from EditTableRowModal');
+                        // Refresh the main table data if needed
+                    }}
+                />
             )}
         </>
     );
