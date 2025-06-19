@@ -123,12 +123,64 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 }
             });
 
-            console.log('Page data response:', response.data.data.rs0);
+            console.log('Page data response:', response.data.data);
 
-            let EditTablePageData = response.data.data.rs0
+            let EditTablePageData = response.data.data.rs0; // Form field configuration
+            let ChildEntryData = response.data.data.rs1 || []; // Child entry data records
 
-            console.log(EditTablePageData,'editTable');
-            
+            console.log('Master Form Configuration (rs0):', EditTablePageData);
+            console.log('Child Entry Data Records (rs1):', ChildEntryData);
+
+            // Create ChildEntry configuration structure
+            // rs0 contains form field configuration, rs1 contains actual child entry data
+            let childEntryStructure: any = {};
+
+            // Check if there are child entry form fields in rs0 or if rs1 has data
+            const hasChildEntryFields = EditTablePageData && Array.isArray(EditTablePageData) &&
+                EditTablePageData.some(field => field.wKey && typeof field.wKey === 'string');
+
+            const hasChildEntryData = ChildEntryData && Array.isArray(ChildEntryData) && ChildEntryData.length > 0;
+
+            if (hasChildEntryData || hasChildEntryFields) {
+                console.log('Child entry data/fields found, creating ChildEntry configuration');
+
+                // Create child entry configuration similar to how it's done in DynamicReportComponent
+                const baseStructure = {
+                    J_Ui: {
+                        ActionName: ACTION_NAME,
+                        Option: "ChildEntry_Edit"
+                    },
+                    J_Api: {
+                        UserId: localStorage.getItem('userId') || 'ADMIN',
+                        AccYear: localStorage.getItem('accYear') || '24',
+                        MyDbPrefix: localStorage.getItem('myDbPrefix') || '',
+                        MemberCode: localStorage.getItem('memberCode') || '',
+                        SecretKey: localStorage.getItem('secretKey') || '',
+                        MenuCode: localStorage.getItem('menuCode') || 0,
+                        ModuleID: localStorage.getItem('moduleID') || 0,
+                        MyDb: localStorage.getItem('myDb') || '',
+                        DenyRights: localStorage.getItem('denyRights') || ''
+                    },
+                    X_Filter: rowData, // Use the current row data as filter for child entries
+                    sql: {}
+                };
+
+                childEntryStructure = { ...baseStructure };
+
+                // If we have actual child entry data, include it
+                if (hasChildEntryData) {
+                    childEntryStructure.childData = ChildEntryData;
+                }
+
+                // If we have child entry form fields, include them
+                if (hasChildEntryFields) {
+                    childEntryStructure.formFields = EditTablePageData;
+                }
+
+                console.log('Created child entry structure:', childEntryStructure);
+            } else {
+                console.log('No child entry data or configuration found in API response');
+            }
 
             // Create a mock pageData structure that EntryFormModal expects
             const mockPageData = [{
@@ -153,9 +205,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         X_Filter: rowData,
                         sql: {}
                     },
-                    ChildEntry: {} // Empty child entry
+                    ChildEntry: childEntryStructure // Use child entry data from API response
                 }
             }];
+            console.log(mockPageData, 'mockPageData');
 
             setPageData(mockPageData);
             setEntryFormData(rowData);
