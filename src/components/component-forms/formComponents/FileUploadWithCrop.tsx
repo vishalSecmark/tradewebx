@@ -46,6 +46,8 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
       setFileType(file.type);
       setFileName(file.name);
 
+      setFieldErrors(prev => ({ ...prev, [field.wKey]: `` }));
+
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.addEventListener('load', () => {
@@ -166,6 +168,8 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
           type: fileType
         }
       }));
+        // Clear field error when crop is done
+      setFieldErrors(prev => ({ ...prev, [field.wKey]: `` }));
     }
     setShowModal(false);
   };

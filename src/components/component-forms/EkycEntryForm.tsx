@@ -13,7 +13,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
 import { handleViewFile } from "@/utils/helper";
 import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
-import LoadingSpinner from '../Loaders/LoadingSpinner';
+import LoaderOverlay from "../Loaders/LoadingSpinner";
 
 
 const DropdownField: React.FC<{
@@ -572,11 +572,13 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                 />
                                 <button
                                     type="button"
-                                    className="rounded-l-none px-3 py-1 bg-blue-500 text-white border border-l-0 border-blue-500 rounded-md hover:bg-blue-600 focus:outline-none"
+                                    className="rounded-l-none px-3 py-1 border rounded-md border-black"
                                     style={{
+                                        backgroundColor: colors.background,
+                                        color: colors.text,
                                         borderTopLeftRadius: 0,
                                         borderBottomLeftRadius: 0,
-                                        height: '35px' // match input height
+                                        height: '34px' // match input height
                                     }}
                                     onClick={() => {
                                         handleThirdActions(field)
@@ -795,41 +797,53 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
     return (
         <div className="grid grid-cols-3 gap-4">
-            <>
-                {formData.map((field) => renderFormField(field))}
-                {showEmailOtpModal && currentOtpField && (
-                    <OtpVerificationModal
-                        isOpen={showEmailOtpModal}
-                        onClose={() => setShowEmailOtpModal(false)}
-                        onSuccess={(verifiedValue) => {
-                            handleInputChange(currentOtpField.wKey, verifiedValue);
-                            setShowEmailOtpModal(false);
-                        }}
-                        field={currentOtpField}
-                        setFieldErrors={setFieldErrors}
-                        formValues={formValues}
-                        masterValues={masterValues}
-                        type="email"
-                        oldValue={currentOtpField.OlddataValue || ''}
-                    />
-                )}
-                {showMobileOtpModal && currentOtpField && (
-                    <OtpVerificationModal
-                        isOpen={showMobileOtpModal}
-                        onClose={() => setShowMobileOtpModal(false)}
-                        onSuccess={(verifiedValue) => {
-                            handleInputChange(currentOtpField.wKey, verifiedValue);
-                            setShowMobileOtpModal(false);
-                        }}
-                        field={currentOtpField}
-                        setFieldErrors={setFieldErrors}
-                        formValues={formValues}
-                        masterValues={masterValues}
-                        type="mobile"
-                        oldValue={currentOtpField.OlddataValue || ''}
-                    />
-                )}
-            </>
+            {!isThirdPartyLoading ? (
+                <>
+                    {formData.map((field) => renderFormField(field))}
+                    {showEmailOtpModal && currentOtpField && (
+                        <OtpVerificationModal
+                            isOpen={showEmailOtpModal}
+                            onClose={() => setShowEmailOtpModal(false)}
+                            onSuccess={(verifiedValue) => {
+                                handleInputChange(currentOtpField.wKey, verifiedValue);
+                                setShowEmailOtpModal(false);
+                            }}
+                            field={currentOtpField}
+                            setFieldErrors={setFieldErrors}
+                            formValues={formValues}
+                            masterValues={masterValues}
+                            type="email"
+                            oldValue={currentOtpField.OlddataValue || ''}
+                        />
+                    )}
+                    {showMobileOtpModal && currentOtpField && (
+                        <OtpVerificationModal
+                            isOpen={showMobileOtpModal}
+                            onClose={() => setShowMobileOtpModal(false)}
+                            onSuccess={(verifiedValue) => {
+                                handleInputChange(currentOtpField.wKey, verifiedValue);
+                                setShowMobileOtpModal(false);
+                            }}
+                            field={currentOtpField}
+                            setFieldErrors={setFieldErrors}
+                            formValues={formValues}
+                            masterValues={masterValues}
+                            type="mobile"
+                            oldValue={currentOtpField.OlddataValue || ''}
+                        />
+                    )}
+                </>
+
+            ) : (
+                <LoaderOverlay
+                    loading={isThirdPartyLoading}
+                    text="Processing your request..."
+                    spinnerColor="text-purple-500"
+                    overlayColor="bg-gray-900 bg-opacity-70"
+                    zIndex={100}
+                />
+
+            )}
 
             {/* <LoadingSpinner
                 isLoading={isThirdPartyLoading}

@@ -12,6 +12,8 @@ import { findPageData } from '@/utils/helper';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
+import { IoArrowBack } from "react-icons/io5";
+
 
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
@@ -95,6 +97,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
     setIsMinor(minor);
     return minor;
   };
+  
   // Validate mandatory fields for nominee
   const validateMandatoryFields = (formData: any) => {
     const errors: Record<string, string> = {};
@@ -335,24 +338,35 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
   }
 
   return (
-    <div className="w-full p-5 bg-white rounded-lg shadow-md">
-      <div className="text-end">
+    <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
+      <div className="flex justify-between items-center">
         <button
-          onClick={handleAddNomineeClick}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-3"
-        >
-          Add Nominee
-        </button>
-        <button
-          className="rounded-lg ml-4"
+          className="rounded-lg"
           style={{
             backgroundColor: colors.background,
             padding: "10px"
-          }}
-          onClick={handleSaveAndNext}
+          }} onClick={() => setActiveTab("personal")}
         >
-          Save and Next
+          <IoArrowBack size={20}/> 
         </button>
+        <div className="text-end">
+          <button
+            onClick={handleAddNomineeClick}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-3"
+          >
+            Add Nominee
+          </button>
+          <button
+            className="rounded-lg ml-4"
+            style={{
+              backgroundColor: colors.background,
+              padding: "10px"
+            }}
+            onClick={handleSaveAndNext}
+          >
+            Save and Next
+          </button>
+        </div>
       </div>
       <DataGrid
         columns={columns}

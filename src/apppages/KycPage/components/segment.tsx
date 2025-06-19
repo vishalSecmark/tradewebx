@@ -3,8 +3,10 @@ import React from 'react';
 import { useTheme } from "@/context/ThemeContext";
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import { DataGrid } from 'react-data-grid';
+import { IoArrowBack } from 'react-icons/io5';
+import { handleSaveSinglePageData } from '../ekychelper';
 
-const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab }: EkycComponentProps) => {
+const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
 
   // Handler to update the segment tableData
@@ -63,23 +65,35 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
 
   const handleSaveAndNext = () => {
     // Perform validation checks here   
+    handleSaveSinglePageData(Settings.SaveNextAPI, tableData)
     setActiveTab("attachments")
   }
 
   return (
-    <div className="w-full p-5 bg-white rounded-lg shadow-md">
-      <div className="text-end mb-2">
-
+    <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
+      <div className="flex justify-between items-center">
         <button
-          className="rounded-lg ml-4"
+          className="rounded-lg"
           style={{
             backgroundColor: colors.background,
             padding: "10px"
-          }}
-          onClick={handleSaveAndNext}
+          }} onClick={() => setActiveTab("demat")}
         >
-          Save and Next
+          <IoArrowBack size={20} />
         </button>
+
+        <div className="text-end mb-2">
+          <button
+            className="rounded-lg ml-4"
+            style={{
+              backgroundColor: colors.background,
+              padding: "10px"
+            }}
+            onClick={handleSaveAndNext}
+          >
+            Save and Next
+          </button>
+        </div>
       </div>
       <DataGrid
         columns={columns}

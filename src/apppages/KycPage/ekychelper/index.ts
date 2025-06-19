@@ -39,3 +39,47 @@ export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOpti
             setMasterLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
         }
     };
+
+
+export const handleSaveSinglePageData = async (settings: any , JsonData : any) => {
+    console.log('handleSaveSinglePageData called with settings:', settings, 'and JsonData:', JsonData);
+    if (!settings) return;
+        try {
+            const jUi = Object.entries(settings.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(settings.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+             // Construct X_Filter with edit data if available
+             let formData = JsonData || {};
+            let XFilterMultiple = '';
+            Object.entries(settings.X_Filter_Multiple).forEach(([key, value]) => {
+                    XFilterMultiple += `<${key}>${value}</${key}>`;
+            });
+
+
+            
+            const xmlData = `<dsXml>
+            <J_Ui>${jUi}</J_Ui>
+            <Sql>${settings.Sql || ''}</Sql>
+            <X_Filter></X_Filter>
+            <X_DataJson>${JSON.stringify(formData)}</X_DataJson>
+            <X_Filter_Multiple>${XFilterMultiple || ''}</X_Filter_Multiple>
+            <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+            console.log('Response from saveSinglePageData:', response.data);
+        } catch (error) {
+            console.error(`Error fetching options for `, error);
+        } finally {
+
+        }
+}

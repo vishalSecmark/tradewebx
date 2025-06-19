@@ -1,30 +1,30 @@
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react'
-import { fetchEkycDropdownOptions } from '../ekychelper';
+import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
+import { IoArrowBack } from 'react-icons/io5';
+import { useTheme } from '@/context/ThemeContext';
+import { toast } from 'react-toastify';
 
 
-const Documents = ({ formFields, tableData, fieldErrors , setFieldData }: EkycComponentProps) => {
+const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     console.log('personal tab', formFields, tableData);
+    const { colors, fonts } = useTheme();
+
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
-    const [fieldVlaues, setFieldValues] = useState<Record<string, any>>({});
+    const [fieldVlaues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
+    const [attachmentsFieldErrors, setAttachmentsFieldErrors] = useState<Record<string, string>>(fieldErrors || {});
     const [validationModal, setValidationModal] = useState<{
-            isOpen: boolean;
-            message: string;
-            type: 'M' | 'S' | 'E' | 'D';
-            callback?: (confirmed: boolean) => void;
-        }>({ isOpen: false, message: '', type: 'M' });
-    
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>({ isOpen: false, message: '', type: 'M' });
 
-    
-    console.log('personalDropdownOptions', personalDropdownOptions);
-    console.log('personalLoadingDropdowns', personalLoadingDropdowns);
-    
-    console.log('FieldValue', fieldVlaues);
 
-    useEffect(()=>{
+    useEffect(() => {
         if (formFields && formFields.length > 0) {
             formFields.forEach((field) => {
                 if (field.wQuery && field.wKey) {
@@ -33,7 +33,7 @@ const Documents = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCo
                 }
             })
         }
-    },[])
+    }, [])
 
     // Handler to update the 0th index of personalTabData.tableData in dynamicData
     const handleFieldChange = (updateFn: (prev: any) => any) => {
@@ -56,39 +56,100 @@ const Documents = ({ formFields, tableData, fieldErrors , setFieldData }: EkycCo
         setFieldValues((prev: any) => updateFn(prev));
     };
 
-    const handleErrorChange = (updateFn: (prev: any) => any) => {
-        setFieldData((prevState: any) => {
-            const prevFieldErrors = prevState.attachments.fieldErrors || {};
-            const updatedErrors = updateFn(prevFieldErrors);
-            return {
-                ...prevState,
-                attachments: {
-                    ...prevState.attachments,
-                    fieldErrors: updatedErrors
-                }
-            };
+    // Validate mandatory fields for nominee
+    const validateMandatoryFields = (formData: any) => {
+        const errors: Record<string, string> = {};
+        let isValid = true;
+        formFields.forEach((field) => {
+            if (field.isMandatory === "true" && !formData[field.wKey]) {
+                errors[field.wKey] = `${field.label} is required`;
+                isValid = false;
+            }
         });
+
+        return { isValid, errors };
+    };
+
+
+    function transformData(inputData: any) {
+        const result = {};
+
+        for (const [key, value] of Object.entries(inputData)) {
+            if (value && typeof value === 'object' && 'data' in value) {
+                result[key] = value.data;
+            }else{
+                result[key] = value
+            }
+        }
+
+        return [result];
     }
 
+
+    const handleSave = () => {
+        const { isValid, errors } = validateMandatoryFields(fieldVlaues);
+        setAttachmentsFieldErrors(errors);
+        if (!isValid) {
+            toast.error("Please fill all mandatory fields");
+            return;
+        } else {
+            const transformedData = transformData(tableData[0] || {});
+            console.log('Transformed Data:', transformedData);
+            handleSaveSinglePageData(Settings.SaveNextAPI, transformedData)
+        }
+    }
     return (
-        <div className="w-full p-5 bg-white rounded-lg shadow-md">
-             <CaseConfirmationModal
+        <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
+            <div className="flex justify-between items-center pb-2">
+                <button
+                    className="rounded-lg"
+                    style={{
+                        backgroundColor: colors.background,
+                        padding: "10px"
+                    }} onClick={() => setActiveTab("segment")}
+                >
+                    <IoArrowBack size={20} />
+                </button>
+
+                <div className="text-end mb-2">
+                    <button
+                        className="rounded-lg"
+                        style={{
+                            backgroundColor: colors.background,
+                            padding: "10px"
+                        }}
+                        onClick={handleSave}
+                    >
+                        Save
+                    </button>
+                    <button
+                        className="rounded-lg ml-4"
+                        style={{
+                            backgroundColor: colors.background,
+                            padding: "10px"
+                        }}
+                    >
+                        Submit
+                    </button>
+                </div>
+            </div>
+            <CaseConfirmationModal
                 isOpen={validationModal.isOpen}
                 message={validationModal.message}
                 type={validationModal.type}
                 onConfirm={() => validationModal.callback?.(true)}
                 onCancel={() => validationModal.callback?.(false)}
-              />
+            />
             <EkycEntryForm
                 formData={formFields}
-                formValues={tableData[0] || {}}
+                formValues={fieldVlaues}
                 masterValues={{}}
                 setFormValues={handleFieldChange}
                 onDropdownChange={() => { }}
                 dropdownOptions={personalDropdownOptions}
                 loadingDropdowns={personalLoadingDropdowns}
-                fieldErrors={fieldErrors}
-                setFieldErrors={handleErrorChange}
+                fieldErrors={attachmentsFieldErrors}
+                setFieldErrors={setAttachmentsFieldErrors}
                 setFormData={() => { }}
                 setValidationModal={setValidationModal}
                 setDropDownOptions={() => { }}

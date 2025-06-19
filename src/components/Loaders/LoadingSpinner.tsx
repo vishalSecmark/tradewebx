@@ -1,43 +1,38 @@
-import React from 'react';
-import { useTheme } from '@/context/ThemeContext';
+import React from "react";
 
-interface LoadingSpinnerProps {
-  isLoading: boolean;
-  loadingText?: string;
-  spinnerSize?: number; // Optional size in pixels
-  className?: string; // Optional additional className
+interface LoaderOverlayProps {
+  loading?: boolean;
+  text?: string;
+  spinnerColor?: string;
+  overlayColor?: string;
+  zIndex?: number;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  isLoading,
-  loadingText = 'Loading dashboard...',
-  spinnerSize = 12,
-  className = ''
+const LoaderOverlay: React.FC<LoaderOverlayProps> = ({
+  loading = false,
+  text = "Loading...",
+  spinnerColor = "text-blue-500",
+  overlayColor = "bg-black bg-opacity-50",
+  zIndex = 50,
 }) => {
-  const { colors } = useTheme();
-
-  if (!isLoading) return null;
+  if (!loading) return null;
 
   return (
-    <div
-      className={`flex items-center justify-center min-h-screen ${className}`}
-      style={{ backgroundColor: colors?.background2 || '#f0f0f0' }}
+    <div 
+      className={`fixed inset-0 flex items-center justify-center ${overlayColor}`}
+      style={{ zIndex }}
     >
-      <div className="text-center">
-        <div
-          className="animate-spin rounded-full border-b-2"
-          style={{ 
-            borderColor: colors.primary,
-            width: `${spinnerSize}px`,
-            height: `${spinnerSize}px`
-          }}
-        ></div>
-        <p style={{ color: colors.text }} className="mt-4">
-          {loadingText}
-        </p>
+      <div className="flex flex-col items-center">
+        {/* Spinner */}
+        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${spinnerColor}`}></div>
+        
+        {/* Loading text */}
+        {text && (
+          <p className="mt-4 text-white font-medium">{text}</p>
+        )}
       </div>
     </div>
   );
 };
 
-export default LoadingSpinner;
+export default LoaderOverlay;

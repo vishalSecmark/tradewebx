@@ -25,6 +25,7 @@ export default function Kyc() {
     const menuItems = useAppSelector(selectAllMenuItems);
     const pageData: any = findPageData(menuItems, "rekyc");
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<string>(() => {
         if (typeof window !== 'undefined') {
             const savedTab = localStorage.getItem('ekyc_activeTab');
@@ -39,7 +40,9 @@ export default function Kyc() {
             const saved = localStorage.getItem('ekyc_dynamicData');
             if (saved) {
                 try {
-                    return JSON.parse(saved);
+                    const parsed = JSON.parse(saved);
+                    setLastUpdated(parsed._lastUpdated || null);
+                    return parsed;
                 } catch (e) {
                     // fallback to default if parse fails
                 }
@@ -49,37 +52,43 @@ export default function Kyc() {
             personalTabData: {
                 formFields: [],
                 tableData: [],
-                fieldsErrors: {}
+                fieldsErrors: {},
+                Settings:{}
             },
             bankTabData: {
                 formFields: [],
                 tableData: [],
-                fieldsErrors: {}
+                fieldsErrors: {},
+                Settings:{}
             },
             dematTabData: {
                 formFields: [],
                 tableData: [],
-                fieldsErrors: {}
+                fieldsErrors: {},
+                Settings:{}
             },
             nomineeTabData: {
                 formFields: [],
                 tableData: [],
-                fieldsErrors: {}
+                fieldsErrors: {},
+                Settings:{}
             },
             segmentTabData: {
                 formFields: [],
                 tableData: [],
-                fieldsErrors: {}
+                fieldsErrors: {},
+                Settings:{}
             },
-            attachments : {
+            attachments: {
                 formFields: [],
                 tableData: [],
-                fieldsErrors: {}
-        }
+                fieldsErrors: {},
+                Settings:{}
+            },
+            _lastUpdated: null
         };
     });
 
-   
     // Persist dynamicData and activeTab to localStorage whenever they change
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -87,82 +96,6 @@ export default function Kyc() {
             localStorage.setItem('ekyc_activeTab', activeTab);
         }
     }, [dynamicData, activeTab]);
-
-    
-
-
-
-    // Example tab data - you can replace this with your JSON data
-    const tabs: TabData[] = [
-        {
-            id: "personal",
-            label: "Personal Information",
-            content: <Personal
-                formFields={dynamicData.personalTabData.formFields}
-                tableData={dynamicData.personalTabData.tableData}
-                fieldErrors={dynamicData.personalTabData.fieldsErrors}
-                setFieldData={setDynamicData}
-                setActiveTab={setActiveTab}
-
-            />
-        },
-        {
-            id: "nominee",
-            label: "Nominee",
-            content: <Nominee
-                formFields={dynamicData.nomineeTabData.formFields}
-                tableData={dynamicData.nomineeTabData.tableData}
-                fieldErrors={dynamicData.nomineeTabData.fieldsErrors}
-                setFieldData={setDynamicData}
-                setActiveTab={setActiveTab}
-
-            />
-        },
-        {
-            id: "bank",
-            label: "Bank",
-            content: <KycBank
-                formFields={dynamicData.bankTabData.formFields}
-                tableData={dynamicData.bankTabData.tableData}
-                fieldErrors={dynamicData.bankTabData.fieldsErrors}
-                setFieldData={setDynamicData}
-                setActiveTab={setActiveTab}
-            />
-        },
-        {
-            id: "demat",
-            label: "Demat",
-            content: <KycDemat
-                formFields={dynamicData.dematTabData.formFields}
-                tableData={dynamicData.dematTabData.tableData}
-                fieldErrors={dynamicData.dematTabData.fieldsErrors}
-                setFieldData={setDynamicData}
-                setActiveTab={setActiveTab}
-            />
-        },
-        {
-            id: "segment",
-            label: "Segment",
-            content: <Segment
-                formFields={dynamicData.segmentTabData.formFields}
-                tableData={dynamicData.segmentTabData.tableData}
-                fieldErrors={dynamicData.segmentTabData.fieldsErrors}
-                setFieldData={setDynamicData}
-                setActiveTab={setActiveTab}
-            />
-        },
-        {
-            id: "attachments",
-            label: "Documents",
-            content: <Documents
-                formFields={dynamicData.attachments?.formFields}
-                tableData={dynamicData.attachments?.tableData}
-                fieldErrors={dynamicData.attachments?.fieldsErrors}
-                setFieldData={setDynamicData}
-                setActiveTab={setActiveTab}
-            />
-        }
-    ];
 
     const fetchFormData = async () => {
         if (!pageData?.[0]?.Entry) return;
@@ -212,28 +145,35 @@ export default function Kyc() {
             const transformedData = {
                 personalTabData: {
                     formFields: [],
-                    tableData: []
+                    tableData: [],
+                    Settings:{}
                 },
                 bankTabData: {
                     formFields: [],
-                    tableData: []
+                    tableData: [],
+                    Settings:{}
                 },
                 dematTabData: {
                     formFields: [],
-                    tableData: []
+                    tableData: [],
+                    Settings:{}
                 },
                 nomineeTabData: {
                     formFields: [],
-                    tableData: []
+                    tableData: [],
+                    Settings:{}
                 },
                 segmentTabData: {
                     formFields: [],
-                    tableData: []
+                    tableData: [],
+                    Settings:{}
                 },
-                attachments : {
+                attachments: {
                     formFields: [],
-                    tableData: []
-                }
+                    tableData: [],
+                    Settings:{}
+                },
+                _lastUpdated: new Date().toISOString()
             };
 
             formData.forEach((tab: any) => {
@@ -241,43 +181,50 @@ export default function Kyc() {
                     case "PersonalDetails":
                         transformedData.personalTabData = {
                             formFields: tab.Data,
-                            tableData: tab.tableData
+                            tableData: tab.tableData,
+                            Settings: tab.Settings,
                         };
                         break;
                     case "BankDetails":
                         transformedData.bankTabData = {
                             formFields: tab.Data,
-                            tableData: tab.tableData
+                            tableData: tab.tableData,
+                            Settings: tab.Settings,
                         };
                         break;
                     case "DematDetails":
                         transformedData.dematTabData = {
                             formFields: tab.Data,
-                            tableData: tab.tableData
+                            tableData: tab.tableData,
+                            Settings: tab.Settings,
                         };
                         break;
                     case "NomineeDetails":
                         transformedData.nomineeTabData = {
                             formFields: tab.Data,
-                            tableData: tab.tableData
+                            tableData: tab.tableData,
+                            Settings: tab.Settings,
                         };
                         break;
                     case "SegmentDetails":
                         transformedData.segmentTabData = {
                             formFields: tab.Data,
-                            tableData: tab.tableData
+                            tableData: tab.tableData,
+                            Settings: tab.Settings,
                         };
                         break;
                     case "Attachments":
                         transformedData.attachments = {
                             formFields: tab.Data,
-                            tableData: tab.tableData
+                            tableData: tab.tableData,
+                            Settings: tab.Settings,
                         };
                         break;
                 }
             });
 
             setDynamicData(transformedData);
+            setLastUpdated(transformedData._lastUpdated);
 
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
@@ -285,10 +232,9 @@ export default function Kyc() {
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
-
             });
            
-            console.log("initial vaues", initialValues);
+            console.log("initial values", initialValues);
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
             setIsLoading(false);
@@ -297,57 +243,126 @@ export default function Kyc() {
         }
     };
 
-    // Only fetch if no localStorage data exists or if the data is empty
+    // Always fetch fresh data when component mounts
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('ekyc_dynamicData');
-            let shouldFetch = false;
-            if (!saved) {
-                shouldFetch = true;
-            } else {
-                try {
-                    const parsed = JSON.parse(saved);
-                    // Check if all tab arrays are empty
-                    const isEmpty = [
-                        'personalTabData',
-                        'bankTabData',
-                        'dematTabData',
-                        'nomineeTabData',
-                        'segmentTabData',
-                        'attachments'
-                    ].every(tab =>
-                        Array.isArray(parsed?.[tab]?.formFields) && parsed[tab].formFields.length === 0 &&
-                        Array.isArray(parsed?.[tab]?.tableData) && parsed[tab].tableData.length === 0
-                    );
-                    if (isEmpty) shouldFetch = true;
-                } catch (e) {
-                    shouldFetch = true;
-                }
-            }
-            if (shouldFetch) {
-                fetchFormData();
-            }
-        }
-    }, [])
+        fetchFormData();
+    }, []);
 
-
-    // When changing tab, also update localStorage
     const handleSetActiveTab = (tabId: string) => {
         setActiveTab(tabId);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('ekyc_activeTab', tabId);
-        }
     };
+
+    const handleRefresh = () => {
+        fetchFormData();
+    };
+
+    const tabs: TabData[] = [
+        {
+            id: "personal",
+            label: "Personal Information",
+            content: <Personal
+                formFields={dynamicData.personalTabData.formFields}
+                tableData={dynamicData.personalTabData.tableData}
+                fieldErrors={dynamicData.personalTabData.fieldsErrors}
+                Settings={dynamicData.personalTabData.Settings}
+                setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
+            />
+        },
+        {
+            id: "nominee",
+            label: "Nominee",
+            content: <Nominee
+                formFields={dynamicData.nomineeTabData.formFields}
+                tableData={dynamicData.nomineeTabData.tableData}
+                fieldErrors={dynamicData.nomineeTabData.fieldsErrors}
+                Settings={dynamicData.nomineeTabData.Settings}
+                setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
+            />
+        },
+        {
+            id: "bank",
+            label: "Bank",
+            content: <KycBank
+                formFields={dynamicData.bankTabData.formFields}
+                tableData={dynamicData.bankTabData.tableData}
+                fieldErrors={dynamicData.bankTabData.fieldsErrors}
+                Settings={dynamicData.bankTabData.Settings}
+                setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
+            />
+        },
+        {
+            id: "demat",
+            label: "Demat",
+            content: <KycDemat
+                formFields={dynamicData.dematTabData.formFields}
+                tableData={dynamicData.dematTabData.tableData}
+                fieldErrors={dynamicData.dematTabData.fieldsErrors}
+                Settings={dynamicData.dematTabData.Settings}
+                setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
+            />
+        },
+        {
+            id: "segment",
+            label: "Segment",
+            content: <Segment
+                formFields={dynamicData.segmentTabData.formFields}
+                tableData={dynamicData.segmentTabData.tableData}
+                fieldErrors={dynamicData.segmentTabData.fieldsErrors}
+                Settings={dynamicData.segmentTabData.Settings}
+                setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
+            />
+        },
+        {
+            id: "attachments",
+            label: "Documents",
+            content: <Documents
+                formFields={dynamicData.attachments?.formFields}
+                tableData={dynamicData.attachments?.tableData}
+                fieldErrors={dynamicData.attachments?.fieldsErrors}
+                Settings={dynamicData.attachments?.Settings}
+                setFieldData={setDynamicData}
+                setActiveTab={setActiveTab}
+            />
+        }
+    ];
 
     return (
         <div className="p-4" style={{ fontFamily: fonts.content }}>
-            <h1 className="text-2xl font-bold mb-6" style={{ color: colors.text }}>KYC Verification</h1>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-bold" style={{ color: colors.text }}>KYC Verification</h1>
+                <div className="flex items-center">
+                    {lastUpdated && (
+                        <span className="text-sm mr-4" style={{ color: colors.textSecondary }}>
+                            Last updated: {new Date(lastUpdated).toLocaleString()}
+                        </span>
+                    )}
+                    <button
+                        onClick={handleRefresh}
+                        className="px-3 py-1 text-sm rounded flex items-center"
+                        style={{
+                            backgroundColor: colors.buttonBackground,
+                            color: colors.buttonText
+                        }}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
             {/* Tabs Navigation */}
             <div className="flex border-b" style={{ borderColor: colors.color3 }}>
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        // onClick={() => handleSetActiveTab(tab.id)}
+                        onClick={() => handleSetActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`
@@ -361,17 +376,14 @@ export default function Kyc() {
                     </button>
                 ))}
             </div>
+            
             {isLoading ? (
                 <div className="text-center py-4">Loading...</div>
             ) : (
-
                 <div className="mt-3">
                     {tabs.find(tab => tab.id === activeTab)?.content}
                 </div>
-
             )}
-
         </div>
-
     );
 }

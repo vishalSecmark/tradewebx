@@ -110,4 +110,5 @@ export interface EkycComponentProps {
     fieldErrors?: Record<string, string>;
     setFieldData?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
     setActiveTab?: React.Dispatch<React.SetStateAction<string>>;
+    Settings?: Record<string, any>;
 }
