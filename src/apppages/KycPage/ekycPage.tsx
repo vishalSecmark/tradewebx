@@ -139,7 +139,7 @@ export default function Kyc() {
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
-            let formData = response?.data?.data?.rs0 || [];
+            const formData = response?.data?.data?.rs0 || [];
          
             // Transform the API data into your state structure
             const transformedData = {
@@ -337,7 +337,7 @@ export default function Kyc() {
                 <h1 className="text-2xl font-bold" style={{ color: colors.text }}>KYC Verification</h1>
                 <div className="flex items-center">
                     {lastUpdated && (
-                        <span className="text-sm mr-4" style={{ color: colors.textSecondary }}>
+                        <span className="text-sm mr-4" style={{ color: colors.secondary }}>
                             Last updated: {new Date(lastUpdated).toLocaleString()}
                         </span>
                     )}

@@ -54,7 +54,7 @@ export const handleSaveSinglePageData = async (settings: any , JsonData : any) =
                 .join(',');
 
              // Construct X_Filter with edit data if available
-             let formData = JsonData || {};
+            const formData = JsonData || {};
             let XFilterMultiple = '';
             Object.entries(settings.X_Filter_Multiple).forEach(([key, value]) => {
                     XFilterMultiple += `<${key}>${value}</${key}>`;

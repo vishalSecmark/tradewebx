@@ -282,7 +282,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
       });
-      let formData = response?.data?.data?.rs0[0].Data || [];
+      const formData = response?.data?.data?.rs0[0].Data || [];
       console.log("Fetched form data:", formData);
       setGurdianFields(formData)
       // Initialize form values with any preset values

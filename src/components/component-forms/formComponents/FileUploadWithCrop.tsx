@@ -33,10 +33,9 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-
   const acceptedTypes = field.fileType === 'image' 
     ? 'image/*' 
-    : !field.FileType.includes("jpg" || "png") 
+    : !(field.FileType.includes("jpg") || field.FileType.includes("png")) 
       ? '.pdf,.doc,.docx,.xls,.xlsx,.txt' 
       : 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt';
 

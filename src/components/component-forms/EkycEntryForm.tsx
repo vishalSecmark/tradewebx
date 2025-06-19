@@ -347,7 +347,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
             }
             else if (columnData) {
                 // Ensure the XML is wrapped in a root tag
-                let xmlString = columnData.trim().startsWith('<root>') ? columnData : `<root>${columnData}</root>`;
+                const xmlString = columnData.trim().startsWith('<root>') ? columnData : `<root>${columnData}</root>`;
                 try {
                     const parser = new DOMParser();
                     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
@@ -782,7 +782,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     };
     useEffect(() => {
         if (scope && scope.includes("ADHAR") && success === "True") {
-            let redirectedField = localStorage.getItem('redirectedField')
+            const redirectedField = localStorage.getItem('redirectedField')
             // Find the field related to ADHAR (by wKey or label containing ADHAR)
             const adharField = formData.find(f => (f.wKey && f.wKey === redirectedField));
             if (adharField && redirectedField) {

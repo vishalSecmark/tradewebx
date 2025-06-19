@@ -403,7 +403,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           <div>
             <div className="mb-4">
               <p className="text-sm mb-4">
-                We've sent an OTP to your old {type}: <span className="font-semibold">{formValues[field.wKey] || oldValue}</span>
+                We&apos;ve sent an OTP to your old {type}: <span className="font-semibold">{formValues[field.wKey] || oldValue}</span>
               </p>
 
               <div className="mb-4">
@@ -446,7 +446,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
           <div>
             <div className="mb-4">
               <p className="text-sm mb-4">
-                We've sent an OTP to your new {type}: <span className="font-semibold">{newValue}</span>
+                We&apos;ve sent an OTP to your new {type}: <span className="font-semibold">{newValue}</span>
               </p>
 
               <div className="mb-4">
