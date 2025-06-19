@@ -267,13 +267,15 @@ export const handleTermsChange = (
   
 
 
-const submitApiFetch = async (xmlData,config) => {
+const submitApiFetch = async (xmlData,config,clearFn) => {
 
 
     const response = await axios.post(IPO_url, xmlData, config)
     console.log(response, 'response Submit Api');
     if (response.status === 200) {
+        // clearFn()
         alert('form submitted')
+        return
     }
 
     // configDetails(authToken)
@@ -326,7 +328,7 @@ export const onSubmitBtn = (userClientCode:any, scripCode:any, ipoCategory:any, 
     else {
         console.log('in else part of submit');
         setTermsAccepted(!termsAccepted)
-        submitApiFetch(submitXML(data.clientCode, data.scripCode, data.category, data.UPIId, data.bid1, data.cutOff, data.cutOffFlag, data.bid2, data.cutOff2, data.cutOffFlag2, data.bid3, data.cutOff3, data.cutOffFlag3), configDetails(authToken))
+        submitApiFetch(submitXML(data.clientCode, data.scripCode, data.category, data.UPIId, data.bid1, data.cutOff, data.cutOffFlag, data.bid2, data.cutOff2, data.cutOffFlag2, data.bid3, data.cutOff3, data.cutOffFlag3), configDetails(authToken),clearFn)
        
         setStatus(false);
         clearFn()

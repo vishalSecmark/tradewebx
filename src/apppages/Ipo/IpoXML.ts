@@ -35,6 +35,7 @@ export const submitXML = (
   bid3:any,
   cutOff3:any,
   cutOffFlag3:any,
+  // clearFn:any
 ) => {
   const xmlData = `<dsXml>
   <J_Ui>"ActionName":"IPO", "Option":"Submit" </J_Ui>

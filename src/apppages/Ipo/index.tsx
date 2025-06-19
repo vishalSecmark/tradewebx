@@ -102,7 +102,7 @@ const Ipo = () => {
   const maxPrice = parseFloat(maxPriceStr || minPriceStr); // fallback to min if only one price
   const minPrice = ipo.min_order
 
-  console.log(ipo,'minPrice');
+  // console.log(ipo,'minPrice');
   
 
   // ✅ Set Bid 1 to minimum order and Cutoff to max price
@@ -179,6 +179,10 @@ const Ipo = () => {
         return Math.max(...baseLine)
     };
 
+
+    // console.log(selectedIpo,'selectedIpo');
+    
+
     const clearFn = () => {
         setBid1('');
         setBid2('');
@@ -186,8 +190,8 @@ const Ipo = () => {
         setCutOff('');
         setCutOff2('');
         setCutOff3('');
-        setUpi('');
-        setSelectedUpiSelect('');
+        setUpiId('');
+        setSelectedUpi('');
         setIsChecked(false)
         setIsChecked2(false)
         setIsChecked3(false)
