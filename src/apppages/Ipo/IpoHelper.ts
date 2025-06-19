@@ -54,7 +54,7 @@ export const fetchUPIType = async (setUpiSelect:any,authToken:any) => {
         console.log(response.data, "UPI TYpe");
 
         if (response.data.data.rs0) {
-            let userTypeData = response.data.data.rs0
+            const userTypeData = response.data.data.rs0
 
             const formattedUpiType = userTypeData.map((upiType) => ({
                 Value: `@${upiType.Value.trim()}`, // Key

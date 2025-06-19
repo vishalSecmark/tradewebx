@@ -133,7 +133,7 @@ const Ipo = () => {
 
       const calculateAmountPayable = () => {
 
-        let discount = parseInt(ipoData1[0].discount)
+        const discount = parseInt(ipoData1[0].discount)
 
         let baseLine = []
         let values = []
