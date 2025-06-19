@@ -58,8 +58,10 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
 
   // Find the component in menu items and check its type
   const findComponentType = (items: any[]): string | undefined => {
-    for (const item of items) {
+    for (const item of items) {  
       if (item.componentName?.toLowerCase() === componentName.toLowerCase()) {
+        console.log(item.componentType,'componontType1');
+        
         return item.componentType;
       }
 
