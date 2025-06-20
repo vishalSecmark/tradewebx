@@ -31,7 +31,7 @@ function lerpColorTable(
     const rowCount = table.length;
 
     for (let i = 0; i < rowCount; ++i) {
-        let a = table[i][0];
+        const a = table[i][0];
 
         if (i === 0 && tValue < a) {
             return lerpColor(
@@ -103,7 +103,9 @@ export default function Loader() {
 
         setStroke(colorValue);
 
-        animIdRef.current = window.requestAnimationFrame && window.requestAnimationFrame(animate);
+        if (window.requestAnimationFrame) {
+            animIdRef.current = window.requestAnimationFrame(animate);
+        }
         return animIdRef.current;
     };
 
@@ -114,7 +116,9 @@ export default function Loader() {
 
     const stop = () => {
         if (animIdRef.current) {
-            window.cancelAnimationFrame && window.cancelAnimationFrame(animIdRef.current);
+            if (window.cancelAnimationFrame) {
+                window.cancelAnimationFrame(animIdRef.current);
+            }
             animIdRef.current = null;
         }
     };
