@@ -18,6 +18,7 @@ import { parseStringPromise } from 'xml2js';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
+import Loader from './Loader';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -739,7 +740,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             />}
 
             {/* Loading State */}
-            {isLoading && <div>Loading...</div>}
+            {isLoading &&
+                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
+                    <Loader />
+                </div>
+            }
 
             {/* Horizontal Filters */}
             {showFilterHorizontally && pageData[0].filters && pageData[0].filters.length > 0 && (
