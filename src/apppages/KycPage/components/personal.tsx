@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 
 
 const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
-    console.log('personal tab', formFields, tableData);
+
     const { colors, fonts } = useTheme();
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -20,12 +20,6 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
         type: 'M' | 'S' | 'E' | 'D';
         callback?: (confirmed: boolean) => void;
     }>({ isOpen: false, message: '', type: 'M' });
-
-
-    console.log('personalDropdownOptions', personalDropdownOptions);
-    console.log('personalLoadingDropdowns', personalLoadingDropdowns);
-
-    console.log('FieldValue', fieldVlaues);
 
     useEffect(() => {
         if (formFields && formFields.length > 0) {
@@ -79,8 +73,8 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
             toast.error("Please fill all mandatory fields");
             return;
         } else {
-            handleSaveSinglePageData(Settings.SaveNextAPI, tableData)
-            setActiveTab("nominee")
+            handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab , "nominee")
+            // setActiveTab("nominee")
         }
     }
     return (

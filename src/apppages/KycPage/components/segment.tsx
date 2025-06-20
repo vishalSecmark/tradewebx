@@ -65,8 +65,8 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
 
   const handleSaveAndNext = () => {
     // Perform validation checks here   
-    handleSaveSinglePageData(Settings.SaveNextAPI, tableData)
-    setActiveTab("attachments")
+    handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab, "attachments")
+    // setActiveTab("attachments")
   }
 
   return (

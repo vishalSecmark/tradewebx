@@ -3,7 +3,7 @@ import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react';
 import { DataGrid } from 'react-data-grid';
 import { useTheme } from "@/context/ThemeContext";
-import { fetchEkycDropdownOptions } from '../ekychelper';
+import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import moment from 'moment';
 import { useAppSelector } from '@/redux/hooks';
@@ -15,7 +15,7 @@ import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
 
 
-const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComponentProps) => {
+const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddNominee, setOpenAddNominee] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
@@ -40,31 +40,53 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
   const menuItems = useAppSelector(selectAllMenuItems);
   const pageData: any = findPageData(menuItems, "rekyc");
 
-  console.log("current gurdian form data--->", guardianFormData);
+  console.log("current gurdian form data--->", guardianFormData, currentFormData);
 
-  // Function to create a new empty nominee entry
   const createNewNomineeEntry = () => {
-    if (tableData.length > 0) {
-      const newEntry: any = {};
-      Object.keys(tableData[0]).forEach(key => {
-        newEntry[key] = '';
-      });
-      newEntry.IsNomineeDeleted = "false";
-      return newEntry;
-    }
-    return {};
+    // Create new entry using formFields structure
+    const newEntry: Record<string, any> = {};
+
+    // Add all fields from formFields with empty values
+    formFields.forEach((field: any) => {
+      if (field.wKey) {
+        // Set default empty value based on field type
+        switch (field.type) {
+          case 'WCheckBox':
+            newEntry[field.wKey] = "false";
+            break;
+          case 'WDropDownBox':
+            newEntry[field.wKey] = ""; // Dropdowns typically start empty
+            break;
+          default:
+            newEntry[field.wKey] = "";
+        }
+      }
+    });
+    // Add system fields
+    newEntry.IsNomineeDeleted = "false";
+    newEntry.IsInserted = "true";
+    console.log("newEntry", newEntry);
+
+    return newEntry;
   };
+
   const handleAddNomineeClick = () => {
-    const newNomineeEntry = createNewNomineeEntry();
-    setCurrentFormData(newNomineeEntry);
-    setIsEditing(false);
-    setEditIndex(null);
-    setOpenAddNominee(true);
-    setShowGuardianForm(false);
-    setIsMinor(false);
-    // Clear all errors when adding new nominee
-    setFieldErrors({});
-    setGuardianFieldErrors({});
+    const maxAllowed = Number(Settings?.maxAllowedRecords) || 0;
+    if (maxAllowed > 0 && tableData.length >= maxAllowed) {
+      toast.error(`You can only add up to ${maxAllowed} nominees.`);
+      return
+    } else {
+      const newNomineeEntry = createNewNomineeEntry();
+      setCurrentFormData(newNomineeEntry);
+      setIsEditing(false);
+      setEditIndex(null);
+      setOpenAddNominee(true);
+      setShowGuardianForm(false);
+      setIsMinor(false);
+      // Clear all errors when adding new nominee
+      setFieldErrors({});
+      setGuardianFieldErrors({});
+    }
   };
   const handleEditNomineeClick = (row: any, rowIndex: number) => {
     setCurrentFormData({ ...row });
@@ -97,7 +119,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
     setIsMinor(minor);
     return minor;
   };
-  
+
   // Validate mandatory fields for nominee
   const validateMandatoryFields = (formData: any) => {
     const errors: Record<string, string> = {};
@@ -332,9 +354,21 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
     }
   }, [pageData])
 
+
+  useEffect(() => {
+    const newEntry = createNewNomineeEntry();
+    if (Object.keys(currentFormData).length === 0) {
+      setCurrentFormData(newEntry);
+    }
+  }, [])
+
   const handleSaveAndNext = () => {
-    // Perform validation checks here   
-    setActiveTab("bank")
+    const transformedData = tableData.map((item: any) => ({
+      ...item,
+      ...(item?.NomSerial && { IsInserted: "false" })
+    }));
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "bank");
+    // setActiveTab("bank");
   }
 
   return (
@@ -347,7 +381,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
             padding: "10px"
           }} onClick={() => setActiveTab("personal")}
         >
-          <IoArrowBack size={20}/> 
+          <IoArrowBack size={20} />
         </button>
         <div className="text-end">
           <button
@@ -387,7 +421,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
             <div className="flex justify-between items-center gap-4 mt-2 mb-4">
               <h4 className="text-xl font-semibold">
                 {isEditing ? 'Edit Nominee Details' : 'Add Nominee Details'}
-              </h4>              <div className="flex gap-4">
+              </h4>
+              <div className="flex gap-4">
                 <button
                   onClick={clearFormAndCloseModal}
                   className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
@@ -444,7 +479,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab }: EkycComp
                   >
                     {showGuardianForm ? 'Remove Guardian' : 'Add Guardian'}
                   </button>
-                </div>                {showGuardianForm && (
+                </div>
+                {showGuardianForm && (
                   <div className="border-t pt-4">
                     <EkycEntryForm
                       formData={gurdianFileds}

@@ -4,17 +4,18 @@ import { DataGrid } from 'react-data-grid';
 import { useTheme } from "@/context/ThemeContext";
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
-import { fetchEkycDropdownOptions } from '../ekychelper';
+import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
+import { toast } from 'react-toastify';
 
-const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab }: EkycComponentProps) => {
+const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddDemat, setOpenAddDemat] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [dematDropdownOptions, setDematDropdownOptions] = useState<Record<string, any[]>>({});
   const [dematLoadingDropdowns, setDematLoadingDropdowns] = useState<Record<string, boolean>>({});
-  const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [validationModal, setValidationModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -22,106 +23,134 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
 
-  console.log("kyc current form data", currentFormData);
-
   // Function to create a new empty demat entry
   const createNewDematEntry = () => {
-    if (tableData.length > 0) {
-      const newEntry: any = {};
-      Object.keys(tableData[0]).forEach(key => {
-        newEntry[key] = '';
-      });
-      newEntry.isDefault = "false";
-      return newEntry;
-    }
-    return {};
+    const newEntry: Record<string, any> = {};
+
+    // Add all fields from formFields with empty values
+    formFields.forEach((field: any) => {
+      if (field.wKey) {
+        // Set default empty value based on field type
+        switch(field.type) {
+          case 'WCheckBox':
+            newEntry[field.wKey] = "false";
+            break;
+          case 'WDropDownBox':
+            newEntry[field.wKey] = ""; // Dropdowns typically start empty
+            break;
+          default:
+            newEntry[field.wKey] = "";
+        }
+      }
+    });
+
+    // Add system fields
+    newEntry.IsDefault = "false";
+    newEntry.IsInserted = "true";
+    
+    return newEntry;
   };
 
   const handleAddDematClick = () => {
+    const maxAllowed = Number(Settings?.maxAllowedRecords) || 0;
+    if (maxAllowed > 0 && tableData.length >= maxAllowed) {
+      toast.error(`You can only add up to ${maxAllowed} demat accounts.`);
+      return;
+    }
+    
     const newDematEntry = createNewDematEntry();
     setCurrentFormData(newDematEntry);
     setOpenAddDemat(true);
+    // Clear errors when adding new demat
+    setFieldErrors({});
   };
 
-  // Handler to add new demat entry to the end of tableData
-  const handleAddNewDemat = () => {
+  // Validate mandatory fields
+  const validateMandatoryFields = (formData: any) => {
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    formFields.forEach((field) => {
+      if (field.isMandatory === "true" && !formData[field.wKey]) {
+        errors[field.wKey] = `${field.label} is required`;
+        isValid = false;
+      }
+    });
+
+    return { isValid, errors };
+  };
+
+  // Handler to add new demat entry
+  const handleSaveDemat = () => {
+    const { isValid, errors } = validateMandatoryFields(currentFormData);
+    setFieldErrors(errors);
+
+    if (!isValid) {
+      return;
+    }
+
+    // If this is being set as default, unset all other defaults
+    const updatedDematData = currentFormData.IsDefault === "true"
+      ? { ...currentFormData }
+      : currentFormData;
+
     setFieldData((prevState: any) => {
       const prevTableData = prevState.dematTabData.tableData || [];
+      
+      // If setting as default, unset all other defaults
+      const updatedTableData = updatedDematData.IsDefault === "true"
+        ? prevTableData.map(demat => ({ ...demat, IsDefault: "false" }))
+        : prevTableData;
+
       return {
         ...prevState,
         dematTabData: {
           ...prevState.dematTabData,
           tableData: [
-            ...prevTableData,
-            currentFormData // Add the new entry at the end
+            ...updatedTableData,
+            updatedDematData
           ]
         }
       };
     });
+
+    clearFormAndCloseModal();
+  };
+
+  // Function to clear form and close modal
+  const clearFormAndCloseModal = () => {
+    setCurrentFormData({});
+    setFieldErrors({});
     setOpenAddDemat(false);
   };
 
-  // Handler to update the 0th index of dematTabData.tableData in dynamicData
-  const handleFieldChange = (updateFn: (prev: any) => any) => {
-    setFieldData((prevState: any) => {
-      const prevTableData = prevState.dematTabData.tableData || [];
-      const updatedRow = updateFn(prevTableData[0] || {});
-      return {
-        ...prevState,
-        dematTabData: {
-          ...prevState.dematTabData,
-          tableData: [
-            updatedRow,
-            ...prevTableData.slice(1)
-          ]
-        }
-      };
-    });
-    setFieldValues((prev: any) => updateFn(prev));
-  };
-
-  const handleErrorChange = (updateFn: (prev: any) => any) => {
-    setFieldData((prevState: any) => {
-      const prevFieldErrors = prevState.dematTabData.fieldErrors || {};
-      const updatedErrors = updateFn(prevFieldErrors);
-      return {
-        ...prevState,
-        dematTabData: {
-          ...prevState.dematTabData,
-          fieldErrors: updatedErrors
-        }
-      };
-    });
-  };
-
-  // Transform the tableData to match the expected row structure
-  const rows = tableData.map(demat => ({
-    DematId: demat.DematId,
-    DPAcNo: demat.DPAcNo,
-    DPID: demat.DPID,
-    DematAccountType: demat.DematAccountType,
-    isDefault: demat.isDefault === "true"
-  }));
-
   const columns = [
-    { key: 'DematId', name: 'Demat Id', sortable: true },
-    { key: 'DPAcNo', name: 'DP Acc No', sortable: true },
-    { key: 'DPID', name: 'Demat Number', sortable: true },
-    { key: 'DematAccountType', name: 'Acc Type', sortable: true },
+    { key: 'DematId', name: 'Demat Id', sortable: false },
+    { key: 'DPAcNo', name: 'DP Acc No', sortable: false },
+    { key: 'DPID', name: 'Demat Number', sortable: false },
+    { key: 'DematAccountType', name: 'Acc Type', sortable: false },
     {
-      key: 'isDefault',
+      key: 'IsDefault',
       name: 'Default Account',
       renderCell: ({ row }: any) => (
         <input
           type="checkbox"
-          checked={row.isDefault}
-          onChange={(e) => { }}
+          checked={row.IsDefault === "true"}
+          readOnly
           className="h-4 w-4"
-          disabled
         />
       )
     },
   ];
+
+  const handleSaveAndNext = () => {
+    const transformedData = tableData.map((item: any) => ({
+      ...item,
+      ...(item?.DematId && { IsInserted: "false" })
+    }));
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "segment");
+    // setActiveTab("segment");
+  };
 
   useEffect(() => {
     if (formFields && formFields.length > 0) {
@@ -131,12 +160,14 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
         }
       });
     }
-  }, []);
+  }, [formFields]);
 
-  const handleSaveAndNext = () => {
-    // Perform validation checks here   
-    setActiveTab("segment")
-  }
+  useEffect(() => {
+    const newEntry = createNewDematEntry();
+    if (Object.keys(currentFormData).length === 0) {
+      setCurrentFormData(newEntry);
+    }
+  }, []);
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
@@ -146,7 +177,8 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
           style={{
             backgroundColor: colors.background,
             padding: "10px"
-          }} onClick={() => setActiveTab("bank")}
+          }} 
+          onClick={() => setActiveTab("bank")}
         >
           <IoArrowBack size={20} />
         </button>
@@ -171,7 +203,7 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
       </div>
       <DataGrid
         columns={columns}
-        rows={rows}
+        rows={tableData || []}
         className="rdg-light"
         rowHeight={40}
         headerRowHeight={40}
@@ -181,10 +213,28 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
           fontFamily: fonts.content,
         }}
       />
+
       {openAddDemat && (
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl">
-            <h4 className="text-xl font-semibold mb-4">Add Demat Details</h4>
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center gap-4 mt-2 mb-4">
+              <h4 className="text-xl font-semibold">Add Demat Details</h4>
+              <div className="flex gap-4">
+                <button
+                  onClick={clearFormAndCloseModal}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveDemat}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+
             <CaseConfirmationModal
               isOpen={validationModal.isOpen}
               message={validationModal.message}
@@ -192,34 +242,21 @@ const KycDemat = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
               onConfirm={() => validationModal.callback?.(true)}
               onCancel={() => validationModal.callback?.(false)}
             />
+
             <EkycEntryForm
               formData={formFields}
               formValues={currentFormData}
               masterValues={{}}
               setFormValues={setCurrentFormData}
-              dropdownOptions={dematDropdownOptions}
               onDropdownChange={() => { }}
+              dropdownOptions={dematDropdownOptions}
               loadingDropdowns={dematLoadingDropdowns}
               fieldErrors={fieldErrors}
-              setFieldErrors={handleErrorChange}
+              setFieldErrors={setFieldErrors}
               setFormData={() => { }}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
             />
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                onClick={() => setOpenAddDemat(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddNewDemat}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-              >
-                Save
-              </button>
-            </div>
           </div>
         </div>
       )}

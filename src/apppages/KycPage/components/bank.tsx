@@ -1,19 +1,20 @@
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
-import { EkycComponentProps } from '@/types/EkycFormTypes'
+import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react';
 import { DataGrid } from 'react-data-grid';
 import { useTheme } from "@/context/ThemeContext";
-import { fetchEkycDropdownOptions } from '../ekychelper';
+import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
+import { toast } from 'react-toastify';
 
-const KycBank = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab }: EkycComponentProps) => {
+const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const [openAddBank, setOpenAddBank] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
-  const [bankDropdownOptions, setbankDropdownOptions] = useState<Record<string, any[]>>({});
-  const [bankLoadingDropdowns, setbankLoadingDropdowns] = useState<Record<string, boolean>>({});
-  const [fieldVlaues, setFieldValues] = useState<Record<string, any>>({});
+  const [bankDropdownOptions, setBankDropdownOptions] = useState<Record<string, any[]>>({});
+  const [bankLoadingDropdowns, setBankLoadingDropdowns] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [validationModal, setValidationModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -23,119 +24,150 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
 
   // Function to create a new empty bank entry
   const createNewBankEntry = () => {
-    if (tableData.length > 0) {
-      const newEntry: any = {};
-      Object.keys(tableData[0]).forEach(key => {
-        newEntry[key] = '';
-      });
-      newEntry.IsDefault = "false";
-      return newEntry;
-    }
-    return {};
+    const newEntry: Record<string, any> = {};
+
+    // Add all fields from formFields with empty values
+    formFields.forEach((field: any) => {
+      if (field.wKey) {
+        // Set default empty value based on field type
+        switch(field.type) {
+          case 'WCheckBox':
+            newEntry[field.wKey] = "false";
+            break;
+          case 'WDropDownBox':
+            newEntry[field.wKey] = ""; // Dropdowns typically start empty
+            break;
+          default:
+            newEntry[field.wKey] = "";
+        }
+      }
+    });
+
+    // Add system fields
+    newEntry.IsDefault = "false";
+    newEntry.IsInserted = "true";
+    
+    return newEntry;
   };
 
   const handleAddBankClick = () => {
+    const maxAllowed = Number(Settings?.maxAllowedRecords) || 0;
+    if (maxAllowed > 0 && tableData.length >= maxAllowed) {
+      toast.error(`You can only add up to ${maxAllowed} bank accounts.`);
+      return;
+    }
+    
     const newBankEntry = createNewBankEntry();
     setCurrentFormData(newBankEntry);
     setOpenAddBank(true);
+    // Clear errors when adding new bank
+    setFieldErrors({});
   };
 
-  // Handler to add new bank entry to the end of tableData
-  const handleAddNewBank = () => {
+  // Validate mandatory fields
+  const validateMandatoryFields = (formData: any) => {
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    formFields.forEach((field) => {
+      if (field.isMandatory === "true" && !formData[field.wKey]) {
+        errors[field.wKey] = `${field.label} is required`;
+        isValid = false;
+      }
+    });
+
+    return { isValid, errors };
+  };
+
+  // Handler to add new bank entry
+  const handleSaveBank = () => {
+    const { isValid, errors } = validateMandatoryFields(currentFormData);
+    setFieldErrors(errors);
+
+    if (!isValid) {
+      return;
+    }
+
+    // If this is being set as default, unset all other defaults
+    const updatedBankData = currentFormData.IsDefault === "true"
+      ? { ...currentFormData }
+      : currentFormData;
+
     setFieldData((prevState: any) => {
       const prevTableData = prevState.bankTabData.tableData || [];
+      
+      // If setting as default, unset all other defaults
+      const updatedTableData = updatedBankData.IsDefault === "true"
+        ? prevTableData.map(bank => ({ ...bank, IsDefault: "false" }))
+        : prevTableData;
+
       return {
         ...prevState,
         bankTabData: {
           ...prevState.bankTabData,
           tableData: [
-            ...prevTableData,
-            currentFormData // Add the new entry at the end
+            ...updatedTableData,
+            updatedBankData
           ]
         }
       };
     });
+
+    clearFormAndCloseModal();
+  };
+
+  // Function to clear form and close modal
+  const clearFormAndCloseModal = () => {
+    setCurrentFormData({});
+    setFieldErrors({});
     setOpenAddBank(false);
   };
 
-  // Handler to update the 0th index of bankTabData.tableData in dynamicData
-  const handleFieldChange = (updateFn: (prev: any) => any) => {
-    setFieldData((prevState: any) => {
-      const prevTableData = prevState.bankTabData.tableData || [];
-      const updatedRow = updateFn(prevTableData[0] || {});
-      return {
-        ...prevState,
-        bankTabData: {
-          ...prevState.bankTabData,
-          tableData: [
-            updatedRow,
-            ...prevTableData.slice(1)
-          ]
-        }
-      };
-    });
-    setFieldValues((prev: any) => updateFn(prev));
-  };
-
-  const handleErrorChange = (updateFn: (prev: any) => any) => {
-    setFieldData((prevState: any) => {
-      const prevFieldErrors = prevState.bankTabData.fieldErrors || {};
-      const updatedErrors = updateFn(prevFieldErrors);
-      return {
-        ...prevState,
-        bankTabData: {
-          ...prevState.bankTabData,
-          fieldErrors: updatedErrors
-        }
-      };
-    });
-  }
-
-  // Transform the tableData to match the expected row structure
-  const rows = tableData.map(bank => ({
-    mcr: bank.BankMICR,
-    ifsc: bank.BankIFSC,
-    accountNumber: bank.BankAccNo,
-    bankName: bank.BankName,
-    accountType: bank.AccountType,
-    isDefault: bank.IsDefault === "true"
-  }));
-
   const columns = [
-    { key: 'mcr', name: 'MCR', sortable: true },
-    { key: 'ifsc', name: 'IFSC Code', sortable: true },
-    { key: 'accountNumber', name: 'Account Number', sortable: true },
-    { key: 'bankName', name: 'Bank Name', sortable: true },
-    { key: 'accountType', name: 'Account Type', sortable: true },
+    { key: 'BankMICR', name: 'MCR', sortable: false },
+    { key: 'BankIFSC', name: 'IFSC Code', sortable: false },
+    { key: 'BankAccNo', name: 'Account Number', sortable: false },
+    { key: 'BankName', name: 'Bank Name', sortable: false },
+    { key: 'AccountType', name: 'Account Type', sortable: false },
     {
-      key: 'isDefault',
+      key: 'IsDefault',
       name: 'Default Account',
       renderCell: ({ row }: any) => (
         <input
           type="checkbox"
-          checked={row.isDefault}
-          onChange={(e) => { }}
+          checked={row.IsDefault === "true"}
+          readOnly
           className="h-4 w-4"
-          disabled
         />
       )
     },
   ];
 
+  const handleSaveAndNext = () => {
+    const transformedData = tableData.map((item: any) => ({
+      ...item,
+      ...(item?.BankID && { IsInserted: "false" })
+    }));
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat");
+    // setActiveTab("demat");
+  };
+
   useEffect(() => {
     if (formFields && formFields.length > 0) {
       formFields.forEach((field) => {
         if (field.wQuery && field.wKey) {
-          fetchEkycDropdownOptions(field, setbankDropdownOptions, setbankLoadingDropdowns);
+          fetchEkycDropdownOptions(field, setBankDropdownOptions, setBankLoadingDropdowns);
         }
-      })
+      });
     }
-  }, [])
+  }, [formFields]);
 
-  const handleSaveAndNext = () => {
-    // Perform validation checks here   
-    setActiveTab("demat")
-  }
+  useEffect(() => {
+    const newEntry = createNewBankEntry();
+    if (Object.keys(currentFormData).length === 0) {
+      setCurrentFormData(newEntry);
+    }
+  }, []);
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
@@ -145,7 +177,8 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
           style={{
             backgroundColor: colors.background,
             padding: "10px"
-          }} onClick={() => setActiveTab("nominee")}
+          }} 
+          onClick={() => setActiveTab("nominee")}
         >
           <IoArrowBack size={20} />
         </button>
@@ -170,7 +203,7 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
       </div>
       <DataGrid
         columns={columns}
-        rows={rows}
+        rows={tableData || []}
         className="rdg-light"
         rowHeight={40}
         headerRowHeight={40}
@@ -180,10 +213,28 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
           fontFamily: fonts.content,
         }}
       />
+
       {openAddBank && (
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl">
-            <h4 className="text-xl font-semibold mb-4">Add Bank Details</h4>
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center gap-4 mt-2 mb-4">
+              <h4 className="text-xl font-semibold">Add Bank Details</h4>
+              <div className="flex gap-4">
+                <button
+                  onClick={clearFormAndCloseModal}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveBank}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+
             <CaseConfirmationModal
               isOpen={validationModal.isOpen}
               message={validationModal.message}
@@ -191,38 +242,26 @@ const KycBank = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
               onConfirm={() => validationModal.callback?.(true)}
               onCancel={() => validationModal.callback?.(false)}
             />
+
             <EkycEntryForm
               formData={formFields}
               formValues={currentFormData}
               masterValues={{}}
               setFormValues={setCurrentFormData}
+              onDropdownChange={() => { }}
               dropdownOptions={bankDropdownOptions}
               loadingDropdowns={bankLoadingDropdowns}
               fieldErrors={fieldErrors}
-              setFieldErrors={handleErrorChange}
+              setFieldErrors={setFieldErrors}
               setFormData={() => { }}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
             />
-            <div className="flex justify-end gap-4 mt-6">
-              <button
-                onClick={() => setOpenAddBank(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddNewBank}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-              >
-                Save
-              </button>
-            </div>
           </div>
         </div>
       )}
     </div>
-  )
-}
+  );
+};
 
 export default KycBank;

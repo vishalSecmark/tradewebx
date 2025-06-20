@@ -1,5 +1,6 @@
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOptions: any, setMasterLoadingDropdowns:any) => {
         if (!field.wQuery) return;
@@ -41,7 +42,7 @@ export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOpti
     };
 
 
-export const handleSaveSinglePageData = async (settings: any , JsonData : any) => {
+export const handleSaveSinglePageData = async (settings: any, JsonData: any, setActiveTab?: any, tabName?:string) => {
     console.log('handleSaveSinglePageData called with settings:', settings, 'and JsonData:', JsonData);
     if (!settings) return;
         try {
@@ -53,33 +54,39 @@ export const handleSaveSinglePageData = async (settings: any , JsonData : any) =
                 .map(([key, value]) => `"${key}":"${value}"`)
                 .join(',');
 
-             // Construct X_Filter with edit data if available
+            // Construct X_Filter with edit data if available
             const formData = JsonData || {};
             let XFilterMultiple = '';
             Object.entries(settings.X_Filter_Multiple).forEach(([key, value]) => {
                     XFilterMultiple += `<${key}>${value}</${key}>`;
             });
 
+            // Stringify first, then escape ampersands
+            const jsonString = JSON.stringify(formData);
+            // const escapedJsonString = jsonString.replace(/&/g, '&amp;');
 
-            
             const xmlData = `<dsXml>
             <J_Ui>${jUi}</J_Ui>
             <Sql>${settings.Sql || ''}</Sql>
             <X_Filter></X_Filter>
-            <X_DataJson>${JSON.stringify(formData)}</X_DataJson>
+            <X_DataJson>${jsonString}</X_DataJson>
             <X_Filter_Multiple>${XFilterMultiple || ''}</X_Filter_Multiple>
             <J_Api>${jApi}</J_Api>
             </dsXml>`;
+            
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
                 headers: {
                     'Content-Type': 'application/xml',
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+            if(response.data?.success){
+                setActiveTab(tabName);
+            }else{
+                toast.error(response.data.message || "something went wrong while saving data")
+            }
             console.log('Response from saveSinglePageData:', response.data);
         } catch (error) {
             console.error(`Error fetching options for `, error);
-        } finally {
-
         }
 }
