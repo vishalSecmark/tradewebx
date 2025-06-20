@@ -613,6 +613,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setSearchTerm('');
     };
 
+    // Close search box when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const searchContainer = document.querySelector('.search-container');
+            if (isSearchActive && searchContainer && !searchContainer.contains(event.target as Node)) {
+                setIsSearchActive(false);
+                setSearchTerm('');
+            }
+        };
+
+        if (isSearchActive) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isSearchActive]);
+
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
@@ -711,13 +730,58 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             </>
                         )}
                         {apiData && apiData.length > 0 && (
-                            <button
-                                className="p-2 rounded"
-                                onClick={handleSearchToggle}
-                                style={{ color: colors.text }}
-                            >
-                                <FaSearch size={20} />
-                            </button>
+                            <div className="relative search-container">
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={handleSearchToggle}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaSearch size={20} />
+                                </button>
+
+                                {/* Absolute Search Box */}
+                                {isSearchActive && (
+                                    <div
+                                        className="absolute top-full right-0 mt-1 w-80 p-2 rounded border shadow-lg z-50"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            borderColor: '#e5e7eb'
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 relative">
+                                                <input
+                                                    type="text"
+                                                    value={searchTerm}
+                                                    onChange={handleSearchChange}
+                                                    placeholder="Search across all columns..."
+                                                    className="w-full px-2 py-1.5 text-sm rounded border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    style={{
+                                                        backgroundColor: colors.textInputBackground || '#ffffff',
+                                                        borderColor: '#d1d5db',
+                                                        color: colors.text
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                {searchTerm && (
+                                                    <button
+                                                        onClick={handleSearchClear}
+                                                        className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
+                                                        style={{ color: colors.text }}
+                                                    >
+                                                        <FaTimes size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {searchTerm && (
+                                            <div className="text-xs text-gray-500 mt-1 text-right">
+                                                {filteredApiData.length} of {apiData?.length || 0} records
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         )}
                         <button
                             className="p-2 rounded"
@@ -739,47 +803,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
 
-            {/* Search Input */}
-            {isSearchActive && (
-                <div className="mb-3 p-2 rounded border" style={{
-                    backgroundColor: colors.cardBackground,
-                    borderColor: '#e5e7eb'
-                }}>
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 relative">
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={handleSearchChange}
-                                placeholder="Search across all columns..."
-                                className="w-full px-2 py-1.5 text-sm rounded border focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                style={{
-                                    backgroundColor: colors.textInputBackground || '#ffffff',
-                                    borderColor: '#d1d5db',
-                                    color: colors.text
-                                }}
-                                autoFocus
-                            />
-                            {searchTerm && (
-                                <button
-                                    onClick={handleSearchClear}
-                                    className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaTimes size={12} />
-                                </button>
-                            )}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                            {searchTerm && (
-                                <span>
-                                    {filteredApiData.length} of {apiData?.length || 0} records
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Filter Modals */}
             <FilterModal
