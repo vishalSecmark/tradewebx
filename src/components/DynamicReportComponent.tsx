@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -18,6 +18,7 @@ import { parseStringPromise } from 'xml2js';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
+import Loader from './Loader';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -62,6 +63,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [pdfParams, setPdfParams] = useState<
         [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
     >();
+    const [hasFetchAttempted, setHasFetchAttempted] = useState(false);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -272,6 +274,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (!pageData) return;
 
         setIsLoading(true);
+        setHasFetchAttempted(true);
         const startTime = performance.now();
 
         try {
@@ -566,6 +569,69 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const handleCancelDelete = () => {
         setIsConfirmationModalOpen(false);
     };
+
+    // Add search state variables
+    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filteredApiData, setFilteredApiData] = useState<any[]>([]);
+
+    // Add search filtering logic
+    useEffect(() => {
+        if (!apiData) {
+            setFilteredApiData([]);
+            return;
+        }
+
+        if (!searchTerm.trim()) {
+            setFilteredApiData(apiData);
+            return;
+        }
+
+        const filtered = apiData.filter((row: any) => {
+            return Object.values(row).some((value: any) => {
+                if (value === null || value === undefined) return false;
+                return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+            });
+        });
+
+        setFilteredApiData(filtered);
+    }, [apiData, searchTerm]);
+
+    // Add search handlers
+    const handleSearchToggle = () => {
+        setIsSearchActive(!isSearchActive);
+        if (isSearchActive) {
+            setSearchTerm('');
+        }
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    };
+
+    const handleSearchClear = () => {
+        setSearchTerm('');
+    };
+
+    // Close search box when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const searchContainer = document.querySelector('.search-container');
+            if (isSearchActive && searchContainer && !searchContainer.contains(event.target as Node)) {
+                setIsSearchActive(false);
+                setSearchTerm('');
+            }
+        };
+
+        if (isSearchActive) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isSearchActive]);
+
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
@@ -663,6 +729,60 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </button>
                             </>
                         )}
+                        {apiData && apiData.length > 0 && (
+                            <div className="relative search-container">
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={handleSearchToggle}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaSearch size={20} />
+                                </button>
+
+                                {/* Absolute Search Box */}
+                                {isSearchActive && (
+                                    <div
+                                        className="absolute top-full right-0 mt-1 w-80 p-2 rounded border shadow-lg z-50"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            borderColor: '#e5e7eb'
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 relative">
+                                                <input
+                                                    type="text"
+                                                    value={searchTerm}
+                                                    onChange={handleSearchChange}
+                                                    placeholder="Search across all columns..."
+                                                    className="w-full px-2 py-1.5 text-sm rounded border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    style={{
+                                                        backgroundColor: colors.textInputBackground || '#ffffff',
+                                                        borderColor: '#d1d5db',
+                                                        color: colors.text
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                {searchTerm && (
+                                                    <button
+                                                        onClick={handleSearchClear}
+                                                        className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
+                                                        style={{ color: colors.text }}
+                                                    >
+                                                        <FaTimes size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {searchTerm && (
+                                            <div className="text-xs text-gray-500 mt-1 text-right">
+                                                {filteredApiData.length} of {apiData?.length || 0} records
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -682,6 +802,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     </div>
                 </div>
             )}
+
+
 
             {/* Filter Modals */}
             <FilterModal
@@ -739,7 +861,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             />}
 
             {/* Loading State */}
-            {isLoading && <div>Loading...</div>}
+            {isLoading &&
+                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
+                    <Loader />
+                </div>
+            }
 
             {/* Horizontal Filters */}
             {showFilterHorizontally && pageData[0].filters && pageData[0].filters.length > 0 && (
@@ -793,7 +919,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
 
-            {!apiData && !isLoading && <div>No Data Found</div>}
+            {!apiData && !isLoading && hasFetchAttempted && <div>No Data Found</div>}
             {/* Data Display */}
 
             {!isLoading && apiData && (
@@ -838,11 +964,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     ) : null}
                                 </div>
                             </div>
-                            <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
+                            <div className="text-xs">
+                                {searchTerm ?
+                                    `Showing ${filteredApiData.length} of ${apiData.length} records` :
+                                    `Total Records: ${apiData.length}`
+                                } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
+                            </div>
                         </div>
                     </div>
                     <DataTable
-                        data={apiData}
+                        data={filteredApiData}
                         settings={{
                             ...pageData[0].levels[currentLevel].settings,
                             mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
