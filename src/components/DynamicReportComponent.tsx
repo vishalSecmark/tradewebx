@@ -63,6 +63,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [pdfParams, setPdfParams] = useState<
         [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
     >();
+    const [hasFetchAttempted, setHasFetchAttempted] = useState(false);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -273,6 +274,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (!pageData) return;
 
         setIsLoading(true);
+        setHasFetchAttempted(true);
         const startTime = performance.now();
 
         try {
@@ -798,7 +800,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
 
-            {!apiData && !isLoading && <div>No Data Found</div>}
+            {!apiData && !isLoading && hasFetchAttempted && <div>No Data Found</div>}
             {/* Data Display */}
 
             {!isLoading && apiData && (
