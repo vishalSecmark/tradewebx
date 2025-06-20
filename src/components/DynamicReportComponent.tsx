@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -569,6 +569,50 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const handleCancelDelete = () => {
         setIsConfirmationModalOpen(false);
     };
+
+    // Add search state variables
+    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filteredApiData, setFilteredApiData] = useState<any[]>([]);
+
+    // Add search filtering logic
+    useEffect(() => {
+        if (!apiData) {
+            setFilteredApiData([]);
+            return;
+        }
+
+        if (!searchTerm.trim()) {
+            setFilteredApiData(apiData);
+            return;
+        }
+
+        const filtered = apiData.filter((row: any) => {
+            return Object.values(row).some((value: any) => {
+                if (value === null || value === undefined) return false;
+                return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+            });
+        });
+
+        setFilteredApiData(filtered);
+    }, [apiData, searchTerm]);
+
+    // Add search handlers
+    const handleSearchToggle = () => {
+        setIsSearchActive(!isSearchActive);
+        if (isSearchActive) {
+            setSearchTerm('');
+        }
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    };
+
+    const handleSearchClear = () => {
+        setSearchTerm('');
+    };
+
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
@@ -666,6 +710,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </button>
                             </>
                         )}
+                        {apiData && apiData.length > 0 && (
+                            <button
+                                className="p-2 rounded"
+                                onClick={handleSearchToggle}
+                                style={{ color: colors.text }}
+                            >
+                                <FaSearch size={20} />
+                            </button>
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -682,6 +735,48 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 <FaFilter size={20} />
                             </button>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Search Input */}
+            {isSearchActive && (
+                <div className="mb-3 p-2 rounded border" style={{
+                    backgroundColor: colors.cardBackground,
+                    borderColor: '#e5e7eb'
+                }}>
+                    <div className="flex items-center gap-2">
+                        <div className="flex-1 relative">
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                placeholder="Search across all columns..."
+                                className="w-full px-2 py-1.5 text-sm rounded border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                style={{
+                                    backgroundColor: colors.textInputBackground || '#ffffff',
+                                    borderColor: '#d1d5db',
+                                    color: colors.text
+                                }}
+                                autoFocus
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={handleSearchClear}
+                                    className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaTimes size={12} />
+                                </button>
+                            )}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                            {searchTerm && (
+                                <span>
+                                    {filteredApiData.length} of {apiData?.length || 0} records
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -845,11 +940,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     ) : null}
                                 </div>
                             </div>
-                            <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
+                            <div className="text-xs">
+                                {searchTerm ?
+                                    `Showing ${filteredApiData.length} of ${apiData.length} records` :
+                                    `Total Records: ${apiData.length}`
+                                } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
+                            </div>
                         </div>
                     </div>
                     <DataTable
-                        data={apiData}
+                        data={filteredApiData}
                         settings={{
                             ...pageData[0].levels[currentLevel].settings,
                             mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
