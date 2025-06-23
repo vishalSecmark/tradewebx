@@ -362,7 +362,7 @@ export default function Kyc() {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={() => handleSetActiveTab(tab.id)}
+                        // onClick={() => handleSetActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`
