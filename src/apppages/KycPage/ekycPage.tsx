@@ -13,6 +13,7 @@ import { BASE_URL, PATH_URL } from "@/utils/constants";
 import moment from "moment";
 import { findPageData } from "@/utils/helper";
 import Documents from "./components/documents";
+import Loader from "@/components/Loader";
 
 interface TabData {
     id: string;
@@ -378,7 +379,9 @@ export default function Kyc() {
             </div>
             
             {isLoading ? (
-                <div className="text-center py-4">Loading...</div>
+                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
+                    <Loader />
+                </div>
             ) : (
                 <div className="mt-3">
                     {tabs.find(tab => tab.id === activeTab)?.content}
