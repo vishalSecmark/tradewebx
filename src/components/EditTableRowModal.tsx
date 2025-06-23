@@ -48,6 +48,7 @@ interface EditTableRowModalProps {
     tableData: RowData[];
     wPage: string;
     settings: {
+        ShowView: Boolean;
         EditableColumn: EditableColumn[];
         leftAlignedColumns?: string;
         leftAlignedColums?: string;
@@ -82,6 +83,16 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [pageData, setPageData] = useState<any>(null);
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
+
+    // console.log(tableData,'tableData222');
+    // console.log(settings.ShowView,'settings in edit');
+
+    const showViewTable = settings.ShowView
+
+    console.log(showViewTable,'showViewTable');
+    
+    
+    
 
     const editableColumns = settings.EditableColumn || [];
 
@@ -780,7 +791,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 <table className="min-w-full table-auto border text-sm">
                                     <thead>
                                         <tr>
-                                            <th
+                                           { showViewTable === false && <th
                                                 className="border px-2 py-2 text-left"
                                                 style={{
                                                     backgroundColor: colors.primary,
@@ -790,7 +801,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                 }}
                                             >
                                                 Actions
-                                            </th>
+                                            </th>}
                                             {Object.keys(localData[0]).map((key) => (
                                                 <th
                                                     key={key}
@@ -819,7 +830,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     fontFamily: fonts.content,
                                                 }}
                                             >
-                                                <td className="border px-2 py-2">
+                                                {showViewTable === false && <td className="border px-2 py-2">
                                                     <button
                                                         onClick={() => handleViewRow(row, rowIndex)}
                                                         className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
@@ -829,7 +840,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     >
                                                         View
                                                     </button>
-                                                </td>
+                                                </td>}
                                                 {Object.entries(row).map(([key, value]) => {
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
