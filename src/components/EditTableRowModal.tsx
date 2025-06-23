@@ -48,7 +48,7 @@ interface EditTableRowModalProps {
     tableData: RowData[];
     wPage: string;
     settings: {
-        ShowView: Boolean;
+        ShowView: boolean;
         EditableColumn: EditableColumn[];
         leftAlignedColumns?: string;
         leftAlignedColums?: string;
@@ -136,8 +136,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Page data response:', response.data.data);
 
-            let EditTablePageData = response.data.data.rs0; // Form field configuration
-            let ChildEntryData = response.data.data.rs1 || []; // Child entry data records
+            const EditTablePageData = response.data.data.rs0; // Form field configuration
+            const ChildEntryData = response.data.data.rs1 || []; // Child entry data records
 
             console.log('Master Form Configuration (rs0):', EditTablePageData);
             console.log('Child Entry Data Records (rs1):', ChildEntryData);
@@ -791,7 +791,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 <table className="min-w-full table-auto border text-sm">
                                     <thead>
                                         <tr>
-                                           { showViewTable === false && <th
+                                           { showViewTable === true && <th
                                                 className="border px-2 py-2 text-left"
                                                 style={{
                                                     backgroundColor: colors.primary,
@@ -830,7 +830,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     fontFamily: fonts.content,
                                                 }}
                                             >
-                                                {showViewTable === false && <td className="border px-2 py-2">
+                                                {showViewTable === true && <td className="border px-2 py-2">
                                                     <button
                                                         onClick={() => handleViewRow(row, rowIndex)}
                                                         className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
