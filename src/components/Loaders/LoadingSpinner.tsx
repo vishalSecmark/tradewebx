@@ -1,34 +1,44 @@
 import React from "react";
+import Loader from "../Loader";
+import { useTheme } from "@/context/ThemeContext";
 
 interface LoaderOverlayProps {
   loading?: boolean;
   text?: string;
-  spinnerColor?: string;
-  overlayColor?: string;
   zIndex?: number;
+  restStyles?: React.CSSProperties;
 }
 
 const LoaderOverlay: React.FC<LoaderOverlayProps> = ({
   loading = false,
   text = "Loading...",
-  spinnerColor = "text-blue-500",
-  overlayColor = "bg-black bg-opacity-50",
   zIndex = 50,
 }) => {
+  const { colors } = useTheme();
+  
   if (!loading) return null;
 
   return (
     <div 
-      className={`fixed inset-0 flex items-center justify-center ${overlayColor}`}
-      style={{ zIndex }}
+      className={`fixed inset-0 flex items-center justify-center`}
+      style={{ zIndex,
+         backgroundColor: colors.background,
+          opacity: 0.7
+      }}
     >
       <div className="flex flex-col items-center">
         {/* Spinner */}
-        <div className={`animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 ${spinnerColor}`}></div>
-        
+        <Loader/> 
         {/* Loading text */}
         {text && (
-          <p className="mt-4 text-white font-medium">{text}</p>
+          <p 
+            className="mt-4 font-medium"
+            style={{
+              textColor : colors.text
+            }}
+            >
+              {text}
+            </p>
         )}
       </div>
     </div>

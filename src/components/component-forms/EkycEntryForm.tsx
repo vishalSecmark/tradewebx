@@ -833,22 +833,14 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         />
                     )}
                 </>
-
             ) : (
                 <LoaderOverlay
                     loading={isThirdPartyLoading}
                     text="Processing your request..."
-                    spinnerColor="text-purple-500"
-                    overlayColor="bg-gray-900 bg-opacity-70"
                     zIndex={100}
                 />
 
             )}
-
-            {/* <LoadingSpinner
-                isLoading={isThirdPartyLoading}
-                loadingText="Processing your request..."
-            /> */}
         </div>
     );
 
