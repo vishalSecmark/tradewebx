@@ -247,6 +247,14 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     // Clear the dependent field value
                     newValues[dependentItem.wKey as string] = undefined;
 
+                    // Also clear dropdown options for dependent fields to ensure they're hidden
+                    if (dependentItem.type === 'WDropDownBox') {
+                        setDropdownOptions(prev => ({
+                            ...prev,
+                            [dependentItem.wKey as string]: []
+                        }));
+                    }
+
                     // Find fields that depend on this field
                     const nestedDependentFields = sortedFormData.flat().filter(nestedItem => {
                         if (!nestedItem.dependsOn) return false;
@@ -413,6 +421,18 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 (typeof parentValue === 'object' && Object.values(parentValue).some(val => !val))
             ) {
                 console.error(`Parent value for ${item.wKey} is empty or undefined`, parentValue);
+
+                // Clear dropdown options when parent value is invalid
+                setDropdownOptions(prev => ({
+                    ...prev,
+                    [item.wKey as string]: []
+                }));
+
+                setLoadingDropdowns(prev => ({
+                    ...prev,
+                    [item.wKey as string]: false
+                }));
+
                 return [];
             }
 
@@ -786,6 +806,37 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     const renderFormElement = (item: FormElement) => {
+        // Check if this is a dependent dropdown with no options or unfulfilled dependencies
+        if (item.type === 'WDropDownBox' && item.dependsOn) {
+            // Check if all dependencies are fulfilled
+            const dependenciesFulfilled = Array.isArray(item.dependsOn.field)
+                ? item.dependsOn.field.every(field =>
+                    formValues[field] !== undefined &&
+                    formValues[field] !== null &&
+                    formValues[field] !== ''
+                )
+                : formValues[item.dependsOn.field] !== undefined &&
+                formValues[item.dependsOn.field] !== null &&
+                formValues[item.dependsOn.field] !== '';
+
+            // Hide dependent dropdown if dependencies are not fulfilled
+            if (!dependenciesFulfilled) {
+                return null;
+            }
+
+            const options = item.options
+                ? item.options.map(opt => ({
+                    label: opt.label,
+                    value: opt.Value || opt.value
+                }))
+                : dropdownOptions[item.wKey as string] || [];
+
+            // Hide dependent dropdown if it has no options available
+            if (options.length === 0) {
+                return null;
+            }
+        }
+
         switch (item.type) {
             case 'WDateRangeBox':
                 return renderDateRangeBox(item);
