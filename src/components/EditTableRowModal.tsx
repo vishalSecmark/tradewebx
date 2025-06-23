@@ -4,6 +4,7 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
@@ -534,6 +535,24 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             }
 
             // If we get here, the save was successful
+            // Extract success message from API response
+            let successMessage = 'Record saved successfully';
+
+            if (response.data?.message) {
+                // Extract message from XML format if present
+                const messageMatch = response.data.message.match(/<Message>(.*?)<\/Message>/);
+                if (messageMatch) {
+                    successMessage = messageMatch[1];
+                } else {
+                    // If not in XML format, use the message directly
+                    successMessage = response.data.message;
+                }
+            }
+
+            // Show success toast message
+            toast.success(successMessage);
+
+            // Close the modal after showing success message
             onClose();
 
         } catch (error) {
