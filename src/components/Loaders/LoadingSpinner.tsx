@@ -15,30 +15,31 @@ const LoaderOverlay: React.FC<LoaderOverlayProps> = ({
   zIndex = 50,
 }) => {
   const { colors } = useTheme();
-  
+
   if (!loading) return null;
 
   return (
-    <div 
+    <div
       className={`fixed inset-0 flex items-center justify-center`}
-      style={{ zIndex,
-         backgroundColor: colors.background,
-          opacity: 0.7
+      style={{
+        zIndex,
+        backgroundColor: colors.background,
+        opacity: 0.7
       }}
     >
       <div className="flex flex-col items-center">
         {/* Spinner */}
-        <Loader/> 
+        <Loader />
         {/* Loading text */}
         {text && (
-          <p 
+          <p
             className="mt-4 font-medium"
             style={{
-              textColor : colors.text
+              color: colors.text
             }}
-            >
-              {text}
-            </p>
+          >
+            {text}
+          </p>
         )}
       </div>
     </div>
