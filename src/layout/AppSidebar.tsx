@@ -108,7 +108,7 @@ const AppSidebar: React.FC = () => {
         // Add more mappings as needed
       };
 
-      const basePath = `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+      const basePath = `/${routeMapping[item.componentName] || item?.componentName?.toLowerCase().replace(/\s+/g, '-')}`;
 
       const navItem: NavItem = {
         icon: item.icon,
@@ -122,7 +122,7 @@ const AppSidebar: React.FC = () => {
       if (item.submenu && item.submenu.length > 0) {
         navItem.subItems = item.submenu.map((subItem: any) => ({
           name: subItem.title,
-          path: `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`,
+          path: `${basePath}/${subItem?.componentName?.toLowerCase().replace(/\s+/g, '-')}`,
           pro: false,
           componentName: subItem.componentName,
           componentType: subItem.componentType,

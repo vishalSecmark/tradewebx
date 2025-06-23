@@ -18,9 +18,9 @@ const staticRoutes: Record<string, React.ReactNode> = {
   changepassword: <ChangePassword />,
   theme: <ThemePage />,
   downloads: <Downloads />,
-  kycpage: <KycPage />,
-  marginPledge:<MarginPledgeOnline/>,
-  ipo:<Ipo/>
+  rekyc: <KycPage />,
+  marginPledge: <MarginPledgeOnline />,
+  ipo: <Ipo />
 };
 
 // Define the type for params explicitly
@@ -39,8 +39,14 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
 
 
   // Handle static routes
-  if (staticRoutes[componentName]) {
-    return staticRoutes[componentName];
+  if (route in staticRoutes) {
+    return staticRoutes[route];
+  }
+  if (subRoute in staticRoutes) {
+    return staticRoutes[subRoute];
+  }
+  if (subSubRoute in staticRoutes) {
+    return staticRoutes[subSubRoute];
   }
 
   // For dynamic routes, determine the actual componentName
@@ -62,7 +68,7 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
 
   // Find the component in menu items and check its type
   const findComponentType = (items: any[]): string | undefined => {
-    for (const item of items) {  
+    for (const item of items) {
       if (item.componentName?.toLowerCase() === componentName.toLowerCase()) {
         console.log(item.componentType,'componontType1');
         
@@ -81,7 +87,7 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   };
 
   const componentType = findComponentType(menuItems);
-  // console.log('componentType', componentType);
+  console.log('componentType', componentType);
   // console.log('componentName', componentName);
   // Show entry component if componentType is 'entry', otherwise show report component
   return (
