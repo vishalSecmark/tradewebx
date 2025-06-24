@@ -53,6 +53,10 @@ interface EditTableRowModalProps {
         EditableColumn: EditableColumn[];
         leftAlignedColumns?: string;
         leftAlignedColums?: string;
+        columnWidth?: Array<{
+            key: string;
+            width: number;
+        }>;
     }
 }
 
@@ -90,12 +94,22 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     const showViewTable = settings.ShowView
 
-    console.log(showViewTable,'showViewTable');
-    
-    
-    
+    console.log(showViewTable, 'showViewTable');
+
+
+
 
     const editableColumns = settings.EditableColumn || [];
+
+    // Get column width configuration from settings
+    const getColumnWidth = (columnKey: string): number | undefined => {
+        const columnWidthConfig = settings?.columnWidth;
+        if (columnWidthConfig && Array.isArray(columnWidthConfig)) {
+            const widthConfig = columnWidthConfig.find(config => config.key === columnKey);
+            return widthConfig?.width;
+        }
+        return undefined;
+    };
 
     const showValidationMessage = (message: string, type: 'M' | 'S' | 'E' | 'D' = 'E') => {
         setValidationModal({
@@ -580,6 +594,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         return editableColumns.find((col) => col.wKey === key);
     };
 
+    // Function to get column order - editable columns first, then non-editable
+    const getOrderedColumns = (dataKeys: string[]) => {
+        const editableKeys = editableColumns.map(col => col.wKey);
+        const editableColumnKeys = dataKeys.filter(key => editableKeys.includes(key));
+        const nonEditableColumnKeys = dataKeys.filter(key => !editableKeys.includes(key));
+
+        return [...editableColumnKeys, ...nonEditableColumnKeys];
+    };
+
     const fetchDropdownOptions = async (column: EditableColumn) => {
         try {
             setLoadingDropdowns(prev => ({
@@ -807,10 +830,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         <DialogTitle className="text-lg font-semibold mb-4">{title}</DialogTitle>
                         {localData.length > 0 ? (
                             <div className="overflow-auto flex-1">
-                                <table className="min-w-full table-auto border text-sm">
+                                <table className="border text-sm">
                                     <thead>
                                         <tr>
-                                           { showViewTable === true && <th
+                                            {showViewTable === true && <th
                                                 className="border px-2 py-2 text-left"
                                                 style={{
                                                     backgroundColor: colors.primary,
@@ -821,19 +844,23 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                             >
                                                 Actions
                                             </th>}
-                                            {Object.keys(localData[0]).map((key) => (
-                                                <th
-                                                    key={key}
-                                                    className="border px-2 py-2 text-left"
-                                                    style={{
-                                                        backgroundColor: colors.primary,
-                                                        color: colors.text,
-                                                        fontFamily: fonts.content,
-                                                    }}
-                                                >
-                                                    {key}
-                                                </th>
-                                            ))}
+                                            {getOrderedColumns(Object.keys(localData[0])).map((key) => {
+                                                const columnWidth = getColumnWidth(key);
+                                                return (
+                                                    <th
+                                                        key={key}
+                                                        className="border px-2 py-2 text-left"
+                                                        style={{
+                                                            backgroundColor: colors.primary,
+                                                            color: colors.text,
+                                                            fontFamily: fonts.content,
+                                                            ...(columnWidth && { minWidth: `${columnWidth}px` }),
+                                                        }}
+                                                    >
+                                                        {key}
+                                                    </th>
+                                                );
+                                            })}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -860,7 +887,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                         View
                                                     </button>
                                                 </td>}
-                                                {Object.entries(row).map(([key, value]) => {
+                                                {getOrderedColumns(Object.keys(row)).map((key) => {
+                                                    const value = row[key];
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
                                                     const hasChar = hasCharacterField(key);
@@ -877,7 +905,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                             key={key}
                                                             className="border px-2 py-2"
                                                             style={{
-                                                                textAlign: isLeftAligned ? 'left' : (hasChar ? 'left' : 'right')
+                                                                textAlign: isLeftAligned || editable ? 'left' : (hasChar ? 'left' : 'right')
                                                             }}
                                                         >
                                                             {editable ? (
