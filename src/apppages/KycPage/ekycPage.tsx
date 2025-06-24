@@ -7,7 +7,7 @@ import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { findPageData } from "@/utils/helper";
 import axios from "axios";
 import Loader from "@/components/Loader";
-import { buildTabs, TabData } from "./kycTabs";
+import { buildTabs, TabData } from "./KycTabs";
 import { FiRefreshCcw } from "react-icons/fi";
 import { useSaveLoading } from "@/context/SaveLoadingContext";
 
