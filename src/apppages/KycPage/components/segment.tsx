@@ -5,9 +5,12 @@ import { EkycComponentProps } from '@/types/EkycFormTypes';
 import { DataGrid } from 'react-data-grid';
 import { IoArrowBack } from 'react-icons/io5';
 import { handleSaveSinglePageData } from '../ekychelper';
+import { useSaveLoading } from '@/context/SaveLoadingContext';
 
 const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
+  const { setSaving } = useSaveLoading();
+  
 
   // Handler to update the segment tableData
   const handleSegmentUpdate = (id: string, fieldKey: string, value: string) => {
@@ -65,7 +68,7 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
 
   const handleSaveAndNext = () => {
     // Perform validation checks here   
-    handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab, "attachments")
+    handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab, "attachments",setSaving)
     // setActiveTab("attachments")
   }
 

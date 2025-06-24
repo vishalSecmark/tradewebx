@@ -13,10 +13,12 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
+import { useSaveLoading } from '@/context/SaveLoadingContext';
 
 
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
+  const { setSaving } = useSaveLoading();
   const [openAddNominee, setOpenAddNominee] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [nomineeDropdownOptions, setNomineeDropdownOptions] = useState<Record<string, any[]>>({});
@@ -367,7 +369,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       ...item,
       ...(item?.NomSerial && { IsInserted: "false" })
     }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "bank");
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "bank",setSaving);
     // setActiveTab("bank");
   }
 

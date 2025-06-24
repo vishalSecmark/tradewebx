@@ -1,11 +1,12 @@
-import { EkycFormProvider } from "@/context/EkycFormContext"
 import Kyc from "./ekycPage"
+import { SaveLoadingProvider } from "@/context/SaveLoadingContext"
 
 const KycPage = () =>{
 return (
-    <EkycFormProvider>
-        <Kyc/>
-    </EkycFormProvider>
+    <SaveLoadingProvider>
+     <Kyc/>
+    </SaveLoadingProvider>
+    
 )
 }
 

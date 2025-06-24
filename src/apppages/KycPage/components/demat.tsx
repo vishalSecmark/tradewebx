@@ -8,9 +8,11 @@ import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelpe
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { toast } from 'react-toastify';
+import { useSaveLoading } from '@/context/SaveLoadingContext';
 
 const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
+  const { setSaving } = useSaveLoading();
   const [openAddDemat, setOpenAddDemat] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [dematDropdownOptions, setDematDropdownOptions] = useState<Record<string, any[]>>({});
@@ -148,7 +150,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
       ...item,
       ...(item?.DematId && { IsInserted: "false" })
     }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "segment");
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "segment",setSaving);
     // setActiveTab("segment");
   };
 

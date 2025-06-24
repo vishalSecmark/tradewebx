@@ -6,11 +6,15 @@ import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-toastify';
+import { useSaveLoading } from '@/context/SaveLoadingContext';
+
 
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     console.log('personal tab', formFields, tableData);
     const { colors, fonts } = useTheme();
+    const { setSaving } = useSaveLoading();
+    
 
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -95,7 +99,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         } else {
             const transformedData = transformData(tableData[0] || {});
             console.log('Transformed Data:', transformedData);
-            handleSaveSinglePageData(Settings.SaveNextAPI, transformedData)
+            handleSaveSinglePageData(Settings.SaveNextAPI, transformedData,setActiveTab,"attachments", setSaving)
         }
     }
     return (

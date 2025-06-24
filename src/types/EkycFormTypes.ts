@@ -111,4 +111,5 @@ export interface EkycComponentProps {
     setFieldData?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
     setActiveTab?: React.Dispatch<React.SetStateAction<string>>;
     Settings?: Record<string, any>;
+    setSaving?: (loading: boolean) => void;
 }
