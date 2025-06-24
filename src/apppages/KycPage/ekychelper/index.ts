@@ -43,7 +43,6 @@ export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOpti
 
 
 export const handleSaveSinglePageData = async (settings: any, JsonData: any, setActiveTab?: any, tabName?:string) => {
-    console.log('handleSaveSinglePageData called with settings:', settings, 'and JsonData:', JsonData);
     if (!settings) return;
         try {
             const jUi = Object.entries(settings.J_Ui)
@@ -81,6 +80,7 @@ export const handleSaveSinglePageData = async (settings: any, JsonData: any, set
                 }
             });
             if(response.data?.success){
+                toast.success(response.data?.data?.rs0[0]?.Column1 || "Data saved successfully");
                 setActiveTab(tabName);
             }else{
                 toast.error(response.data.message || "something went wrong while saving data")

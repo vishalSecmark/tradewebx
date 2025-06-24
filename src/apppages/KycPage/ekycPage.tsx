@@ -14,10 +14,12 @@ import moment from "moment";
 import { findPageData } from "@/utils/helper";
 import Documents from "./components/documents";
 import Loader from "@/components/Loader";
+import { FaUser, FaUsers, FaUniversity, FaCreditCard, FaChartPie, FaFileAlt } from "react-icons/fa";
 
 interface TabData {
     id: string;
     label: string;
+    icon: React.ReactNode;
     content: React.ReactNode;
 }
 
@@ -255,12 +257,12 @@ export default function Kyc() {
 
     const handleRefresh = () => {
         fetchFormData();
-    };
-
+    };    
     const tabs: TabData[] = [
         {
             id: "personal",
             label: "Personal Information",
+            icon: <FaUser className="w-4 h-4" />,
             content: <Personal
                 formFields={dynamicData.personalTabData.formFields}
                 tableData={dynamicData.personalTabData.tableData}
@@ -273,6 +275,7 @@ export default function Kyc() {
         {
             id: "nominee",
             label: "Nominee",
+            icon: <FaUsers className="w-4 h-4" />,
             content: <Nominee
                 formFields={dynamicData.nomineeTabData.formFields}
                 tableData={dynamicData.nomineeTabData.tableData}
@@ -285,6 +288,7 @@ export default function Kyc() {
         {
             id: "bank",
             label: "Bank",
+            icon: <FaUniversity className="w-4 h-4" />,
             content: <KycBank
                 formFields={dynamicData.bankTabData.formFields}
                 tableData={dynamicData.bankTabData.tableData}
@@ -297,6 +301,7 @@ export default function Kyc() {
         {
             id: "demat",
             label: "Demat",
+            icon: <FaCreditCard className="w-4 h-4" />,
             content: <KycDemat
                 formFields={dynamicData.dematTabData.formFields}
                 tableData={dynamicData.dematTabData.tableData}
@@ -309,6 +314,7 @@ export default function Kyc() {
         {
             id: "segment",
             label: "Segment",
+            icon: <FaChartPie className="w-4 h-4" />,
             content: <Segment
                 formFields={dynamicData.segmentTabData.formFields}
                 tableData={dynamicData.segmentTabData.tableData}
@@ -321,6 +327,7 @@ export default function Kyc() {
         {
             id: "attachments",
             label: "Documents",
+            icon: <FaFileAlt className="w-4 h-4" />,
             content: <Documents
                 formFields={dynamicData.attachments?.formFields}
                 tableData={dynamicData.attachments?.tableData}
@@ -356,15 +363,14 @@ export default function Kyc() {
                         Refresh
                     </button>
                 </div>
-            </div>
-            
+            </div>              
             {/* Tabs Navigation */}
-            <div className="flex border-b" style={{ borderColor: colors.color3 }}>
+            <div className="flex border-b relative" style={{ borderColor: colors.color3 }}>
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         // onClick={() => handleSetActiveTab(tab.id)}
-                        className={`px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === tab.id
+                        className={`px-4 py-2 text-sm font-medium transition-colors duration-200 flex items-center gap-2 relative ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`
                             }`}
@@ -373,7 +379,19 @@ export default function Kyc() {
                             backgroundColor: activeTab === tab.id ? colors.buttonBackground : 'transparent'
                         }}
                     >
-                        {tab.label}
+                        {tab.icon}
+                        {tab.label}                        
+                        {/* Triangle tip for active tab */}
+                        {activeTab === tab.id && (
+                            <div 
+                                className="absolute -bottom-[7px] left-1/2 transform -translate-x-1/2 w-0 h-0"
+                                style={{
+                                    borderLeft: '6px solid transparent',
+                                    borderRight: '6px solid transparent',
+                                    borderTop: `6px solid ${colors.primary}`,
+                                }}
+                            />
+                        )}
                     </button>
                 ))}
             </div>
