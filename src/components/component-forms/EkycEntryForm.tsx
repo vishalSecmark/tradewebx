@@ -6,7 +6,6 @@ import { toast } from "react-toastify";
 import { getDropdownStyles } from "../common/CommonStyling";
 import CreatableSelect from 'react-select/creatable';
 import axios from 'axios';
-import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -14,6 +13,8 @@ import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
 import { handleViewFile } from "@/utils/helper";
 import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
 import LoaderOverlay from "../Loaders/LoadingSpinner";
+import  Flatpickr  from 'react-flatpickr';
+import { FaCalendar } from "react-icons/fa";
 
 
 const DropdownField: React.FC<{
@@ -354,8 +355,12 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     const urlNode = xmlDoc.getElementsByTagName('url')[0];
                     const url = urlNode?.textContent;
                     console.log("check url", url)
-                    if (url) {
+                    if (url && field.GetResponseFlag === "true") {
                         window.open(url, '_blank');
+                        toast.success('Redirecting to third party URL...');
+                        return;
+                    }else{
+                        window.open(url, '_self');
                         toast.success('Redirecting to third party URL...');
                         return;
                     }
@@ -511,34 +516,41 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         handleDropDownChange={onDropdownChange}
                         setDropDownOptions={setDropDownOptions}
                     />
-                );
-
+                );            
             case 'WDateBox':
                 return (
                     <div key={`dateBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
                         </label>
-                        <div
-                            className="w-full"
-                            style={{
-                                backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText
-                            }}
-                        >
-                            <DatePicker
-                                selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
-                                onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
-                                dateFormat="dd/MM/yyyy"
+                        <div className="relative">
+                            <Flatpickr
+                                value={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
+                                onChange={([date]) => handleInputChange(field.wKey, date)}
+                                options={{
+                                    dateFormat: 'd/m/Y',
+                                    allowInput: true,
+                                    clickOpens: isEnabled,
+                                }}
                                 className={`
-                                    w-full px-3 py-1 border rounded-md
-                                    focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-                                    ${!isEnabled ? 'border-gray-300 bg-[#f2f2f0]' : hasError ? 'border-red-500' : 'border-gray-700'}
-                                `}
-                                wrapperClassName="w-full"
-                                placeholderText="Select Date"
-                                onBlur={() => handleBlur(field)}
+                        w-full px-3 py-1 pr-10 border rounded-md
+                        focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                        ${!isEnabled ? 'border-gray-300 bg-[#f2f2f0]' : hasError ? 'border-red-500' : 'border-gray-700'}
+                    `}
+                                style={{
+                                    backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
+                                    color: colors.textInputText
+                                }}
+                                placeholder="Select Date"
+                                onClose={() => handleBlur(field)}
                                 disabled={!isEnabled}
+                            />
+                            <FaCalendar 
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                                style={{ 
+                                    color: !isEnabled ? '#9ca3af' : colors.textInputText,
+                                    fontSize: '14px'
+                                }}
                             />
                         </div>
                         {hasError && (
@@ -546,7 +558,6 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         )}
                     </div>
                 );
-
             case 'WTextBox':
                 if (field.redirectUrl === "true" || field.OTPRequire) {
                     return (

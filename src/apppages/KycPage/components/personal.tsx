@@ -5,11 +5,13 @@ import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelpe
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-toastify';
+import { useSaveLoading } from '@/context/SaveLoadingContext';
 
 
 const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
 
     const { colors, fonts } = useTheme();
+    const { setSaving } = useSaveLoading();
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldVlaues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
@@ -73,7 +75,7 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
             toast.error("Please fill all mandatory fields");
             return;
         } else {
-            handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab , "nominee")
+            handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab , "nominee", setSaving)
             // setActiveTab("nominee")
         }
     }

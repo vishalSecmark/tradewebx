@@ -42,51 +42,77 @@ export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOpti
     };
 
 
-export const handleSaveSinglePageData = async (settings: any, JsonData: any, setActiveTab?: any, tabName?:string) => {
-    console.log('handleSaveSinglePageData called with settings:', settings, 'and JsonData:', JsonData);
+export const handleSaveSinglePageData = async (
+    settings: any, 
+    JsonData: any, 
+    setActiveTab?: any, 
+    tabName?: string,
+    setSaving?: (loading: boolean) => void
+) => {
     if (!settings) return;
-        try {
-            const jUi = Object.entries(settings.J_Ui)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
+    
+    // Set loading state to true when starting the save operation
+    if (setSaving) setSaving(true);
+    
+    try {
+        const jUi = Object.entries(settings.J_Ui)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
 
-            const jApi = Object.entries(settings.J_Api)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
+        const jApi = Object.entries(settings.J_Api)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
 
-            // Construct X_Filter with edit data if available
-            const formData = JsonData || {};
-            let XFilterMultiple = '';
-            Object.entries(settings.X_Filter_Multiple).forEach(([key, value]) => {
-                    XFilterMultiple += `<${key}>${value}</${key}>`;
-            });
+        // Construct X_Filter with edit data if available
+        const formData = JsonData || {};
+        let XFilterMultiple = '';
+        Object.entries(settings.X_Filter_Multiple).forEach(([key, value]) => {
+                XFilterMultiple += `<${key}>${value}</${key}>`;
+        });
 
-            // Stringify first, then escape ampersands
-            const jsonString = JSON.stringify(formData);
-            // const escapedJsonString = jsonString.replace(/&/g, '&amp;');
+        // Stringify first, then escape ampersands
+        const jsonString = JSON.stringify(formData);
+        // const escapedJsonString = jsonString.replace(/&/g, '&amp;');
 
-            const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <Sql>${settings.Sql || ''}</Sql>
-            <X_Filter></X_Filter>
-            <X_DataJson>${jsonString}</X_DataJson>
-            <X_Filter_Multiple>${XFilterMultiple || ''}</X_Filter_Multiple>
-            <J_Api>${jApi}</J_Api>
-            </dsXml>`;
-            
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
-            if(response.data?.success){
-                setActiveTab(tabName);
-            }else{
-                toast.error(response.data.message || "something went wrong while saving data")
+        const xmlData = `<dsXml>
+        <J_Ui>${jUi}</J_Ui>
+        <Sql>${settings.Sql || ''}</Sql>
+        <X_Filter></X_Filter>
+        <X_DataJson>${jsonString}</X_DataJson>
+        <X_Filter_Multiple>${XFilterMultiple || ''}</X_Filter_Multiple>
+        <J_Api>${jApi}</J_Api>
+        </dsXml>`;
+        
+        const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+            headers: {
+                'Content-Type': 'application/xml',
+                'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
             }
-            console.log('Response from saveSinglePageData:', response.data);
-        } catch (error) {
-            console.error(`Error fetching options for `, error);
+        });
+          if(response.data?.success){
+            const responseMessage = response.data?.data?.rs0[0]?.Column1;
+            
+            // Check if response contains <Flag> indicating an error
+            if (responseMessage && responseMessage.includes('<Flag>')) {
+                // Extract message from XML-like format
+                const messageMatch = responseMessage.match(/<Message>(.*?)<\/Message>/);
+                const errorMessage = messageMatch ? messageMatch[1] : responseMessage;
+                toast.error(errorMessage);
+            } else {
+                toast.success(responseMessage || "Data saved successfully");
+                if (setActiveTab && tabName) {
+                    setActiveTab(tabName);
+                }
+            }
+        }else{
+            toast.error(response.data.message || "something went wrong while saving data")
         }
+        console.log('Response from saveSinglePageData:', response.data);
+    } catch (error) {
+        console.error(`Error saving data:`, error);
+        toast.error("An error occurred while saving data");
+    } finally {
+        // Set loading state to false when operation completes (success or error)
+        if (setSaving) setSaving(false);
+    }
 }

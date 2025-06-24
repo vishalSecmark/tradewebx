@@ -7,9 +7,11 @@ import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelpe
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { toast } from 'react-toastify';
+import { useSaveLoading } from '@/context/SaveLoadingContext';
 
 const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
+  const { setSaving } = useSaveLoading();
   const [openAddBank, setOpenAddBank] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [bankDropdownOptions, setBankDropdownOptions] = useState<Record<string, any[]>>({});
@@ -148,7 +150,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       ...item,
       ...(item?.BankID && { IsInserted: "false" })
     }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat");
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat",setSaving);
     // setActiveTab("demat");
   };
 
