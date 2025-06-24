@@ -594,6 +594,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         return editableColumns.find((col) => col.wKey === key);
     };
 
+    // Function to get column order - editable columns first, then non-editable
+    const getOrderedColumns = (dataKeys: string[]) => {
+        const editableKeys = editableColumns.map(col => col.wKey);
+        const editableColumnKeys = dataKeys.filter(key => editableKeys.includes(key));
+        const nonEditableColumnKeys = dataKeys.filter(key => !editableKeys.includes(key));
+
+        return [...editableColumnKeys, ...nonEditableColumnKeys];
+    };
+
     const fetchDropdownOptions = async (column: EditableColumn) => {
         try {
             setLoadingDropdowns(prev => ({
@@ -835,7 +844,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                             >
                                                 Actions
                                             </th>}
-                                            {Object.keys(localData[0]).map((key) => {
+                                            {getOrderedColumns(Object.keys(localData[0])).map((key) => {
                                                 const columnWidth = getColumnWidth(key);
                                                 return (
                                                     <th
@@ -878,7 +887,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                         View
                                                     </button>
                                                 </td>}
-                                                {Object.entries(row).map(([key, value]) => {
+                                                {getOrderedColumns(Object.keys(row)).map((key) => {
+                                                    const value = row[key];
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
                                                     const hasChar = hasCharacterField(key);
