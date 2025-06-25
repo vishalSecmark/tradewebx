@@ -57,6 +57,7 @@ interface EditTableRowModalProps {
             key: string;
             width: number;
         }>;
+        hideMultiEditColumn?: string;
     }
 }
 
@@ -492,6 +493,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     const generateDsXml = (data: RowData[]) => {
+        // Note: This function includes ALL columns in the API call, including hidden ones
+        // The hideMultiEditColumn setting only affects the UI display, not the data sent to API
         const itemsXml = data
             .map(item => {
                 const itemFields = Object.entries(item)
@@ -595,10 +598,31 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     // Function to get column order - editable columns first, then non-editable
+    // Also handles hiding columns based on hideMultiEditColumn setting
     const getOrderedColumns = (dataKeys: string[]) => {
+        // Get columns to hide from settings
+        const hideMultiEditColumn = settings?.hideMultiEditColumn || '';
+        const columnsToHide = hideMultiEditColumn
+            .split(',')
+            .map(col => col.trim())
+            .filter(col => col !== ''); // Remove empty strings
+
+        // Log for debugging
+        if (columnsToHide.length > 0) {
+            console.log('EditTableRowModal - Columns to hide:', columnsToHide);
+            console.log('EditTableRowModal - All available columns:', dataKeys);
+        }
+
+        // Filter out hidden columns from dataKeys
+        const visibleDataKeys = dataKeys.filter(key => !columnsToHide.includes(key));
+
+        if (columnsToHide.length > 0) {
+            console.log('EditTableRowModal - Visible columns after filtering:', visibleDataKeys);
+        }
+
         const editableKeys = editableColumns.map(col => col.wKey);
-        const editableColumnKeys = dataKeys.filter(key => editableKeys.includes(key));
-        const nonEditableColumnKeys = dataKeys.filter(key => !editableKeys.includes(key));
+        const editableColumnKeys = visibleDataKeys.filter(key => editableKeys.includes(key));
+        const nonEditableColumnKeys = visibleDataKeys.filter(key => !editableKeys.includes(key));
 
         return [...editableColumnKeys, ...nonEditableColumnKeys];
     };

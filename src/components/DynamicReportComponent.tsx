@@ -315,7 +315,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-
+    console.log(pageData, 'pageData');
     // Validate pageData whenever it changes
     useEffect(() => {
         if (pageData) {
@@ -788,7 +788,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     // console.log(pageData[0].levels[currentLevel].settings?.EditableColumn,'editable');
 
-    
+
 
     const deleteMasterRecord = async () => {
         try {
@@ -1085,7 +1085,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             >
                                 <FaEdit size={20} />
                             </button>
-                           
+
                         )}
                         {componentType === 'entry' && (
                             <button
@@ -1269,7 +1269,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
                 wPage={safePageData.getSetting('wPage') || ''}
-                settings={safePageData.getCurrentLevel(currentLevel)?.settings || {}}
+                settings={{
+                    ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                    hideMultiEditColumn: safePageData.getCurrentLevel(currentLevel)?.settings?.hideMultiEditColumn
+                }}
             />}
 
             {/* Loading State */}
