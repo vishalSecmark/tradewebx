@@ -19,6 +19,8 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
+  const [localFormData, setLocalFormData] = useState<any>(formFields || {});
+  
   const [openAddNominee, setOpenAddNominee] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [nomineeDropdownOptions, setNomineeDropdownOptions] = useState<Record<string, any[]>>({});
@@ -255,7 +257,11 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         <div className="flex gap-2">
           <button
             onClick={() => handleEditNomineeClick(props.row, props.rowIdx)}
-            className="px-2 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 text-sm"
+            className="px-2 py-1 rounded-lg"
+            style={{
+              backgroundColor: colors.background,
+              border : `1px solid ${colors.buttonBackground}`
+            }}
           >
             Edit
           </button>
@@ -375,28 +381,30 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-2">
         <button
-          className="rounded-lg"
+          className="px-4 py-1 rounded-lg"
           style={{
             backgroundColor: colors.background,
-            padding: "10px"
-          }} onClick={() => setActiveTab("personal")}
+            border : `1px solid ${colors.buttonBackground}`,
+          }} 
+          onClick={() => setActiveTab("personal")}
         >
           <IoArrowBack size={20} />
         </button>
         <div className="text-end">
           <button
             onClick={handleAddNomineeClick}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-3"
+            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText}}
+            className="px-4 py-1 rounded-lg"
           >
             Add Nominee
           </button>
           <button
-            className="rounded-lg ml-4"
+            className="px-4 py-1 rounded-lg ml-4"
             style={{
               backgroundColor: colors.background,
-              padding: "10px"
+              border : `1px solid ${colors.buttonBackground}`
             }}
             onClick={handleSaveAndNext}
           >
@@ -455,7 +463,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             />
 
             <EkycEntryForm
-              formData={formFields}
+              formData={localFormData}
               formValues={currentFormData}
               masterValues={{}}
               setFormValues={(newValues) => {
@@ -466,7 +474,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
               loadingDropdowns={nomineeLoadingDropdowns}
               fieldErrors={fieldErrors}
               setFieldErrors={setFieldErrors}
-              setFormData={() => { }}
+              setFormData={setLocalFormData}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
             />
@@ -494,7 +502,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                       loadingDropdowns={guardianLoadingDropdowns}
                       fieldErrors={guardianFieldErrors}
                       setFieldErrors={setGuardianFieldErrors}
-                      setFormData={() => { }}
+                      setFormData={setGurdianFields}
                       setValidationModal={setValidationModal}
                       setDropDownOptions={setGuardianDropdownOptions}
                     />

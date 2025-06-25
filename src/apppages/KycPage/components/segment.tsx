@@ -11,7 +11,6 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
   
-
   // Handler to update the segment tableData
   const handleSegmentUpdate = (id: string, fieldKey: string, value: string) => {
     setFieldData((prevState: any) => {
@@ -74,23 +73,24 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-2">
         <button
-          className="rounded-lg"
+          className="rounded-lg px-4 py-1"
           style={{
             backgroundColor: colors.background,
-            padding: "10px"
-          }} onClick={() => setActiveTab("demat")}
+            border : `1px solid ${colors.buttonBackground}`,
+          }} 
+          onClick={() => setActiveTab("demat")}
         >
           <IoArrowBack size={20} />
         </button>
 
-        <div className="text-end mb-2">
+        <div className="text-end">
           <button
-            className="rounded-lg ml-4"
+            className="rounded-lg ml-4 px-4 py-1"
             style={{
               backgroundColor: colors.background,
-              padding: "10px"
+              border : `1px solid ${colors.buttonBackground}`,
             }}
             onClick={handleSaveAndNext}
           >

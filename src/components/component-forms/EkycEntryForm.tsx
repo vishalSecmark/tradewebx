@@ -13,7 +13,7 @@ import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
 import { handleViewFile } from "@/utils/helper";
 import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
 import LoaderOverlay from "../Loaders/LoadingSpinner";
-import  Flatpickr  from 'react-flatpickr';
+import Flatpickr from 'react-flatpickr';
 import { FaCalendar } from "react-icons/fa";
 
 
@@ -30,6 +30,7 @@ const DropdownField: React.FC<{
     isDisabled: boolean;
     handleDropDownChange: any;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    isJustUpdated?: boolean;
 }> = ({
     field,
     formValues,
@@ -42,7 +43,8 @@ const DropdownField: React.FC<{
     handleBlur,
     isDisabled,
     handleDropDownChange,
-    setDropDownOptions
+    setDropDownOptions,
+    isJustUpdated = false
 }) => {
         const options = dropdownOptions[field?.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
@@ -91,7 +93,7 @@ const DropdownField: React.FC<{
             }
         };
 
-        const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field);
+        const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field, isJustUpdated);
 
         return (
             <div key={field?.Srno} className="mb-1">
@@ -359,7 +361,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         window.open(url, '_blank');
                         toast.success('Redirecting to third party URL...');
                         return;
-                    }else{
+                    } else {
                         window.open(url, '_self');
                         toast.success('Redirecting to third party URL...');
                         return;
@@ -380,6 +382,120 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         }
     };
 
+    // const handleValidationApiResponse = (response, currFieldName) => {
+    //     if (!response?.trim().startsWith("<root>")) {
+    //         response = `<root>${response}</root>`;
+    //     }
+
+    //     try {
+    //         const parser = new DOMParser();
+    //         const xmlDoc = parser.parseFromString(response, "text/xml");
+
+    //         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
+    //         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
+    //         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
+    //             (node) => node.tagName !== "Flag" && node.tagName !== "Message"
+    //         );
+
+    //         switch (flag) {
+    //             case 'M':
+    //                 setValidationModal({
+    //                     isOpen: true,
+    //                     message: message || 'Are you sure you want to proceed?',
+    //                     type: 'M',
+    //                     callback: (confirmed) => {
+    //                         if (confirmed) {
+    //                             dynamicTags.forEach((tag) => {
+    //                                 const tagName = tag.tagName;
+    //                                 let tempFormData = formData
+    //                                 const tagValue = tag.textContent;
+    //                                 setFormValues(prev => ({ ...prev, [tagName]: tagValue}));
+    //                                 tempFormData = tempFormData.map(field => {
+    //                                     if (field.wKey === tagName) {
+    //                                         return { ...field, fieldJustUpdated: "true"};
+    //                                     }
+    //                                     return field;
+    //                                 });
+    //                                 setFormData(tempFormData);
+    //                             });
+    //                         } else {
+    //                             setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+    //                         }
+    //                         setValidationModal({ isOpen: false, message: '', type: 'M' });
+    //                     }
+    //                 });
+    //                 break;
+
+    //             case 'S':
+    //                 setValidationModal({
+    //                     isOpen: true,
+    //                     message: message || 'Please press ok to proceed',
+    //                     type: 'S',
+    //                     callback: () => {
+    //                         dynamicTags.forEach((tag) => {
+    //                             const tagName = tag.tagName;
+    //                             const tagValue = tag.textContent;
+
+    //                             setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+    //                             setFieldErrors(prev => ({ ...prev, [tagName]: '' }));
+
+    //                              const tempFormData = formData.map(field => {
+    //                                         console.log("only this----",field,tagName)
+
+    //                                     if (field.wKey === tagName) {
+    //                                         console.log("only this----",field.wKey,tagName)
+    //                                         return { ...field, fieldJustUpdated: "true"};
+    //                                     }
+    //                                     return field;
+    //                                 });
+    //                                 console.log("check tempFormData", tempFormData)
+    //                                 setFormData(tempFormData);
+    //                         });
+    //                         setValidationModal({ isOpen: false, message: '', type: 'S' });
+    //                     }
+    //                 });
+    //                 break;
+
+    //             case 'E':
+    //                 toast.warning(message);
+    //                 setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+    //                 break;
+
+    //             case 'D':
+    //                 let updatedFormData = formData;
+    //                 dynamicTags.forEach((tag) => {
+    //                     const tagName = tag.tagName;
+    //                     const tagValue = tag.textContent;
+    //                     const tagFlag = tagValue.toLowerCase();
+    //                     const isDisabled = tagFlag === 'false';
+
+    //                     if (tagFlag === 'true' || tagFlag === 'false') {
+    //                         setFormValues(prev => ({ ...prev, [tagName]: "" }));
+    //                         if (isDisabled) {
+    //                             setFieldErrors(prev => ({ ...prev, [tagName]: '' }));
+    //                         }
+    //                     } else {
+    //                         setFormValues(prev => ({ ...prev, [tagName]: tagValue}));
+    //                     }
+
+    //                     updatedFormData = updatedFormData.map(field => {
+    //                         if (field.wKey === tagName) {
+    //                             return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
+    //                         }
+    //                         return field;
+    //                     });
+    //                 });
+    //                 setFormData(updatedFormData);
+    //                 break;
+
+    //             default:
+    //                 console.error("Unknown flag received:", flag);
+    //         }
+    //     } catch (error) {
+    //         console.error("Error parsing XML response:", error);
+    //     }
+    // };
+
     const handleValidationApiResponse = (response, currFieldName) => {
         if (!response?.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;
@@ -395,6 +511,53 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 (node) => node.tagName !== "Flag" && node.tagName !== "Message"
             );
 
+            const applyTagUpdates = (shouldUpdateFormData = false, setEnabledStatus = false) => {
+                let updatedFormValues = { ...formValues };
+                let updatedFieldErrors = { ...fieldErrors };
+                let updatedFormData = [...formData];
+
+                dynamicTags.forEach(tag => {
+                    const tagName = tag.tagName;
+                    const tagValue = tag.textContent;
+                    const tagFlag = tagValue.toLowerCase();
+
+                    if (flag === 'D') {
+                        const isDisabled = tagFlag === 'false';
+
+                        if (tagFlag === 'true' || tagFlag === 'false') {
+                            updatedFormValues[tagName] = '';
+                            if (isDisabled) {
+                                updatedFieldErrors[tagName] = '';
+                            }
+                        } else {
+                            updatedFormValues[tagName] = tagValue;
+                        }
+
+                        updatedFormData = updatedFormData.map(field =>
+                            field.wKey === tagName
+                                ? { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' }
+                                : field
+                        );
+                    } else {
+                        updatedFormValues[tagName] = tagValue;
+                        updatedFieldErrors[tagName] = '';
+
+                        if (shouldUpdateFormData) {
+                            updatedFormData = updatedFormData.map(field =>
+                                field.wKey === tagName
+                                    ? { ...field, fieldJustUpdated: 'true' }
+                                    : field
+                            );
+                        }
+                    }
+                });
+
+                setFormValues(updatedFormValues);
+                setFieldErrors(updatedFieldErrors);
+                console.log("check--->", updatedFormData)
+                setFormData(updatedFormData);
+            };
+
             switch (flag) {
                 case 'M':
                     setValidationModal({
@@ -403,13 +566,9 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         type: 'M',
                         callback: (confirmed) => {
                             if (confirmed) {
-                                dynamicTags.forEach((tag) => {
-                                    const tagName = tag.tagName;
-                                    const tagValue = tag.textContent;
-                                    setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                                });
+                                applyTagUpdates(true);
                             } else {
-                                setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                                setFormValues(prev => ({ ...prev, [currFieldName]: '' }));
                             }
                             setValidationModal({ isOpen: false, message: '', type: 'M' });
                         }
@@ -422,12 +581,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         message: message || 'Please press ok to proceed',
                         type: 'S',
                         callback: () => {
-                            dynamicTags.forEach((tag) => {
-                                const tagName = tag.tagName;
-                                const tagValue = tag.textContent;
-                                setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                                setFieldErrors(prev => ({ ...prev, [tagName]: '' }));
-                            });
+                            applyTagUpdates(true);
                             setValidationModal({ isOpen: false, message: '', type: 'S' });
                         }
                     });
@@ -435,34 +589,11 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
                 case 'E':
                     toast.warning(message);
-                    setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                    setFormValues(prev => ({ ...prev, [currFieldName]: '' }));
                     break;
 
                 case 'D':
-                    let updatedFormData = formData;
-                    dynamicTags.forEach((tag) => {
-                        const tagName = tag.tagName;
-                        const tagValue = tag.textContent;
-                        const tagFlag = tagValue.toLowerCase();
-                        const isDisabled = tagFlag === 'false';
-
-                        if (tagFlag === 'true' || tagFlag === 'false') {
-                            setFormValues(prev => ({ ...prev, [tagName]: "" }));
-                            if (isDisabled) {
-                                setFieldErrors(prev => ({ ...prev, [tagName]: '' }));
-                            }
-                        } else {
-                            setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-                        }
-
-                        updatedFormData = updatedFormData.map(field => {
-                            if (field.wKey === tagName) {
-                                return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
-                            }
-                            return field;
-                        });
-                    });
-                    setFormData(updatedFormData);
+                    applyTagUpdates(false, true);
                     break;
 
                 default:
@@ -472,6 +603,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
             console.error("Error parsing XML response:", error);
         }
     };
+
 
     //this error function is used to show file uploadation
     const handleFieldError = (fieldKey: string, errorMessage: string) => {
@@ -491,32 +623,33 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 setShowMobileOtpModal(true);
             }
         }
-    };
-    const renderFormField = (field: FormField) => {
+    }; const renderFormField = (field: FormField) => {
         if (!field) return null;
 
         const isEnabled = field.FieldEnabledTag === 'Y';
         const hasError = fieldErrors && fieldErrors[field.wKey];
+        const isJustUpdated = field.fieldJustUpdated === "true";
 
         switch (field.type) {
             case 'WDropDownBox':
                 return (
-                    <DropdownField
-                        key={`dropdown-${field.Srno}-${field.wKey}`}
-                        field={field}
-                        formValues={formValues}
-                        setFormValues={setFormValues}
-                        dropdownOptions={dropdownOptions}
-                        loadingDropdowns={loadingDropdowns}
-                        fieldErrors={fieldErrors}
-                        setFieldErrors={setFieldErrors}
-                        colors={colors}
-                        handleBlur={() => handleBlur(field)}
-                        isDisabled={!isEnabled}
-                        handleDropDownChange={onDropdownChange}
-                        setDropDownOptions={setDropDownOptions}
-                    />
-                );            
+                <DropdownField
+                    key={`dropdown-${field.Srno}-${field.wKey}`}
+                    field={field}
+                    formValues={formValues}
+                    setFormValues={setFormValues}
+                    dropdownOptions={dropdownOptions}
+                    loadingDropdowns={loadingDropdowns}
+                    fieldErrors={fieldErrors}
+                    setFieldErrors={setFieldErrors}
+                    colors={colors}
+                    handleBlur={() => handleBlur(field)}
+                    isDisabled={!isEnabled}
+                    handleDropDownChange={onDropdownChange}
+                    setDropDownOptions={setDropDownOptions}
+                    isJustUpdated={isJustUpdated}
+                />
+                );
             case 'WDateBox':
                 return (
                     <div key={`dateBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
@@ -536,18 +669,18 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         w-full px-3 py-1 pr-10 border rounded-md
                         focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
                         ${!isEnabled ? 'border-gray-300 bg-[#f2f2f0]' : hasError ? 'border-red-500' : 'border-gray-700'}
-                    `}
-                                style={{
+                    `} 
+                    style={{
                                     backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                    color: colors.textInputText
+                                    color: isJustUpdated ? "#22c55e" : colors.textInputText
                                 }}
                                 placeholder="Select Date"
                                 onClose={() => handleBlur(field)}
                                 disabled={!isEnabled}
                             />
-                            <FaCalendar 
+                            <FaCalendar
                                 className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
-                                style={{ 
+                                style={{
                                     color: !isEnabled ? '#9ca3af' : colors.textInputText,
                                     fontSize: '14px'
                                 }}
@@ -572,7 +705,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                     style={{
                                         borderColor: hasError ? 'red' : '#d1d5db',
                                         backgroundColor: "#f2f2f0",
-                                        color: colors.textInputText,
+                                        color: isJustUpdated ? "#22c55e" : colors.textInputText,
                                         borderTopRightRadius: 0,
                                         borderBottomRightRadius: 0
                                     }}
@@ -628,7 +761,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             style={{
                                 borderColor: hasError ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText
+                                color: isJustUpdated ? "#22c55e" : colors.textInputText
                             }}
                             value={formValues[field.wKey] || ''}
                             onChange={(e) => {
@@ -678,11 +811,10 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             {field.label}
                         </label>
                         <div
-                            className="w-full px-3 py-1 border rounded-md"
-                            style={{
+                            className="w-full px-3 py-1 border rounded-md" style={{
                                 borderColor: hasError ? 'red' : !isEnabled ? '#d1d5db' : colors.textInputBorder,
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText
+                                color: isJustUpdated ? "#22c55e" : colors.textInputText
                             }}
                         >
                             {formValues[field.wKey] || '-'}

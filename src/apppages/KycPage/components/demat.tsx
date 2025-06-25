@@ -13,6 +13,8 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
+  
+  const [localFormData, setLocalFormData] = useState<any>(formFields ||  {});
   const [openAddDemat, setOpenAddDemat] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [dematDropdownOptions, setDematDropdownOptions] = useState<Record<string, any[]>>({});
@@ -173,12 +175,12 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-2">
         <button
-          className="rounded-lg"
+          className="rounded-lg px-4 py-1"
           style={{
             backgroundColor: colors.background,
-            padding: "10px"
+            border : `1px solid ${colors.buttonBackground}`,
           }} 
           onClick={() => setActiveTab("bank")}
         >
@@ -187,15 +189,16 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         <div className="text-end">
           <button
             onClick={handleAddDematClick}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-3"
+            className="px-4 py-1 rounded"
+            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText}}
           >
             Add Demat
           </button>
           <button
-            className="rounded-lg ml-4"
+            className="rounded-lg ml-4 px-4 py-1"
             style={{
               backgroundColor: colors.background,
-              padding: "10px"
+              border : `1px solid ${colors.buttonBackground}`,
             }}
             onClick={handleSaveAndNext}
           >
@@ -246,7 +249,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             />
 
             <EkycEntryForm
-              formData={formFields}
+              formData={localFormData}
               formValues={currentFormData}
               masterValues={{}}
               setFormValues={setCurrentFormData}
@@ -255,7 +258,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
               loadingDropdowns={dematLoadingDropdowns}
               fieldErrors={fieldErrors}
               setFieldErrors={setFieldErrors}
-              setFormData={() => { }}
+              setFormData={setLocalFormData}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
             />
