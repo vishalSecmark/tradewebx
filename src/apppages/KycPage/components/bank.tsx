@@ -13,6 +13,8 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
   const [openAddBank, setOpenAddBank] = useState(false);
+  const [localFormData, setLocalFormData] = useState<any>(formFields ||  {});
+  
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [bankDropdownOptions, setBankDropdownOptions] = useState<Record<string, any[]>>({});
   const [bankLoadingDropdowns, setBankLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -23,6 +25,8 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     type: 'M' | 'S' | 'E' | 'D';
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
+
+  console.log("check local data",localFormData)
 
   // Function to create a new empty bank entry
   const createNewBankEntry = () => {
@@ -173,12 +177,12 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-2">
         <button
-          className="rounded-lg"
+          className="rounded-lg px-4 py-1"
           style={{
             backgroundColor: colors.background,
-            padding: "10px"
+            border : `1px solid ${colors.buttonBackground}`,
           }} 
           onClick={() => setActiveTab("nominee")}
         >
@@ -187,15 +191,16 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         <div className="text-end">
           <button
             onClick={handleAddBankClick}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mb-3"
+            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText}}
+            className="px-4 py-1 rounded"
           >
             Add Bank
           </button>
           <button
-            className="rounded-lg ml-4"
+            className="rounded-lg ml-4 px-4 py-1 "
             style={{
               backgroundColor: colors.background,
-              padding: "10px"
+              border : `1px solid ${colors.buttonBackground}`,
             }}
             onClick={handleSaveAndNext}
           >
@@ -246,7 +251,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             />
 
             <EkycEntryForm
-              formData={formFields}
+              formData={localFormData}
               formValues={currentFormData}
               masterValues={{}}
               setFormValues={setCurrentFormData}
@@ -255,7 +260,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
               loadingDropdowns={bankLoadingDropdowns}
               fieldErrors={fieldErrors}
               setFieldErrors={setFieldErrors}
-              setFormData={() => { }}
+              setFormData={setLocalFormData}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
             />

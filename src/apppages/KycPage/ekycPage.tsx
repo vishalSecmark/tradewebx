@@ -7,7 +7,7 @@ import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { findPageData } from "@/utils/helper";
 import axios from "axios";
 import Loader from "@/components/Loader";
-import { buildTabs, TabData } from "./kycTabs";
+import { buildTabs, TabData } from "./KycTabs";
 import { FiRefreshCcw } from "react-icons/fi";
 import { useSaveLoading } from "@/context/SaveLoadingContext";
 
@@ -114,8 +114,8 @@ const Kyc = () => {
     const tabs = buildTabs(dynamicData, setDynamicData, setActiveTab);
 
     return (
-        <div className="p-4" style={{ fontFamily: fonts.content }}>
-            <div className="flex justify-between items-center mb-6">
+        <div className="p-4 pt-0" style={{ fontFamily: fonts.content }}>
+            <div className="flex justify-between items-center mb-2">
                 <h1 className="text-2xl font-bold" style={{ color: colors.text }}>KYC Verification</h1>
                 <div className="flex items-center">
                     {lastUpdated && <span className="text-sm mr-4" style={{ color: colors.secondary }}>Last updated: {new Date(lastUpdated).toLocaleString()}</span>}

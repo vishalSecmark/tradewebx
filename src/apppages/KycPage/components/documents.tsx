@@ -15,7 +15,6 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const { colors, fonts } = useTheme();
     const { setSaving } = useSaveLoading();
     
-
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldVlaues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
@@ -81,7 +80,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         for (const [key, value] of Object.entries(inputData)) {
             if (value && typeof value === 'object' && 'data' in value) {
                 result[key] = value.data;
-            }else{
+            } else {
                 result[key] = value
             }
         }
@@ -99,39 +98,37 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         } else {
             const transformedData = transformData(tableData[0] || {});
             console.log('Transformed Data:', transformedData);
-            handleSaveSinglePageData(Settings.SaveNextAPI, transformedData,setActiveTab,"attachments", setSaving)
+            handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "attachments", setSaving)
         }
     }
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-            <div className="flex justify-between items-center pb-2">
+            <div className="flex justify-between items-center mb-2">
                 <button
-                    className="rounded-lg"
+                    className="rounded-lg px-4 py-1"
                     style={{
                         backgroundColor: colors.background,
-                        padding: "10px"
-                    }} onClick={() => setActiveTab("segment")}
+                        border: `1px solid ${colors.buttonBackground}`,
+                    }} 
+                    onClick={() => setActiveTab("segment")}
                 >
                     <IoArrowBack size={20} />
                 </button>
 
-                <div className="text-end mb-2">
+                <div className="text-end">
                     <button
-                        className="rounded-lg"
+                        className="px-4 py-1 rounded-lg ml-4"
                         style={{
                             backgroundColor: colors.background,
-                            padding: "10px"
+                            border: `1px solid ${colors.buttonBackground}`
                         }}
                         onClick={handleSave}
                     >
                         Save
                     </button>
                     <button
-                        className="rounded-lg ml-4"
-                        style={{
-                            backgroundColor: colors.background,
-                            padding: "10px"
-                        }}
+                        style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                        className="px-4 py-1 rounded-lg ml-4"
                     >
                         Submit
                     </button>

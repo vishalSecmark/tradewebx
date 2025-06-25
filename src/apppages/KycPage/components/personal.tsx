@@ -12,6 +12,7 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
 
     const { colors, fonts } = useTheme();
     const { setSaving } = useSaveLoading();
+    const [localFormData, setLocalFormData] = useState<any>(formFields || {});
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldVlaues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
@@ -34,25 +35,6 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
         }
     }, [])
 
-    // Handler to update the 0th index of personalTabData.tableData in dynamicData
-    const handleFieldChange = (updateFn: (prev: any) => any) => {
-        setFieldData((prevState: any) => {
-            const prevTableData = prevState.personalTabData.tableData || [];
-            const updatedRow = updateFn(prevTableData[0] || {});
-            return {
-                ...prevState,
-                personalTabData: {
-                    ...prevState.personalTabData,
-                    tableData: [
-                        updatedRow,
-                        ...prevTableData.slice(1)
-                    ]
-                }
-            };
-        });
-        setFieldValues((prev: any) => updateFn(prev));
-    };
-
     // Validate mandatory fields for nominee
     const validateMandatoryFields = (formData: any) => {
         const errors: Record<string, string> = {};
@@ -63,10 +45,8 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
                 isValid = false;
             }
         });
-
         return { isValid, errors };
     };
-
 
     const handleSaveAndNext = () => {
         const { isValid, errors } = validateMandatoryFields(fieldVlaues);
@@ -75,18 +55,34 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
             toast.error("Please fill all mandatory fields");
             return;
         } else {
-            handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab , "nominee", setSaving)
+            setFieldData((prevState: any) => {
+                const prevTableData = prevState.personalTabData.tableData || [];
+                return {
+                    ...prevState,
+                    personalTabData: {
+                        ...prevState.personalTabData,
+                        tableData: [
+                            {
+                                ...fieldVlaues,
+                                IsInserted: "true"
+                            },
+                            ...prevTableData.slice(1)
+                        ]
+                    }
+                };
+            })
+            handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab, "nominee", setSaving)
             // setActiveTab("nominee")
         }
     }
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-            <div className="text-end">
+            <div className="text-end mb-2">
                 <button
-                    className="rounded-lg"
+                    className="rounded-lg px-4 py-1"
                     style={{
                         backgroundColor: colors.background,
-                        padding: "10px"
+                        border: `1px solid ${colors.buttonBackground}`,
                     }}
                     onClick={handleSaveAndNext}
                 >
@@ -101,16 +97,16 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
                 onCancel={() => validationModal.callback?.(false)}
             />
             <EkycEntryForm
-                formData={formFields}
-                formValues={tableData[0] || {}}
+                formData={localFormData}
+                formValues={fieldVlaues || {}}
                 masterValues={{}}
-                setFormValues={handleFieldChange}
+                setFormValues={setFieldValues}
                 onDropdownChange={() => { }}
                 dropdownOptions={personalDropdownOptions}
                 loadingDropdowns={personalLoadingDropdowns}
                 fieldErrors={personalFieldErrors}
                 setFieldErrors={setPersonalFieldErrors}
-                setFormData={() => { }}
+                setFormData={setLocalFormData}
                 setValidationModal={setValidationModal}
                 setDropDownOptions={() => { }}
             />
