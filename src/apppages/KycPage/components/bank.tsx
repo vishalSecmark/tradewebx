@@ -26,6 +26,36 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
 
+  // Generate dynamic columns based on formFields
+  const generateDynamicColumns = () => {
+    return formFields
+      .filter(field => field.isVisibleinTable !== "false") // Only include fields marked as visible
+      .map(field => {
+        // Special handling for checkbox fields
+        if (field.type === 'WCheckBox') {
+          return {
+            key: field.wKey,
+            name: field.label,
+            renderCell: ({ row }: any) => (
+              <input
+                type="checkbox"
+                checked={row[field.wKey] === "true"}
+                readOnly
+                className="h-4 w-4"
+              />
+            )
+          };
+        }
+        
+        // Default column configuration for other field types
+        return {
+          key: field.wKey,
+          name: field.label,
+          sortable: false
+        };
+      });
+  };
+
   // Function to create a new empty bank entry
   const createNewBankEntry = () => {
     const newEntry: Record<string, any> = {};
@@ -127,33 +157,12 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     setOpenAddBank(false);
   };
 
-  const columns = [
-    { key: 'BankMICR', name: 'MCR', sortable: false },
-    { key: 'BankIFSC', name: 'IFSC Code', sortable: false },
-    { key: 'BankAccNo', name: 'Account Number', sortable: false },
-    { key: 'BankName', name: 'Bank Name', sortable: false },
-    { key: 'AccountType', name: 'Account Type', sortable: false },
-    {
-      key: 'IsDefault',
-      name: 'Default Account',
-      renderCell: ({ row }: any) => (
-        <input
-          type="checkbox"
-          checked={row.IsDefault === "true"}
-          readOnly
-          className="h-4 w-4"
-        />
-      )
-    },
-  ];
-
   const handleSaveAndNext = () => {
     const transformedData = tableData.map((item: any) => ({
       ...item,
       ...(item?.BankID && { IsInserted: "false" })
     }));
     handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat",setSaving);
-    // setActiveTab("demat");
   };
 
   useEffect(() => {
@@ -207,7 +216,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         </div>
       </div>
       <DataGrid
-        columns={columns}
+        columns={generateDynamicColumns()}
         rows={tableData || []}
         className="rdg-light"
         rowHeight={40}

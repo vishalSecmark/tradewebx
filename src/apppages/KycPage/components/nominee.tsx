@@ -15,7 +15,6 @@ import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
 import { useSaveLoading } from '@/context/SaveLoadingContext';
 
-
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
@@ -44,27 +43,71 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   const menuItems = useAppSelector(selectAllMenuItems);
   const pageData: any = findPageData(menuItems, "rekyc");
 
+  // Generate dynamic columns based on formFields
+  const generateDynamicColumns = () => {
+    const baseColumns: any[] = formFields
+      .filter(field => field.isVisibleinTable !== "false") // Only include fields marked as visible
+      .map(field => {
+        // Special handling for date fields
+        if (field.type === 'WDateBox') {
+          return {
+            key: field.wKey,
+            name: field.label,
+            sortable: false,
+            renderCell: ({ row }: any) => row[field.wKey] ? moment(row[field.wKey], 'YYYYMMDD').format('DD/MM/YYYY') : ''
+          };
+        }
+        
+        // Default column configuration for other field types
+        return {
+          key: field.wKey,
+          name: field.label,
+          sortable: false
+        };
+      });
+
+    // Add actions column
+    baseColumns.push({
+      key: 'actions',
+      name: 'Actions',
+      sortable: false,
+      renderCell: (props: any) => (
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleEditNomineeClick(props.row, props.rowIdx)}
+            className="px-2 py-1 rounded-lg"
+            style={{
+              backgroundColor: colors.background,
+              border: `1px solid ${colors.buttonBackground}`
+            }}
+          >
+            Edit
+          </button>
+        </div>
+      )
+    });
+
+    return baseColumns;
+  };
+
   const createNewNomineeEntry = () => {
-    // Create new entry using formFields structure
     const newEntry: Record<string, any> = {};
 
-    // Add all fields from formFields with empty values
     formFields.forEach((field: any) => {
       if (field.wKey) {
-        // Set default empty value based on field type
         switch (field.type) {
           case 'WCheckBox':
             newEntry[field.wKey] = "false";
             break;
           case 'WDropDownBox':
-            newEntry[field.wKey] = ""; // Dropdowns typically start empty
+            newEntry[field.wKey] = "";
             break;
           default:
             newEntry[field.wKey] = "";
         }
       }
     });
-    // Add system fields
+    
     newEntry.IsNomineeDeleted = "false";
     newEntry.IsInserted = "true";
     return newEntry;
@@ -74,7 +117,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     const maxAllowed = Number(Settings?.maxAllowedRecords) || 0;
     if (maxAllowed > 0 && tableData.length >= maxAllowed) {
       toast.error(`You can only add up to ${maxAllowed} nominees.`);
-      return
+      return;
     } else {
       const newNomineeEntry = createNewNomineeEntry();
       setCurrentFormData(newNomineeEntry);
@@ -83,11 +126,11 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       setOpenAddNominee(true);
       setShowGuardianForm(false);
       setIsMinor(false);
-      // Clear all errors when adding new nominee
       setFieldErrors({});
       setGuardianFieldErrors({});
     }
   };
+
   const handleEditNomineeClick = (row: any, rowIndex: number) => {
     setCurrentFormData({ ...row });
     setGuardianFormData(row.GuardianDetails || {});
@@ -96,12 +139,10 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     setOpenAddNominee(true);
     setShowGuardianForm(!!row.GuardianDetails);
     checkIfMinor(row.NomineeDOB);
-    // Clear all errors when editing nominee
     setFieldErrors({});
     setGuardianFieldErrors({});
   };
 
-  // Check if nominee is minor based on DOB using moment.js
   const checkIfMinor = (dob: string) => {
     if (!dob) {
       setIsMinor(false);
@@ -120,7 +161,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     return minor;
   };
 
-  // Validate mandatory fields for nominee
   const validateMandatoryFields = (formData: any) => {
     const errors: Record<string, string> = {};
     let isValid = true;
@@ -135,7 +175,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     return { isValid, errors };
   };
 
-  // Validate mandatory fields for guardian
   const validateGuardianMandatoryFields = (formData: any) => {
     const errors: Record<string, string> = {};
     let isValid = true;
@@ -149,7 +188,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
     return { isValid, errors };
   };
-  // Handler to add/update nominee entry
+
   const handleSaveNominee = () => {
     const { isValid, errors } = validateMandatoryFields(currentFormData);
     setFieldErrors(errors);
@@ -165,7 +204,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       return;
     }
 
-    // Validate guardian form if it's shown
     if (showGuardianForm) {
       const { isValid: isGuardianValid, errors: guardianErrors } = validateGuardianMandatoryFields(guardianFormData);
       setGuardianFieldErrors(guardianErrors);
@@ -210,14 +248,15 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       });
     }
     clearFormAndCloseModal();
-  }; const toggleGuardianForm = () => {
+  };
+
+  const toggleGuardianForm = () => {
     setShowGuardianForm(!showGuardianForm);
-    // Clear guardian errors when toggling the form
     if (showGuardianForm) {
       setGuardianFieldErrors({});
     }
   };
-  // Function to clear all form values and reset modal state
+
   const clearFormAndCloseModal = () => {
     setCurrentFormData({});
     setGuardianFormData({});
@@ -230,41 +269,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     setOpenAddNominee(false);
   };
 
-  const columns = [
-    { key: 'NomSerial', name: 'Serial', sortable: false },
-    { key: 'NomFirstName', name: 'First Name', sortable: false },
-    { key: 'NomMiddleName', name: 'Middle Name', sortable: false },
-    { key: 'NomLastName', name: 'Last Name', sortable: false },
-    { key: 'NomRelation', name: 'Relation', sortable: false },
-    { key: 'NomPercentage', name: 'Percentage', sortable: false },
-    { key: 'NomMobile', name: 'Mobile', sortable: false },
-    {
-      key: 'NomineeDOB',
-      name: 'Date of Birth',
-      sortable: false,
-      renderCell: ({ row }: any) => moment(row.NomineeDOB, 'YYYYMMDD').format('DD/MM/YYYY')
-    },
-    { key: 'NomineePAN', name: 'PAN', sortable: false },
-    { key: 'NomineeUID', name: 'UID', sortable: false },
-    {
-      key: 'actions',
-      name: 'Actions',
-      renderCell: (props: any) => (
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleEditNomineeClick(props.row, props.rowIdx)}
-            className="px-2 py-1 rounded-lg"
-            style={{
-              backgroundColor: colors.background,
-              border : `1px solid ${colors.buttonBackground}`
-            }}
-          >
-            Edit
-          </button>
-        </div>
-      )
-    },
-  ];
   const fetchFormData = async () => {
     if (!pageData?.[0]?.Entry) return;
     try {
@@ -273,19 +277,16 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       
       const sql = Object.keys(childEntry?.sql || {}).length ? childEntry.sql : "";
 
-      // Construct J_Ui - handle 'Option' key specially
       const jUi = Object.entries(childEntry.J_Ui)
         .map(([key, value]) => {
           return `"${key}":"${value}"`;
         })
         .join(',');
 
-      // Construct J_Api
       const jApi = Object.entries(childEntry.J_Api)
         .map(([key, value]) => `"${key}":"${value}"`)
         .join(',');
 
-      // Construct X_Filter with edit data if available
       let xFilter = '';
       Object.entries(childEntry.X_Filter).forEach(([key, value]) => {
         if (key === 'NomSerial') {
@@ -311,7 +312,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       const formData = response?.data?.data?.rs0[0].Data || [];
     
       setGuardianFields(formData)
-      // Initialize form values with any preset values
       const initialValues: Record<string, any> = {};
       formData.forEach((field: any) => {
         if (field.type === 'WDateBox' && field.wValue) {
@@ -319,14 +319,10 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         } else {
           initialValues[field.wKey] = '';
         }
-
       });
       setGuardianFormData(initialValues);
     } catch (error) {
       console.error('Error fetching childEntry data:', error);
-
-    } finally {
-
     }
   };
 
@@ -340,7 +336,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     }
   }, [formFields]);
 
-  // useEffect to fetch dropdown options for guardian fields
   useEffect(() => {
     if (guardianFields && guardianFields.length > 0) {
       guardianFields.forEach((field: any) => {
@@ -357,7 +352,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     }
   }, [pageData])
 
-
   useEffect(() => {
     const newEntry = createNewNomineeEntry();
     if (Object.keys(currentFormData).length === 0) {
@@ -370,8 +364,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       ...item,
       ...(item?.NomSerial && { IsInserted: "false" })
     }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "bank",setSaving);
-    // setActiveTab("bank");
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "bank", setSaving);
   }
 
   return (
@@ -381,7 +374,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           className="px-4 py-1 rounded-lg"
           style={{
             backgroundColor: colors.background,
-            border : `1px solid ${colors.buttonBackground}`,
+            border: `1px solid ${colors.buttonBackground}`,
           }} 
           onClick={() => setActiveTab("personal")}
         >
@@ -399,7 +392,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             className="px-4 py-1 rounded-lg ml-4"
             style={{
               backgroundColor: colors.background,
-              border : `1px solid ${colors.buttonBackground}`
+              border: `1px solid ${colors.buttonBackground}`
             }}
             onClick={handleSaveAndNext}
           >
@@ -408,7 +401,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         </div>
       </div>
       <DataGrid
-        columns={columns}
+        columns={generateDynamicColumns()}
         rows={tableData || []}
         className="rdg-light"
         rowHeight={40}
@@ -454,7 +447,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
               type={validationModal.type}
               onConfirm={() => validationModal.callback?.(true)}
               onCancel={() => validationModal.callback?.(false)}
-
             />
 
             <EkycEntryForm
