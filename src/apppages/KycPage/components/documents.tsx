@@ -11,13 +11,12 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
-    console.log('personal tab', formFields, tableData);
-    const { colors, fonts } = useTheme();
+    const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
     
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
-    const [fieldVlaues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
+    const [fieldValues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
     const [attachmentsFieldErrors, setAttachmentsFieldErrors] = useState<Record<string, string>>(fieldErrors || {});
     const [validationModal, setValidationModal] = useState<{
         isOpen: boolean;
@@ -90,7 +89,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
 
     const handleSave = () => {
-        const { isValid, errors } = validateMandatoryFields(fieldVlaues);
+        const { isValid, errors } = validateMandatoryFields(fieldValues);
         setAttachmentsFieldErrors(errors);
         if (!isValid) {
             toast.error("Please fill all mandatory fields");
@@ -143,7 +142,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             />
             <EkycEntryForm
                 formData={formFields}
-                formValues={fieldVlaues}
+                formValues={fieldValues}
                 masterValues={{}}
                 setFormValues={handleFieldChange}
                 onDropdownChange={() => { }}

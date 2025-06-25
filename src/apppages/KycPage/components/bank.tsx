@@ -26,8 +26,6 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
 
-  console.log("check local data",localFormData)
-
   // Function to create a new empty bank entry
   const createNewBankEntry = () => {
     const newEntry: Record<string, any> = {};

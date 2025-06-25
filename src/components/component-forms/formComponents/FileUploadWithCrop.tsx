@@ -2,6 +2,7 @@ import { handleViewFile } from '@/utils/helper';
 import React, { useRef, useState, useEffect } from 'react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import Image from 'next/image';
 
 interface FileUploadWithCropProps {
   field: any;
@@ -214,10 +215,12 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
           </p>
           
           {fileType.startsWith('image/') ? (
-            <img
+            <Image
               src={croppedImageUrl || currentFile.data}
               alt="Cropped Preview"
-              style={{ maxWidth: 150, maxHeight: 150 }}
+              width={150}
+              height={150}
+              style={{ maxWidth: 150, maxHeight: 150, objectFit: 'contain' }}
             />
           ) : (
             <a
@@ -257,6 +260,7 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
               minWidth={100}
               minHeight={100}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 ref={imgRef}
                 alt="Crop me"

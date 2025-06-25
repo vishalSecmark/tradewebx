@@ -37,14 +37,12 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   const [isMinor, setIsMinor] = useState(false);
   const [showGuardianForm, setShowGuardianForm] = useState(false);
   const [guardianFormData, setGuardianFormData] = useState<any>({});
-  const [gurdianFileds, setGurdianFields] = useState<any>([]);
+  const [guardianFields, setGuardianFields] = useState<any>([]);
   const [guardianDropdownOptions, setGuardianDropdownOptions] = useState<Record<string, any[]>>({});
   const [guardianLoadingDropdowns, setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
   const [guardianFieldErrors, setGuardianFieldErrors] = useState<Record<string, string>>({});
   const menuItems = useAppSelector(selectAllMenuItems);
   const pageData: any = findPageData(menuItems, "rekyc");
-
-  console.log("current gurdian form data--->", guardianFormData, currentFormData);
 
   const createNewNomineeEntry = () => {
     // Create new entry using formFields structure
@@ -69,8 +67,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     // Add system fields
     newEntry.IsNomineeDeleted = "false";
     newEntry.IsInserted = "true";
-    console.log("newEntry", newEntry);
-
     return newEntry;
   };
 
@@ -144,7 +140,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     const errors: Record<string, string> = {};
     let isValid = true;
 
-    gurdianFileds.forEach((field: any) => {
+    guardianFields.forEach((field: any) => {
       if (field.isMandatory === "true" && !formData[field.wKey]) {
         errors[field.wKey] = `${field.label} is required`;
         isValid = false;
@@ -274,7 +270,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     try {
       const entry = pageData[0].Entry;
       const childEntry = entry.ChildEntry;
-      console.log("childEntry", childEntry);
+      
       const sql = Object.keys(childEntry?.sql || {}).length ? childEntry.sql : "";
 
       // Construct J_Ui - handle 'Option' key specially
@@ -313,8 +309,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         }
       });
       const formData = response?.data?.data?.rs0[0].Data || [];
-      console.log("Fetched form data:", formData);
-      setGurdianFields(formData)
+    
+      setGuardianFields(formData)
       // Initialize form values with any preset values
       const initialValues: Record<string, any> = {};
       formData.forEach((field: any) => {
@@ -326,7 +322,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
       });
       setGuardianFormData(initialValues);
-      console.log("initial vaues", initialValues);
     } catch (error) {
       console.error('Error fetching childEntry data:', error);
 
@@ -347,14 +342,14 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   // useEffect to fetch dropdown options for guardian fields
   useEffect(() => {
-    if (gurdianFileds && gurdianFileds.length > 0) {
-      gurdianFileds.forEach((field: any) => {
+    if (guardianFields && guardianFields.length > 0) {
+      guardianFields.forEach((field: any) => {
         if (field.wQuery && field.wKey) {
           fetchEkycDropdownOptions(field, setGuardianDropdownOptions, setGuardianLoadingDropdowns);
         }
       });
     }
-  }, [gurdianFileds]);
+  }, [guardianFields]);
 
   useEffect(() => {
     if (pageData?.[0]?.Entry) {
@@ -493,7 +488,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                 {showGuardianForm && (
                   <div className="border-t pt-4">
                     <EkycEntryForm
-                      formData={gurdianFileds}
+                      formData={guardianFields}
                       formValues={guardianFormData}
                       masterValues={{}}
                       setFormValues={setGuardianFormData}
@@ -502,7 +497,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                       loadingDropdowns={guardianLoadingDropdowns}
                       fieldErrors={guardianFieldErrors}
                       setFieldErrors={setGuardianFieldErrors}
-                      setFormData={setGurdianFields}
+                      setFormData={setGuardianFields}
                       setValidationModal={setValidationModal}
                       setDropDownOptions={setGuardianDropdownOptions}
                     />
