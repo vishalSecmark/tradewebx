@@ -512,8 +512,8 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
             );
 
             const applyTagUpdates = (shouldUpdateFormData = false, setEnabledStatus = false) => {
-                let updatedFormValues = { ...formValues };
-                let updatedFieldErrors = { ...fieldErrors };
+                const updatedFormValues = { ...formValues };
+                const updatedFieldErrors = { ...fieldErrors };
                 let updatedFormData = [...formData];
 
                 dynamicTags.forEach(tag => {
@@ -633,22 +633,22 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         switch (field.type) {
             case 'WDropDownBox':
                 return (
-                <DropdownField
-                    key={`dropdown-${field.Srno}-${field.wKey}`}
-                    field={field}
-                    formValues={formValues}
-                    setFormValues={setFormValues}
-                    dropdownOptions={dropdownOptions}
-                    loadingDropdowns={loadingDropdowns}
-                    fieldErrors={fieldErrors}
-                    setFieldErrors={setFieldErrors}
-                    colors={colors}
-                    handleBlur={() => handleBlur(field)}
-                    isDisabled={!isEnabled}
-                    handleDropDownChange={onDropdownChange}
-                    setDropDownOptions={setDropDownOptions}
-                    isJustUpdated={isJustUpdated}
-                />
+                    <DropdownField
+                        key={`dropdown-${field.Srno}-${field.wKey}`}
+                        field={field}
+                        formValues={formValues}
+                        setFormValues={setFormValues}
+                        dropdownOptions={dropdownOptions}
+                        loadingDropdowns={loadingDropdowns}
+                        fieldErrors={fieldErrors}
+                        setFieldErrors={setFieldErrors}
+                        colors={colors}
+                        handleBlur={() => handleBlur(field)}
+                        isDisabled={!isEnabled}
+                        handleDropDownChange={onDropdownChange}
+                        setDropDownOptions={setDropDownOptions}
+                        isJustUpdated={isJustUpdated}
+                    />
                 );
             case 'WDateBox':
                 return (
@@ -669,8 +669,8 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         w-full px-3 py-1 pr-10 border rounded-md
                         focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
                         ${!isEnabled ? 'border-gray-300 bg-[#f2f2f0]' : hasError ? 'border-red-500' : 'border-gray-700'}
-                    `} 
-                    style={{
+                    `}
+                                style={{
                                     backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                     color: isJustUpdated ? "#22c55e" : colors.textInputText
                                 }}
