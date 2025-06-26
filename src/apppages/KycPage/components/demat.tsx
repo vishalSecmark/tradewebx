@@ -27,6 +27,36 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
 
+  // Generate dynamic columns based on formFields
+  const generateDynamicColumns = () => {
+    return formFields
+      .filter(field => field.isVisibleinTable !== "false") // Only include fields marked as visible
+      .map(field => {
+        // Special handling for checkbox fields
+        if (field.type === 'WCheckBox') {
+          return {
+            key: field.wKey,
+            name: field.label,
+            renderCell: ({ row }: any) => (
+              <input
+                type="checkbox"
+                checked={row[field.wKey] === "true"}
+                readOnly
+                className="h-4 w-4"
+              />
+            )
+          };
+        }
+        
+        // Default column configuration for other field types
+        return {
+          key: field.wKey,
+          name: field.label,
+          sortable: false
+        };
+      });
+  };
+
   // Function to create a new empty demat entry
   const createNewDematEntry = () => {
     const newEntry: Record<string, any> = {};
@@ -128,32 +158,12 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     setOpenAddDemat(false);
   };
 
-  const columns = [
-    { key: 'DematId', name: 'Demat Id', sortable: false },
-    { key: 'DPAcNo', name: 'DP Acc No', sortable: false },
-    { key: 'DPID', name: 'Demat Number', sortable: false },
-    { key: 'DematAccountType', name: 'Acc Type', sortable: false },
-    {
-      key: 'IsDefault',
-      name: 'Default Account',
-      renderCell: ({ row }: any) => (
-        <input
-          type="checkbox"
-          checked={row.IsDefault === "true"}
-          readOnly
-          className="h-4 w-4"
-        />
-      )
-    },
-  ];
-
   const handleSaveAndNext = () => {
     const transformedData = tableData.map((item: any) => ({
       ...item,
       ...(item?.DematId && { IsInserted: "false" })
     }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab , "segment",setSaving);
-    // setActiveTab("segment");
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "segment", setSaving);
   };
 
   useEffect(() => {
@@ -180,7 +190,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
           className="rounded-lg px-4 py-1"
           style={{
             backgroundColor: colors.background,
-            border : `1px solid ${colors.buttonBackground}`,
+            border: `1px solid ${colors.buttonBackground}`,
           }} 
           onClick={() => setActiveTab("bank")}
         >
@@ -190,7 +200,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
           <button
             onClick={handleAddDematClick}
             className="px-4 py-1 rounded"
-            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText}}
+            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
           >
             Add Demat
           </button>
@@ -198,7 +208,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             className="rounded-lg ml-4 px-4 py-1"
             style={{
               backgroundColor: colors.background,
-              border : `1px solid ${colors.buttonBackground}`,
+              border: `1px solid ${colors.buttonBackground}`,
             }}
             onClick={handleSaveAndNext}
           >
@@ -207,7 +217,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         </div>
       </div>
       <DataGrid
-        columns={columns}
+        columns={generateDynamicColumns()}
         rows={tableData || []}
         className="rdg-light"
         rowHeight={40}

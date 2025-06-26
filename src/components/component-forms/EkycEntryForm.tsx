@@ -9,6 +9,7 @@ import axios from 'axios';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
 import { handleViewFile } from "@/utils/helper";
 import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
@@ -866,10 +867,13 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
                                     {/* Optional: show preview for image types */}
                                     {['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(field.FieldType?.toLowerCase()) && (
-                                        <img
+                                        <Image
                                             src={formValues[field.wKey]}
                                             alt="Uploaded preview"
+                                            width={96}
+                                            height={96}
                                             className="h-24 w-auto rounded border mt-2"
+                                            style={{ objectFit: 'contain' }}
                                         />
                                     )}
                                 </div>
