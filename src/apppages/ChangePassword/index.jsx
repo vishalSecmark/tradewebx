@@ -68,8 +68,14 @@ export default function ChangePassword() {
                 timeout: 50000
             });
 
-            if (response.data.success && response.data.data.rs0[0]) {
-                const result = JSON.parse(response.data.data.rs0[0].Column1);
+            // && response.data.data.rs0[0]
+
+            if (response.data.success && response.data.data.rs0) {
+                console.log('inside 11');
+                // console.log(,'response change password');
+                const result = response.data.data.rs0
+
+                // console.log(result.Flag,'result11');
 
                 if (result.Flag === 'S') {
                     setSuccess(result.Message);
