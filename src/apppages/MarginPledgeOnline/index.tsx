@@ -183,9 +183,9 @@ export default function MarginPledgeOnline() {
         form.appendChild(input);
       };
 
-      addHiddenField('DPId', DPId);
-      addHiddenField('ReqId', ReqId);
-      addHiddenField('Version', Version);
+      addHiddenField('dpid', DPId);
+      addHiddenField('reqid', ReqId);
+      addHiddenField('version', Version);
       addHiddenField('pledgedtls', pledgedtls);
 
       document.body.appendChild(form);
