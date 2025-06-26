@@ -1276,11 +1276,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             />}
 
             {/* Loading State */}
-            {isLoading &&
-                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
-                    <Loader />
-                </div>
-            }
+
 
             {/* Horizontal Filters */}
             {showFilterHorizontally && safePageData.hasFilters() && (
@@ -1333,7 +1329,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                 </div>
             )}
-
+            {isLoading &&
+                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
+                    <Loader />
+                </div>
+            }
             {!apiData && !isLoading && hasFetchAttempted && <div>No Data Found</div>}
             {/* Data Display */}
 
