@@ -12,6 +12,24 @@ export const clearLocalStorage = () => {
     if (appTheme) localStorage.setItem(THEME_STORAGE_KEY, appTheme);
 }
 
+// Utility to find page data by component name in menuItems
+export function findPageData(menuItems: any[], componentName: string): any {
+    const searchInItems = (items: any[]): any => {
+        for (const item of items) {
+            if (item.componentName?.toLowerCase() === componentName.toLowerCase() && item.pageData) {
+                return item.pageData;
+            }
+            if (item.subItems && item.subItems.length > 0) {
+                const foundInSubItems = searchInItems(item.subItems);
+                if (foundInSubItems) {
+                    return foundInSubItems;
+                }
+            }
+        }
+        return null;
+    };
+    return searchInItems(menuItems);
+}
 export function handleViewFile(base64Data: string, fieldType: string = 'file') {
     if (!base64Data?.startsWith('data:')) {
         alert("Invalid file data");

@@ -10,6 +10,7 @@ import { useAppSelector } from "@/redux/hooks";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import KycPage from "@/apppages/KycPage";
 import MarginPledgeOnline from "@/apppages/MarginPledgeOnline";
+import Ipo from "@/apppages/Ipo";
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,
@@ -17,8 +18,9 @@ const staticRoutes: Record<string, React.ReactNode> = {
   changepassword: <ChangePassword />,
   theme: <ThemePage />,
   downloads: <Downloads />,
-  kycpage: <KycPage />,
-  marginpledge:<MarginPledgeOnline/>
+  rekyc: <KycPage />,
+  marginPledge: <MarginPledgeOnline />,
+  ipo: <Ipo />
 };
 
 // Define the type for params explicitly
@@ -33,13 +35,21 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
   const subRoute = unwrappedParams.slug[1];
   const subSubRoute = unwrappedParams.slug[2];
 
+  const componentName = subSubRoute || subRoute || route;
+
+
   // Handle static routes
-  if (staticRoutes[route]) {
+  if (route in staticRoutes) {
     return staticRoutes[route];
+  }
+  if (subRoute in staticRoutes) {
+    return staticRoutes[subRoute];
+  }
+  if (subSubRoute in staticRoutes) {
+    return staticRoutes[subSubRoute];
   }
 
   // For dynamic routes, determine the actual componentName
-  const componentName = subSubRoute || subRoute || route;
   console.log('componentName_', componentName);
   console.log('route_', route);
   console.log('subRoute_', subRoute);
@@ -60,6 +70,8 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   const findComponentType = (items: any[]): string | undefined => {
     for (const item of items) {
       if (item.componentName?.toLowerCase() === componentName.toLowerCase()) {
+        console.log(item.componentType,'componontType1');
+        
         return item.componentType;
       }
 
@@ -75,7 +87,7 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   };
 
   const componentType = findComponentType(menuItems);
-  // console.log('componentType', componentType);
+  console.log('componentType', componentType);
   // console.log('componentName', componentName);
   // Show entry component if componentType is 'entry', otherwise show report component
   return (

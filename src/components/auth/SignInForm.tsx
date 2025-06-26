@@ -29,21 +29,68 @@ const VersionUpdateModal = ({
   isOpen,
   onClose,
   updates,
-  onConfirm
+  onConfirm,
+  userType = "User", // Add userType prop to determine if user can update
+  isUpdating = false // Add loading state prop
 }: {
   isOpen: boolean;
   onClose: () => void;
   updates: VersionItem[];
   onConfirm: () => void;
+  userType?: string;
+  isUpdating?: boolean;
 }) => {
   if (!isOpen) return null;
+
+  // Check if there are any mandatory updates
+  const hasMandatoryUpdates = updates.some(update => update.Status === 'M');
+
+  // Determine if user has update rights based on loginAs value
+  // Client (loginAs: "C") cannot update, Branch (loginAs: "B") can update
+  const canUpdate = userType !== "C"; // Only Client (loginAs: "C") cannot update
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         <h4 className="text-xl font-semibold mb-4 dark:text-white">
-          Update Available
+          {hasMandatoryUpdates ? 'Mandatory Update Required' : 'Update Available'}
         </h4>
+
+        {/* Show different messages based on update type and user rights */}
+        {hasMandatoryUpdates && !canUpdate && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-start">
+              <svg className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <strong>Access Restricted:</strong>
+                <p className="mt-1">You cannot login as Client until the mandatory system update is completed. Please contact your branch administrator to update the system, or login as Branch if you have the required permissions.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasMandatoryUpdates && canUpdate && (
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg border border-red-200 dark:border-red-800">
+            <div className="flex items-start">
+              <svg className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <strong>Important:</strong>
+                <p className="mt-1">This update is mandatory and must be installed before you can access the system.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!hasMandatoryUpdates && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg">
+            <strong>Optional Update Available:</strong> You can choose to install now or continue and update later.
+          </div>
+        )}
+
         <div className="mb-6">
           {updates.map((update, index) => (
             <div key={index} className="mb-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700">
@@ -62,19 +109,61 @@ const VersionUpdateModal = ({
             </div>
           ))}
         </div>
+
         <div className="flex justify-end gap-4">
-          <button
-            onClick={onClose}
-            className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md"
-          >
-            No
-          </button>
-          <button
-            onClick={onConfirm}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-          >
-            Update
-          </button>
+          {/* For clients with mandatory updates: Only OK button that closes modal and prevents login */}
+          {hasMandatoryUpdates && !canUpdate ? (
+            <button
+              onClick={onClose}
+              disabled={isUpdating}
+              className={`px-6 py-2 rounded-md font-medium ${isUpdating
+                ? 'bg-red-400 cursor-not-allowed'
+                : 'bg-red-500 hover:bg-red-600'
+                } text-white`}
+            >
+              OK
+            </button>
+          ) : (
+            <>
+              {/* For optional updates or admin users: Show skip/cancel option */}
+              {!hasMandatoryUpdates && (
+                <button
+                  onClick={onClose}
+                  disabled={isUpdating}
+                  className={`px-4 py-2 rounded-md ${isUpdating
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-gray-600 dark:text-gray-400'
+                    : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200'
+                    }`}
+                >
+                  {userType === "C" ? "OK" : "Skip for Now"}
+                </button>
+              )}
+
+              {/* Update button - only for users who can update */}
+              {canUpdate && (
+                <button
+                  onClick={onConfirm}
+                  disabled={isUpdating}
+                  className={`px-6 py-2 rounded-md font-medium transition-all duration-200 ${isUpdating
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                    } text-white`}
+                >
+                  {isUpdating ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </div>
+                  ) : (
+                    hasMandatoryUpdates ? 'Update Now' : 'Update'
+                  )}
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -100,6 +189,8 @@ export default function SignInForm() {
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [versionUpdates, setVersionUpdates] = useState<VersionItem[]>([]);
   const [version, setVersion] = useState("2.0.0.0"); // Default version
+  const [loginData, setLoginData] = useState<any>(null); // Store login data for navigation after version check
+  const [isUpdating, setIsUpdating] = useState(false); // Loading state for update button
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
@@ -167,28 +258,63 @@ export default function SignInForm() {
     loadLoginOptions();
   }, []);
 
-  // Check version on component mount and after login options are loaded
-  useEffect(() => {
-    // Only check version if login options have been loaded
-    if ((loginAsOptions.length > 0 || LOGIN_AS) && selectedLoginAs) {
-      const performVersionCheck = async () => {
-        try {
-          const result = await checkVersion();
-          if (result.success && result.data?.rs0?.length > 0) {
-            setVersionUpdates(result.data.rs0);
-            setShowVersionModal(true);
-          }
-        } catch (error) {
-          console.error('Failed to check version:', error);
-        }
-      };
+  // Function to proceed with navigation after version check
+  const proceedAfterVersionCheck = useCallback((dataToUse?: any, forceLogout = false) => {
+    const currentLoginData = dataToUse || loginData;
+    if (!currentLoginData) return;
 
-      performVersionCheck();
+    // If forceLogout is true (mandatory update for non-admin users), clear everything and stay on login
+    if (forceLogout) {
+      // Clear all auth data
+      localStorage.removeItem('userId');
+      localStorage.removeItem('temp_token');
+      localStorage.removeItem('tokenExpireTime');
+      localStorage.removeItem('clientCode');
+      localStorage.removeItem('clientName');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('loginType');
+
+      // Reset form
+      setUserId("");
+      setPassword("");
+      setError("System update required. Please contact your branch administrator to update the system.");
+      dispatch(setAuthError("System update required. Please contact your branch administrator to update the system."));
+      return;
     }
-  }, [checkVersion, selectedLoginAs]);
+
+    if (currentLoginData.LoginType === "2FA") {
+      router.push('/otp-verification');
+    } else {
+      // Set cookie
+      document.cookie = `auth_token=${currentLoginData.token}; path=/; expires=${new Date(currentLoginData.tokenExpireTime).toUTCString()}`;
+      localStorage.removeItem('temp_token');
+      router.push('/dashboard');
+    }
+  }, [loginData, router, dispatch]);
+
+  // Function to perform version check after successful login
+  const performVersionCheckAfterLogin = useCallback(async (currentLoginData: any) => {
+    try {
+      const result = await checkVersion();
+      if (result.success && result.data?.rs0?.length > 0) {
+        setVersionUpdates(result.data.rs0);
+        setShowVersionModal(true);
+      } else {
+        // No updates available, proceed with navigation
+        proceedAfterVersionCheck(currentLoginData);
+      }
+    } catch (error) {
+      console.error('Failed to check version:', error);
+      // Proceed with navigation even if version check fails
+      proceedAfterVersionCheck(currentLoginData);
+    }
+  }, [checkVersion, proceedAfterVersionCheck]);
 
   // Handle the update confirmation
   const handleUpdateConfirm = useCallback(async () => {
+    setIsUpdating(true); // Start loading
+    setError(""); // Clear any previous errors
+
     try {
       // Create XML with the correct login as value
       const loginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
@@ -217,11 +343,42 @@ export default function SignInForm() {
       });
 
       console.log('Version update response:', response.data);
-      setShowVersionModal(false);
+
+      // Check if update was successful
+      if (response.data.success) {
+        setShowVersionModal(false);
+        setIsUpdating(false);
+        // Only proceed with login after successful update
+        proceedAfterVersionCheck(loginData);
+      } else {
+        // Update failed, show error but keep modal open for mandatory updates
+        const hasMandatoryUpdates = versionUpdates.some(update => update.Status === 'M');
+        setIsUpdating(false);
+        if (hasMandatoryUpdates) {
+          setError("Update failed. Please try again or contact support.");
+        } else {
+          // For optional updates, allow proceeding even if update fails
+          setShowVersionModal(false);
+          proceedAfterVersionCheck(loginData);
+        }
+      }
     } catch (error) {
       console.error('Failed to update version:', error);
+
+      // Check if it's a mandatory update
+      const hasMandatoryUpdates = versionUpdates.some(update => update.Status === 'M');
+      setIsUpdating(false);
+
+      if (hasMandatoryUpdates) {
+        // For mandatory updates, don't proceed if update fails
+        setError("Update failed. Please check your connection and try again.");
+      } else {
+        // For optional updates, allow proceeding even if update fails
+        setShowVersionModal(false);
+        proceedAfterVersionCheck(loginData);
+      }
     }
-  }, [loginAsOptions, selectedLoginAs, version]);
+  }, [loginAsOptions, selectedLoginAs, version, loginData, proceedAfterVersionCheck, versionUpdates]);
 
   const handleLoginAsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedIndex = e.target.selectedIndex;
@@ -278,16 +435,20 @@ export default function SignInForm() {
         localStorage.setItem('clientName', data.data[0].ClientName);
         localStorage.setItem('userType', data.data[0].UserType);
         localStorage.setItem('loginType', data.data[0].LoginType);
+        localStorage.removeItem("ekyc_dynamicData");
+        localStorage.removeItem("ekyc_activeTab");
 
-        if (data.data[0].LoginType === "2FA") {
+        // Store login data for navigation after version check
+        const currentLoginData = {
+          token: data.token,
+          tokenExpireTime: data.tokenExpireTime,
+          LoginType: data.data[0].LoginType
+        };
 
-          router.push('/otp-verification');
-        } else {
-          // Set cookie
-          document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`;
-          localStorage.removeItem('temp_token');
-          router.push('/dashboard');
-        }
+        setLoginData(currentLoginData);
+
+        // Check for version updates after successful login
+        await performVersionCheckAfterLogin(currentLoginData);
       } else {
         dispatch(setAuthError(data.message || 'Login failed'));
         setError(data.message || 'Login failed');
@@ -439,9 +600,28 @@ export default function SignInForm() {
       {/* Version Update Modal */}
       <VersionUpdateModal
         isOpen={showVersionModal}
-        onClose={() => setShowVersionModal(false)}
+        onClose={() => {
+          setShowVersionModal(false);
+          setIsUpdating(false); // Reset loading state when modal closes
+
+          // Check if there are mandatory updates and user doesn't have update rights
+          const hasMandatoryUpdates = versionUpdates.some(update => update.Status === 'M');
+          // Use selectedLoginAs to determine user type (C = Client, B = Branch)
+          const currentLoginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
+          const canUpdate = currentLoginAs !== "C"; // Only Client (loginAs: "C") cannot update
+
+          if (hasMandatoryUpdates && !canUpdate) {
+            // Force logout for clients with mandatory updates
+            proceedAfterVersionCheck(loginData, true);
+          } else {
+            // Allow normal login flow for optional updates or branch users
+            proceedAfterVersionCheck(loginData);
+          }
+        }}
         updates={versionUpdates}
         onConfirm={handleUpdateConfirm}
+        userType={loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS}
+        isUpdating={isUpdating}
       />
     </div>
   );

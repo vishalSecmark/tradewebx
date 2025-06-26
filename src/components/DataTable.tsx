@@ -26,6 +26,10 @@ interface DataTableProps {
         mobileColumns?: string[];
         tabletColumns?: string[];
         webColumns?: string[];
+        columnWidth?: Array<{
+            key: string;
+            width: number;
+        }>;
         [key: string]: any;
     };
     onRowClick?: (record: any) => void;
@@ -307,6 +311,22 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
             : [];
 
+        // Create column width mapping from settings
+        const columnWidthMap: Record<string, number> = {};
+        if (settings?.columnWidth && Array.isArray(settings.columnWidth)) {
+            settings.columnWidth.forEach((widthConfig: { key: string; width: number }) => {
+                if (widthConfig.key && widthConfig.width) {
+                    // Handle comma-separated column names
+                    const columnNames = widthConfig.key.split(',').map((name: string) => name.trim());
+                    columnNames.forEach((columnName: string) => {
+                        if (columnName) {
+                            columnWidthMap[columnName] = widthConfig.width;
+                        }
+                    });
+                }
+            });
+        }
+
         // Get available columns from the actual data
         const availableColumns = formattedData.length > 0 ? Object.keys(formattedData[0]).filter(key => !key.startsWith('_')) : [];
 
@@ -509,13 +529,27 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     (col: any) => col.key === key
                 );
 
-                return {
+                // Get custom width for this column if specified
+                const customWidth = columnWidthMap[key];
+                const columnConfig: any = {
                     key,
                     name: key,
                     sortable: true,
-                    minWidth: 80,
-                    maxWidth: 400,
                     resizable: true,
+                };
+
+                // Apply custom width or use default min/max width
+                if (customWidth) {
+                    columnConfig.width = customWidth;
+                    columnConfig.minWidth = Math.min(50, Math.floor(customWidth * 0.5)); // Allow resizing down to 50% of custom width or minimum 50px
+                    columnConfig.maxWidth = Math.max(600, Math.floor(customWidth * 2)); // Allow resizing up to 200% of custom width or minimum 600px
+                } else {
+                    columnConfig.minWidth = 80;
+                    columnConfig.maxWidth = 400;
+                }
+
+                return {
+                    ...columnConfig,
                     headerCellClass: isNumericColumn ? 'numeric-column-header' : '',
                     cellClass: isNumericColumn ? 'numeric-column-cell' : '',
                     renderSummaryCell: (props: any) => {
@@ -600,7 +634,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             )
         }
         return baseColumns;
-    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, expandedRows]);
+    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {

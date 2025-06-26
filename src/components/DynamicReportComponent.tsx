@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -17,6 +17,8 @@ import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import EditTableRowModal from './EditTableRowModal';
+import FormCreator from './FormCreator';
+import Loader from './Loader';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -24,6 +26,219 @@ interface DynamicReportComponentProps {
     componentName: string;
     componentType: string;
 }
+
+// Add validation interfaces and functions
+interface ValidationError {
+    field: string;
+    message: string;
+    severity: 'error' | 'warning';
+}
+
+interface PageDataValidationResult {
+    isValid: boolean;
+    errors: ValidationError[];
+    warnings: ValidationError[];
+}
+
+// Utility function to safely access pageData properties
+const safePageDataAccess = (pageData: any, validationResult: PageDataValidationResult | null) => {
+    if (!validationResult?.isValid || !pageData?.[0]) {
+        return {
+            config: null,
+            isValid: false,
+            getCurrentLevel: () => null,
+            hasFilters: () => false,
+            getLevels: () => [],
+            getSetting: () => null
+        };
+    }
+
+    const config = pageData[0];
+
+    return {
+        config,
+        isValid: true,
+        getCurrentLevel: (currentLevel: number) => {
+            if (!config.levels || !Array.isArray(config.levels) || currentLevel >= config.levels.length) {
+                return null;
+            }
+            return config.levels[currentLevel];
+        },
+        hasFilters: () => {
+            return config.filters && Array.isArray(config.filters) && config.filters.length > 0;
+        },
+        getLevels: () => {
+            return config.levels && Array.isArray(config.levels) ? config.levels : [];
+        },
+        getSetting: (path: string) => {
+            try {
+                return path.split('.').reduce((obj, key) => obj?.[key], config);
+            } catch {
+                return null;
+            }
+        }
+    };
+};
+
+// Page data validator function
+const validatePageData = (pageData: any): PageDataValidationResult => {
+    const errors: ValidationError[] = [];
+    const warnings: ValidationError[] = [];
+
+    try {
+        // Check if pageData exists and is an array
+        if (!pageData) {
+            errors.push({
+                field: 'pageData',
+                message: 'Page data is not available. Please check your menu configuration.',
+                severity: 'error'
+            });
+            return { isValid: false, errors, warnings };
+        }
+
+        if (!Array.isArray(pageData)) {
+            errors.push({
+                field: 'pageData',
+                message: 'Page data should be an array structure.',
+                severity: 'error'
+            });
+            return { isValid: false, errors, warnings };
+        }
+
+        if (pageData.length === 0) {
+            errors.push({
+                field: 'pageData',
+                message: 'Page data array is empty. No configuration found.',
+                severity: 'error'
+            });
+            return { isValid: false, errors, warnings };
+        }
+
+        const pageConfig = pageData[0];
+
+        // Validate main page configuration
+        if (!pageConfig || typeof pageConfig !== 'object') {
+            errors.push({
+                field: 'pageData[0]',
+                message: 'Invalid page configuration structure.',
+                severity: 'error'
+            });
+            return { isValid: false, errors, warnings };
+        }
+
+        // Validate levels array
+        if (!pageConfig.levels) {
+            errors.push({
+                field: 'levels',
+                message: 'Page levels configuration is missing.',
+                severity: 'error'
+            });
+        } else if (!Array.isArray(pageConfig.levels)) {
+            errors.push({
+                field: 'levels',
+                message: 'Page levels should be an array.',
+                severity: 'error'
+            });
+        } else if (pageConfig.levels.length === 0) {
+            errors.push({
+                field: 'levels',
+                message: 'At least one level configuration is required.',
+                severity: 'error'
+            });
+        } else {
+            // Validate each level
+            pageConfig.levels.forEach((level: any, index: number) => {
+                if (!level || typeof level !== 'object') {
+                    errors.push({
+                        field: `levels[${index}]`,
+                        message: `Level ${index} configuration is invalid.`,
+                        severity: 'error'
+                    });
+                } else {
+                    // Validate J_Ui in each level
+                    if (!level.J_Ui) {
+                        warnings.push({
+                            field: `levels[${index}].J_Ui`,
+                            message: `Level ${index} is missing J_Ui configuration.`,
+                            severity: 'warning'
+                        });
+                    }
+                }
+            });
+        }
+
+        // Validate filters if they exist
+        if (pageConfig.filters !== undefined) {
+            if (!Array.isArray(pageConfig.filters)) {
+                errors.push({
+                    field: 'filters',
+                    message: 'Filters configuration should be an array.',
+                    severity: 'error'
+                });
+            } else {
+                // Validate nested filter structure
+                pageConfig.filters.forEach((filterGroup: any, groupIndex: number) => {
+                    if (!Array.isArray(filterGroup)) {
+                        errors.push({
+                            field: `filters[${groupIndex}]`,
+                            message: `Filter group ${groupIndex} should be an array.`,
+                            severity: 'error'
+                        });
+                    } else {
+                        filterGroup.forEach((filter: any, filterIndex: number) => {
+                            if (!filter || typeof filter !== 'object') {
+                                errors.push({
+                                    field: `filters[${groupIndex}][${filterIndex}]`,
+                                    message: `Filter at position [${groupIndex}][${filterIndex}] is invalid.`,
+                                    severity: 'error'
+                                });
+                            } else if (!filter.type) {
+                                warnings.push({
+                                    field: `filters[${groupIndex}][${filterIndex}].type`,
+                                    message: `Filter at position [${groupIndex}][${filterIndex}] is missing type.`,
+                                    severity: 'warning'
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        // Validate SQL if present
+        if (pageConfig.Sql !== undefined && typeof pageConfig.Sql !== 'string') {
+            warnings.push({
+                field: 'Sql',
+                message: 'SQL configuration should be a string.',
+                severity: 'warning'
+            });
+        }
+
+        // Validate other optional fields
+        if (pageConfig.autoFetch !== undefined &&
+            typeof pageConfig.autoFetch !== 'string' &&
+            typeof pageConfig.autoFetch !== 'boolean') {
+            warnings.push({
+                field: 'autoFetch',
+                message: 'autoFetch should be a string or boolean.',
+                severity: 'warning'
+            });
+        }
+
+    } catch (error) {
+        errors.push({
+            field: 'validation',
+            message: `Validation error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            severity: 'error'
+        });
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        warnings
+    };
+};
 
 const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ componentName, componentType }) => {
     const menuItems = useAppSelector(selectAllMenuItems);
@@ -61,6 +276,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [pdfParams, setPdfParams] = useState<
         [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
     >();
+    const [hasFetchAttempted, setHasFetchAttempted] = useState(false);
+
+    // Add validation state
+    const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
+    const [showValidationDetails, setShowValidationDetails] = useState(false);
 
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
@@ -97,7 +317,26 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-    console.log(pageData, 'pageData')
+    console.log(pageData, 'pageData');
+    // Validate pageData whenever it changes
+    useEffect(() => {
+        if (pageData) {
+            const validation = validatePageData(pageData);
+            setValidationResult(validation);
+            console.log('Page Data Validation Result:', validation);
+        } else {
+            setValidationResult({
+                isValid: false,
+                errors: [{
+                    field: 'pageData',
+                    message: 'No page data found for this component. Please check your menu configuration.',
+                    severity: 'error'
+                }],
+                warnings: []
+            });
+        }
+    }, [pageData]);
+
     // Helper functions for parsing XML settings
     const parseXmlList = (xmlString: string, tag: string): string[] => {
         const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
@@ -187,71 +426,116 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         return Object.keys(obj).length > 0 ? obj : null;
     }
 
-    // Modified filter initialization useEffect
+    // Modified filter initialization useEffect with validation
     useEffect(() => {
-        if (pageData?.[0]?.filters?.length > 0) {
-            const defaultFilters: Record<string, any> = {};
+        // Only proceed if pageData is valid
+        if (!validationResult?.isValid) {
+            setAreFiltersInitialized(true);
+            return;
+        }
 
-            // Handle the nested array structure
-            pageData[0].filters.forEach(filterGroup => {
-                filterGroup.forEach(filter => {
-                    if (filter.type === 'WDateRangeBox') {
-                        const [fromKey, toKey] = filter.wKey;
+        try {
+            if (pageData?.[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0) {
+                const defaultFilters: Record<string, any> = {};
 
-                        if (filter.wValue && filter.wValue.length === 2) {
-                            // Use pre-selected values if provided
-                            defaultFilters[fromKey] = moment(filter.wValue[0], 'YYYYMMDD').toDate();
-                            defaultFilters[toKey] = moment(filter.wValue[1], 'YYYYMMDD').toDate();
-                        } else {
-                            // Fallback to financial year logic
-                            const currentDate = moment();
-                            let financialYearStart;
-
-                            if (currentDate.month() < 3) {
-                                financialYearStart = moment().subtract(1, 'year').month(3).date(1);
-                            } else {
-                                financialYearStart = moment().month(3).date(1);
-                            }
-
-                            defaultFilters[fromKey] = financialYearStart.toDate();
-                            defaultFilters[toKey] = moment().toDate();
-                        }
+                // Handle the nested array structure with safe validation
+                pageData[0].filters.forEach((filterGroup, groupIndex) => {
+                    if (!Array.isArray(filterGroup)) {
+                        console.warn(`Filter group at index ${groupIndex} is not an array, skipping...`);
+                        return;
                     }
-                    // Add other filter type initializations if needed
+
+                    filterGroup.forEach((filter, filterIndex) => {
+                        if (!filter || typeof filter !== 'object') {
+                            console.warn(`Filter at position [${groupIndex}][${filterIndex}] is invalid, skipping...`);
+                            return;
+                        }
+
+                        try {
+                            if (filter.type === 'WDateRangeBox') {
+                                if (!filter.wKey || !Array.isArray(filter.wKey) || filter.wKey.length < 2) {
+                                    console.warn(`WDateRangeBox filter at [${groupIndex}][${filterIndex}] has invalid wKey`);
+                                    return;
+                                }
+
+                                const [fromKey, toKey] = filter.wKey;
+
+                                if (filter.wValue && Array.isArray(filter.wValue) && filter.wValue.length === 2) {
+                                    // Use pre-selected values if provided
+                                    const fromDate = moment(filter.wValue[0], 'YYYYMMDD');
+                                    const toDate = moment(filter.wValue[1], 'YYYYMMDD');
+
+                                    if (fromDate.isValid() && toDate.isValid()) {
+                                        defaultFilters[fromKey] = fromDate.toDate();
+                                        defaultFilters[toKey] = toDate.toDate();
+                                    } else {
+                                        console.warn(`Invalid date values in WDateRangeBox filter at [${groupIndex}][${filterIndex}]`);
+                                    }
+                                } else {
+                                    // Fallback to financial year logic
+                                    const currentDate = moment();
+                                    let financialYearStart;
+
+                                    if (currentDate.month() < 3) {
+                                        financialYearStart = moment().subtract(1, 'year').month(3).date(1);
+                                    } else {
+                                        financialYearStart = moment().month(3).date(1);
+                                    }
+
+                                    defaultFilters[fromKey] = financialYearStart.toDate();
+                                    defaultFilters[toKey] = moment().toDate();
+                                }
+                            }
+                            // Add other filter type initializations if needed
+                        } catch (filterError) {
+                            console.error(`Error processing filter at [${groupIndex}][${filterIndex}]:`, filterError);
+                        }
+                    });
                 });
-            });
 
-            // Add client code to filters if present in query params
-            if (clientCode) {
-                defaultFilters['ClientCode'] = clientCode;
+                // Add client code to filters if present in query params
+                if (clientCode) {
+                    defaultFilters['ClientCode'] = clientCode;
+                }
+
+                setFilters(defaultFilters);
+                setAreFiltersInitialized(true);
+            } else {
+                // No filters needed, mark as initialized
+                setAreFiltersInitialized(true);
             }
-
-            setFilters(defaultFilters);
-            setAreFiltersInitialized(true);
-        } else {
-            // No filters needed, mark as initialized
-            setAreFiltersInitialized(true);
+        } catch (error) {
+            console.error('Error initializing filters:', error);
+            setAreFiltersInitialized(true); // Set to true to prevent blocking
         }
-    }, [pageData, clientCode]);
+    }, [pageData, clientCode, validationResult]);
 
-    // Set autoFetch based on pageData and clientCode
+    // Set autoFetch based on pageData and clientCode with validation
     useEffect(() => {
-        if (pageData?.[0]?.autoFetch !== undefined) {
-            const newAutoFetch = pageData[0].autoFetch === "true" || clientCode !== null;
-            setAutoFetch(newAutoFetch);
-
-            // If we have a client code, we want to fetch data regardless of autoFetch setting
-            if (clientCode) {
-                fetchData();
-            } else if (!newAutoFetch) {
-                return;
-            }
-            if (!hasFetchedRef.current) {
-                fetchData();
-                hasFetchedRef.current = true; // prevent second run
-            }
+        if (!validationResult?.isValid || !pageData?.[0]) {
+            return;
         }
-    }, [pageData, clientCode]);
+
+        try {
+            if (pageData[0].autoFetch !== undefined) {
+                const newAutoFetch = pageData[0].autoFetch === "true" || clientCode !== null;
+                setAutoFetch(newAutoFetch);
+
+                // If we have a client code, we want to fetch data regardless of autoFetch setting
+                if (clientCode) {
+                    fetchData();
+                } else if (!newAutoFetch) {
+                    return;
+                }
+                if (!hasFetchedRef.current) {
+                    fetchData();
+                    hasFetchedRef.current = true; // prevent second run
+                }
+            }
+        } catch (error) {
+            console.error('Error setting autoFetch:', error);
+        }
+    }, [pageData, clientCode, validationResult]);
 
     // Add new useEffect to handle level changes and manual fetching
     useEffect(() => {
@@ -270,9 +554,21 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }, [currentLevel, autoFetch]);
 
     const fetchData = async (currentFilters = filters) => {
-        if (!pageData) return;
+        // Validate pageData before proceeding
+        if (!pageData || !validationResult?.isValid) {
+            console.error('Cannot fetch data: Invalid page configuration');
+            return;
+        }
+
+        // Additional safety checks
+        if (!pageData[0] || !pageData[0].levels || !Array.isArray(pageData[0].levels) ||
+            currentLevel >= pageData[0].levels.length || !pageData[0].levels[currentLevel]) {
+            console.error('Cannot fetch data: Invalid level configuration');
+            return;
+        }
 
         setIsLoading(true);
+        setHasFetchAttempted(true);
         const startTime = performance.now();
 
         try {
@@ -284,7 +580,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }
 
             // Check if page has filters and if filters are initialized
-            const hasFilters = pageData[0]?.filters?.length > 0;
+            const hasFilters = pageData[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0;
 
             // Only process filters if the page has filter configuration and filters are initialized
             if (hasFilters && areFiltersInitialized) {
@@ -293,11 +589,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         return;
                     }
 
-                    if (value instanceof Date || moment.isMoment(value)) {
-                        const formattedDate = moment(value).format('YYYYMMDD');
-                        filterXml += `<${key}>${formattedDate}</${key}>`;
-                    } else {
-                        filterXml += `<${key}>${value}</${key}>`;
+                    try {
+                        if (value instanceof Date || moment.isMoment(value)) {
+                            const formattedDate = moment(value).format('YYYYMMDD');
+                            filterXml += `<${key}>${formattedDate}</${key}>`;
+                        } else {
+                            filterXml += `<${key}>${value}</${key}>`;
+                        }
+                    } catch (error) {
+                        console.warn(`Error processing filter ${key}:`, error);
                     }
                 });
             }
@@ -309,8 +609,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 });
             }
 
+            // Safely get J_Ui data
+            const currentLevelConfig = pageData[0].levels[currentLevel];
+            const jUiData = currentLevelConfig.J_Ui || {};
+
             const xmlData = `<dsXml>
-                <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)}</J_Ui>
+                <J_Ui>${JSON.stringify(jUiData).slice(1, -1)}</J_Ui>
                 <Sql>${pageData[0].Sql || ''}</Sql>
                 <X_Filter>${filterXml}</X_Filter>
                 <X_GFilter></X_GFilter>
@@ -439,6 +743,24 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }, 1000);
     }, [currentLevel, primaryKeyFilters]);
 
+    // Auto-open filter modal when autoFetch is false and filterType is not "onPage"
+    useEffect(() => {
+        if (pageData && pageLoaded && areFiltersInitialized && currentLevel === 0) {
+            const autoFetchSetting = pageData[0]?.autoFetch;
+            const filterType = pageData[0]?.filterType;
+            const hasFilters = pageData[0]?.filters?.length > 0;
+
+            // Check if autoFetch is false and filterType is not "onPage" and has filters
+            if (autoFetchSetting === "false" && filterType !== "onPage" && hasFilters && !clientCode) {
+                // Only auto-open if we haven't manually opened it yet
+                if (!isFilterModalOpen) {
+                    setIsFilterModalOpen(true);
+                }
+            }
+        }
+    }, [pageData, pageLoaded, areFiltersInitialized, currentLevel, clientCode]);
+
+
     // Add handleTabClick function
     const handleTabClick = (level: number, index: number) => {
         const newStack = levelStack.slice(0, index + 1);
@@ -466,6 +788,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setDownloadFilters(newFilters);
         }
     };
+
+
+    // console.log(pageData[0].levels[currentLevel].settings?.EditableColumn,'editable');
 
 
 
@@ -552,11 +877,182 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const handleCancelDelete = () => {
         setIsConfirmationModalOpen(false);
     };
+
+    // Add search state variables
+    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filteredApiData, setFilteredApiData] = useState<any[]>([]);
+
+    // Add search filtering logic
+    useEffect(() => {
+        if (!apiData) {
+            setFilteredApiData([]);
+            return;
+        }
+
+        if (!searchTerm.trim()) {
+            setFilteredApiData(apiData);
+            return;
+        }
+
+        const filtered = apiData.filter((row: any) => {
+            return Object.values(row).some((value: any) => {
+                if (value === null || value === undefined) return false;
+                return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+            });
+        });
+
+        setFilteredApiData(filtered);
+    }, [apiData, searchTerm]);
+
+    // Add search handlers
+    const handleSearchToggle = () => {
+        setIsSearchActive(!isSearchActive);
+        if (isSearchActive) {
+            setSearchTerm('');
+        }
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    };
+
+    const handleSearchClear = () => {
+        setSearchTerm('');
+    };
+
+    // Close search box when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const searchContainer = document.querySelector('.search-container');
+            if (isSearchActive && searchContainer && !searchContainer.contains(event.target as Node)) {
+                setIsSearchActive(false);
+                setSearchTerm('');
+            }
+        };
+
+        if (isSearchActive) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isSearchActive]);
+
+    // Show validation errors if pageData is invalid
+    if (validationResult && !validationResult.isValid) {
+        return (
+            <div className="p-6">
+                <div
+                    className="border rounded-lg p-4 mb-4"
+                    style={{
+                        backgroundColor: '#fee2e2',
+                        borderColor: '#fca5a5',
+                        color: '#991b1b'
+                    }}
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-lg font-semibold flex items-center">
+                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            Configuration Error
+                        </h3>
+                        <button
+                            onClick={() => setShowValidationDetails(!showValidationDetails)}
+                            className="text-sm underline hover:no-underline"
+                        >
+                            {showValidationDetails ? 'Hide Details' : 'Show Details'}
+                        </button>
+                    </div>
+
+                    <p className="mb-3">
+                        The page configuration for <strong>{componentName}</strong> contains errors that prevent it from loading properly.
+                    </p>
+
+                    {showValidationDetails && (
+                        <div className="space-y-3">
+                            {/* Errors */}
+                            {validationResult.errors.length > 0 && (
+                                <div>
+                                    <h4 className="font-medium mb-2">Errors ({validationResult.errors.length}):</h4>
+                                    <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {validationResult.errors.map((error, index) => (
+                                            <li key={index}>
+                                                <strong>{error.field}:</strong> {error.message}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Warnings */}
+                            {validationResult.warnings.length > 0 && (
+                                <div>
+                                    <h4 className="font-medium mb-2">Warnings ({validationResult.warnings.length}):</h4>
+                                    <ul className="list-disc list-inside space-y-1 text-sm">
+                                        {validationResult.warnings.map((warning, index) => (
+                                            <li key={index}>
+                                                <strong>{warning.field}:</strong> {warning.message}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
+                            {/* Debug Information */}
+                            <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
+                                <h5 className="font-medium mb-2">Debug Information:</h5>
+                                <p><strong>Component Name:</strong> {componentName}</p>
+                                <p><strong>Component Type:</strong> {componentType}</p>
+                                <p><strong>Page Data Available:</strong> {pageData ? 'Yes' : 'No'}</p>
+                                {pageData && (
+                                    <details className="mt-2">
+                                        <summary className="cursor-pointer font-medium">Raw Page Data (Click to expand)</summary>
+                                        <pre className="mt-2 text-xs overflow-auto max-h-40 bg-white p-2 rounded border">
+                                            {JSON.stringify(pageData, null, 2)}
+                                        </pre>
+                                    </details>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200 text-blue-800">
+                        <h4 className="font-medium mb-1">What you can do:</h4>
+                        <ul className="text-sm list-disc list-inside space-y-1">
+                            <li>Contact your system administrator</li>
+                            <li>Check the menu configuration for this component</li>
+                            <li>Verify that the page data structure matches expected format</li>
+                            <li>Try refreshing the page</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {/* Retry Button */}
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 rounded text-white font-medium"
+                    style={{
+                        backgroundColor: colors.buttonBackground || '#3b82f6'
+                    }}
+                >
+                    Retry / Refresh Page
+                </button>
+            </div>
+        );
+    }
+
     if (!pageData) {
         return <div>Loading report data...</div>;
     }
 
-    const showTypeList = pageData[0]?.levels[0]?.settings?.showTypstFlag || false
+    // Safe access to pageData properties with validation
+    const safePageData = safePageDataAccess(pageData, validationResult);
+    const showTypeList = safePageData.getSetting('levels.0.settings.showTypstFlag') || false;
+    const showFilterHorizontally = safePageData.getSetting('filterType') === "onPage";
+
     return (
         <div className=""
             style={{
@@ -564,7 +1060,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }}
         >
             {/* Tabs - Only show if there are multiple levels */}
-            {pageData[0].levels.length > 1 && (
+            {safePageData.isValid && safePageData.getLevels().length > 1 && (
                 <div className="flex  border-b border-gray-200">
                     <div className="flex flex-1 gap-2">
                         {levelStack.map((level, index) => (
@@ -578,14 +1074,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 onClick={() => handleTabClick(level, index)}
                             >
                                 {level === 0
-                                    ? pageData[0].level || 'Main'
-                                    : pageData[0].levels[level].name
+                                    ? safePageData.getSetting('level') || 'Main'
+                                    : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
                                 }
                             </button>
                         ))}
                     </div>
                     <div className="flex gap-2">
-                        {selectedRows.length > 0 && pageData[0].levels[currentLevel].settings?.EditableColumn && (
+                        {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
                             <button
                                 className="p-2 rounded"
                                 onClick={() => setIsEditTableRowModalOpen(true)}
@@ -593,6 +1089,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             >
                                 <FaEdit size={20} />
                             </button>
+
                         )}
                         {componentType === 'entry' && (
                             <button
@@ -648,6 +1145,60 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </button>
                             </>
                         )}
+                        {apiData && apiData.length > 0 && (
+                            <div className="relative search-container">
+                                <button
+                                    className="p-2 rounded"
+                                    onClick={handleSearchToggle}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaSearch size={20} />
+                                </button>
+
+                                {/* Absolute Search Box */}
+                                {isSearchActive && (
+                                    <div
+                                        className="absolute top-full right-0 mt-1 w-80 p-2 rounded border shadow-lg z-50"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            borderColor: '#e5e7eb'
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 relative">
+                                                <input
+                                                    type="text"
+                                                    value={searchTerm}
+                                                    onChange={handleSearchChange}
+                                                    placeholder="Search across all columns..."
+                                                    className="w-full px-2 py-1.5 text-sm rounded border focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                    style={{
+                                                        backgroundColor: colors.textInputBackground || '#ffffff',
+                                                        borderColor: '#d1d5db',
+                                                        color: colors.text
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                {searchTerm && (
+                                                    <button
+                                                        onClick={handleSearchClear}
+                                                        className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
+                                                        style={{ color: colors.text }}
+                                                    >
+                                                        <FaTimes size={12} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {searchTerm && (
+                                            <div className="text-xs text-gray-500 mt-1 text-right">
+                                                {filteredApiData.length} of {apiData?.length || 0} records
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <button
                             className="p-2 rounded"
                             onClick={() => fetchData()}
@@ -655,7 +1206,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         >
                             <FaSync size={20} />
                         </button>
-                        {pageData[0].filters && pageData[0].filters.length > 0 && (
+                        {!showFilterHorizontally && safePageData.hasFilters() && (
                             <button
                                 className="p-2 rounded"
                                 onClick={() => setIsFilterModalOpen(true)}
@@ -668,12 +1219,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
 
+
+
             {/* Filter Modals */}
             <FilterModal
                 isOpen={isFilterModalOpen}
                 onClose={() => setIsFilterModalOpen(false)}
                 title="Filters"
-                filters={pageData[0].filters || [[]]}
+                filters={safePageData.config?.filters || [[]]}
                 onFilterChange={handleFilterChange}
                 initialValues={filters}
                 sortableFields={apiData ? Object.keys(apiData[0] || {}).map(key => ({
@@ -682,7 +1235,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 })) : []}
                 currentSort={sortConfig}
                 onSortChange={setSortConfig}
-                isSortingAllowed={pageData[0].isShortAble !== "false"}
+                isSortingAllowed={safePageData.getCurrentLevel(currentLevel)?.isShortAble !== "false"}
                 onApply={() => { }}
             />
             <ConfirmationModal
@@ -707,7 +1260,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isOpen={isDownloadModalOpen}
                 onClose={() => setIsDownloadModalOpen(false)}
                 title="Download Options"
-                filters={pageData[0].downloadFilters || []}
+                filters={safePageData.config?.downloadFilters || []}
                 onFilterChange={handleDownloadFilterChange}
                 initialValues={downloadFilters}
                 isDownload={true}
@@ -717,17 +1270,77 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {isEditTableRowModalOpen && <EditTableRowModal
                 isOpen={isEditTableRowModalOpen}
                 onClose={() => setIsEditTableRowModalOpen(false)}
-                title={pageData[0].levels[currentLevel].name}
+                title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
-                wPage={pageData[0].wPage}
-                settings={pageData[0].levels[currentLevel].settings}
+                wPage={safePageData.getSetting('wPage') || ''}
+                settings={{
+                    ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                    hideMultiEditColumn: safePageData.getCurrentLevel(currentLevel)?.settings?.hideMultiEditColumn
+                }}
             />}
 
             {/* Loading State */}
-            {isLoading && <div>Loading...</div>}
 
-            {!apiData && !isLoading && <div>No Data Found</div>}
+
+            {/* Horizontal Filters */}
+            {showFilterHorizontally && safePageData.hasFilters() && (
+                <div className="mb-2 px-3 py-1 rounded-lg border" style={{
+                    backgroundColor: colors.cardBackground,
+                    borderColor: '#e5e7eb'
+                }}>
+                    <div className="flex items-center justify-between mb-0">
+                        <div
+                            className="flex flex-wrap gap-4 items-start"
+                            style={{
+                                background: 'none'
+                            }}
+                        >
+                            <FormCreator
+                                formData={safePageData.config?.filters || [[]]}
+                                onFilterChange={handleFilterChange}
+                                initialValues={filters}
+                                isHorizontal={true}
+                            />
+                        </div>
+                        <div className="flex gap-2">
+
+                            <button
+                                className="px-3 py-1 text-sm rounded"
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText
+                                }}
+                                onClick={() => fetchData(filters)}
+                            >
+                                Apply
+                            </button>
+                            <button
+                                className="px-3 py-1 text-sm rounded"
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText
+                                }}
+                                onClick={() => {
+                                    const emptyValues = {};
+                                    setFilters(emptyValues);
+                                    handleFilterChange(emptyValues);
+                                }}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            )}
+            {isLoading &&
+                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
+                    <Loader />
+                </div>
+            }
+            {!apiData && !isLoading && hasFetchAttempted && <div>No Data Found</div>}
             {/* Data Display */}
+
             {!isLoading && apiData && (
                 <div className="space-y-0">
                     <div className="text-sm text-gray-500">
@@ -770,13 +1383,18 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     ) : null}
                                 </div>
                             </div>
-                            <div className="text-xs">Total Records: {apiData.length} | Response Time: {(apiResponseTime / 1000).toFixed(2)}s</div>
+                            <div className="text-xs">
+                                {searchTerm ?
+                                    `Showing ${filteredApiData.length} of ${apiData.length} records` :
+                                    `Total Records: ${apiData.length}`
+                                } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
+                            </div>
                         </div>
                     </div>
                     <DataTable
-                        data={apiData}
+                        data={filteredApiData}
                         settings={{
-                            ...pageData[0].levels[currentLevel].settings,
+                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
                             mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                             tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
                             webColumns: rs1Settings?.webColumns?.[0] || [],
@@ -788,7 +1406,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 webColumns: rs1Settings?.webColumns?.[0] || []
                             } : {})
                         }}
-                        summary={pageData[0].levels[currentLevel].summary}
+                        summary={safePageData.getCurrentLevel(currentLevel)?.summary}
                         onRowClick={handleRecordClick}
                         onRowSelect={handleRowSelect}
                         tableRef={tableRef}
@@ -809,7 +1427,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         <DataTable
                                             data={tableData}
                                             settings={{
-                                                ...pageData[0].levels[currentLevel].settings,
+                                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
                                                 mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                                 tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
                                                 webColumns: rs1Settings?.webColumns?.[0] || [],
@@ -821,7 +1439,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     webColumns: rs1Settings?.webColumns?.[0] || []
                                                 } : {})
                                             }}
-                                            summary={pageData[0].levels[currentLevel].summary}
+                                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
                                             tableRef={tableRef}
                                             fullHeight={false}
                                         />
@@ -833,7 +1451,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
 
-            {componentType === 'entry' && (
+            {componentType === 'entry' && safePageData.isValid && (
                 <EntryFormModal
                     isOpen={isEntryModalOpen}
                     onClose={() => setIsEntryModalOpen(false)}

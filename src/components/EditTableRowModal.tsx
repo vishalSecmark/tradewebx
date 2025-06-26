@@ -4,9 +4,11 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { toast } from 'react-toastify';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
+import EntryFormModal from './EntryFormModal';
 
 interface RowData {
     [key: string]: any;
@@ -47,9 +49,15 @@ interface EditTableRowModalProps {
     tableData: RowData[];
     wPage: string;
     settings: {
+        ShowView: boolean;
         EditableColumn: EditableColumn[];
         leftAlignedColumns?: string;
         leftAlignedColums?: string;
+        columnWidth?: Array<{
+            key: string;
+            width: number;
+        }>;
+        hideMultiEditColumn?: string;
     }
 }
 
@@ -75,7 +83,34 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         message: '',
         type: 'E'
     });
+
+    // EntryFormModal states
+    const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
+    const [entryFormData, setEntryFormData] = useState<any>(null);
+    const [pageData, setPageData] = useState<any>(null);
+    const [isLoadingPageData, setIsLoadingPageData] = useState(false);
+
+    // console.log(tableData,'tableData222');
+    // console.log(settings.ShowView,'settings in edit');
+
+    const showViewTable = settings.ShowView
+
+    console.log(showViewTable, 'showViewTable');
+
+
+
+
     const editableColumns = settings.EditableColumn || [];
+
+    // Get column width configuration from settings
+    const getColumnWidth = (columnKey: string): number | undefined => {
+        const columnWidthConfig = settings?.columnWidth;
+        if (columnWidthConfig && Array.isArray(columnWidthConfig)) {
+            const widthConfig = columnWidthConfig.find(config => config.key === columnKey);
+            return widthConfig?.width;
+        }
+        return undefined;
+    };
 
     const showValidationMessage = (message: string, type: 'M' | 'S' | 'E' | 'D' = 'E') => {
         setValidationModal({
@@ -87,6 +122,140 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     const handleValidationClose = () => {
         setValidationModal(prev => ({ ...prev, isOpen: false }));
+    };
+
+    // New function to fetch page data for EntryFormModal
+    const fetchPageDataForView = async (rowData: RowData) => {
+        setIsLoadingPageData(true);
+        try {
+            // Create X_Filter from all row data
+            const xFilterTags = Object.entries(rowData)
+                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .join('');
+
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Master_Edit"</J_Ui>
+                <Sql></Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple>${xFilterTags}</X_Filter_Multiple>
+                <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
+            </dsXml>`;
+
+            console.log('Fetching page data for EntryFormModal:', xmlData);
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
+                }
+            });
+
+            console.log('Page data response:', response.data.data);
+
+            const EditTablePageData = response.data.data.rs0; // Form field configuration
+            const ChildEntryData = response.data.data.rs1 || []; // Child entry data records
+
+            console.log('Master Form Configuration (rs0):', EditTablePageData);
+            console.log('Child Entry Data Records (rs1):', ChildEntryData);
+
+            // Create ChildEntry configuration structure
+            // rs0 contains form field configuration, rs1 contains actual child entry data
+            let childEntryStructure: any = {};
+
+            // Check if there are child entry form fields in rs0 or if rs1 has data
+            const hasChildEntryFields = EditTablePageData && Array.isArray(EditTablePageData) &&
+                EditTablePageData.some(field => field.wKey && typeof field.wKey === 'string');
+
+            const hasChildEntryData = ChildEntryData && Array.isArray(ChildEntryData) && ChildEntryData.length > 0;
+
+            if (hasChildEntryData || hasChildEntryFields) {
+                console.log('Child entry data/fields found, creating ChildEntry configuration');
+
+                // Create child entry configuration similar to how it's done in DynamicReportComponent
+                const baseStructure = {
+                    J_Ui: {
+                        ActionName: ACTION_NAME,
+                        Option: "ChildEntry_Edit"
+                    },
+                    J_Api: {
+                        UserId: localStorage.getItem('userId') || 'ADMIN',
+                        AccYear: localStorage.getItem('accYear') || '24',
+                        MyDbPrefix: localStorage.getItem('myDbPrefix') || '',
+                        MemberCode: localStorage.getItem('memberCode') || '',
+                        SecretKey: localStorage.getItem('secretKey') || '',
+                        MenuCode: localStorage.getItem('menuCode') || 0,
+                        ModuleID: localStorage.getItem('moduleID') || 0,
+                        MyDb: localStorage.getItem('myDb') || '',
+                        DenyRights: localStorage.getItem('denyRights') || ''
+                    },
+                    X_Filter: rowData, // Use the current row data as filter for child entries
+                    sql: {}
+                };
+
+                childEntryStructure = { ...baseStructure };
+
+                // If we have actual child entry data, include it
+                if (hasChildEntryData) {
+                    childEntryStructure.childData = ChildEntryData;
+                }
+
+                // If we have child entry form fields, include them
+                if (hasChildEntryFields) {
+                    childEntryStructure.formFields = EditTablePageData;
+                }
+
+                console.log('Created child entry structure:', childEntryStructure);
+            } else {
+                console.log('No child entry data or configuration found in API response');
+            }
+
+            // Create a mock pageData structure that EntryFormModal expects
+            const mockPageData = [{
+                wPage: wPage,
+                Entry: {
+                    MasterEntry: {
+                        J_Ui: {
+                            ActionName: ACTION_NAME,
+                            Option: "Master_Edit"
+                        },
+                        J_Api: {
+                            UserId: localStorage.getItem('userId') || 'ADMIN',
+                            AccYear: localStorage.getItem('accYear') || '24',
+                            MyDbPrefix: localStorage.getItem('myDbPrefix') || '',
+                            MemberCode: localStorage.getItem('memberCode') || '',
+                            SecretKey: localStorage.getItem('secretKey') || '',
+                            MenuCode: localStorage.getItem('menuCode') || 0,
+                            ModuleID: localStorage.getItem('moduleID') || 0,
+                            MyDb: localStorage.getItem('myDb') || '',
+                            DenyRights: localStorage.getItem('denyRights') || ''
+                        },
+                        X_Filter: rowData,
+                        sql: {}
+                    },
+                    ChildEntry: childEntryStructure // Use child entry data from API response
+                }
+            }];
+            console.log(mockPageData, 'mockPageData');
+
+            setPageData(mockPageData);
+            setEntryFormData(rowData);
+            setIsEntryModalOpen(true);
+
+        } catch (error) {
+            console.error('Error fetching page data:', error);
+            showValidationMessage('Failed to load form configuration. Please try again.');
+        } finally {
+            setIsLoadingPageData(false);
+        }
+    };
+
+    const handleViewRow = (rowData: RowData, rowIndex: number) => {
+        console.log('=== View Row Clicked ===');
+        console.log('Row Data:', rowData);
+        console.log('Row Index:', rowIndex);
+        console.log('wPage:', wPage);
+
+        fetchPageDataForView(rowData);
     };
 
     const isNumeric = (value: any): boolean => {
@@ -119,10 +288,38 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         });
     }, [editableColumns]);
 
-    const handleInputChange = (rowIndex: number, key: string, value: any) => {
-        const updated = [...localData];
-        updated[rowIndex] = { ...updated[rowIndex], [key]: value };
-        setLocalData(updated);
+    // Console log EntryFormModal data when modal opens
+    useEffect(() => {
+        if (isEntryModalOpen && pageData) {
+            console.log('=== EntryFormModal Data from EditTableRowModal ===', {
+                isOpen: isEntryModalOpen,
+                pageData: pageData,
+                editData: entryFormData,
+                action: 'view',
+                wPage: wPage,
+                timestamp: new Date().toISOString()
+            });
+
+            console.log('isEntryModalOpen:', isEntryModalOpen);
+            console.log('pageData:', pageData);
+            console.log('entryFormData:', entryFormData);
+            console.log('action: view');
+            console.log('wPage:', wPage);
+            console.log('pageData[0]?.Entry:', pageData?.[0]?.Entry);
+        }
+    }, [isEntryModalOpen, pageData, entryFormData, wPage]);
+
+    const handleInputChange = (rowIndex: number | string, key: string, value: any) => {
+        let updated: RowData[];
+
+        if (rowIndex === "viewModal") {
+            // Skip view modal handling since we removed it
+            return;
+        } else {
+            updated = [...localData];
+            updated[rowIndex as number] = { ...updated[rowIndex as number], [key]: value };
+            setLocalData(updated);
+        }
 
         // Check if any dropdown depends on this field
         const dependentColumns = editableColumns.filter(column =>
@@ -135,27 +332,36 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         // Update dependent dropdowns
         if (dependentColumns.length > 0) {
             dependentColumns.forEach(column => {
-                // For each row, fetch the dependent options
-                updated.forEach((_, idx) => {
-                    if (Array.isArray(column.dependsOn!.field)) {
-                        const allFieldValues = column.dependsOn!.field.reduce((acc, field) => {
-                            acc[field] = updated[idx][field];
-                            return acc;
-                        }, {} as Record<string, any>);
+                if (rowIndex === "viewModal") {
+                    // Skip view modal handling since we removed it
+                    return;
+                } else {
+                    // Handle table rows
+                    updated!.forEach((_, idx) => {
+                        if (Array.isArray(column.dependsOn!.field)) {
+                            const allFieldValues = column.dependsOn!.field.reduce((acc, field) => {
+                                acc[field] = updated![idx][field];
+                                return acc;
+                            }, {} as Record<string, any>);
 
-                        fetchDependentOptions(column, allFieldValues, idx);
-                    } else {
-                        fetchDependentOptions(column, updated[idx][key], idx);
-                    }
-                });
+                            fetchDependentOptions(column, allFieldValues, idx);
+                        } else {
+                            fetchDependentOptions(column, updated![idx][key], idx);
+                        }
+                    });
+                }
             });
         }
     };
 
-    const handleInputBlur = async (rowIndex: number, key: string, previousValue: any) => {
+    const handleInputBlur = async (rowIndex: number | string, key: string, previousValue: any) => {
         const field = editableColumns.find(col => col.wKey === key);
         if (!field?.ValidationAPI?.dsXml) return;
-        const rowValues = localData[rowIndex] || {};
+        if (rowIndex === "viewModal") {
+            // Skip view modal handling since we removed it
+            return;
+        }
+        const rowValues = localData[rowIndex as number] || {};
         const { J_Ui, Sql, X_Filter, X_Filter_Multiple, J_Api } = field.ValidationAPI.dsXml;
         let xFilter = '';
         let xFilterMultiple = '';
@@ -232,14 +438,19 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                 if (flag !== 'S') {
                     showValidationMessage(message);
-                    setLocalData(prev => {
-                        const updated = [...prev];
-                        updated[rowIndex] = {
-                            ...updated[rowIndex],
-                            [key]: previousValue
-                        };
-                        return updated;
-                    });
+                    if (rowIndex === "viewModal") {
+                        // Skip view modal handling since we removed it
+                        return;
+                    } else {
+                        setLocalData(prev => {
+                            const updated = [...prev];
+                            updated[rowIndex as number] = {
+                                ...updated[rowIndex as number],
+                                [key]: previousValue
+                            };
+                            return updated;
+                        });
+                    }
                 } else {
                     // Validation successful - extract additional column values
                     // Find all XML tags except Flag and Message
@@ -259,14 +470,19 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                     // Update the row data with any additional column values returned
                     if (Object.keys(columnUpdates).length > 0) {
-                        setLocalData(prev => {
-                            const updated = [...prev];
-                            updated[rowIndex] = {
-                                ...updated[rowIndex],
-                                ...columnUpdates
-                            };
-                            return updated;
-                        });
+                        if (rowIndex === "viewModal") {
+                            // Skip view modal handling since we removed it
+                            return;
+                        } else {
+                            setLocalData(prev => {
+                                const updated = [...prev];
+                                updated[rowIndex as number] = {
+                                    ...updated[rowIndex as number],
+                                    ...columnUpdates
+                                };
+                                return updated;
+                            });
+                        }
                     }
                 }
             }
@@ -277,6 +493,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     const generateDsXml = (data: RowData[]) => {
+        // Note: This function includes ALL columns in the API call, including hidden ones
+        // The hideMultiEditColumn setting only affects the UI display, not the data sent to API
         const itemsXml = data
             .map(item => {
                 const itemFields = Object.entries(item)
@@ -334,6 +552,24 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             }
 
             // If we get here, the save was successful
+            // Extract success message from API response
+            let successMessage = 'Record saved successfully';
+
+            if (response.data?.message) {
+                // Extract message from XML format if present
+                const messageMatch = response.data.message.match(/<Message>(.*?)<\/Message>/);
+                if (messageMatch) {
+                    successMessage = messageMatch[1];
+                } else {
+                    // If not in XML format, use the message directly
+                    successMessage = response.data.message;
+                }
+            }
+
+            // Show success toast message
+            toast.success(successMessage);
+
+            // Close the modal after showing success message
             onClose();
 
         } catch (error) {
@@ -359,6 +595,36 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     const getEditableColumn = (key: string) => {
         return editableColumns.find((col) => col.wKey === key);
+    };
+
+    // Function to get column order - editable columns first, then non-editable
+    // Also handles hiding columns based on hideMultiEditColumn setting
+    const getOrderedColumns = (dataKeys: string[]) => {
+        // Get columns to hide from settings
+        const hideMultiEditColumn = settings?.hideMultiEditColumn || '';
+        const columnsToHide = hideMultiEditColumn
+            .split(',')
+            .map(col => col.trim())
+            .filter(col => col !== ''); // Remove empty strings
+
+        // Log for debugging
+        if (columnsToHide.length > 0) {
+            console.log('EditTableRowModal - Columns to hide:', columnsToHide);
+            console.log('EditTableRowModal - All available columns:', dataKeys);
+        }
+
+        // Filter out hidden columns from dataKeys
+        const visibleDataKeys = dataKeys.filter(key => !columnsToHide.includes(key));
+
+        if (columnsToHide.length > 0) {
+            console.log('EditTableRowModal - Visible columns after filtering:', visibleDataKeys);
+        }
+
+        const editableKeys = editableColumns.map(col => col.wKey);
+        const editableColumnKeys = visibleDataKeys.filter(key => editableKeys.includes(key));
+        const nonEditableColumnKeys = visibleDataKeys.filter(key => !editableKeys.includes(key));
+
+        return [...editableColumnKeys, ...nonEditableColumnKeys];
     };
 
     const fetchDropdownOptions = async (column: EditableColumn) => {
@@ -449,7 +715,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-    const fetchDependentOptions = async (column: EditableColumn, parentValue: string | Record<string, any>, rowIndex: number) => {
+    const fetchDependentOptions = async (column: EditableColumn, parentValue: string | Record<string, any>, rowIndex: number | string) => {
         try {
             if (!column.dependsOn) return [];
 
@@ -588,22 +854,37 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         <DialogTitle className="text-lg font-semibold mb-4">{title}</DialogTitle>
                         {localData.length > 0 ? (
                             <div className="overflow-auto flex-1">
-                                <table className="min-w-full table-auto border text-sm">
+                                <table className="border text-sm">
                                     <thead>
                                         <tr>
-                                            {Object.keys(localData[0]).map((key) => (
-                                                <th
-                                                    key={key}
-                                                    className="border px-2 py-2 text-left"
-                                                    style={{
-                                                        backgroundColor: colors.primary,
-                                                        color: colors.text,
-                                                        fontFamily: fonts.content,
-                                                    }}
-                                                >
-                                                    {key}
-                                                </th>
-                                            ))}
+                                            {showViewTable === true && <th
+                                                className="border px-2 py-2 text-left"
+                                                style={{
+                                                    backgroundColor: colors.primary,
+                                                    color: colors.text,
+                                                    fontFamily: fonts.content,
+                                                    minWidth: '100px'
+                                                }}
+                                            >
+                                                Actions
+                                            </th>}
+                                            {getOrderedColumns(Object.keys(localData[0])).map((key) => {
+                                                const columnWidth = getColumnWidth(key);
+                                                return (
+                                                    <th
+                                                        key={key}
+                                                        className="border px-2 py-2 text-left"
+                                                        style={{
+                                                            backgroundColor: colors.primary,
+                                                            color: colors.text,
+                                                            fontFamily: fonts.content,
+                                                            ...(columnWidth && { minWidth: `${columnWidth}px` }),
+                                                        }}
+                                                    >
+                                                        {key}
+                                                    </th>
+                                                );
+                                            })}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -619,7 +900,19 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                     fontFamily: fonts.content,
                                                 }}
                                             >
-                                                {Object.entries(row).map(([key, value]) => {
+                                                {showViewTable === true && <td className="border px-2 py-2">
+                                                    <button
+                                                        onClick={() => handleViewRow(row, rowIndex)}
+                                                        className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
+                                                        style={{
+                                                            fontFamily: fonts.content,
+                                                        }}
+                                                    >
+                                                        View
+                                                    </button>
+                                                </td>}
+                                                {getOrderedColumns(Object.keys(row)).map((key) => {
+                                                    const value = row[key];
                                                     const editable = getEditableColumn(key);
                                                     const isValueNumeric = isNumeric(value);
                                                     const hasChar = hasCharacterField(key);
@@ -636,7 +929,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                             key={key}
                                                             className="border px-2 py-2"
                                                             style={{
-                                                                textAlign: isLeftAligned ? 'left' : (hasChar ? 'left' : 'right')
+                                                                textAlign: isLeftAligned || editable ? 'left' : (hasChar ? 'left' : 'right')
                                                             }}
                                                         >
                                                             {editable ? (
@@ -779,6 +1072,30 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Entry Form Modal */}
+            {isEntryModalOpen && pageData && (
+                <EntryFormModal
+                    isOpen={isEntryModalOpen}
+                    onClose={() => {
+                        console.log('EntryFormModal onClose called from EditTableRowModal');
+                        setIsEntryModalOpen(false);
+                        setEntryFormData(null);
+                        setPageData(null);
+                    }}
+                    pageData={pageData}
+                    editData={entryFormData}
+                    action="view"
+                    setEntryEditData={(data) => {
+                        console.log('setEntryEditData called from EditTableRowModal with:', data);
+                        setEntryFormData(data);
+                    }}
+                    refreshFunction={() => {
+                        console.log('EntryFormModal refreshFunction called from EditTableRowModal');
+                        // Refresh the main table data if needed
+                    }}
+                />
             )}
         </>
     );

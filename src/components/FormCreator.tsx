@@ -45,12 +45,14 @@ interface FormCreatorProps {
     formData: FormElement[][];
     onFilterChange: (values: any) => void;
     initialValues?: Record<string, any>;
+    isHorizontal?: boolean;
 }
 
 const FormCreator: React.FC<FormCreatorProps> = ({
     formData,
     onFilterChange,
-    initialValues = {}
+    initialValues = {},
+    isHorizontal = false
 }) => {
     const { colors } = useTheme();
     const [formValues, setFormValues] = useState(initialValues);
@@ -245,6 +247,14 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     // Clear the dependent field value
                     newValues[dependentItem.wKey as string] = undefined;
 
+                    // Also clear dropdown options for dependent fields to ensure they're hidden
+                    if (dependentItem.type === 'WDropDownBox') {
+                        setDropdownOptions(prev => ({
+                            ...prev,
+                            [dependentItem.wKey as string]: []
+                        }));
+                    }
+
                     // Find fields that depend on this field
                     const nestedDependentFields = sortedFormData.flat().filter(nestedItem => {
                         if (!nestedItem.dependsOn) return false;
@@ -411,6 +421,18 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 (typeof parentValue === 'object' && Object.values(parentValue).some(val => !val))
             ) {
                 console.error(`Parent value for ${item.wKey} is empty or undefined`, parentValue);
+
+                // Clear dropdown options when parent value is invalid
+                setDropdownOptions(prev => ({
+                    ...prev,
+                    [item.wKey as string]: []
+                }));
+
+                setLoadingDropdowns(prev => ({
+                    ...prev,
+                    [item.wKey as string]: false
+                }));
+
                 return [];
             }
 
@@ -634,8 +656,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         const [fromKey, toKey] = item.wKey as string[];
 
         return (
-            <div className="mb-4">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+            <div className={isHorizontal ? "mb-2" : "mb-4"}>
+                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
                 <div className="flex gap-4">
@@ -698,8 +720,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderTextBox = (item: FormElement) => {
         return (
-            <div className="mb-4">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+            <div className={isHorizontal ? "mb-2" : "mb-4"}>
+                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
                 <input
@@ -720,8 +742,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderDateBox = (item: FormElement) => {
         return (
-            <div className="mb-4">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+            <div className={isHorizontal ? "mb-2" : "mb-4"}>
+                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
                 <DatePicker
@@ -759,13 +781,14 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 formData={sortedFormData}
                 handleFormChange={handleFormChange}
                 formValues={formValues}
+                isHorizontal={isHorizontal}
             />
         );
     };
 
     const renderCheckBox = (item: FormElement) => {
         return (
-            <div className="mb-4 flex items-center">
+            <div className={`${isHorizontal ? "mb-2" : "mb-4"} flex items-center`}>
                 <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-gray-300"
@@ -775,7 +798,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         accentColor: colors.primary
                     }}
                 />
-                <label className="ml-2 text-sm font-medium" style={{ color: colors.text }}>
+                <label className={`ml-2 text-sm ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
                     {item.label}
                 </label>
             </div>
@@ -783,6 +806,37 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     const renderFormElement = (item: FormElement) => {
+        // Check if this is a dependent dropdown with no options or unfulfilled dependencies
+        if (item.type === 'WDropDownBox' && item.dependsOn) {
+            // Check if all dependencies are fulfilled
+            const dependenciesFulfilled = Array.isArray(item.dependsOn.field)
+                ? item.dependsOn.field.every(field =>
+                    formValues[field] !== undefined &&
+                    formValues[field] !== null &&
+                    formValues[field] !== ''
+                )
+                : formValues[item.dependsOn.field] !== undefined &&
+                formValues[item.dependsOn.field] !== null &&
+                formValues[item.dependsOn.field] !== '';
+
+            // Hide dependent dropdown if dependencies are not fulfilled
+            if (!dependenciesFulfilled) {
+                return null;
+            }
+
+            const options = item.options
+                ? item.options.map(opt => ({
+                    label: opt.label,
+                    value: opt.Value || opt.value
+                }))
+                : dropdownOptions[item.wKey as string] || [];
+
+            // Hide dependent dropdown if it has no options available
+            if (options.length === 0) {
+                return null;
+            }
+        }
+
         switch (item.type) {
             case 'WDateRangeBox':
                 return renderDateRangeBox(item);
@@ -798,8 +852,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return null;
         }
     };
-
-
 
     useEffect(() => {
         sortedFormData?.flat().forEach(item => {
@@ -848,11 +900,19 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     }, [dropdownOptions, sortedFormData, formValues]);
 
     return (
-        <div className="p-4" style={{ backgroundColor: colors.filtersBackground }}>
+        <div
+            className={isHorizontal ? "flex flex-wrap gap-4 items-start" : "p-4"}
+            style={{
+                backgroundColor: isHorizontal ? 'transparent' : colors.filtersBackground
+            }}
+        >
             {sortedFormData?.map((filterGroup, groupIndex) => (
-                <div key={groupIndex} className="mb-4">
+                <div key={groupIndex} className={isHorizontal ? "contents" : "mb-4"}>
                     {filterGroup.map((item, itemIndex) => (
-                        <div key={`${groupIndex}-${itemIndex}`}>
+                        <div
+                            key={`${groupIndex}-${itemIndex}`}
+                            className={isHorizontal ? "min-w-[250px]" : ""}
+                        >
                             {renderFormElement(item)}
                         </div>
                     ))}

@@ -1,6 +1,6 @@
 import { FormField } from "@/types";
 
-export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors: Record<string, string>, field: FormField) => ({
+export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors: Record<string, string>, field: FormField, isJustUpdated: boolean = false) => ({
   control: (base: any, state: any) => ({
     ...base,
     borderColor: state.isFocused
@@ -25,19 +25,17 @@ export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors:
             : '#374151'
           : '#d1d5db',
     },
-  }),
-  singleValue: (base: any) => ({
+  }),  singleValue: (base: any) => ({
     ...base,
-    color: isDisabled ? '#6b7280' : colors.textInputText,
+    color: isJustUpdated ? '#22c55e' : (isDisabled ? '#6b7280' : colors.textInputText),
   }),
   option: (base: any, state: any) => ({
     ...base,
     backgroundColor: state.isFocused ? colors.primary : colors.textInputBackground,
     color: state.isFocused ? colors.buttonText : colors.textInputText,
-  }),
-  input: (base: any) => ({
+  }),  input: (base: any) => ({
     ...base,
-    color: colors.textInputText,
+    color: isJustUpdated ? '#22c55e' : colors.textInputText,
   }),
   menu: (base: any) => ({
     ...base,
