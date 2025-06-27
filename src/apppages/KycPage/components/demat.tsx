@@ -80,7 +80,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     });
 
     // Add system fields
-    newEntry.IsDefault = "false";
+    newEntry.IsDefault = "true";
     newEntry.IsInserted = "true";
 
     return newEntry;
@@ -124,18 +124,20 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
       return;
     }
 
-    // If this is being set as default, unset all other defaults
-    const updatedDematData = currentFormData.IsDefault === "true"
-      ? { ...currentFormData }
-      : currentFormData;
+    // Ensure the new entry is set as default and all others are not
+    const updatedDematData = {
+      ...currentFormData,
+      IsDefault: "true" // Force new entry to be default
+    };
 
     setFieldData((prevState: any) => {
       const prevTableData = prevState.dematTabData.tableData || [];
 
-      // If setting as default, unset all other defaults
-      const updatedTableData = updatedDematData.IsDefault === "true"
-        ? prevTableData.map(demat => ({ ...demat, IsDefault: "false" }))
-        : prevTableData;
+      // Unset all other defaults
+      const updatedTableData = prevTableData.map(demat => ({
+        ...demat,
+        IsDefault: "false"
+      }));
 
       return {
         ...prevState,
@@ -148,9 +150,9 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         }
       };
     });
-
     clearFormAndCloseModal();
   };
+
 
   // Function to clear form and close modal
   const clearFormAndCloseModal = () => {
