@@ -296,6 +296,30 @@ export default function SignInForm() {
   const performVersionCheckAfterLogin = useCallback(async (currentLoginData: any) => {
     try {
       const result = await checkVersion();
+
+      // Check if the API returned success: false
+      if (result.success === false) {
+        // Show error message and don't let user proceed
+        const errorMessage = result.message || 'Version check failed. Please try again.';
+        setError(errorMessage);
+        dispatch(setAuthError(errorMessage));
+
+        // Clear login data and reset form
+        localStorage.removeItem('userId');
+        localStorage.removeItem('temp_token');
+        localStorage.removeItem('tokenExpireTime');
+        localStorage.removeItem('clientCode');
+        localStorage.removeItem('clientName');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('loginType');
+
+        // Reset form state
+        setUserId("");
+        setPassword("");
+        setLoginData(null);
+        return; // Don't proceed to next page
+      }
+
       if (result.success && result.data?.rs0?.length > 0) {
         setVersionUpdates(result.data.rs0);
         setShowVersionModal(true);
@@ -305,10 +329,26 @@ export default function SignInForm() {
       }
     } catch (error) {
       console.error('Failed to check version:', error);
-      // Proceed with navigation even if version check fails
-      proceedAfterVersionCheck(currentLoginData);
+      // Show error message and don't let user proceed in case of network/other errors
+      const errorMessage = 'Failed to check version. Please check your connection and try again.';
+      setError(errorMessage);
+      dispatch(setAuthError(errorMessage));
+
+      // Clear login data and reset form
+      localStorage.removeItem('userId');
+      localStorage.removeItem('temp_token');
+      localStorage.removeItem('tokenExpireTime');
+      localStorage.removeItem('clientCode');
+      localStorage.removeItem('clientName');
+      localStorage.removeItem('userType');
+      localStorage.removeItem('loginType');
+
+      // Reset form state
+      setUserId("");
+      setPassword("");
+      setLoginData(null);
     }
-  }, [checkVersion, proceedAfterVersionCheck]);
+  }, [checkVersion, proceedAfterVersionCheck, dispatch]);
 
   // Handle the update confirmation
   const handleUpdateConfirm = useCallback(async () => {
