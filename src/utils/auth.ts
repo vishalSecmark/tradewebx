@@ -70,3 +70,16 @@ export const getUserData = () => {
     userType: localStorage.getItem('userType'),
   };
 };
+
+export const clearAuthStorage = () => {
+  localStorage.removeItem('userId');
+  localStorage.removeItem('temp_token');
+  localStorage.removeItem('tokenExpireTime');
+  localStorage.removeItem('clientCode');
+  localStorage.removeItem('clientName');
+  localStorage.removeItem('userType');
+  localStorage.removeItem('loginType');
+  localStorage.removeItem('ekyc_dynamicData');
+  localStorage.removeItem('ekyc_activeTab');
+  localStorage.removeItem('redirectedField');
+};

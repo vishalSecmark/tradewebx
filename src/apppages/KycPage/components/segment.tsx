@@ -10,7 +10,9 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  
+  const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+
+
   // Handler to update the segment tableData
   const handleSegmentUpdate = (id: string, fieldKey: string, value: string) => {
     setFieldData((prevState: any) => {
@@ -44,6 +46,7 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
         renderCell: ({ row }: any) => (
           <input
             type="checkbox"
+            disabled={viewMode}
             checked={row[field.wKey] === "true"}
             onChange={(e) => {
               const newValue = e.target.checked ? "true" : "false";
@@ -67,9 +70,14 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
 
   const handleSaveAndNext = () => {
     // Perform validation checks here   
-    handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab, "attachments",setSaving)
+    handleSaveSinglePageData(Settings.SaveNextAPI, tableData, setActiveTab, "attachments", setSaving)
     // setActiveTab("attachments")
   }
+
+  const handleNext = () => {
+    setActiveTab("attachments")
+  }
+
 
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
@@ -78,25 +86,39 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
           className="rounded-lg px-4 py-1"
           style={{
             backgroundColor: colors.background,
-            border : `1px solid ${colors.buttonBackground}`,
-          }} 
+            border: `1px solid ${colors.buttonBackground}`,
+          }}
           onClick={() => setActiveTab("demat")}
         >
           <IoArrowBack size={20} />
         </button>
-
-        <div className="text-end">
-          <button
-            className="rounded-lg ml-4 px-4 py-1"
-            style={{
-              backgroundColor: colors.background,
-              border : `1px solid ${colors.buttonBackground}`,
-            }}
-            onClick={handleSaveAndNext}
-          >
-            Save and Next
-          </button>
-        </div>
+        {viewMode ? (
+          <div className="text-end">
+            <button
+              className="rounded-lg px-4 py-1"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleNext}
+            >
+              Next
+            </button>
+          </div>
+        ) : (
+          <div className="text-end">
+            <button
+              className="rounded-lg ml-4 px-4 py-1"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleSaveAndNext}
+            >
+              Save and Next
+            </button>
+          </div>
+        )}
       </div>
       <DataGrid
         columns={columns}

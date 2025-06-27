@@ -73,6 +73,7 @@ export interface EntryFormProps {
         callback?: (confirmed: boolean) => void;
     }>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    viewMode: boolean;
 }
 
 export interface ChildEntryModalProps {
