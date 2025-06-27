@@ -296,7 +296,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       });
 
       const xmlData = `<dsXml>
-                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Master_Edit"</J_Ui>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"ChildEntry"</J_Ui>
                 <Sql></Sql>
                 <X_Filter>${xFilter}</X_Filter>
                 <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
