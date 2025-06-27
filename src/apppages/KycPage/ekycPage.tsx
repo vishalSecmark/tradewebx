@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useTheme } from "@/context/ThemeContext";
 import { useAppSelector } from "@/redux/hooks";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { findPageData } from "@/utils/helper";
 import axios from "axios";
 import Loader from "@/components/Loader";
@@ -57,16 +57,28 @@ const Kyc = () => {
         }
     }, [dynamicData, activeTab]);
 
-    const fetchFormData = async () => {
-        if (!pageData?.[0]?.Entry) return;
+    const fetchFormData = async (viewMode: boolean = false) => {
         setIsLoading(true);
         try {
             const { MasterEntry } = pageData[0].Entry;
-            const jUi = Object.entries(MasterEntry.J_Ui || {}).map(([k, v]) => `"${k}":"${k === 'Option' ? 'Master_Edit' : v}"`).join(",");
-            const jApi = Object.entries(MasterEntry.J_Api || {}).map(([k, v]) => `"${k}":"${v}"`).join(",");
-            const xFilter = Object.entries(MasterEntry.X_Filter || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
+            // const jUi = Object.entries(MasterEntry.J_Ui || {}).map(([k, v]) => `"${k}":"${k === 'Option' ? 'Master_Edit' : v}"`).join(",");
+            // const jApi = Object.entries(MasterEntry.J_Api || {}).map(([k, v]) => `"${k}":"${v}"`).join(",");
+            const userData = localStorage.getItem("rekycRowData_viewMode");
+            const parsedUserData = userData ? JSON.parse(userData) : null;
+            console.log("Parsed User Data:", parsedUserData,userData);
+            const payload = !viewMode ? MasterEntry.X_Filter : {
+                EntryName:  parsedUserData?.EntryName,
+                ClientCode:  parsedUserData?.ClientCode,
+            }
 
-            const xmlData = `<dsXml><J_Ui>${jUi}</J_Ui><Sql>${MasterEntry.sql || ""}</Sql><X_Filter>${xFilter}</X_Filter><J_Api>${jApi}</J_Api></dsXml>`;
+            const xFilter = Object.entries(payload || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
+
+            const xmlData = `<dsXml>
+            <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Master_Edit"</J_Ui>
+            <Sql></Sql>
+            <X_Filter>${xFilter}</X_Filter>
+            <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
+            </dsXml>`;
 
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
                 headers: {
@@ -108,7 +120,9 @@ const Kyc = () => {
     };
 
     useEffect(() => {
-        fetchFormData();
+        const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+        console.log("Parsed User Data:",viewMode)
+        fetchFormData(viewMode);
     }, []);
 
     const tabs = buildTabs(dynamicData, setDynamicData, setActiveTab);
@@ -119,7 +133,7 @@ const Kyc = () => {
                 <h1 className="text-2xl font-bold" style={{ color: colors.text }}>KYC Verification</h1>
                 <div className="flex items-center">
                     {lastUpdated && <span className="text-sm mr-4" style={{ color: colors.secondary }}>Last updated: {new Date(lastUpdated).toLocaleString()}</span>}
-                    <button onClick={fetchFormData} className="px-3 py-1 text-sm rounded flex items-center" style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}>
+                    <button onClick={() => fetchFormData(localStorage.getItem("ekyc_viewMode") === "true")} className="px-3 py-1 text-sm rounded flex items-center" style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}>
                         <FiRefreshCcw />
                         Refresh
                     </button>

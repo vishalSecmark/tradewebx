@@ -13,7 +13,8 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
-    
+    const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [fieldValues, setFieldValues] = useState<Record<string, any>>(tableData[0] || {});
@@ -108,30 +109,33 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                     style={{
                         backgroundColor: colors.background,
                         border: `1px solid ${colors.buttonBackground}`,
-                    }} 
+                    }}
                     onClick={() => setActiveTab("segment")}
                 >
                     <IoArrowBack size={20} />
                 </button>
+                {!viewMode && (
+                    <div className="text-end">
+                        <button
+                            className="px-4 py-1 rounded-lg ml-4"
+                            style={{
+                                backgroundColor: colors.background,
+                                border: `1px solid ${colors.buttonBackground}`
+                            }}
+                            onClick={handleSave}
+                        >
+                            Save
+                        </button>
+                        <button
+                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            className="px-4 py-1 rounded-lg ml-4"
+                        >
+                            Submit
+                        </button>
+                    </div>
+                )}
 
-                <div className="text-end">
-                    <button
-                        className="px-4 py-1 rounded-lg ml-4"
-                        style={{
-                            backgroundColor: colors.background,
-                            border: `1px solid ${colors.buttonBackground}`
-                        }}
-                        onClick={handleSave}
-                    >
-                        Save
-                    </button>
-                    <button
-                        style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
-                        className="px-4 py-1 rounded-lg ml-4"
-                    >
-                        Submit
-                    </button>
-                </div>
+
             </div>
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}
@@ -153,6 +157,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 setFormData={() => { }}
                 setValidationModal={setValidationModal}
                 setDropDownOptions={() => { }}
+                viewMode={viewMode}
             />
         </div>
     )

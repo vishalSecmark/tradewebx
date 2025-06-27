@@ -12,6 +12,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import "flatpickr/dist/themes/light.css";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import TableStyling from "@/components/ui/table/TableStyling";
 
 const appMetadata = (() => {
   try {
@@ -56,6 +57,7 @@ export default function RootLayout({
           <ThemeProvider>
             <SidebarProvider>
               {children}
+              <TableStyling/>
               <ToastContainer />
             </SidebarProvider>
           </ThemeProvider>
