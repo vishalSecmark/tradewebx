@@ -72,7 +72,6 @@ export const handleSaveSinglePageData = async (
 
         // Stringify first, then escape ampersands
         const jsonString = JSON.stringify(formData);
-        // const escapedJsonString = jsonString.replace(/&/g, '&amp;');
 
         const xmlData = `<dsXml>
         <J_Ui>${jUi}</J_Ui>
@@ -89,24 +88,27 @@ export const handleSaveSinglePageData = async (
                 'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
             }
         });
-          if(response.data?.success){
-            const responseMessage = response.data?.data?.rs0[0]?.Column1;
+
+        if (response.data?.success) {
+            const responseData = response.data?.data?.rs0?.[0];
             
-            // Check if response contains <Flag> indicating an error
-            if (responseMessage && responseMessage.includes('<Flag>')) {
-                // Extract message from XML-like format
-                const messageMatch = responseMessage.match(/<Message>(.*?)<\/Message>/);
-                const errorMessage = messageMatch ? messageMatch[1] : responseMessage;
-                toast.error(errorMessage);
-            } else {
-                toast.success(responseMessage || "Data saved successfully");
+            if (responseData?.Flag === "E") {
+                // Error case
+                toast.error(responseData.Message || "Error saving data");
+            } else if (responseData?.Flag === "S") {
+                // Success case
+                toast.success(responseData.Message || "Data saved successfully");
                 if (setActiveTab && tabName) {
                     setActiveTab(tabName);
                 }
+            } else {
+                // Handle other cases or default success
+                toast.error(responseData.Message || "Something went wrong");
             }
-        }else{
-            toast.error(response.data.message || "something went wrong while saving data")
+        } else {
+            toast.error(response.data.message || "Something went wrong while saving data");
         }
+        
         console.log('Response from saveSinglePageData:', response.data);
     } catch (error) {
         console.error(`Error saving data:`, error);
