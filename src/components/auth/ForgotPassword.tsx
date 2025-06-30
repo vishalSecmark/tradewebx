@@ -3,7 +3,7 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
@@ -56,8 +56,12 @@ export default function ForgotPasswordForm() {
             });
 
             if (response.data.success) {
+                console.log(clientCode,'1212121');
+                
                 setCurrentStep(2);
-                toast.success(response.data.message);
+                
+                toast.success(response.data.data.rs0[0].Message);
+                console.log(clientCode,'client 221');
             } else {
                 setError(response.data.message || 'Failed to process request');
             }
@@ -106,6 +110,10 @@ export default function ForgotPasswordForm() {
 
             if (response.data.success) {
                 router.push('/signin');
+                console.log('inside sucess');
+                console.log(response.data.rs0.Message),'resp mshshsh';
+                
+                
                 toast.success(response.data.message);
             } else {
                 setError(response.data.message || 'Failed to change password');
@@ -167,13 +175,13 @@ export default function ForgotPasswordForm() {
                     )}
 
                     {currentStep === 1 ? (
-                        <form onSubmit={handleClientCodeSubmit} className="space-y-5">
+                        <form autoComplete="off" onSubmit={handleClientCodeSubmit} className="space-y-5">
                             <div>
                                 <Label className="text-gray-700 dark:text-gray-300 font-medium">Client Code</Label>
                                 <Input
                                     type="text"
                                     value={clientCode}
-                                    onChange={(e) => setClientCode(e.target.value)}
+                                    onChange={(e) => {setClientCode(e.target.value)}}
                                     placeholder="Enter your client code"
                                     className="mt-1 transition-all duration-200 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
                                 />
@@ -196,12 +204,15 @@ export default function ForgotPasswordForm() {
                             </Button>
                         </form>
                     ) : (
-                        <form onSubmit={handlePasswordChange} className="space-y-5">
+                        <form autoComplete="off" onSubmit={handlePasswordChange} className="space-y-5">
                             <div>
                                 <Label className="text-gray-700 dark:text-gray-300 font-medium">OTP</Label>
                                 <Input
+                                 key={currentStep === 2 ? "otp-field" : "other"}
                                     type="text"
                                     value={otp}
+                                    name="otp"
+                                    // autoComplete="off"
                                     onChange={(e) => setOtp(e.target.value)}
                                     placeholder="Enter OTP"
                                     className="mt-1 transition-all duration-200 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
