@@ -6,6 +6,8 @@ export interface EntryFormModalProps {
     action?: 'edit' | 'delete' | 'view' | null;
     setEntryEditData?: React.Dispatch<React.SetStateAction<any>>;
     refreshFunction?: () => void;
+    childModalZindex?:string;
+    parentModalZindex?:string;
 }
 
 export interface ApiResponse {
@@ -96,4 +98,5 @@ export interface ChildEntryModalProps {
     isLoading: boolean;
     setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    childModalZindex?:string;
 }
