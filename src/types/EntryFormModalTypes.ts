@@ -6,12 +6,37 @@ export interface EntryFormModalProps {
     action?: 'edit' | 'delete' | 'view' | null;
     setEntryEditData?: React.Dispatch<React.SetStateAction<any>>;
     refreshFunction?: () => void;
+    isTabs?: boolean;
 }
 
 export interface ApiResponse {
     success: boolean;
     message?: string;
     data?: any;
+}
+
+export interface TabSettings {
+    isTable: string;
+    maxAllowedRecords: string;
+    SaveNextAPI: {
+        J_Ui: {
+            ActionName: string;
+            Option: string;
+        };
+        Sql: any;
+        X_Filter_Multiple: any;
+        X_DataJson: string;
+        J_Api: {
+            UserId: string;
+        };
+    };
+}
+
+export interface TabData {
+    TabName: string;
+    tableData: any[];
+    Settings: TabSettings;
+    Data: FormField[];
 }
 
 export interface FormField {
@@ -25,6 +50,7 @@ export interface FormField {
     FieldType: string;
     ValidationAPI: any;
     FieldEnabledTag: string;
+    isMandatory?: string;
     wQuery?: {
         Sql: string;
         J_Ui: any;
