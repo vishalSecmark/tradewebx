@@ -77,6 +77,7 @@ const Input: FC<InputProps> = ({
         disabled={disabled}
         className={inputClasses}
         style={dynamicStyles} // This applies the dynamic colors
+        autoComplete="off"
       />
 
       {hint && (
