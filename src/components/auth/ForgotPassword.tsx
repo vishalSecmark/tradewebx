@@ -110,11 +110,7 @@ export default function ForgotPasswordForm() {
 
             if (response.data.success) {
                 router.push('/signin');
-                console.log('inside sucess');
-                console.log(response.data.rs0.Message),'resp mshshsh';
-                
-                
-                toast.success(response.data.message);
+                toast.success(response.data.data.rs0.Message);
             } else {
                 setError(response.data.message || 'Failed to change password');
             }
