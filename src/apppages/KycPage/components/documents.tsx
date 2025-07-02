@@ -1,19 +1,29 @@
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react'
-import { fetchEkycDropdownOptions, handleSaveSinglePageData } from '../ekychelper';
+import { fetchEkycDropdownOptions, handleDigiLockerCallBackAPI, handleSaveSinglePageData, SubmitEkycForm } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
-
+import { useSearchParams, useRouter } from 'next/navigation';
 
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
     const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+    const enableSubmitBtn = localStorage.getItem("ekyc_submit") === "true";
+    const ekycChecker = localStorage.getItem("ekyc_checker") === "true";
+
+
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const success = searchParams.get('success');
+    const id = searchParams.get('id');
+    const scope = searchParams.get('scope');
+        
 
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -25,6 +35,12 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         type: 'M' | 'S' | 'E' | 'D';
         callback?: (confirmed: boolean) => void;
     }>({ isOpen: false, message: '', type: 'M' });
+
+    const [kraESignSubmit, setKraEsignSubmit] = useState(false);
+    const [finalESignSubmit, setFinalEsignSubmit] = useState(false);
+
+    console.log("check the sumit button", enableSubmitBtn)
+
 
 
     useEffect(() => {
@@ -98,9 +114,57 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         } else {
             const transformedData = transformData(tableData[0] || {});
             console.log('Transformed Data:', transformedData);
-            handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "attachments", setSaving)
+            handleSaveSinglePageData(
+                Settings.SaveNextAPI,
+                transformedData,
+                setActiveTab,
+                "attachments",
+                setSaving
+            )
         }
     }
+
+    const handleSubmit = () => {
+        const rawData = localStorage.getItem("ekyc_dynamicData");
+        const storedFormData = JSON.parse(rawData);
+        const constructPayload: any = {
+            RekycJson: [
+                {
+                    ReKycDetails: [
+                        {
+                            KycMode: "Online",
+                            NomineeOpt: "",
+                            IsNomineeModified: "",
+                            IsBankModified: "",
+                            IsDematModified: ""
+                        }
+                    ],
+                    PersonalDetails: storedFormData?.personalTabData?.tableData || [],
+                    NomineeDetails: storedFormData?.nomineeTabData?.tableData || [],
+                    BankDetails: storedFormData?.bankTabData?.tableData || [],
+                    DematDetails: storedFormData?.dematTabData?.tableData || [],
+                    SegmentDetails: storedFormData?.segmentTabData?.tableData || [],
+                }
+            ]
+        }
+        console.log("check submit data", JSON.parse(rawData));
+        console.log("check constructed payload", constructPayload);
+
+        SubmitEkycForm(Settings?.MakerSaveAPI, constructPayload, setSaving, Settings);
+    }
+
+
+    useEffect(()=>{
+         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
+            const redirectedField = localStorage.getItem('redirectedField')
+            
+            console.log("calling third part",redirectedField)
+                // rekyc?success=True&id=f2794eec-0e60-4084-8c0f-77ca0790c769&scope=ADHAR%2BPANCR
+            handleDigiLockerCallBackAPI(Settings);
+            router.replace(window.location.pathname);
+        }
+    },[scope,success])
+
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
             <div className="flex justify-between items-center mb-2">
@@ -127,15 +191,53 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                             Save
                         </button>
                         <button
-                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
-                            className="px-4 py-1 rounded-lg ml-4"
+                            style={{
+                                backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
+                                color: enableSubmitBtn ? colors.buttonText : '#666666',
+                                cursor: enableSubmitBtn ? 'pointer' : 'not-allowed',
+                                border: `1px solid ${enableSubmitBtn ? colors.buttonBackground : '#cccccc'}`
+                            }}
+                            className="px-4 py-1 rounded-lg ml-4 transition-colors duration-200"
+                            disabled={!enableSubmitBtn}
+                            onClick={handleSubmit}
                         >
                             Submit
                         </button>
+
                     </div>
                 )}
-
-
+                {ekycChecker && (
+                    <div className="text-end">
+                        <button
+                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            className="px-4 py-1 rounded-lg ml-4"
+                            disabled={true}
+                        >
+                            KRA PDF-Gen
+                        </button>
+                        <button
+                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            className="px-4 py-1 rounded-lg ml-4"
+                            disabled={true}
+                        >
+                            KRA E-Sign
+                        </button>
+                        <button
+                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            className="px-4 py-1 rounded-lg ml-4"
+                            disabled={true}
+                        >
+                            Final PDF-Gen
+                        </button>
+                        <button
+                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            className="px-4 py-1 rounded-lg ml-4"
+                            disabled={true}
+                        >
+                            Final-ESign
+                        </button>
+                    </div>
+                )}
             </div>
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}

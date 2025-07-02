@@ -127,6 +127,8 @@ const Kyc = () => {
 
     const tabs = buildTabs(dynamicData, setDynamicData, setActiveTab);
 
+    console.log("Documents component rendering");
+
     return (
         <div className="p-4 pt-0" style={{ fontFamily: fonts.content }}>
             <div className="flex justify-between items-center mb-2">
@@ -144,6 +146,7 @@ const Kyc = () => {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
+                        onClick={()=>setActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 flex items-center gap-2 relative ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`}`}

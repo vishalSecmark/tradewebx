@@ -387,119 +387,6 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         }
     };
 
-    // const handleValidationApiResponse = (response, currFieldName) => {
-    //     if (!response?.trim().startsWith("<root>")) {
-    //         response = `<root>${response}</root>`;
-    //     }
-
-    //     try {
-    //         const parser = new DOMParser();
-    //         const xmlDoc = parser.parseFromString(response, "text/xml");
-
-    //         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
-    //         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
-    //         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
-    //             (node) => node.tagName !== "Flag" && node.tagName !== "Message"
-    //         );
-
-    //         switch (flag) {
-    //             case 'M':
-    //                 setValidationModal({
-    //                     isOpen: true,
-    //                     message: message || 'Are you sure you want to proceed?',
-    //                     type: 'M',
-    //                     callback: (confirmed) => {
-    //                         if (confirmed) {
-    //                             dynamicTags.forEach((tag) => {
-    //                                 const tagName = tag.tagName;
-    //                                 let tempFormData = formData
-    //                                 const tagValue = tag.textContent;
-    //                                 setFormValues(prev => ({ ...prev, [tagName]: tagValue}));
-    //                                 tempFormData = tempFormData.map(field => {
-    //                                     if (field.wKey === tagName) {
-    //                                         return { ...field, fieldJustUpdated: "true"};
-    //                                     }
-    //                                     return field;
-    //                                 });
-    //                                 setFormData(tempFormData);
-    //                             });
-    //                         } else {
-    //                             setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-    //                         }
-    //                         setValidationModal({ isOpen: false, message: '', type: 'M' });
-    //                     }
-    //                 });
-    //                 break;
-
-    //             case 'S':
-    //                 setValidationModal({
-    //                     isOpen: true,
-    //                     message: message || 'Please press ok to proceed',
-    //                     type: 'S',
-    //                     callback: () => {
-    //                         dynamicTags.forEach((tag) => {
-    //                             const tagName = tag.tagName;
-    //                             const tagValue = tag.textContent;
-
-    //                             setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
-    //                             setFieldErrors(prev => ({ ...prev, [tagName]: '' }));
-
-    //                              const tempFormData = formData.map(field => {
-    //                                         console.log("only this----",field,tagName)
-
-    //                                     if (field.wKey === tagName) {
-    //                                         console.log("only this----",field.wKey,tagName)
-    //                                         return { ...field, fieldJustUpdated: "true"};
-    //                                     }
-    //                                     return field;
-    //                                 });
-    //                                 console.log("check tempFormData", tempFormData)
-    //                                 setFormData(tempFormData);
-    //                         });
-    //                         setValidationModal({ isOpen: false, message: '', type: 'S' });
-    //                     }
-    //                 });
-    //                 break;
-
-    //             case 'E':
-    //                 toast.warning(message);
-    //                 setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
-    //                 break;
-
-    //             case 'D':
-    //                 let updatedFormData = formData;
-    //                 dynamicTags.forEach((tag) => {
-    //                     const tagName = tag.tagName;
-    //                     const tagValue = tag.textContent;
-    //                     const tagFlag = tagValue.toLowerCase();
-    //                     const isDisabled = tagFlag === 'false';
-
-    //                     if (tagFlag === 'true' || tagFlag === 'false') {
-    //                         setFormValues(prev => ({ ...prev, [tagName]: "" }));
-    //                         if (isDisabled) {
-    //                             setFieldErrors(prev => ({ ...prev, [tagName]: '' }));
-    //                         }
-    //                     } else {
-    //                         setFormValues(prev => ({ ...prev, [tagName]: tagValue}));
-    //                     }
-
-    //                     updatedFormData = updatedFormData.map(field => {
-    //                         if (field.wKey === tagName) {
-    //                             return { ...field, FieldEnabledTag: isDisabled ? 'N' : 'Y' };
-    //                         }
-    //                         return field;
-    //                     });
-    //                 });
-    //                 setFormData(updatedFormData);
-    //                 break;
-
-    //             default:
-    //                 console.error("Unknown flag received:", flag);
-    //         }
-    //     } catch (error) {
-    //         console.error("Error parsing XML response:", error);
-    //     }
-    // };
 
     const handleValidationApiResponse = (response, currFieldName) => {
         if (!response?.trim().startsWith("<root>")) {
@@ -934,7 +821,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         }
     };
     useEffect(() => {
-        if (scope && scope.includes("ADHAR") && success === "True") {
+        if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") !== "FinalFormSubmission") {
             const redirectedField = localStorage.getItem('redirectedField')
             // Find the field related to ADHAR (by wKey or label containing ADHAR)
             const adharField = formData.find(f => (f.wKey && f.wKey === redirectedField));
