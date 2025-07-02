@@ -13,8 +13,9 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  
-  const [localFormData, setLocalFormData] = useState<any>(formFields ||  {});
+  const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+
+  const [localFormData, setLocalFormData] = useState<any>(formFields || {});
   const [openAddDemat, setOpenAddDemat] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [dematDropdownOptions, setDematDropdownOptions] = useState<Record<string, any[]>>({});
@@ -47,7 +48,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             )
           };
         }
-        
+
         // Default column configuration for other field types
         return {
           key: field.wKey,
@@ -65,7 +66,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     formFields.forEach((field: any) => {
       if (field.wKey) {
         // Set default empty value based on field type
-        switch(field.type) {
+        switch (field.type) {
           case 'WCheckBox':
             newEntry[field.wKey] = "false";
             break;
@@ -79,9 +80,9 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     });
 
     // Add system fields
-    newEntry.IsDefault = "false";
+    newEntry.IsDefault = "true";
     newEntry.IsInserted = "true";
-    
+
     return newEntry;
   };
 
@@ -91,7 +92,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
       toast.error(`You can only add up to ${maxAllowed} demat accounts.`);
       return;
     }
-    
+
     const newDematEntry = createNewDematEntry();
     setCurrentFormData(newDematEntry);
     setOpenAddDemat(true);
@@ -123,18 +124,20 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
       return;
     }
 
-    // If this is being set as default, unset all other defaults
-    const updatedDematData = currentFormData.IsDefault === "true"
-      ? { ...currentFormData }
-      : currentFormData;
+    // Ensure the new entry is set as default and all others are not
+    const updatedDematData = {
+      ...currentFormData,
+      IsDefault: "true" // Force new entry to be default
+    };
 
     setFieldData((prevState: any) => {
       const prevTableData = prevState.dematTabData.tableData || [];
-      
-      // If setting as default, unset all other defaults
-      const updatedTableData = updatedDematData.IsDefault === "true"
-        ? prevTableData.map(demat => ({ ...demat, IsDefault: "false" }))
-        : prevTableData;
+
+      // Unset all other defaults
+      const updatedTableData = prevTableData.map(demat => ({
+        ...demat,
+        IsDefault: "false"
+      }));
 
       return {
         ...prevState,
@@ -147,9 +150,9 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         }
       };
     });
-
     clearFormAndCloseModal();
   };
+
 
   // Function to clear form and close modal
   const clearFormAndCloseModal = () => {
@@ -165,6 +168,12 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     }));
     handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "segment", setSaving);
   };
+
+
+  const handleNext = () => {
+    setActiveTab("segment")
+  }
+
 
   useEffect(() => {
     if (formFields && formFields.length > 0) {
@@ -191,30 +200,46 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
           style={{
             backgroundColor: colors.background,
             border: `1px solid ${colors.buttonBackground}`,
-          }} 
+          }}
           onClick={() => setActiveTab("bank")}
         >
           <IoArrowBack size={20} />
         </button>
-        <div className="text-end">
-          <button
-            onClick={handleAddDematClick}
-            className="px-4 py-1 rounded"
-            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
-          >
-            Add Demat
-          </button>
-          <button
-            className="rounded-lg ml-4 px-4 py-1"
-            style={{
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.buttonBackground}`,
-            }}
-            onClick={handleSaveAndNext}
-          >
-            Save and Next
-          </button>
-        </div>
+        {viewMode ? (
+          <div className="text-end">
+            <button
+              className="rounded-lg px-4 py-1"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleNext}
+            >
+              Next
+            </button>
+          </div>
+        ) : (
+          <div className="text-end">
+            <button
+              onClick={handleAddDematClick}
+              className="px-4 py-1 rounded"
+              style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+            >
+              Add Demat
+            </button>
+            <button
+              className="rounded-lg ml-4 px-4 py-1"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleSaveAndNext}
+            >
+              Save and Next
+            </button>
+          </div>
+        )}
+
       </div>
       <DataGrid
         columns={generateDynamicColumns()}
@@ -271,6 +296,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
               setFormData={setLocalFormData}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
+              viewMode={viewMode}
             />
           </div>
         </div>

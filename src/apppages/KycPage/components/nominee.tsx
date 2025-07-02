@@ -10,7 +10,7 @@ import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import { findPageData } from '@/utils/helper';
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
 import { useSaveLoading } from '@/context/SaveLoadingContext';
@@ -18,8 +18,10 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
+  const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
-  
+
   const [openAddNominee, setOpenAddNominee] = useState(false);
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [nomineeDropdownOptions, setNomineeDropdownOptions] = useState<Record<string, any[]>>({});
@@ -57,7 +59,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             renderCell: ({ row }: any) => row[field.wKey] ? moment(row[field.wKey], 'YYYYMMDD').format('DD/MM/YYYY') : ''
           };
         }
-        
+
         // Default column configuration for other field types
         return {
           key: field.wKey,
@@ -81,7 +83,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
               border: `1px solid ${colors.buttonBackground}`
             }}
           >
-            Edit
+            {viewMode ? "View" : "Edit"}
           </button>
         </div>
       )
@@ -107,7 +109,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         }
       }
     });
-    
+
     newEntry.IsNomineeDeleted = "false";
     newEntry.IsInserted = "true";
     return newEntry;
@@ -132,7 +134,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   };
 
   const handleEditNomineeClick = (row: any, rowIndex: number) => {
-    setCurrentFormData({ ...row });
+    setCurrentFormData({ ...row, IsModified : "true" });
     setGuardianFormData(row.GuardianDetails || {});
     setIsEditing(true);
     setEditIndex(rowIndex);
@@ -269,26 +271,23 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     setOpenAddNominee(false);
   };
 
+
+
   const fetchFormData = async () => {
-    if (!pageData?.[0]?.Entry) return;
     try {
       const entry = pageData[0].Entry;
       const childEntry = entry.ChildEntry;
-      
-      const sql = Object.keys(childEntry?.sql || {}).length ? childEntry.sql : "";
 
-      const jUi = Object.entries(childEntry.J_Ui)
-        .map(([key, value]) => {
-          return `"${key}":"${value}"`;
-        })
-        .join(',');
-
-      const jApi = Object.entries(childEntry.J_Api)
-        .map(([key, value]) => `"${key}":"${value}"`)
-        .join(',');
+      const userData = localStorage.getItem("rekycRowData_viewMode");
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+      const payload = !viewMode ? childEntry.X_Filter : {
+        EntryName: parsedUserData?.EntryName,
+        ClientCode: parsedUserData?.ClientCode,
+        NomSerial: ''
+      }
 
       let xFilter = '';
-      Object.entries(childEntry.X_Filter).forEach(([key, value]) => {
+      Object.entries(payload).forEach(([key, value]) => {
         if (key === 'NomSerial') {
           xFilter += `<${key}></${key}>`;
         } else {
@@ -297,10 +296,10 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       });
 
       const xmlData = `<dsXml>
-                <J_Ui>${jUi}</J_Ui>
-                <Sql>${sql}</Sql>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"ChildEntry"</J_Ui>
+                <Sql></Sql>
                 <X_Filter>${xFilter}</X_Filter>
-                <J_Api>${jApi}</J_Api>
+                <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
             </dsXml>`;
 
       const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
@@ -310,7 +309,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         }
       });
       const formData = response?.data?.data?.rs0[0].Data || [];
-    
+
       setGuardianFields(formData)
       const initialValues: Record<string, any> = {};
       formData.forEach((field: any) => {
@@ -367,6 +366,10 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "bank", setSaving);
   }
 
+  const handleNext = () => {
+    setActiveTab("bank")
+  }
+
   return (
     <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-2">
@@ -375,30 +378,47 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           style={{
             backgroundColor: colors.background,
             border: `1px solid ${colors.buttonBackground}`,
-          }} 
+          }}
           onClick={() => setActiveTab("personal")}
         >
           <IoArrowBack size={20} />
         </button>
-        <div className="text-end">
-          <button
-            onClick={handleAddNomineeClick}
-            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText}}
-            className="px-4 py-1 rounded-lg"
-          >
-            Add Nominee
-          </button>
-          <button
-            className="px-4 py-1 rounded-lg ml-4"
-            style={{
-              backgroundColor: colors.background,
-              border: `1px solid ${colors.buttonBackground}`
-            }}
-            onClick={handleSaveAndNext}
-          >
-            Save and Next
-          </button>
-        </div>
+        {viewMode ? (
+          <div className="text-end">
+
+            <button
+              className="rounded-lg px-4 py-1"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleNext}
+            >
+              Next
+            </button>
+          </div>
+        ) : (
+          <div className="text-end">
+            <button
+              onClick={handleAddNomineeClick}
+              style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+              className="px-4 py-1 rounded-lg"
+            >
+              Add Nominee
+            </button>
+            <button
+              className="px-4 py-1 rounded-lg ml-4"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`
+              }}
+              onClick={handleSaveAndNext}
+            >
+              Save and Next
+            </button>
+          </div>
+        )}
+
       </div>
       <DataGrid
         columns={generateDynamicColumns()}
@@ -418,7 +438,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center gap-4 mt-2 mb-4">
               <h4 className="text-xl font-semibold">
-                {isEditing ? 'Edit Nominee Details' : 'Add Nominee Details'}
+                {viewMode ? "Nominee Details" : isEditing ? 'Edit Nominee Details' : 'Add Nominee Details'}
               </h4>
               <div className="flex gap-4">
                 <button
@@ -427,12 +447,14 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSaveNominee}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
-                >
-                  {isEditing ? 'Update' : 'Save'}
-                </button>
+                {!viewMode && (
+                  <button
+                    onClick={handleSaveNominee}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+                  >
+                    {isEditing ? 'Update' : 'Save'}
+                  </button>
+                )}
               </div>
             </div>
             {isMinor && !showGuardianForm && (
@@ -440,7 +462,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                 <p>Nominee is a minor. Please add guardian details.</p>
               </div>
             )}
-
             <CaseConfirmationModal
               isOpen={validationModal.isOpen}
               message={validationModal.message}
@@ -464,6 +485,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
               setFormData={setLocalFormData}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
+              viewMode={viewMode}
             />
 
             {isMinor && (
@@ -472,6 +494,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                   <h4 className="text-lg font-semibold">Guardian Details</h4>
                   <button
                     onClick={toggleGuardianForm}
+                    disabled={viewMode}
                     className={`px-4 py-2 rounded-md ${showGuardianForm ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
                   >
                     {showGuardianForm ? 'Remove Guardian' : 'Add Guardian'}
@@ -492,6 +515,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                       setFormData={setGuardianFields}
                       setValidationModal={setValidationModal}
                       setDropDownOptions={setGuardianDropdownOptions}
+                      viewMode={viewMode}
                     />
                   </div>
                 )}

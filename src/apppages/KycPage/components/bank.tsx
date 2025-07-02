@@ -12,9 +12,11 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
+  const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+
   const [openAddBank, setOpenAddBank] = useState(false);
-  const [localFormData, setLocalFormData] = useState<any>(formFields ||  {});
-  
+  const [localFormData, setLocalFormData] = useState<any>(formFields || {});
+
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [bankDropdownOptions, setBankDropdownOptions] = useState<Record<string, any[]>>({});
   const [bankLoadingDropdowns, setBankLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -46,7 +48,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             )
           };
         }
-        
+
         // Default column configuration for other field types
         return {
           key: field.wKey,
@@ -64,7 +66,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     formFields.forEach((field: any) => {
       if (field.wKey) {
         // Set default empty value based on field type
-        switch(field.type) {
+        switch (field.type) {
           case 'WCheckBox':
             newEntry[field.wKey] = "false";
             break;
@@ -78,9 +80,9 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     });
 
     // Add system fields
-    newEntry.IsDefault = "false";
+    newEntry.IsDefault = "true";
     newEntry.IsInserted = "true";
-    
+
     return newEntry;
   };
 
@@ -90,7 +92,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       toast.error(`You can only add up to ${maxAllowed} bank accounts.`);
       return;
     }
-    
+
     const newBankEntry = createNewBankEntry();
     setCurrentFormData(newBankEntry);
     setOpenAddBank(true);
@@ -122,18 +124,20 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       return;
     }
 
-    // If this is being set as default, unset all other defaults
-    const updatedBankData = currentFormData.IsDefault === "true"
-      ? { ...currentFormData }
-      : currentFormData;
+    // Ensure the new entry is set as default and all others are not
+    const updatedBankData = {
+      ...currentFormData,
+      IsDefault: "true" // Force new entry to be default
+    };
 
     setFieldData((prevState: any) => {
       const prevTableData = prevState.bankTabData.tableData || [];
-      
-      // If setting as default, unset all other defaults
-      const updatedTableData = updatedBankData.IsDefault === "true"
-        ? prevTableData.map(bank => ({ ...bank, IsDefault: "false" }))
-        : prevTableData;
+
+      // Unset all other defaults
+      const updatedTableData = prevTableData.map(bank => ({
+        ...bank,
+        IsDefault: "false"
+      }));
 
       return {
         ...prevState,
@@ -162,8 +166,13 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       ...item,
       ...(item?.BankID && { IsInserted: "false" })
     }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat",setSaving);
+    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat", setSaving);
   };
+
+  const handleNext = () => {
+    setActiveTab("demat")
+  }
+
 
   useEffect(() => {
     if (formFields && formFields.length > 0) {
@@ -189,31 +198,49 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           className="rounded-lg px-4 py-1"
           style={{
             backgroundColor: colors.background,
-            border : `1px solid ${colors.buttonBackground}`,
-          }} 
+            border: `1px solid ${colors.buttonBackground}`,
+          }}
           onClick={() => setActiveTab("nominee")}
         >
           <IoArrowBack size={20} />
         </button>
-        <div className="text-end">
-          <button
-            onClick={handleAddBankClick}
-            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText}}
-            className="px-4 py-1 rounded"
-          >
-            Add Bank
-          </button>
-          <button
-            className="rounded-lg ml-4 px-4 py-1 "
-            style={{
-              backgroundColor: colors.background,
-              border : `1px solid ${colors.buttonBackground}`,
-            }}
-            onClick={handleSaveAndNext}
-          >
-            Save and Next
-          </button>
-        </div>
+
+        {viewMode ? (
+          <div className="text-end">
+
+            <button
+              className="rounded-lg px-4 py-1"
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleNext}
+            >
+              Next
+            </button>
+          </div>
+        ) : (
+          <div className="text-end">
+            <button
+              onClick={handleAddBankClick}
+              style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+              className="px-4 py-1 rounded"
+            >
+              Add Bank
+            </button>
+            <button
+              className="rounded-lg ml-4 px-4 py-1 "
+              style={{
+                backgroundColor: colors.background,
+                border: `1px solid ${colors.buttonBackground}`,
+              }}
+              onClick={handleSaveAndNext}
+            >
+              Save and Next
+            </button>
+          </div>
+        )}
+
       </div>
       <DataGrid
         columns={generateDynamicColumns()}
@@ -270,6 +297,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
               setFormData={setLocalFormData}
               setValidationModal={setValidationModal}
               setDropDownOptions={() => { }}
+              viewMode={viewMode}
             />
           </div>
         </div>

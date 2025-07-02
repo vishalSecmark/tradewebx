@@ -11,6 +11,8 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
 
     const { colors, fonts } = useTheme();
+    const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+
     const { setSaving } = useSaveLoading();
     const [localFormData, setLocalFormData] = useState<any>(formFields || {});
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
@@ -75,19 +77,36 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
             // setActiveTab("nominee")
         }
     }
+    const handleNext = () => {
+        setActiveTab("nominee")
+    }
+    
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
             <div className="text-end mb-2">
-                <button
-                    className="rounded-lg px-4 py-1"
-                    style={{
-                        backgroundColor: colors.background,
-                        border: `1px solid ${colors.buttonBackground}`,
-                    }}
-                    onClick={handleSaveAndNext}
-                >
-                    Save and Next
-                </button>
+                {viewMode ? (
+                    <button
+                        className="rounded-lg px-4 py-1"
+                        style={{
+                            backgroundColor: colors.background,
+                            border: `1px solid ${colors.buttonBackground}`,
+                        }}
+                        onClick={handleNext}
+                    >
+                        Next
+                    </button>
+                ) : (
+                    <button
+                        className="rounded-lg px-4 py-1"
+                        style={{
+                            backgroundColor: colors.background,
+                            border: `1px solid ${colors.buttonBackground}`,
+                        }}
+                        onClick={handleSaveAndNext}
+                    >
+                        Save and Next
+                    </button>
+                )}
             </div>
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}
@@ -109,6 +128,7 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
                 setFormData={setLocalFormData}
                 setValidationModal={setValidationModal}
                 setDropDownOptions={() => { }}
+                viewMode={viewMode}
             />
         </div>
     )

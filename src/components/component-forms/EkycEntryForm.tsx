@@ -162,8 +162,12 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     masterValues = {},
     setFormData,
     setValidationModal,
-    setDropDownOptions
+    setDropDownOptions,
+    viewMode
 }) => {
+
+
+    console.log("check view mode in the form ", viewMode)
     const { colors } = useTheme();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -627,7 +631,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     }; const renderFormField = (field: FormField) => {
         if (!field) return null;
 
-        const isEnabled = field.FieldEnabledTag === 'Y';
+        const isEnabled = viewMode ? false : field.FieldEnabledTag === 'Y';
         const hasError = fieldErrors && fieldErrors[field.wKey];
         const isJustUpdated = field.fieldJustUpdated === "true";
 
@@ -693,7 +697,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     </div>
                 );
             case 'WTextBox':
-                if (field.redirectUrl === "true" || field.OTPRequire) {
+                if (!viewMode && (field.redirectUrl === "true" || field.OTPRequire)) {
                     return (
                         <div key={`textBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                             <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
@@ -715,9 +719,11 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                     disabled={true}
                                     placeholder={field.label}
                                 />
+
                                 <button
                                     type="button"
                                     className="rounded-l-none px-3 py-1 border rounded-md border-black"
+                                    disabled={viewMode}
                                     style={{
                                         backgroundColor: colors.background,
                                         color: colors.text,
@@ -733,7 +739,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                 </button>
 
                             </div>
-                            {field.GetResponseFlag === "true" && (
+                            {(field.GetResponseFlag === "true" && !viewMode) && (
                                 <span
                                     className="text-blue-500 underline cursor-pointer hover:text-blue-700 mt-1 inline-block"
                                     style={{ height: '35px', lineHeight: '35px' }}

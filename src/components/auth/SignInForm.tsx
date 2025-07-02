@@ -11,6 +11,7 @@ import { setAuthData, setError as setAuthError, setLoading } from '@/redux/featu
 import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
+import { clearAuthStorage } from '@/utils/auth';
 import Link from "next/link";
 
 // Default options to use if JSON file is not available
@@ -265,14 +266,9 @@ export default function SignInForm() {
 
     // If forceLogout is true (mandatory update for non-admin users), clear everything and stay on login
     if (forceLogout) {
-      // Clear all auth data
-      localStorage.removeItem('userId');
-      localStorage.removeItem('temp_token');
-      localStorage.removeItem('tokenExpireTime');
-      localStorage.removeItem('clientCode');
-      localStorage.removeItem('clientName');
-      localStorage.removeItem('userType');
-      localStorage.removeItem('loginType');
+
+      // function Clear all auth data
+      clearAuthStorage();
 
       // Reset form
       setUserId("");
@@ -305,14 +301,8 @@ export default function SignInForm() {
         dispatch(setAuthError(errorMessage));
 
         // Clear login data and reset form
-        localStorage.removeItem('userId');
-        localStorage.removeItem('temp_token');
-        localStorage.removeItem('tokenExpireTime');
-        localStorage.removeItem('clientCode');
-        localStorage.removeItem('clientName');
-        localStorage.removeItem('userType');
-        localStorage.removeItem('loginType');
-
+        clearAuthStorage();
+        
         // Reset form state
         setUserId("");
         setPassword("");
@@ -335,14 +325,8 @@ export default function SignInForm() {
       dispatch(setAuthError(errorMessage));
 
       // Clear login data and reset form
-      localStorage.removeItem('userId');
-      localStorage.removeItem('temp_token');
-      localStorage.removeItem('tokenExpireTime');
-      localStorage.removeItem('clientCode');
-      localStorage.removeItem('clientName');
-      localStorage.removeItem('userType');
-      localStorage.removeItem('loginType');
-
+      clearAuthStorage();
+      
       // Reset form state
       setUserId("");
       setPassword("");

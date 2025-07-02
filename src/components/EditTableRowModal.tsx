@@ -9,6 +9,7 @@ import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
+import KycPage from "@/apppages/KycPage";
 
 interface RowData {
     [key: string]: any;
@@ -89,6 +90,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [pageData, setPageData] = useState<any>(null);
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
+
+    // eky modal state 
+    const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
 
     // console.log(tableData,'tableData222');
     // console.log(settings.ShowView,'settings in edit');
@@ -255,7 +259,14 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         console.log('Row Index:', rowIndex);
         console.log('wPage:', wPage);
 
-        fetchPageDataForView(rowData);
+        // this condition is specifically for ekyc component form (check for entry name)
+        if (rowData?.EntryName === "Rekyc") {
+            localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
+            localStorage.setItem("ekyc_viewMode", "true");
+            setIsKycModalOpen(true);
+        } else {
+            fetchPageDataForView(rowData);
+        }
     };
 
     const isNumeric = (value: any): boolean => {
@@ -1095,7 +1106,28 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         console.log('EntryFormModal refreshFunction called from EditTableRowModal');
                         // Refresh the main table data if needed
                     }}
+                    childModalZindex="z-500"
+                    parentModalZindex="z-400"
                 />
+            )}
+            {isEkycModalOpen && (
+                <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                    <div className="bg-white rounded-lg py-3 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
+                        <div className="flex justify-between items-center pl-4">
+                            <button
+                                onClick={() => {
+                                    localStorage.setItem('rekycRowData_viewMode', null);
+                                    localStorage.setItem("ekyc_viewMode", "false");
+                                    setIsKycModalOpen(false);
+                                 }}
+                                className="text-gray-700 hover:text-gray-900"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <KycPage />
+                    </div>
+                </div>
             )}
         </>
     );
