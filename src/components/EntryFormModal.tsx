@@ -54,7 +54,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isLoading,
     setChildEntriesTable,
     setDropDownOptions,
-
+    childModalZindex
 }) => {
     if (!isOpen) return null;
 
@@ -100,7 +100,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
         }
     };
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-[500]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+        <div className={`fixed inset-0 flex items-center justify-center ${childModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "} Child Entry Form</h2>
@@ -160,7 +160,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 };
 
 
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs }) => {
+
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -1298,7 +1299,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     return (
         <>
             {isOpen && (
-                <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
                     <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-semibold">
@@ -1661,6 +1662,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     onChildFormSubmit={onChildFormSubmit}
                     setValidationModal={setValidationModal}
                     viewAccess={viewMode}
+                    childModalZindex={childModalZindex}
                 />
             )}
         </>

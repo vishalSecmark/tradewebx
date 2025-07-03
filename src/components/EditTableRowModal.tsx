@@ -1106,6 +1106,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         console.log('EntryFormModal refreshFunction called from EditTableRowModal');
                         // Refresh the main table data if needed
                     }}
+                    childModalZindex="z-500"
+                    parentModalZindex="z-400"
                 />
             )}
             {isEkycModalOpen && (

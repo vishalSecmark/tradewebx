@@ -1339,7 +1339,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
             {isLoading &&
-                <div className="flex inset-0 flex items-center justify-center z-[200] h-[70vh]">
+                <div className="flex inset-0 flex items-center justify-center z-[200] h-[100vh]">
                     <Loader />
                 </div>
             }
