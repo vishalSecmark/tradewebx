@@ -79,7 +79,12 @@ export const clearAuthStorage = () => {
   localStorage.removeItem('clientName');
   localStorage.removeItem('userType');
   localStorage.removeItem('loginType');
+
+  // ekyc related states 
   localStorage.removeItem('ekyc_dynamicData');
   localStorage.removeItem('ekyc_activeTab');
   localStorage.removeItem('redirectedField');
+  localStorage.removeItem('ekyc_submit');
+  localStorage.removeItem('ekyc_viewMode');
+  localStorage.removeItem('ekyc_checker');
 };

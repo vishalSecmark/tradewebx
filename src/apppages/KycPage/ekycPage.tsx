@@ -60,7 +60,7 @@ const Kyc = () => {
     const fetchFormData = async (viewMode: boolean = false) => {
         setIsLoading(true);
         try {
-            const { MasterEntry } = pageData[0].Entry;
+            const { MasterEntry } = pageData[0]?.Entry;
             // const jUi = Object.entries(MasterEntry.J_Ui || {}).map(([k, v]) => `"${k}":"${k === 'Option' ? 'Master_Edit' : v}"`).join(",");
             // const jApi = Object.entries(MasterEntry.J_Api || {}).map(([k, v]) => `"${k}":"${v}"`).join(",");
             const userData = localStorage.getItem("rekycRowData_viewMode");

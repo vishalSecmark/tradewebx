@@ -8,22 +8,22 @@ import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
 
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
-    const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
-    const enableSubmitBtn = localStorage.getItem("ekyc_submit") === "true";
-    const ekycChecker = localStorage.getItem("ekyc_checker") === "true";
-
+    const viewMode = useLocalStorageListener("ekyc_viewMode", false);
+    const enableSubmitBtn = useLocalStorageListener("ekyc_submit", false);
+    const ekycChecker = useLocalStorageListener("ekyc_checker", false);
 
     const searchParams = useSearchParams();
     const router = useRouter();
     const success = searchParams.get('success');
     const id = searchParams.get('id');
     const scope = searchParams.get('scope');
-        
+
 
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -154,16 +154,16 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     }
 
 
-    useEffect(()=>{
-         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
+    useEffect(() => {
+        if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
             const redirectedField = localStorage.getItem('redirectedField')
-            
-            console.log("calling third part",redirectedField)
-                // rekyc?success=True&id=f2794eec-0e60-4084-8c0f-77ca0790c769&scope=ADHAR%2BPANCR
+
+            console.log("calling third part", redirectedField)
+            // rekyc?success=True&id=f2794eec-0e60-4084-8c0f-77ca0790c769&scope=ADHAR%2BPANCR
             handleDigiLockerCallBackAPI(Settings);
             router.replace(window.location.pathname);
         }
-    },[scope,success])
+    }, [scope, success])
 
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
