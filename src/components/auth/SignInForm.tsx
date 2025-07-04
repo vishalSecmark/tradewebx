@@ -20,9 +20,9 @@ const passKey = "TradeWebX1234567";
 
 // Encryption function
 function Encryption(data: string) {
-  var key = CryptoJS.enc.Utf8.parse(passKey);
-  var iv = CryptoJS.enc.Utf8.parse(passKey);
-  var encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), key,
+  const key = CryptoJS.enc.Utf8.parse(passKey);
+  const iv = CryptoJS.enc.Utf8.parse(passKey);
+  const encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), key,
     {
       keySize: 128 / 8,
       iv: iv,
