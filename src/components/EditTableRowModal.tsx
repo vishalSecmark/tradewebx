@@ -624,6 +624,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     // Function to get column order - editable columns first, then non-editable
     // Also handles hiding columns based on hideMultiEditColumn setting
+    // When showViewDocument is true, show non-editable columns first
     const getOrderedColumns = (dataKeys: string[]) => {
         // Get columns to hide from settings
         const hideMultiEditColumn = settings?.hideMultiEditColumn || '';
@@ -649,6 +650,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         const editableColumnKeys = visibleDataKeys.filter(key => editableKeys.includes(key));
         const nonEditableColumnKeys = visibleDataKeys.filter(key => !editableKeys.includes(key));
 
+        // If showViewDocument is true, show non-editable columns first, then editable columns
+        if (showViewDocument) {
+            return [...nonEditableColumnKeys, ...editableColumnKeys];
+        }
+
+        // Default behavior: editable columns first, then non-editable
         return [...editableColumnKeys, ...nonEditableColumnKeys];
     };
 
@@ -951,7 +958,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                         />
                                                                     ) : editable.type === "WDropDownBox" ? (
                                                                         <CustomDropdown
-                                                                            item={{ ...editable, isMultiple: false } as any}
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false,
+                                                                                label: "" // Override label to empty string to hide internal label
+                                                                            } as any}
                                                                             value={value ?? ""}
                                                                             onChange={async (newValue) => {
                                                                                 const previousValue = value;
@@ -1142,7 +1153,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                         />
                                                                     ) : editable.type === "WDropDownBox" ? (
                                                                         <CustomDropdown
-                                                                            item={{ ...editable, isMultiple: false } as any}
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false,
+                                                                                label: "" // Override label to empty string for table layout too
+                                                                            } as any}
                                                                             value={value ?? ""}
                                                                             onChange={async (newValue) => {
                                                                                 const previousValue = value;
