@@ -40,6 +40,7 @@ interface DataTableProps {
     isEntryForm?: boolean;
     handleAction?: (action: string, record: any) => void;
     fullHeight?: boolean;
+    showViewDocument?: boolean;
 }
 
 interface DecimalColumn {
@@ -160,7 +161,7 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false }) => {
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
@@ -370,6 +371,15 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         const selectedIds = selectedRows.map(r => r._id);
                         const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
 
+                        // Don't show header checkbox for single selection mode
+                        if (showViewDocument) {
+                            return (
+                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                    <span style={{ fontSize: '12px', color: '#666' }}>Select</span>
+                                </div>
+                            );
+                        }
+
                         return (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                 <input
@@ -386,16 +396,25 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     },
                     renderCell: ({ row }) => (
                         <input
-                            type="checkbox"
+                            type={showViewDocument ? "radio" : "checkbox"}
+                            name={showViewDocument ? "singleSelection" : undefined}
                             checked={selectedRows.some(r => r._id === row._id)}
                             onChange={(e) => {
-                                const exists = selectedRows.some(r => r._id === row._id);
-                                const updated = exists
-                                    ? selectedRows.filter(r => r._id !== row._id)
-                                    : [...selectedRows, row];
+                                if (showViewDocument) {
+                                    // Single selection mode - replace the entire selection
+                                    const updated = e.target.checked ? [row] : [];
+                                    setSelectedRows(updated);
+                                    onRowSelect?.(updated);
+                                } else {
+                                    // Multiple selection mode - existing logic
+                                    const exists = selectedRows.some(r => r._id === row._id);
+                                    const updated = exists
+                                        ? selectedRows.filter(r => r._id !== row._id)
+                                        : [...selectedRows, row];
 
-                                setSelectedRows(updated);
-                                onRowSelect?.(updated);
+                                    setSelectedRows(updated);
+                                    onRowSelect?.(updated);
+                                }
                             }}
                             style={{ cursor: "pointer" }}
                         />
@@ -753,7 +772,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     }
                 }}
             />
-            <TableStyling onRowClick={onRowClick}/>
+            <TableStyling onRowClick={onRowClick} />
         </div>
     );
 };

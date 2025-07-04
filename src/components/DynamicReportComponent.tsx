@@ -1282,6 +1282,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     ...safePageData.getCurrentLevel(currentLevel)?.settings,
                     hideMultiEditColumn: safePageData.getCurrentLevel(currentLevel)?.settings?.hideMultiEditColumn
                 }}
+                showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
             />}
 
             {/* Loading State */}
@@ -1418,6 +1419,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         isEntryForm={componentType === "entry" || componentType === "multientry"}
                         handleAction={handleTableAction}
                         fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
+                        showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                     />
                     {Object.keys(additionalTables).length > 0 && (
                         <div>
