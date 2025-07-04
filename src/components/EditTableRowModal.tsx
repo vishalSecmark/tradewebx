@@ -978,9 +978,18 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                     <CustomDropdown
                                                                         item={{ ...editable, isMultiple: false } as any}
                                                                         value={value ?? ""}
-                                                                        onChange={(newValue) =>
-                                                                            handleInputChange(rowIndex, key, newValue)
-                                                                        }
+                                                                        onChange={async (newValue) => {
+                                                                            const previousValue = value;
+                                                                            handleInputChange(rowIndex, key, newValue);
+
+                                                                            // Trigger validation API if configured
+                                                                            if (editable.ValidationAPI?.dsXml) {
+                                                                                // Small delay to ensure state is updated
+                                                                                setTimeout(() => {
+                                                                                    handleInputBlur(rowIndex, key, previousValue);
+                                                                                }, 100);
+                                                                            }
+                                                                        }}
                                                                         options={
                                                                             editable.options
                                                                                 ? editable.options.map(opt => ({
@@ -1119,7 +1128,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                     localStorage.setItem('rekycRowData_viewMode', null);
                                     localStorage.setItem("ekyc_viewMode", "false");
                                     setIsKycModalOpen(false);
-                                 }}
+                                }}
                                 className="text-gray-700 hover:text-gray-900"
                             >
                                 ✕
