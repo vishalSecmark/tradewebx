@@ -286,7 +286,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const { colors, fonts } = useTheme();
     const hasFetchedRef = useRef(false);
 
-  
+
 
     const appMetadata = (() => {
         try {
@@ -693,7 +693,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     };
 
- 
+
 
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
@@ -1091,10 +1091,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             </button>
 
                         )}
-                        {componentType === 'entry' && (
+                        {(componentType === 'entry' || componentType === "multientry") && (
                             <button
                                 className="p-2 rounded"
-                                onClick={() => setIsEntryModalOpen(true)}
+                                onClick={() => {
+                                    console.log('Plus button clicked, componentType:', componentType);
+                                    console.log('pageData available:', !!pageData);
+                                    console.log('pageData structure:', pageData);
+                                    setIsEntryModalOpen(true);
+                                }}
                                 style={{ color: colors.text }}
                             >
                                 <FaPlus size={20} />
@@ -1277,6 +1282,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     ...safePageData.getCurrentLevel(currentLevel)?.settings,
                     hideMultiEditColumn: safePageData.getCurrentLevel(currentLevel)?.settings?.hideMultiEditColumn
                 }}
+                showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
             />}
 
             {/* Loading State */}
@@ -1410,9 +1416,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         onRowClick={handleRecordClick}
                         onRowSelect={handleRowSelect}
                         tableRef={tableRef}
-                        isEntryForm={componentType === "entry"}
+                        isEntryForm={componentType === "entry" || componentType === "multientry"}
                         handleAction={handleTableAction}
                         fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
+                        showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                     />
                     {Object.keys(additionalTables).length > 0 && (
                         <div>
@@ -1451,13 +1458,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 </div>
             )}
 
-            {componentType === 'entry' && safePageData.isValid && (
+            {(componentType === 'entry' || componentType === "multientry") && safePageData.isValid && (
                 <EntryFormModal
                     isOpen={isEntryModalOpen}
                     onClose={() => setIsEntryModalOpen(false)}
                     pageData={pageData}
                     editData={entryFormData}
                     action={entryAction}
+                    isTabs={componentType === "multientry" ? true : false}
                     setEntryEditData={setEntryFormData}
                     refreshFunction={() => fetchData()}
                 />

@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
-import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps } from '@/types';
+import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData } from '@/types';
 import EntryForm from './component-forms/EntryForm';
 
 
@@ -160,7 +160,8 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 };
 
 
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction,childModalZindex = 'z-200',parentModalZindex = 'z-100'}) => {
+
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -177,11 +178,18 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [isFormSubmit, setIsFormSubmit] = useState<boolean>(false);
 
-    console.log(pageData[0].Entry.ChildEntry,'entry page datat');
-    
+    // Tabs-related state
+    const [tabsData, setTabsData] = useState<TabData[]>([]);
+    const [activeTabIndex, setActiveTabIndex] = useState<number>(0);
+    const [tabFormValues, setTabFormValues] = useState<Record<string, Record<string, any>>>({});
+    const [tabDropdownOptions, setTabDropdownOptions] = useState<Record<string, Record<string, any[]>>>({});
+    const [tabLoadingDropdowns, setTabLoadingDropdowns] = useState<Record<string, Record<string, boolean>>>({});
+    const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
 
-    const childEntryPresent = pageData[0].Entry.ChildEntry;
-    const isThereChildEntry = !childEntryPresent || Object.keys(childEntryPresent).length === 0;
+    console.log(pageData[0]?.Entry?.ChildEntry, 'entry page data');
+
+    const childEntryPresent = pageData[0]?.Entry?.ChildEntry;
+    const isThereChildEntry = !isTabs && (!childEntryPresent || Object.keys(childEntryPresent).length === 0);
 
     const [validationModal, setValidationModal] = useState<{
         isOpen: boolean;
@@ -191,6 +199,246 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }>({ isOpen: false, message: '', type: 'M' });
 
     const [viewMode, setViewMode] = useState<boolean>(false);
+
+    const fetchTabsData = async (editData?: any, viewMode: boolean = false) => {
+        console.log('fetchTabsData called with:', { pageData, isTabs, isOpen });
+        if (!pageData?.[0]) {
+            console.error('fetchTabsData: pageData[0] is not available');
+            return;
+        }
+
+        console.log('fetchTabsData: pageData[0]:', pageData[0]);
+        console.log('fetchTabsData: pageData[0].Entry:', pageData[0].Entry);
+
+        setIsLoading(true);
+        try {
+            // Fetch tabs data which includes Master tab
+            const entry = pageData[0].Entry;
+            if (!entry) {
+                console.error('fetchTabsData: Entry is not available in pageData[0]');
+                setIsLoading(false);
+                return;
+            }
+
+            const masterEntry = entry.MasterEntry;
+            if (!masterEntry) {
+                console.error('fetchTabsData: MasterEntry is not available in Entry');
+                setIsLoading(false);
+                return;
+            }
+
+            console.log('fetchTabsData: masterEntry:', masterEntry);
+            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
+
+            // Construct J_Ui - handle 'Option' key specially
+            const jUi = Object.entries(masterEntry.J_Ui)
+                .map(([key, value]) => {
+                    if (key === 'Option' && editData) {
+                        return `"${key}":"Master_Edit"`;
+                    }
+                    return `"${key}":"${value}"`;
+                })
+                .join(',');
+
+            // Construct J_Api
+            const jApi = Object.entries(masterEntry.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            // Construct X_Filter with edit data if available
+            let xFilter = '';
+            if (masterEntry.X_Filter) {
+                Object.entries(masterEntry.X_Filter).forEach(([key, value]) => {
+                    // If we have edit data and the key exists in it, use that value
+                    if (editData && editData[key] !== undefined && editData[key] !== null) {
+                        xFilter += `<${key}>${editData[key]}</${key}>`;
+                    }
+                    // Otherwise use the default value from masterEntry
+                    else if (value === '##InstrumentType##' || value === '##IntRefNo##') {
+                        xFilter += `<${key}></${key}>`;
+                    } else {
+                        xFilter += `<${key}>${value}</${key}>`;
+                    }
+                });
+            }
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${sql}</Sql>
+                <X_Filter>${xFilter}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response?.data?.data?.rs0) {
+                const allTabs: TabData[] = response.data.data.rs0;
+                console.log('All tabs received:', allTabs.map(tab => ({ TabName: tab.TabName })));
+
+                // Find and extract Master tab data
+                const masterTab = allTabs.find(tab =>
+                    tab.TabName && tab.TabName.toLowerCase().trim() === 'master'
+                );
+
+                console.log('Master tab found:', masterTab ? masterTab.TabName : 'Not found');
+
+                // Filter out Master tab from tabs navigation - be more comprehensive
+                const tabs = allTabs.filter(tab =>
+                    tab.TabName &&
+                    tab.TabName.toLowerCase().trim() !== 'master' &&
+                    tab.TabName.toLowerCase().trim() !== 'master form'
+                );
+
+                console.log('Filtered tabs:', tabs.map(tab => ({ TabName: tab.TabName })));
+
+                // Set up master form data from Master tab
+                if (masterTab) {
+                    let masterFormData = masterTab.Data || [];
+
+                    // Set all fields to disabled if in view mode
+                    if (viewMode) {
+                        masterFormData = masterFormData.map((field: any) => ({
+                            ...field,
+                            FieldEnabledTag: "N"
+                        }));
+                    }
+
+                    setMasterFormData(masterFormData);
+
+                    // Initialize master form values with any preset values
+                    const initialMasterValues: Record<string, any> = {};
+                    masterFormData.forEach((field: FormField) => {
+                        if (field.type === 'WDateBox' && field.wValue) {
+                            initialMasterValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+                        } else if (editData && editData[field.wKey] !== undefined) {
+                            initialMasterValues[field.wKey] = editData[field.wKey];
+                        } else if (field.wValue) {
+                            initialMasterValues[field.wKey] = field.wValue;
+                        }
+                    });
+
+                    setMasterFormValues(initialMasterValues);
+
+                    // Fetch initial dropdown options for master form
+                    masterFormData.forEach((field: FormField) => {
+                        if (field.type === 'WDropDownBox' && field.wQuery) {
+                            fetchDropdownOptions(field);
+                        }
+                    });
+                }
+
+                // Set up remaining tabs (excluding Master)
+                setTabsData(tabs);
+
+                // Reset active tab index to 0 since we filtered out Master
+                setActiveTabIndex(0);
+
+                // Initialize form values and dropdown options for each tab
+                const initialTabFormValues: Record<string, Record<string, any>> = {};
+                const initialTabDropdownOptions: Record<string, Record<string, any[]>> = {};
+                const initialTabLoadingDropdowns: Record<string, Record<string, boolean>> = {};
+                const initialTabTableData: Record<string, any[]> = {};
+
+                tabs.forEach((tab, index) => {
+                    const tabKey = `tab_${index}`;
+                    initialTabFormValues[tabKey] = {};
+                    initialTabDropdownOptions[tabKey] = {};
+                    initialTabLoadingDropdowns[tabKey] = {};
+                    initialTabTableData[tabKey] = tab.tableData || [];
+
+                    // Initialize form values with any preset values
+                    tab.Data.forEach((field: FormField) => {
+                        if (field.type === 'WDateBox' && field.wValue) {
+                            initialTabFormValues[tabKey][field.wKey] = moment(field.wValue).format('YYYYMMDD');
+                        } else if (editData && editData[field.wKey] !== undefined) {
+                            initialTabFormValues[tabKey][field.wKey] = editData[field.wKey];
+                        } else if (field.wValue) {
+                            initialTabFormValues[tabKey][field.wKey] = field.wValue;
+                        }
+                    });
+
+                    // Set all fields to disabled if in view mode
+                    if (viewMode) {
+                        tab.Data = tab.Data.map((field: any) => ({
+                            ...field,
+                            FieldEnabledTag: "N"
+                        }));
+                    }
+
+                    // Fetch initial dropdown options for each tab
+                    tab.Data.forEach((field: FormField) => {
+                        if (field.type === 'WDropDownBox' && field.wQuery) {
+                            fetchDropdownOptionsForTab(field, tabKey);
+                        }
+                    });
+                });
+
+                setTabFormValues(initialTabFormValues);
+                setTabDropdownOptions(initialTabDropdownOptions);
+                setTabLoadingDropdowns(initialTabLoadingDropdowns);
+                setTabTableData(initialTabTableData);
+            }
+        } catch (error) {
+            console.error('Error fetching tabs data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchDropdownOptionsForTab = async (field: FormField, tabKey: string) => {
+        if (!field.wQuery) return;
+
+        try {
+            setTabLoadingDropdowns(prev => ({
+                ...prev,
+                [tabKey]: { ...prev[tabKey], [field.wKey]: true }
+            }));
+
+            const jUi = Object.entries(field.wQuery.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(field.wQuery.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${field.wQuery.Sql || ''}</Sql>
+                <X_Filter>${field.wQuery.X_Filter || ''}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            const options = response.data?.data?.rs0?.map((item: any) => ({
+                label: item[field.wDropDownKey?.key || 'DisplayName'],
+                value: item[field.wDropDownKey?.value || 'Value']
+            }));
+
+            setTabDropdownOptions(prev => ({
+                ...prev,
+                [tabKey]: { ...prev[tabKey], [field.wKey]: options }
+            }));
+        } catch (error) {
+            console.error(`Error fetching options for ${field.wKey}:`, error);
+        } finally {
+            setTabLoadingDropdowns(prev => ({
+                ...prev,
+                [tabKey]: { ...prev[tabKey], [field.wKey]: false }
+            }));
+        }
+    };
 
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
@@ -320,12 +568,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const fetchMasterEntryData = async (editData?: any, viewMode: boolean = false) => {
-        if (!pageData?.[0]?.Entry) return;
-        setIsLoading(true);
+    const fetchMasterEntryData = async (editData?: any, viewMode: boolean = false, shouldSetLoading: boolean = true) => {
+        console.log('fetchMasterEntryData called with:', { pageData, isTabs, isOpen });
+        if (!pageData?.[0]?.Entry) {
+            console.error('fetchMasterEntryData: pageData[0].Entry is not available');
+            return;
+        }
+        if (shouldSetLoading) {
+            setIsLoading(true);
+        }
         try {
             const entry = pageData[0].Entry;
             const masterEntry = entry.MasterEntry;
+            console.log('fetchMasterEntryData: masterEntry:', masterEntry);
             const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
             // Construct J_Ui - handle 'Option' key specially
@@ -422,9 +677,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             });
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
-            setIsLoading(false);
+            if (shouldSetLoading) {
+                setIsLoading(false);
+            }
         } finally {
-            setIsLoading(false);
+            if (shouldSetLoading) {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -537,10 +796,20 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     };
 
     useEffect(() => {
+        console.log('EntryFormModal useEffect triggered:', { isOpen, isEdit, editData, isTabs });
         if (isOpen && !isEdit && (!editData || Object.keys(editData).length === 0)) {
-            fetchMasterEntryData();
+            console.log('Conditions met, calling fetch function. isTabs:', isTabs);
+            if (isTabs) {
+                console.log('Calling fetchTabsData for multientry...');
+                fetchTabsData();
+            } else {
+                console.log('Calling fetchMasterEntryData for regular entry...');
+                fetchMasterEntryData();
+            }
+        } else {
+            console.log('Conditions not met:', { isOpen, isEdit, editDataExists: !!editData, editDataLength: Object.keys(editData || {}).length });
         }
-    }, [isOpen, pageData]);
+    }, [isOpen, pageData, isTabs]);
 
     const deleteChildRecord = async () => {
         try {
@@ -626,13 +895,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     useEffect(() => {
         if (action === 'edit' && editData) {
-            fetchMasterEntryData(editData);
+            if (isTabs) {
+                fetchTabsData(editData);
+            } else {
+                fetchMasterEntryData(editData);
+            }
             setIsEdit(true);
         } else if (action === 'view' && editData) {
             setViewMode(true);
-            fetchMasterEntryData(editData, true);
+            if (isTabs) {
+                fetchTabsData(editData, true);
+            } else {
+                fetchMasterEntryData(editData, true);
+            }
         }
-    }, [action, editData]);
+    }, [action, editData, isTabs]);
 
     const handleConfirmDelete = () => {
         if (childFormValues && childFormValues?.Id) {
@@ -701,17 +978,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         });
     };
     const resetParentForm = () => {
-        setMasterFormValues({});
-        setFieldErrors({});
-        setChildEntriesTable([]);
-        setMasterDropdownOptions({});
-        setMasterFormData([]);
-        resetChildForm();
-        setIsEdit(false);
-        setEntryEditData(null);
-        onClose();
-        setViewMode(false);
-        refreshFunction()
+        if (isTabs) {
+            resetTabsForm();
+        } else {
+            setMasterFormValues({});
+            setFieldErrors({});
+            setChildEntriesTable([]);
+            setMasterDropdownOptions({});
+            setMasterFormData([]);
+            resetChildForm();
+            setIsEdit(false);
+            setEntryEditData?.(null);
+            onClose();
+            setViewMode(false);
+            refreshFunction?.();
+        }
     }
 
     const submitFormData = async () => {
@@ -882,6 +1163,135 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     }
 
+    const handleTabDropdownChange = (field: any, tabKey: string) => {
+        // Handle dependent fields for tabs
+        if (field.dependsOn) {
+            if (Array.isArray(field.dependsOn.field)) {
+                // Handle dependent dropdowns for tabs if needed
+                console.log('Handle dependent dropdown for tab:', tabKey);
+            }
+        }
+    };
+
+    const validateTabForm = (tabData: TabData, tabFormValues: Record<string, any>) => {
+        const errors = {};
+        tabData.Data.forEach(field => {
+            if (field.FieldEnabledTag === "Y" && field.isMandatory === "true" && field.type !== "WDisplayBox") {
+                if (!tabFormValues[field.wKey] || tabFormValues[field.wKey]?.toString()?.trim() === "") {
+                    errors[field.wKey] = `${field.label} is required`;
+                }
+            }
+        });
+        return errors;
+    };
+
+    const submitTabsFormData = async () => {
+        const currentTab = tabsData[activeTabIndex];
+        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabFormValues = tabFormValues[currentTabKey] || {};
+
+        // Validate master form first
+        const masterErrors = validateForm(masterFormData, masterFormValues);
+
+        // Validate current tab
+        const tabErrors = validateTabForm(currentTab, currentTabFormValues);
+
+        // Combine all errors
+        const allErrors = { ...masterErrors, ...tabErrors };
+
+        if (Object.keys(allErrors).length > 0) {
+            setFieldErrors(allErrors);
+            if (Object.keys(masterErrors).length > 0) {
+                toast.error("Please fill all mandatory fields in the Master form before submitting.");
+            } else {
+                toast.error("Please fill all mandatory fields in the current tab before submitting.");
+            }
+            return;
+        }
+
+        setIsFormSubmit(true);
+        try {
+            const saveNextAPI = currentTab.Settings.SaveNextAPI;
+
+            const jUi = Object.entries(saveNextAPI.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(saveNextAPI.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            // Create X_DataJson with current tab form values
+            const xDataJson = JSON.stringify(currentTabFormValues);
+
+            // Replace placeholders in X_Filter_Multiple
+            let xFilterMultiple = '';
+            Object.entries(saveNextAPI.X_Filter_Multiple).forEach(([key, value]) => {
+                let finalValue = value;
+                if (typeof value === 'string' && value.includes('##')) {
+                    // Replace placeholders with actual values
+                    finalValue = value.replace(/##(\w+)##/g, (match, placeholder) => {
+                        return currentTabFormValues[placeholder] || '';
+                    });
+                }
+                xFilterMultiple += `<${key}>${finalValue}</${key}>`;
+            });
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql></Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+                <X_DataJson>${xDataJson}</X_DataJson>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post<ApiResponse>(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response?.data?.success) {
+                toast.success('Tab form submitted successfully!');
+                setIsFormSubmit(false);
+
+                // Check if there are more tabs to navigate to
+                if (activeTabIndex < tabsData.length - 1) {
+                    setActiveTabIndex(activeTabIndex + 1);
+                    toast.info(`Moved to next tab: ${tabsData[activeTabIndex + 1].TabName}`);
+                } else {
+                    // All tabs completed, close modal
+                    resetTabsForm();
+                }
+            } else {
+                const message = response?.data?.message?.replace(/<\/?Message>/g, '') || 'Submission failed';
+                toast.warning(message);
+                setIsFormSubmit(false);
+            }
+        } catch (error) {
+            console.error('Error submitting tab form:', error);
+            toast.error('Failed to submit the form. Please try again.');
+            setIsFormSubmit(false);
+        }
+    };
+
+    const resetTabsForm = () => {
+        setTabsData([]);
+        setActiveTabIndex(0);
+        setTabFormValues({});
+        setTabDropdownOptions({});
+        setTabLoadingDropdowns({});
+        setTabTableData({});
+        setFieldErrors({});
+        setIsEdit(false);
+        setEntryEditData?.(null);
+        onClose();
+        setViewMode(false);
+        refreshFunction?.();
+    };
+
     // In your component
     const dynamicColumns = getAllColumns(childEntriesTable);
 
@@ -892,7 +1302,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
                     <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "}Entry Form</h2>
+                            <h2 className="text-xl font-semibold">
+                                {isTabs
+                                    ? `${isEdit ? "Edit " : "Add "}Master Form`
+                                    : `${isEdit ? "Edit " : "Add "}Entry Form`
+                                }
+                            </h2>
                             <button
                                 onClick={() => { resetParentForm() }}
                                 className="text-gray-500 hover:text-gray-700"
@@ -900,9 +1315,109 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 ✕
                             </button>
                         </div>
+
                         {isLoading ? (
                             <div className="text-center py-4">Loading...</div>
+                        ) : isTabs ? (
+                            // Tabs-based form rendering with Master always shown first
+                            <>
+                                {/* Master Form - Always visible at top */}
+                                <div className="mb-8">
+                                    {/* <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                                        <h3 className="text-lg font-semibold text-blue-800">Master</h3>
+                                    </div> */}
+                                    <EntryForm
+                                        formData={masterFormData}
+                                        formValues={masterFormValues}
+                                        setFormValues={setMasterFormValues}
+                                        dropdownOptions={masterDropdownOptions}
+                                        setDropDownOptions={setMasterDropdownOptions}
+                                        loadingDropdowns={masterLoadingDropdowns}
+                                        onDropdownChange={handleMasterDropdownChange}
+                                        fieldErrors={fieldErrors}
+                                        setFieldErrors={setFieldErrors}
+                                        masterValues={masterFormValues}
+                                        setFormData={setMasterFormData}
+                                        setValidationModal={setValidationModal}
+                                    />
+                                </div>
+
+                                {/* Other Tabs Navigation and Content - Only show if there are non-Master tabs */}
+                                {tabsData.length > 0 && (
+                                    <div className="border-t pt-6">
+                                        <div className="mb-6">
+                                            <div className="border-b border-gray-200">
+                                                <nav className="-mb-px flex space-x-8">
+                                                    {tabsData.map((tab, index) => (
+                                                        <button
+                                                            key={index}
+                                                            onClick={() => setActiveTabIndex(index)}
+                                                            className={`py-2 px-4 border-b-2 font-medium text-sm ${activeTabIndex === index
+                                                                ? 'border-blue-500 text-blue-600'
+                                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                                }`}
+                                                        >
+                                                            {tab.TabName}
+                                                        </button>
+                                                    ))}
+                                                </nav>
+                                            </div>
+                                        </div>
+
+                                        {tabsData.length > 0 && tabsData[activeTabIndex] && (
+                                            <>
+                                                <div className="flex justify-end mb-4">
+                                                    <button
+                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode
+                                                            ? 'bg-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-500 hover:bg-blue-600'
+                                                            } text-white rounded-md`}
+                                                        onClick={submitTabsFormData}
+                                                        disabled={isFormInvalid || viewMode || isFormSubmit}
+                                                    >
+                                                        {isFormSubmit ? "Submitting..." : (
+                                                            <>
+                                                                <FaSave />
+                                                                {activeTabIndex < tabsData.length - 1 ? "Save & Next" : "Save & Complete"}
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                                <EntryForm
+                                                    formData={tabsData[activeTabIndex].Data}
+                                                    formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                    setFormValues={(values) => {
+                                                        setTabFormValues(prev => ({
+                                                            ...prev,
+                                                            [`tab_${activeTabIndex}`]: typeof values === 'function'
+                                                                ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                : values
+                                                        }));
+                                                    }}
+                                                    dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                    setDropDownOptions={(options) => {
+                                                        setTabDropdownOptions(prev => ({
+                                                            ...prev,
+                                                            [`tab_${activeTabIndex}`]: typeof options === 'function'
+                                                                ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                : options
+                                                        }));
+                                                    }}
+                                                    loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                    onDropdownChange={(field) => handleTabDropdownChange(field, `tab_${activeTabIndex}`)}
+                                                    fieldErrors={fieldErrors}
+                                                    setFieldErrors={setFieldErrors}
+                                                    masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                    setFormData={() => { }} // Not needed for tabs
+                                                    setValidationModal={setValidationModal}
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+                                )}
+                            </>
                         ) : (
+                            // Regular form rendering (existing logic)
                             <>
                                 {isThereChildEntry && (
                                     <div className="flex justify-end">

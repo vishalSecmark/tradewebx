@@ -13,6 +13,24 @@ import Image from "next/image";
 import { RootState } from "@/redux/store";
 import { clearAuthStorage } from '@/utils/auth';
 import Link from "next/link";
+import CryptoJS from 'crypto-js';
+
+// Password encryption key
+const passKey = "TradeWebX1234567";
+
+// Encryption function
+function Encryption(data: string) {
+  const key = CryptoJS.enc.Utf8.parse(passKey);
+  const iv = CryptoJS.enc.Utf8.parse(passKey);
+  const encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), key,
+    {
+      keySize: 128 / 8,
+      iv: iv,
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    });
+  return encrypted.toString();
+}
 
 // Default options to use if JSON file is not available
 const DEFAULT_LOGIN_OPTIONS = [];
@@ -303,7 +321,7 @@ export default function SignInForm() {
 
         // Clear login data and reset form
         clearAuthStorage();
-        
+
         // Reset form state
         setUserId("");
         setPassword("");
@@ -327,7 +345,7 @@ export default function SignInForm() {
 
       // Clear login data and reset form
       clearAuthStorage();
-      
+
       // Reset form state
       setUserId("");
       setPassword("");
@@ -422,7 +440,7 @@ export default function SignInForm() {
     // Use fallback values if no login options are available
     const params = {
       userId: userId,
-      password: password,
+      ePassword: Encryption(password),
       key: loginAsOptions.length > 0 ? selectedLoginKey : LOGIN_KEY,
       loginAs: loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS,
       product: PRODUCT

@@ -60,7 +60,18 @@ interface EditTableRowModalProps {
             width: number;
         }>;
         hideMultiEditColumn?: string;
-    }
+        ShowViewDocument?: boolean;
+        ShowViewDocumentAPI?: {
+            dsXml: {
+                J_Ui: any;
+                Sql: string;
+                X_Filter: string;
+                X_Filter_Multiple?: any;
+                J_Api: any;
+            };
+        };
+    };
+    showViewDocument?: boolean;
 }
 
 const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
@@ -70,6 +81,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     tableData,
     wPage,
     settings,
+    showViewDocument = false,
 }) => {
     const { colors, fonts } = useTheme();
     const [localData, setLocalData] = useState<RowData[]>([]);
@@ -128,6 +140,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const handleValidationClose = () => {
         setValidationModal(prev => ({ ...prev, isOpen: false }));
     };
+
+
 
     // New function to fetch page data for EntryFormModal
     const fetchPageDataForView = async (rowData: RowData) => {
@@ -612,6 +626,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     // Function to get column order - editable columns first, then non-editable
     // Also handles hiding columns based on hideMultiEditColumn setting
+    // When showViewDocument is true, show non-editable columns first
     const getOrderedColumns = (dataKeys: string[]) => {
         // Get columns to hide from settings
         const hideMultiEditColumn = settings?.hideMultiEditColumn || '';
@@ -637,6 +652,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         const editableColumnKeys = visibleDataKeys.filter(key => editableKeys.includes(key));
         const nonEditableColumnKeys = visibleDataKeys.filter(key => !editableKeys.includes(key));
 
+        // If showViewDocument is true, show non-editable columns first, then editable columns
+        if (showViewDocument) {
+            return [...nonEditableColumnKeys, ...editableColumnKeys];
+        }
+
+        // Default behavior: editable columns first, then non-editable
         return [...editableColumnKeys, ...nonEditableColumnKeys];
     };
 
@@ -866,174 +887,343 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                     <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] min-h-[70vh] flex flex-col">
                         <DialogTitle className="text-lg font-semibold mb-4">{title}</DialogTitle>
                         {localData.length > 0 ? (
-                            <div className="overflow-auto flex-1">
-                                <table className="border text-sm">
-                                    <thead>
-                                        <tr>
-                                            {showViewTable === true && <th
-                                                className="border px-2 py-2 text-left"
-                                                style={{
-                                                    backgroundColor: colors.primary,
-                                                    color: colors.text,
-                                                    fontFamily: fonts.content,
-                                                    minWidth: '100px'
-                                                }}
-                                            >
-                                                Actions
-                                            </th>}
-                                            {getOrderedColumns(Object.keys(localData[0])).map((key) => {
-                                                const columnWidth = getColumnWidth(key);
-                                                return (
-                                                    <th
-                                                        key={key}
-                                                        className="border px-2 py-2 text-left"
-                                                        style={{
-                                                            backgroundColor: colors.primary,
-                                                            color: colors.text,
-                                                            fontFamily: fonts.content,
-                                                            ...(columnWidth && { minWidth: `${columnWidth}px` }),
-                                                        }}
-                                                    >
-                                                        {key}
-                                                    </th>
-                                                );
-                                            })}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
+                            showViewDocument ? (
+                                // Form layout for ShowViewDocument
+                                <div className="overflow-auto flex-1 p-4">
+                                    <div className="max-w-4xl mx-auto">
                                         {localData.map((row, rowIndex) => (
-                                            <tr
-                                                key={rowIndex}
-                                                style={{
-                                                    backgroundColor:
-                                                        rowIndex % 2 === 0
-                                                            ? colors.evenCardBackground
-                                                            : colors.oddCardBackground,
-                                                    color: colors.text,
-                                                    fontFamily: fonts.content,
-                                                }}
-                                            >
-                                                {showViewTable === true && <td className="border px-2 py-2">
-                                                    <button
-                                                        onClick={() => handleViewRow(row, rowIndex)}
-                                                        className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
-                                                        style={{
-                                                            fontFamily: fonts.content,
-                                                        }}
-                                                    >
-                                                        View
-                                                    </button>
-                                                </td>}
-                                                {getOrderedColumns(Object.keys(row)).map((key) => {
-                                                    const value = row[key];
-                                                    const editable = getEditableColumn(key);
-                                                    const isValueNumeric = isNumeric(value);
-                                                    const hasChar = hasCharacterField(key);
+                                            <div key={rowIndex} className="mb-8">
+                                                {rowIndex > 0 && <hr className="my-6 border-gray-300" />}
 
-                                                    // Get columns that should be left-aligned even if they contain numbers
-                                                    const leftAlignedColumns = settings?.leftAlignedColumns || settings?.leftAlignedColums
-                                                        ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
-                                                        : [];
-
-                                                    const isLeftAligned = leftAlignedColumns.includes(key);
-
-                                                    return (
-                                                        <td
-                                                            key={key}
-                                                            className="border px-2 py-2"
+                                                {/* Action buttons for view */}
+                                                {showViewTable === true && (
+                                                    <div className="mb-4 flex justify-end">
+                                                        <button
+                                                            onClick={() => handleViewRow(row, rowIndex)}
+                                                            className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-4 py-2 rounded-md transition-colors"
                                                             style={{
-                                                                textAlign: isLeftAligned || editable ? 'left' : (hasChar ? 'left' : 'right')
+                                                                fontFamily: fonts.content,
                                                             }}
                                                         >
-                                                            {editable ? (
-                                                                editable.type === "WTextBox" ? (
+                                                            View Details
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Form fields */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {getOrderedColumns(Object.keys(row)).map((key) => {
+                                                        const value = row[key];
+                                                        const editable = getEditableColumn(key);
+
+                                                        return (
+                                                            <div key={key} className="mb-4">
+                                                                <label
+                                                                    className="block text-sm font-medium mb-2"
+                                                                    style={{
+                                                                        color: colors.text,
+                                                                        fontFamily: fonts.content
+                                                                    }}
+                                                                >
+                                                                    {key}
+                                                                </label>
+                                                                {editable ? (
+                                                                    editable.type === "WTextBox" ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={value ?? ""}
+                                                                            onChange={(e) =>
+                                                                                handleInputChange(rowIndex, key, e.target.value)
+                                                                            }
+                                                                            onFocus={() =>
+                                                                                setPreviousValues(prev => ({
+                                                                                    ...prev,
+                                                                                    [`${rowIndex}_${key}`]: value
+                                                                                }))
+                                                                            }
+                                                                            onBlur={() => {
+                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                                setPreviousValues(prev => {
+                                                                                    const updated = { ...prev };
+                                                                                    delete updated[`${rowIndex}_${key}`];
+                                                                                    return updated;
+                                                                                });
+                                                                            }}
+                                                                            placeholder={editable.wPlaceholder}
+                                                                            className="w-full border border-gray-300 rounded px-3 py-2"
+                                                                            style={{
+                                                                                fontFamily: fonts.content,
+                                                                                color: colors.text,
+                                                                                backgroundColor: colors.textInputBackground,
+                                                                                borderColor: colors.textInputBorder,
+                                                                            }}
+                                                                        />
+                                                                    ) : editable.type === "WDropDownBox" ? (
+                                                                        <CustomDropdown
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false,
+                                                                                label: "" // Override label to empty string to hide internal label
+                                                                            } as any}
+                                                                            value={value ?? ""}
+                                                                            onChange={async (newValue) => {
+                                                                                const previousValue = value;
+                                                                                handleInputChange(rowIndex, key, newValue);
+
+                                                                                // Trigger validation API if configured
+                                                                                if (editable.ValidationAPI?.dsXml) {
+                                                                                    // Small delay to ensure state is updated
+                                                                                    setTimeout(() => {
+                                                                                        handleInputBlur(rowIndex, key, previousValue);
+                                                                                    }, 100);
+                                                                                }
+                                                                            }}
+                                                                            options={
+                                                                                editable.options
+                                                                                    ? editable.options.map(opt => ({
+                                                                                        label: opt.label,
+                                                                                        value: opt.Value,
+                                                                                    }))
+                                                                                    : editable.dependsOn
+                                                                                        ? dropdownOptions[`${key}_${rowIndex}`] || []
+                                                                                        : dropdownOptions[key] || []
+                                                                            }
+                                                                            isLoading={
+                                                                                editable.dependsOn
+                                                                                    ? loadingDropdowns[`${key}_${rowIndex}`] || false
+                                                                                    : loadingDropdowns[key] || false
+                                                                            }
+                                                                            colors={colors}
+                                                                            formData={[]}
+                                                                            handleFormChange={() => { }}
+                                                                            formValues={row}
+                                                                        />
+                                                                    ) : editable.type === "WDateBox" ? (
+                                                                        <div
+                                                                            style={{
+                                                                                fontFamily: fonts.content,
+                                                                                color: colors.text,
+                                                                                backgroundColor: colors.textInputBackground,
+                                                                                borderColor: colors.textInputBorder,
+                                                                            }}
+                                                                        >
+                                                                            <DatePicker
+                                                                                selected={value ? new Date(value) : null}
+                                                                                onChange={(date: Date | null) =>
+                                                                                    handleInputChange(rowIndex, key, date)
+                                                                                }
+                                                                                dateFormat="dd/MM/yyyy"
+                                                                                className="w-full border border-gray-300 rounded px-3 py-2"
+                                                                            />
+                                                                        </div>
+                                                                    ) : null
+                                                                ) : (
                                                                     <input
                                                                         type="text"
                                                                         value={value ?? ""}
-                                                                        onChange={(e) =>
-                                                                            handleInputChange(rowIndex, key, e.target.value)
-                                                                        }
-                                                                        onFocus={() =>
-                                                                            setPreviousValues(prev => ({
-                                                                                ...prev,
-                                                                                [`${rowIndex}_${key}`]: value
-                                                                            }))
-                                                                        }
-                                                                        onBlur={() => {
-                                                                            handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
-                                                                            setPreviousValues(prev => {
-                                                                                const updated = { ...prev };
-                                                                                delete updated[`${rowIndex}_${key}`];
-                                                                                return updated;
-                                                                            });
-                                                                        }}
-                                                                        placeholder={editable.wPlaceholder}
-                                                                        className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                        disabled
+                                                                        className="w-full border rounded px-3 py-2 cursor-not-allowed"
                                                                         style={{
                                                                             fontFamily: fonts.content,
-                                                                            color: colors.text,
-                                                                            backgroundColor: colors.textInputBackground,
-                                                                            borderColor: colors.textInputBorder,
+                                                                            color: '#6b7280', // Gray-500 for disabled text
+                                                                            backgroundColor: '#f9fafb', // Gray-50 for disabled background
+                                                                            borderColor: '#d1d5db', // Gray-300 for disabled border
+                                                                            opacity: 0.6
                                                                         }}
+                                                                        readOnly
                                                                     />
-                                                                ) : editable.type === "WDropDownBox" ? (
-                                                                    <CustomDropdown
-                                                                        item={{ ...editable, isMultiple: false } as any}
-                                                                        value={value ?? ""}
-                                                                        onChange={(newValue) =>
-                                                                            handleInputChange(rowIndex, key, newValue)
-                                                                        }
-                                                                        options={
-                                                                            editable.options
-                                                                                ? editable.options.map(opt => ({
-                                                                                    label: opt.label,
-                                                                                    value: opt.Value,
-                                                                                }))
-                                                                                : editable.dependsOn
-                                                                                    ? dropdownOptions[`${key}_${rowIndex}`] || []
-                                                                                    : dropdownOptions[key] || []
-                                                                        }
-                                                                        isLoading={
-                                                                            editable.dependsOn
-                                                                                ? loadingDropdowns[`${key}_${rowIndex}`] || false
-                                                                                : loadingDropdowns[key] || false
-                                                                        }
-                                                                        colors={colors}
-                                                                        formData={[]}
-                                                                        handleFormChange={() => { }}
-                                                                        formValues={row}
-                                                                    />
-                                                                ) : editable.type === "WDateBox" ? (
-                                                                    <div
-                                                                        style={{
-                                                                            fontFamily: fonts.content,
-                                                                            color: colors.text,
-                                                                            backgroundColor: colors.textInputBackground,
-                                                                            borderColor: colors.textInputBorder,
-                                                                        }}
-                                                                    >
-                                                                        <DatePicker
-                                                                            selected={value ? new Date(value) : null}
-                                                                            onChange={(date: Date | null) =>
-                                                                                handleInputChange(rowIndex, key, date)
-                                                                            }
-                                                                            dateFormat="dd/MM/yyyy"
-                                                                            className="w-full border border-gray-300 rounded px-2 py-1"
-                                                                        />
-                                                                    </div>
-                                                                ) : null
-                                                            ) : (
-                                                                <span style={{ fontFamily: fonts.content }}>{value}</span>
-                                                            )}
-                                                        </td>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                // Table layout for normal editing
+                                <div className="overflow-auto flex-1">
+                                    <table className="border text-sm">
+                                        <thead>
+                                            <tr>
+                                                {showViewTable === true && <th
+                                                    className="border px-2 py-2 text-left"
+                                                    style={{
+                                                        backgroundColor: colors.primary,
+                                                        color: colors.text,
+                                                        fontFamily: fonts.content,
+                                                        minWidth: '100px'
+                                                    }}
+                                                >
+                                                    Actions
+                                                </th>}
+                                                {getOrderedColumns(Object.keys(localData[0])).map((key) => {
+                                                    const columnWidth = getColumnWidth(key);
+                                                    return (
+                                                        <th
+                                                            key={key}
+                                                            className="border px-2 py-2 text-left"
+                                                            style={{
+                                                                backgroundColor: colors.primary,
+                                                                color: colors.text,
+                                                                fontFamily: fonts.content,
+                                                                ...(columnWidth && { minWidth: `${columnWidth}px` }),
+                                                            }}
+                                                        >
+                                                            {key}
+                                                        </th>
                                                     );
                                                 })}
                                             </tr>
-                                        ))}
-                                    </tbody>
+                                        </thead>
+                                        <tbody>
+                                            {localData.map((row, rowIndex) => (
+                                                <tr
+                                                    key={rowIndex}
+                                                    style={{
+                                                        backgroundColor:
+                                                            rowIndex % 2 === 0
+                                                                ? colors.evenCardBackground
+                                                                : colors.oddCardBackground,
+                                                        color: colors.text,
+                                                        fontFamily: fonts.content,
+                                                    }}
+                                                >
+                                                    {showViewTable === true && <td className="border px-2 py-2">
+                                                        <button
+                                                            onClick={() => handleViewRow(row, rowIndex)}
+                                                            className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
+                                                            style={{
+                                                                fontFamily: fonts.content,
+                                                            }}
+                                                        >
+                                                            View
+                                                        </button>
+                                                    </td>}
+                                                    {getOrderedColumns(Object.keys(row)).map((key) => {
+                                                        const value = row[key];
+                                                        const editable = getEditableColumn(key);
+                                                        const isValueNumeric = isNumeric(value);
+                                                        const hasChar = hasCharacterField(key);
 
-                                </table>
-                            </div>
+                                                        // Get columns that should be left-aligned even if they contain numbers
+                                                        const leftAlignedColumns = settings?.leftAlignedColumns || settings?.leftAlignedColums
+                                                            ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
+                                                            : [];
+
+                                                        const isLeftAligned = leftAlignedColumns.includes(key);
+
+                                                        return (
+                                                            <td
+                                                                key={key}
+                                                                className="border px-2 py-2"
+                                                                style={{
+                                                                    textAlign: isLeftAligned || editable ? 'left' : (hasChar ? 'left' : 'right')
+                                                                }}
+                                                            >
+                                                                {editable ? (
+                                                                    editable.type === "WTextBox" ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={value ?? ""}
+                                                                            onChange={(e) =>
+                                                                                handleInputChange(rowIndex, key, e.target.value)
+                                                                            }
+                                                                            onFocus={() =>
+                                                                                setPreviousValues(prev => ({
+                                                                                    ...prev,
+                                                                                    [`${rowIndex}_${key}`]: value
+                                                                                }))
+                                                                            }
+                                                                            onBlur={() => {
+                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                                setPreviousValues(prev => {
+                                                                                    const updated = { ...prev };
+                                                                                    delete updated[`${rowIndex}_${key}`];
+                                                                                    return updated;
+                                                                                });
+                                                                            }}
+                                                                            placeholder={editable.wPlaceholder}
+                                                                            className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                            style={{
+                                                                                fontFamily: fonts.content,
+                                                                                color: colors.text,
+                                                                                backgroundColor: colors.textInputBackground,
+                                                                                borderColor: colors.textInputBorder,
+                                                                            }}
+                                                                        />
+                                                                    ) : editable.type === "WDropDownBox" ? (
+                                                                        <CustomDropdown
+                                                                            item={{
+                                                                                ...editable,
+                                                                                isMultiple: false,
+                                                                                label: "" // Override label to empty string for table layout too
+                                                                            } as any}
+                                                                            value={value ?? ""}
+                                                                            onChange={async (newValue) => {
+                                                                                const previousValue = value;
+                                                                                handleInputChange(rowIndex, key, newValue);
+
+                                                                                // Trigger validation API if configured
+                                                                                if (editable.ValidationAPI?.dsXml) {
+                                                                                    // Small delay to ensure state is updated
+                                                                                    setTimeout(() => {
+                                                                                        handleInputBlur(rowIndex, key, previousValue);
+                                                                                    }, 100);
+                                                                                }
+                                                                            }}
+                                                                            options={
+                                                                                editable.options
+                                                                                    ? editable.options.map(opt => ({
+                                                                                        label: opt.label,
+                                                                                        value: opt.Value,
+                                                                                    }))
+                                                                                    : editable.dependsOn
+                                                                                        ? dropdownOptions[`${key}_${rowIndex}`] || []
+                                                                                        : dropdownOptions[key] || []
+                                                                            }
+                                                                            isLoading={
+                                                                                editable.dependsOn
+                                                                                    ? loadingDropdowns[`${key}_${rowIndex}`] || false
+                                                                                    : loadingDropdowns[key] || false
+                                                                            }
+                                                                            colors={colors}
+                                                                            formData={[]}
+                                                                            handleFormChange={() => { }}
+                                                                            formValues={row}
+                                                                        />
+                                                                    ) : editable.type === "WDateBox" ? (
+                                                                        <div
+                                                                            style={{
+                                                                                fontFamily: fonts.content,
+                                                                                color: colors.text,
+                                                                                backgroundColor: colors.textInputBackground,
+                                                                                borderColor: colors.textInputBorder,
+                                                                            }}
+                                                                        >
+                                                                            <DatePicker
+                                                                                selected={value ? new Date(value) : null}
+                                                                                onChange={(date: Date | null) =>
+                                                                                    handleInputChange(rowIndex, key, date)
+                                                                                }
+                                                                                dateFormat="dd/MM/yyyy"
+                                                                                className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                            />
+                                                                        </div>
+                                                                    ) : null
+                                                                ) : (
+                                                                    <span style={{ fontFamily: fonts.content }}>{value}</span>
+                                                                )}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )
                         ) : (
                             <p className="text-gray-600">No data available.</p>
                         )}
@@ -1121,7 +1311,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                     localStorage.setItem('rekycRowData_viewMode', null);
                                     localStorage.setItem("ekyc_viewMode", "false");
                                     setIsKycModalOpen(false);
-                                 }}
+                                }}
                                 className="text-gray-700 hover:text-gray-900"
                             >
                                 ✕
