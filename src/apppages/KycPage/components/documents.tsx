@@ -9,7 +9,8 @@ import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
-
+import axios from 'axios';
+import { BASE_URL, PATH_URL } from '@/utils/constants';
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     const { colors } = useTheme();
@@ -23,7 +24,8 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const success = searchParams.get('success');
     const id = searchParams.get('id');
     const scope = searchParams.get('scope');
-
+    const signerIdentifier = searchParams.get('signerIdentifier');
+    const esp = searchParams.get('esp');
 
     const [personalDropdownOptions, setPersonalDropdownOptions] = useState<Record<string, any[]>>({});
     const [personalLoadingDropdowns, setPersonalLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -36,31 +38,83 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         callback?: (confirmed: boolean) => void;
     }>({ isOpen: false, message: '', type: 'M' });
 
-    const [kraESignSubmit, setKraEsignSubmit] = useState(false);
-    const [finalESignSubmit, setFinalEsignSubmit] = useState(false);
+    // State for button enabling and PDF data
+    const [kraPdfData, setKraPdfData] = useState<any | null>(null);
+    const [finalPdfData, setFinalPdfData] = useState<any | null>(null);
+    const [kraPdfGenerated, setKraPdfGenerated] = useState(false);
+    const [kraESignEnabled, setKraESignEnabled] = useState(false);
+    const [finalPdfGenerated, setFinalPdfGenerated] = useState(false);
+    const [finalESignEnabled, setFinalESignEnabled] = useState(false);
+    const [isGeneratingKraPdf, setIsGeneratingKraPdf] = useState(false);
+    const [isGeneratingFinalPdf, setIsGeneratingFinalPdf] = useState(false);
+    const [isSigningKra, setIsSigningKra] = useState(false);
+    const [isSigningFinal, setIsSigningFinal] = useState(false);
 
-    console.log("check the sumit button", enableSubmitBtn)
+    // Load state from localStorage on component mount
+    useEffect(() => {
+        const loadState = () => {
+            const savedState = localStorage.getItem('ekyc_pdf_state');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                setKraPdfData(state.kraPdfData || null);
+                setFinalPdfData(state.finalPdfData || null);
+                setKraPdfGenerated(state.kraPdfGenerated || false);
+                setKraESignEnabled(state.kraESignEnabled || false);
+                setFinalPdfGenerated(state.finalPdfGenerated || false);
+                setFinalESignEnabled(state.finalESignEnabled || false);
+            }
+        };
+        loadState();
+    }, []);
 
+    // Save state to localStorage whenever it changes
+    useEffect(() => {
+        if (ekycChecker) {
+            localStorage.setItem('ekyc_pdf_state', JSON.stringify({
+                kraPdfData,
+                finalPdfData,
+                kraPdfGenerated,
+                kraESignEnabled,
+                finalPdfGenerated,
+                finalESignEnabled
+            }));
+        }
+    }, [kraPdfData, finalPdfData, kraPdfGenerated, kraESignEnabled, finalPdfGenerated, finalESignEnabled, ekycChecker]);
 
+    // Handle E-Sign callback
+    useEffect(() => {
+        if (success === 'true' && id && signerIdentifier && esp) {
+            const savedState = localStorage.getItem('ekyc_esign_state');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+
+                if (state.currentStep === 'kra_esign_completed') {
+                    setFinalPdfGenerated(true);
+                    toast.success("KRA E-Sign completed successfully");
+                } else if (state.currentStep === 'final_esign_completed') {
+                    toast.success("Final E-Sign completed successfully");
+                }
+
+                localStorage.removeItem('ekyc_esign_state');
+                router.replace(window.location.pathname);
+            }
+        }
+    }, [success, id, signerIdentifier, esp, router]);
 
     useEffect(() => {
         if (formFields && formFields.length > 0) {
             formFields.forEach((field) => {
                 if (field.wQuery && field.wKey) {
-                    // Fetch dropdown options for each field with a query
                     fetchEkycDropdownOptions(field, setPersonalDropdownOptions, setPersonalLoadingDropdowns);
                 }
             })
         }
-    }, [])
+    }, [formFields]);
 
-    // Handler to update the 0th index of personalTabData.tableData in dynamicData
     const handleFieldChange = (updateFn: (prev: any) => any) => {
-        console.log('handleFieldChange called with updateFn:', updateFn);
         setFieldData((prevState: any) => {
             const prevTableData = prevState.attachments.tableData || [];
             const updatedRow = updateFn(prevTableData[0] || {});
-            // console.log('handleFieldChange called with updateFn:', updatedRow);
             return {
                 ...prevState,
                 attachments: {
@@ -75,7 +129,6 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         setFieldValues((prev: any) => updateFn(prev));
     };
 
-    // Validate mandatory fields for nominee
     const validateMandatoryFields = (formData: any) => {
         const errors: Record<string, string> = {};
         let isValid = true;
@@ -85,25 +138,20 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 isValid = false;
             }
         });
-
         return { isValid, errors };
     };
 
-
     function transformData(inputData: any) {
         const result = {};
-
         for (const [key, value] of Object.entries(inputData)) {
             if (value && typeof value === 'object' && 'data' in value) {
                 result[key] = value.data;
             } else {
-                result[key] = value
+                result[key] = value;
             }
         }
-
         return [result];
     }
-
 
     const handleSave = () => {
         const { isValid, errors } = validateMandatoryFields(fieldValues);
@@ -113,16 +161,15 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             return;
         } else {
             const transformedData = transformData(tableData[0] || {});
-            console.log('Transformed Data:', transformedData);
             handleSaveSinglePageData(
                 Settings.SaveNextAPI,
                 transformedData,
                 setActiveTab,
                 "attachments",
                 setSaving
-            )
+            );
         }
-    }
+    };
 
     const handleSubmit = () => {
         const rawData = localStorage.getItem("ekyc_dynamicData");
@@ -146,24 +193,331 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                     SegmentDetails: storedFormData?.segmentTabData?.tableData || [],
                 }
             ]
-        }
-        console.log("check submit data", JSON.parse(rawData));
-        console.log("check constructed payload", constructPayload);
-
+        };
         SubmitEkycForm(Settings?.MakerSaveAPI, constructPayload, setSaving, Settings);
-    }
+    };
 
+
+    const handleGenerateKraPdf = async () => {
+        setIsGeneratingKraPdf(true);
+        try {
+            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const accYear = localStorage.getItem('accYear') || '24';
+            const myDbPrefix = localStorage.getItem('myDbPrefix') || 'undefined';
+            const memberCode = localStorage.getItem('memberCode') || 'undefined';
+            const secretKey = localStorage.getItem('secretKey') || 'undefined';
+            const menuCode = localStorage.getItem('menuCode') || '27';
+
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"TradeWeb","Option":"KRAPDF","RequestFrom":"W"</J_Ui>
+                <Sql></Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple></X_Filter_Multiple>
+                <X_Data></X_Data>
+                <J_Api>"UserId":"${userId}","AccYear":"${accYear}","MyDbPrefix":"${myDbPrefix}","MemberCode":"${memberCode}","SecretKey":"${secretKey}","MenuCode":"${menuCode}"</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
+                await handleGenerateRekycPdf('KRAPDF');
+            } else if (response.data?.data?.rs0?.[0]?.Base64PDF) {
+                const pdfData = response.data.data.rs0[0];
+                setKraPdfData(pdfData);
+                setKraPdfGenerated(true);
+                setKraESignEnabled(true);
+                toast.success("KRA PDF generated successfully");
+            } else {
+                toast.error("Failed to generate KRA PDF");
+            }
+        } catch (error) {
+            console.error("Error generating KRA PDF:", error);
+            toast.error("Error generating KRA PDF");
+        } finally {
+            setIsGeneratingKraPdf(false);
+        }
+    };
+
+    const handleGenerateRekycPdf = async (reportName: string) => {
+        try {
+            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const entryName = 'REKYC';
+            const clientCode = userId;
+
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"TradeWeb","Option":"GenerateRekycPDF","RequestFrom":"W","ReportDisplay":"D"</J_Ui>
+                <Sql></Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple></X_Filter_Multiple>
+                <X_Data>
+                    <ReportName>${reportName}</ReportName>
+                    <EntryName>${entryName}</EntryName>
+                    <ClientCode>${clientCode}</ClientCode>
+                </X_Data>
+                <J_Api>"UserId":"${userId}"</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response.data?.data?.rs0?.[0]?.Base64PDF) {
+                const pdfData = response.data.data.rs0[0];
+                if (reportName === 'KRAPDF') {
+                    setKraPdfData(pdfData);
+                    setKraPdfGenerated(true);
+                    setKraESignEnabled(true);
+                    toast.success("KRA PDF generated successfully");
+                } else {
+                    setFinalPdfData(pdfData);
+                    setFinalPdfGenerated(true);
+                    setFinalESignEnabled(true);
+                    toast.success("Final PDF generated successfully");
+                }
+            } else {
+                toast.error(`Failed to generate ${reportName} PDF`);
+            }
+        } catch (error) {
+            console.error(`Error generating ${reportName} PDF:`, error);
+            toast.error(`Error generating ${reportName} PDF`);
+        }
+    };
+
+    const handleKraESign = async () => {
+        if (!kraPdfData) {
+            toast.error("No KRA PDF available for E-Sign");
+            return;
+        }
+
+        try {
+            setIsSigningKra(true);
+            const userId = localStorage.getItem('userId') || 'ADMIN';
+
+            const J_Ui = {
+                ActionName: "Rekyc",
+                Option: "EsignRequest"
+            };
+            const Sql = null;
+            const X_Filter = "";
+            const X_Filter_Multiple = {
+                ClientCode: userId,
+                base64: kraPdfData.Base64PDF,
+                pdfpage: kraPdfData.TotalPages.toString(),
+                FileType: "KRAPDF"
+            };
+            const J_Api = {
+                UserId: userId
+            };
+
+            let xFilterMultiple = '';
+            Object.entries(X_Filter_Multiple).forEach(([key, value]) => {
+                xFilterMultiple += `<${key}>${value}</${key}>`;
+            });
+
+            const jUi = Object.entries(J_Ui).map(([key, value]) => `"${key}":"${value}"`).join(',');
+            const jApi = Object.entries(J_Api).map(([key, value]) => `"${key}":"${value}"`).join(',');
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${Sql || ''}</Sql>
+                <X_Filter>${X_Filter}</X_Filter>
+                <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response.data?.success) {
+                const columnData = response.data?.data?.rs0?.[0]?.Column1;
+                console.log("KRA E-Sign response column data:", columnData);
+
+                if (columnData) {
+                    try {
+                        // Parse the XML string to extract the Url
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(columnData, 'text/html');
+                        const url = doc.querySelector('Url')?.textContent;
+                        console.log("Parsed XML Document:", url);
+
+                        console.log("check url", url)
+                        if (url) {
+                            localStorage.setItem('ekyc_esign_state', JSON.stringify({
+                                kraPdfData,
+                                finalPdfData,
+                                kraPdfGenerated: true,
+                                kraESignEnabled: true,
+                                finalPdfGenerated: false,
+                                finalESignEnabled: false,
+                                currentStep: 'kra_esign_completed'
+                            }));
+                            window.open(url, '_self');
+                            return;
+                        } else {
+                            toast.error("No URL found in E-Sign response");
+                        }
+                    } catch (error) {
+                        console.error("Error parsing E-Sign response:", error);
+                        toast.error("Error processing E-Sign response");
+                    }
+                }
+            } else {
+                toast.error(response.data?.message || "Failed to initiate KRA E-Sign");
+            }
+        } catch (error) {
+            console.error("Error during KRA E-Sign:", error);
+            toast.error("Error during KRA E-Sign");
+        } finally {
+            setIsSigningKra(false);
+        }
+    };
+
+    const handleGenerateFinalPdf = async () => {
+        setIsGeneratingFinalPdf(true);
+        try {
+            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const accYear = localStorage.getItem('accYear') || '24';
+            const myDbPrefix = localStorage.getItem('myDbPrefix') || 'undefined';
+            const memberCode = localStorage.getItem('memberCode') || 'undefined';
+            const secretKey = localStorage.getItem('secretKey') || 'undefined';
+            const menuCode = localStorage.getItem('menuCode') || '27';
+
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"TradeWeb","Option":"FinalPDF","RequestFrom":"W"</J_Ui>
+                <Sql></Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple></X_Filter_Multiple>
+                <X_Data></X_Data>
+                <J_Api>"UserId":"${userId}","AccYear":"${accYear}","MyDbPrefix":"${myDbPrefix}","MemberCode":"${memberCode}","SecretKey":"${secretKey}","MenuCode":"${menuCode}"</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
+                await handleGenerateRekycPdf('FINALPDF');
+            } else if (response.data?.data?.rs0?.[0]?.Base64PDF) {
+                setFinalPdfData(response.data.data.rs0[0]);
+                setFinalPdfGenerated(true);
+                setFinalESignEnabled(true);
+                toast.success("Final PDF generated successfully");
+            } else {
+                toast.error("Failed to generate Final PDF");
+            }
+        } catch (error) {
+            console.error("Error generating Final PDF:", error);
+            toast.error("Error generating Final PDF");
+        } finally {
+            setIsGeneratingFinalPdf(false);
+        }
+    };
+
+    const handleFinalESign = async () => {
+        if (!finalPdfData) {
+            toast.error("No Final PDF available for E-Sign");
+            return;
+        }
+
+        try {
+            setIsSigningFinal(true);
+            const userId = localStorage.getItem('userId') || 'ADMIN';
+
+            const J_Ui = {
+                ActionName: "Rekyc",
+                Option: "EsignRequest"
+            };
+            const Sql = null;
+            const X_Filter = "";
+            const X_Filter_Multiple = {
+                ClientCode: userId,
+                base64: finalPdfData.Base64PDF,
+                pdfpage: finalPdfData.TotalPages.toString(),
+                FileType: finalPdfData.PDFName
+            };
+            const J_Api = {
+                UserId: userId
+            };
+
+            let xFilterMultiple = '';
+            Object.entries(X_Filter_Multiple).forEach(([key, value]) => {
+                xFilterMultiple += `<${key}>${value}</${key}>`;
+            });
+
+            const jUi = Object.entries(J_Ui).map(([key, value]) => `"${key}":"${value}"`).join(',');
+            const jApi = Object.entries(J_Api).map(([key, value]) => `"${key}":"${value}"`).join(',');
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${Sql || ''}</Sql>
+                <X_Filter>${X_Filter}</X_Filter>
+                <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response.data?.success) {
+                const columnData = response.data?.data?.rs0?.[0]?.Column1;
+                if (columnData) {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(`<root>${columnData}</root>`, 'text/xml');
+                    const urlNode = xmlDoc.getElementsByTagName('Url')[0] || xmlDoc.getElementsByTagName('redirectUrl')[0];
+                    const url = urlNode?.textContent;
+
+                    if (url) {
+                        localStorage.setItem('ekyc_esign_state', JSON.stringify({
+                            kraPdfData,
+                            finalPdfData,
+                            kraPdfGenerated: true,
+                            kraESignEnabled: true,
+                            finalPdfGenerated: true,
+                            finalESignEnabled: true,
+                            currentStep: 'final_esign_completed'
+                        }));
+
+                        window.open(url, '_self');
+                        return;
+                    }
+                }
+                toast.error("No redirect URL found in E-Sign response");
+            } else {
+                toast.error(response.data?.message || "Failed to initiate Final E-Sign");
+            }
+        } catch (error) {
+            console.error("Error during Final E-Sign:", error);
+            toast.error("Error during Final E-Sign");
+        } finally {
+            setIsSigningFinal(false);
+        }
+    };
 
     useEffect(() => {
         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
-            const redirectedField = localStorage.getItem('redirectedField')
-
-            console.log("calling third part", redirectedField)
-            // rekyc?success=True&id=f2794eec-0e60-4084-8c0f-77ca0790c769&scope=ADHAR%2BPANCR
             handleDigiLockerCallBackAPI(Settings);
             router.replace(window.location.pathname);
         }
-    }, [scope, success])
+    }, [scope, success, Settings, router]);
 
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
@@ -178,7 +532,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 >
                     <IoArrowBack size={20} />
                 </button>
-                {!viewMode && (
+                {(!viewMode && !ekycChecker) && (
                     <div className="text-end">
                         <button
                             className="px-4 py-1 rounded-lg ml-4"
@@ -203,38 +557,57 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         >
                             Submit
                         </button>
-
                     </div>
                 )}
                 {ekycChecker && (
                     <div className="text-end">
                         <button
-                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            style={{
+                                backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
+                                color: enableSubmitBtn ? colors.buttonText : '#666666',
+                                cursor: enableSubmitBtn ? 'pointer' : 'not-allowed'
+                            }}
                             className="px-4 py-1 rounded-lg ml-4"
-                            disabled={true}
+                            disabled={!enableSubmitBtn || isGeneratingKraPdf}
+                            onClick={handleGenerateKraPdf}
                         >
-                            KRA PDF-Gen
+                            {isGeneratingKraPdf ? 'Generating...' : 'KRA PDF-Gen'}
                         </button>
                         <button
-                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            style={{
+                                backgroundColor: kraESignEnabled ? colors.buttonBackground : '#cccccc',
+                                color: kraESignEnabled ? colors.buttonText : '#666666',
+                                cursor: kraESignEnabled ? 'pointer' : 'not-allowed'
+                            }}
                             className="px-4 py-1 rounded-lg ml-4"
-                            disabled={true}
+                            disabled={!kraESignEnabled || isSigningKra}
+                            onClick={handleKraESign}
                         >
-                            KRA E-Sign
+                            {isSigningKra ? 'Signing...' : 'KRA E-Sign'}
                         </button>
                         <button
-                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            style={{
+                                backgroundColor: finalPdfGenerated ? colors.buttonBackground : '#cccccc',
+                                color: finalPdfGenerated ? colors.buttonText : '#666666',
+                                cursor: finalPdfGenerated ? 'pointer' : 'not-allowed'
+                            }}
                             className="px-4 py-1 rounded-lg ml-4"
-                            disabled={true}
+                            disabled={!finalPdfGenerated || isGeneratingFinalPdf}
+                            onClick={handleGenerateFinalPdf}
                         >
-                            Final PDF-Gen
+                            {isGeneratingFinalPdf ? 'Generating...' : 'Final PDF-Gen'}
                         </button>
                         <button
-                            style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
+                            style={{
+                                backgroundColor: finalESignEnabled ? colors.buttonBackground : '#cccccc',
+                                color: finalESignEnabled ? colors.buttonText : '#666666',
+                                cursor: finalESignEnabled ? 'pointer' : 'not-allowed'
+                            }}
                             className="px-4 py-1 rounded-lg ml-4"
-                            disabled={true}
+                            disabled={!finalESignEnabled || isSigningFinal}
+                            onClick={handleFinalESign}
                         >
-                            Final-ESign
+                            {isSigningFinal ? 'Signing...' : 'Final-ESign'}
                         </button>
                     </div>
                 )}

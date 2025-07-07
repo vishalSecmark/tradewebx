@@ -520,7 +520,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
         const isEnabled = viewMode ? false : field.FieldEnabledTag === 'Y';
         const hasError = fieldErrors && fieldErrors[field.wKey];
-        const isJustUpdated = field.fieldJustUpdated === "true";
+        const isJustUpdated = field.fieldJustUpdated === "true" || field.isChangeColumn === "true";
 
         switch (field.type) {
             case 'WDropDownBox':

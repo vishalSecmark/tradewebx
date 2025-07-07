@@ -87,3 +87,7 @@ export const buildFilterXml = (filters: Record<string, any>, userId: string): st
         return `<ClientCode>${userId}</ClientCode>`;
     }
 };
+
+export const clearMakerSates = () => {
+    localStorage.removeItem('ekycChecker');
+}

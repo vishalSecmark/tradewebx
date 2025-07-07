@@ -10,6 +10,7 @@ import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
+import { clearMakerSates } from "@/utils/helper";
 
 interface RowData {
     [key: string]: any;
@@ -264,6 +265,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
             localStorage.setItem("ekyc_viewMode", "true");
             setIsKycModalOpen(true);
+            clearMakerSates();
         } else {
             fetchPageDataForView(rowData);
         }

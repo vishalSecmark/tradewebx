@@ -10,6 +10,7 @@ import Loader from "@/components/Loader";
 import { buildTabs, TabData } from "./KycTabs";
 import { FiRefreshCcw } from "react-icons/fi";
 import { useSaveLoading } from "@/context/SaveLoadingContext";
+import { useLocalStorageListener } from "@/hooks/useLocalStorageListner";
 
 
 const Kyc = () => {
@@ -17,6 +18,9 @@ const Kyc = () => {
     const { isSaving } = useSaveLoading();
     const menuItems = useAppSelector(selectAllMenuItems);
     const pageData: any = findPageData(menuItems, "rekyc");
+
+    const ekycChecker = useLocalStorageListener("ekyc_checker", false);
+
 
     const [isLoading, setIsLoading] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -58,6 +62,7 @@ const Kyc = () => {
     }, [dynamicData, activeTab]);
 
     const fetchFormData = async (viewMode: boolean = false) => {
+        console.log("check for page data --->:", pageData);
         setIsLoading(true);
         try {
             const { MasterEntry } = pageData[0]?.Entry;
@@ -65,10 +70,10 @@ const Kyc = () => {
             // const jApi = Object.entries(MasterEntry.J_Api || {}).map(([k, v]) => `"${k}":"${v}"`).join(",");
             const userData = localStorage.getItem("rekycRowData_viewMode");
             const parsedUserData = userData ? JSON.parse(userData) : null;
-            console.log("Parsed User Data:", parsedUserData,userData);
-            const payload = !viewMode ? MasterEntry.X_Filter : {
-                EntryName:  parsedUserData?.EntryName,
-                ClientCode:  parsedUserData?.ClientCode,
+            console.log("Parsed User Data:", parsedUserData, userData);
+            const payload = (!viewMode && !ekycChecker) ? MasterEntry.X_Filter : {
+                EntryName: parsedUserData?.EntryName,
+                ClientCode: parsedUserData?.ClientCode,
             }
 
             const xFilter = Object.entries(payload || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
@@ -121,7 +126,7 @@ const Kyc = () => {
 
     useEffect(() => {
         const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
-        console.log("Parsed User Data:",viewMode)
+        console.log("Parsed User Data:", viewMode)
         fetchFormData(viewMode);
     }, []);
 
@@ -146,7 +151,7 @@ const Kyc = () => {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
-                        onClick={()=>setActiveTab(tab.id)}
+                        onClick={() => setActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 flex items-center gap-2 relative ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`}`}

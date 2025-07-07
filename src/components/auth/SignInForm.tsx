@@ -4,7 +4,7 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { EyeCloseIcon, EyeIcon } from "@/icons";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
@@ -172,6 +172,7 @@ const VersionUpdateModal = ({
 };
 
 export default function SignInForm() {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
@@ -490,6 +491,14 @@ export default function SignInForm() {
       setIsLoading(false);
     }
   };
+
+  // Effect to clear local storage and redirect to sign-in if clearLocalStorage param is true
+   useEffect(() => {
+    if (searchParams.get('clearLocalStorage') === 'true') {
+      localStorage.clear();
+      router.replace(`${BASE_PATH_FRONT_END}/signin`);
+    }
+  }, [searchParams]);
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
