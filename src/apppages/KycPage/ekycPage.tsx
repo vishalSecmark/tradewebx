@@ -10,6 +10,7 @@ import Loader from "@/components/Loader";
 import { buildTabs, TabData } from "./KycTabs";
 import { FiRefreshCcw } from "react-icons/fi";
 import { useSaveLoading } from "@/context/SaveLoadingContext";
+import { useLocalStorageListener } from "@/hooks/useLocalStorageListner";
 
 
 const Kyc = () => {
@@ -17,6 +18,9 @@ const Kyc = () => {
     const { isSaving } = useSaveLoading();
     const menuItems = useAppSelector(selectAllMenuItems);
     const pageData: any = findPageData(menuItems, "rekyc");
+
+    const ekycChecker = useLocalStorageListener("ekyc_checker", false);
+
 
     const [isLoading, setIsLoading] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -60,15 +64,16 @@ const Kyc = () => {
     const fetchFormData = async (viewMode: boolean = false) => {
         setIsLoading(true);
         try {
-            const { MasterEntry } = pageData[0].Entry;
+            const { MasterEntry } = pageData[0]?.Entry;
             // const jUi = Object.entries(MasterEntry.J_Ui || {}).map(([k, v]) => `"${k}":"${k === 'Option' ? 'Master_Edit' : v}"`).join(",");
             // const jApi = Object.entries(MasterEntry.J_Api || {}).map(([k, v]) => `"${k}":"${v}"`).join(",");
+        
             const userData = localStorage.getItem("rekycRowData_viewMode");
             const parsedUserData = userData ? JSON.parse(userData) : null;
-            console.log("Parsed User Data:", parsedUserData,userData);
-            const payload = !viewMode ? MasterEntry.X_Filter : {
-                EntryName:  parsedUserData?.EntryName,
-                ClientCode:  parsedUserData?.ClientCode,
+        
+            const payload = (!viewMode && !ekycChecker) ? MasterEntry.X_Filter : {
+                EntryName: parsedUserData?.EntryName,
+                ClientCode: parsedUserData?.ClientCode,
             }
 
             const xFilter = Object.entries(payload || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
@@ -121,12 +126,10 @@ const Kyc = () => {
 
     useEffect(() => {
         const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
-        console.log("Parsed User Data:",viewMode)
         fetchFormData(viewMode);
     }, []);
 
     const tabs = buildTabs(dynamicData, setDynamicData, setActiveTab);
-
     return (
         <div className="p-4 pt-0" style={{ fontFamily: fonts.content }}>
             <div className="flex justify-between items-center mb-2">
@@ -170,7 +173,7 @@ const Kyc = () => {
                     <Loader />
                 </div>
             ) : (
-                <div className="mt-3">{tabs.find(tab => tab.id === activeTab)?.content}</div>
+                <div>{tabs.find(tab => tab.id === activeTab)?.content}</div>
             )}
         </div>
     );

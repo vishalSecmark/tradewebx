@@ -88,6 +88,9 @@ export const buildFilterXml = (filters: Record<string, any>, userId: string): st
     }
 };
 
+export const clearMakerSates = () => {
+    localStorage.removeItem('ekycChecker');
+}
 
 export function getFileTypeFromBase64(base64: string): string {
     const header = base64.slice(0, 30);
@@ -102,4 +105,6 @@ export function getFileTypeFromBase64(base64: string): string {
     if (/^[A-Za-z0-9+\/=]+\s*$/.test(base64)) return 'text'; // generic fallback for plain text
   
     return 'unknown';
-  }
+}
+
+

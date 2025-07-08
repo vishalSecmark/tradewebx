@@ -134,7 +134,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   };
 
   const handleEditNomineeClick = (row: any, rowIndex: number) => {
-    setCurrentFormData({ ...row, IsModified : "true" });
+    setCurrentFormData({ ...row, IsModified: "true" });
     setGuardianFormData(row.GuardianDetails || {});
     setIsEditing(true);
     setEditIndex(rowIndex);

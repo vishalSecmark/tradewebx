@@ -10,9 +10,10 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/sso');
 
   // If user is not authenticated and trying to access protected route
-  console.log("pathname", request.nextUrl.pathname);
-  if (!authToken && !isAuthPage) {
-    return NextResponse.redirect(new URL(`${BASE_PATH_FRONT_END}/signin`, request.url));
+ if (!authToken && !isAuthPage) {
+    const signInUrl = new URL(`${BASE_PATH_FRONT_END}/signin`, request.url);
+    signInUrl.searchParams.set('clearLocalStorage', 'true'); // Add query param
+    return NextResponse.redirect(signInUrl);
   }
 
   // If user is authenticated and trying to access auth pages
