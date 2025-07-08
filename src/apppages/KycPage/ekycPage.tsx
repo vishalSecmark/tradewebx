@@ -178,7 +178,7 @@ const Kyc = () => {
                     <Loader />
                 </div>
             ) : (
-                <div className="mt-3">{tabs.find(tab => tab.id === activeTab)?.content}</div>
+                <div>{tabs.find(tab => tab.id === activeTab)?.content}</div>
             )}
         </div>
     );

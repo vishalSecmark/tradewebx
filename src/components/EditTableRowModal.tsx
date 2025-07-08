@@ -278,6 +278,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         if (rowData?.EntryName === "Rekyc") {
             localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
             localStorage.setItem("ekyc_viewMode", "true");
+            localStorage.setItem("ekyc_activeTab", "personal");
+            localStorage.setItem("ekyc_checker", "false");
             setIsKycModalOpen(true);
             clearMakerSates();
         } else {
@@ -1304,17 +1306,22 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             )}
             {isEkycModalOpen && (
                 <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg py-3 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                        <div className="flex justify-between items-center pl-4">
+                    <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[85vh] max-h-[85vh]">
+                        <div className="flex justify-end items-center pr-4 mb-2">
                             <button
                                 onClick={() => {
                                     localStorage.setItem('rekycRowData_viewMode', null);
                                     localStorage.setItem("ekyc_viewMode", "false");
                                     setIsKycModalOpen(false);
                                 }}
-                                className="text-gray-700 hover:text-gray-900"
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText,
+                                }}
+                                className="px-4 py-1 rounded-lg ml-4"
+
                             >
-                                ✕
+                                Close
                             </button>
                         </div>
                         <KycPage />

@@ -83,7 +83,7 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
     
     return (
         <div className="w-full p-5 pt-2 bg-white rounded-lg shadow-md">
-            <div className="text-end mb-2">
+            <div className="text-end">
                 {viewMode ? (
                     <button
                         className="rounded-lg px-4 py-1"
