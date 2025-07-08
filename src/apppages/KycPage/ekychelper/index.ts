@@ -111,8 +111,6 @@ export const handleSaveSinglePageData = async (
         } else {
             toast.error(response.data.message || "Something went wrong while saving data");
         }
-        
-        console.log('Response from saveSinglePageData:', response.data);
     } catch (error) {
         console.error(`Error saving data:`, error);
         toast.error("An error occurred while saving data");
@@ -183,9 +181,6 @@ export const SubmitEkycForm = async (settings: any,data : any,setSaving?: (loadi
             toast.error(response.data.message || "Something went wrong while saving data");
         }
        
-
-            console.log("check for response", response)
-
            } catch (error) {
             console.error(`Error fetching options for:`, error);
         } finally {
@@ -226,7 +221,6 @@ export const SubmitEkycForm = async (settings: any,data : any,setSaving?: (loadi
     
                 // Extract and parse the XML from response
                 const columnData = response?.data?.data?.rs0?.[0]?.Column1;
-                console.log("check column ata",columnData)
                 if (columnData) {
                     // Ensure the XML is wrapped in a root tag
                     const xmlString = columnData.trim().startsWith('<root>') ? columnData : `<root>${columnData}</root>`;
@@ -241,7 +235,6 @@ export const SubmitEkycForm = async (settings: any,data : any,setSaving?: (loadi
                         console.error('Error parsing ThirdPartyAPI XML:', err);
                     }
                 }
-                console.log('ThirdPartyAPI response:', response?.data);
             } catch (error) {
                 console.error('ThirdPartyAPI error:', error);
                 toast.error('ThirdPartyAPI error!');
@@ -286,7 +279,6 @@ export const handleDigiLockerCallBackAPI=async (Settings: any) => {
                     localStorage.setItem("ekyc_checker","true");
                     toast.success("E-verification successfull")
                 }
-                console.log("check call back api",columnData);
                } catch (error) {
                 console.error('ThirdPartyAPI error:', error);
                 toast.error('ThirdPartyAPI error!');

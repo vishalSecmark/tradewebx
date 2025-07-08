@@ -342,17 +342,12 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
             if (response.data?.success) {
                 const columnData = response.data?.data?.rs0?.[0]?.Column1;
-                console.log("KRA E-Sign response column data:", columnData);
-
                 if (columnData) {
                     try {
                         // Parse the XML string to extract the Url
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
-                        console.log("Parsed XML Document:", url);
-
-                        console.log("check url", url)
                         if (url) {
                             localStorage.setItem('ekyc_esign_state', JSON.stringify({
                                 kraPdfData,
@@ -485,31 +480,29 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
-                        console.log("Parsed XML Document:", url);
+                         if (url) {
+                            localStorage.setItem('ekyc_esign_state', JSON.stringify({
+                                kraPdfData,
+                                finalPdfData,
+                                kraPdfGenerated: true,
+                                kraESignEnabled: true,
+                                finalPdfGenerated: true,
+                                finalESignEnabled: true,
+                                currentStep: 'final_esign_completed'
+                            }));
 
-                    if (url) {
-                        localStorage.setItem('ekyc_esign_state', JSON.stringify({
-                            kraPdfData,
-                            finalPdfData,
-                            kraPdfGenerated: true,
-                            kraESignEnabled: true,
-                            finalPdfGenerated: true,
-                            finalESignEnabled: true,
-                            currentStep: 'final_esign_completed'
-                        }));
-
-                        window.open(url, '_self');
-                        return;
-                    }
-                    else {
+                            window.open(url, '_self');
+                            return;
+                        }
+                        else {
                             toast.error("No URL found in E-Sign response");
                         }
-                    }catch(err){
-                         console.error("Error parsing E-Sign response:", err);
+                    } catch (err) {
+                        console.error("Error parsing E-Sign response:", err);
                         toast.error("Error processing Final E-Sign response");
                     }
                 }
-            
+
             } else {
                 toast.error(response.data?.message || "Failed to initiate Final E-Sign");
             }
