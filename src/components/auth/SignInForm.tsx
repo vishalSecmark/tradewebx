@@ -437,27 +437,40 @@ export default function SignInForm() {
     dispatch(setAuthError(null));
 
     // Use fallback values if no login options are available
-    const params = {
-      userId: userId,
-      ePassword: Encryption(password),
-      key: loginAsOptions.length > 0 ? selectedLoginKey : LOGIN_KEY,
-      loginAs: loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS,
-      product: PRODUCT
-    };
+    const loginKey = loginAsOptions.length > 0 ? selectedLoginKey : LOGIN_KEY;
+    const loginAsValue = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
+
+    const xmlData = `<dsXml>
+    <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
+    <Sql/>
+    <X_Filter></X_Filter>
+    <X_Data>
+        <UserId>${userId}</UserId>
+        <Password>${password}</Password>
+        <EPassword>${Encryption(password)}</EPassword>
+        <Key>${loginKey}</Key>
+        <LoginAs>${loginAsValue}</LoginAs>
+        <Product>${PRODUCT}</Product>
+        <ICPV></ICPV>
+        <Feature></Feature>
+    </X_Data>
+    <J_Api>"UserId":"", "UserType":"User"</J_Api>
+</dsXml>`;
+
+    console.log('Login XML Data:', xmlData);
 
     try {
       const response = await axios({
         method: 'post',
-        url: BASE_URL + LOGIN_URL,
-        params: params,
+        url: BASE_URL + OTP_VERIFICATION_URL,
+        data: xmlData,
         headers: {
-          'Content-Type': 'application/json',
-        },
-        data: ''  // Empty body as requested
+          'Content-Type': 'application/xml',
+        }
       });
 
       const data = response.data;
-      console.log(data);
+      console.log('Login Response:', data);
 
       if (data.status) {
         dispatch(setAuthData({
