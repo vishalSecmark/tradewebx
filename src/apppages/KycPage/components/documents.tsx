@@ -309,8 +309,8 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const X_Filter = "";
             const X_Filter_Multiple = {
                 ClientCode: userId,
-                base64: kraPdfData.Base64PDF,
-                pdfpage: kraPdfData.TotalPages.toString(),
+                base64: kraPdfData?.Base64PDF,
+                pdfpage: kraPdfData?.TotalPages?.toString(),
                 FileType: "KRAPDF"
             };
             const J_Api = {
@@ -448,7 +448,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 ClientCode: userId,
                 base64: finalPdfData.Base64PDF,
                 pdfpage: finalPdfData.TotalPages.toString(),
-                FileType: finalPdfData.PDFName
+                FileType: "FINALPDF"
             };
             const J_Api = {
                 UserId: userId
@@ -480,10 +480,12 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             if (response.data?.success) {
                 const columnData = response.data?.data?.rs0?.[0]?.Column1;
                 if (columnData) {
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(`<root>${columnData}</root>`, 'text/xml');
-                    const urlNode = xmlDoc.getElementsByTagName('Url')[0] || xmlDoc.getElementsByTagName('redirectUrl')[0];
-                    const url = urlNode?.textContent;
+                    try {
+                        // Parse the XML string to extract the Url
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(columnData, 'text/html');
+                        const url = doc.querySelector('Url')?.textContent;
+                        console.log("Parsed XML Document:", url);
 
                     if (url) {
                         localStorage.setItem('ekyc_esign_state', JSON.stringify({
@@ -499,8 +501,15 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         window.open(url, '_self');
                         return;
                     }
+                    else {
+                            toast.error("No URL found in E-Sign response");
+                        }
+                    }catch(err){
+                         console.error("Error parsing E-Sign response:", err);
+                        toast.error("Error processing Final E-Sign response");
+                    }
                 }
-                toast.error("No redirect URL found in E-Sign response");
+            
             } else {
                 toast.error(response.data?.message || "Failed to initiate Final E-Sign");
             }
