@@ -447,7 +447,7 @@ export default function SignInForm() {
     <X_Filter></X_Filter>
     <X_Data>
         <UserId>${userId}</UserId>
-        <Password>${password}</Password>
+        
         <EPassword>${Encryption(password)}</EPassword>
         <Key>${loginKey}</Key>
         <LoginAs>${loginAsValue}</LoginAs>
@@ -524,7 +524,7 @@ export default function SignInForm() {
   };
 
   // Effect to clear local storage and redirect to sign-in if clearLocalStorage param is true
-   useEffect(() => {
+  useEffect(() => {
     if (searchParams.get('clearLocalStorage') === 'true') {
       localStorage.clear();
       router.replace(`${BASE_PATH_FRONT_END}/signin`);

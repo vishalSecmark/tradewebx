@@ -118,12 +118,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     
     const showViewDocumentAPI = settings.ShowViewDocumentAPI
 
-    console.log(settings,'settings');
-    
-
-
-
-
     const editableColumns = settings.EditableColumn || [];
 
     // Get column width configuration from settings
@@ -296,80 +290,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
 
 
-    const handleDocumentView = async (rowData: RowData, rowIndex: number) => {
-        if(rowData.RekycDocumentType === ''){
-            setValidationModal({
-                isOpen: true,
-                message:'Please select a Rekyc Document Type from the dropdown to view the document.',
-                type: 'E'
-            });
-            return
-        }
-        
-      
-        const J_Ui = Object.entries(showViewDocumentAPI.dsXml.J_Ui)
-          .map(([key, value]) => `"${key}":"${value}"`)
-          .join(',');
-      
-        const X_Filter_Multiple = Object.keys(showViewDocumentAPI.dsXml.X_Filter_Multiple)
-          .filter(key => key in rowData)
-          .map(key => `<${key}>${rowData[key]}</${key}>`)
-          .join('');
-      
-        const xmlData = `<dsXml>
-          <J_Ui>${J_Ui}</J_Ui>
-          <Sql>${showViewDocumentAPI.dsXml.Sql || ''}</Sql>
-          <X_Filter>${showViewDocumentAPI.dsXml.X_Filter || ''}</X_Filter>
-          <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
-          <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
-        </dsXml>`;
-      
-        try {
-          const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-            headers: {
-              'Content-Type': 'application/xml',
-              'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-            }
-          });
-      
-      
-          const base64 = response.data.data.rs0.Base64PDF;
-          const fileType = getFileTypeFromBase64(base64); // function you defined earlier
-          const mimeMap: Record<string, string> = {
-            pdf: 'application/pdf',
-            png: 'image/png',
-            jpeg: 'image/jpeg',
-            jpg: 'image/jpeg',
-            gif: 'image/gif',
-            xml: 'application/xml',
-            text: 'text/plain'
-          };
-      
-          const mimeType = mimeMap[fileType] || 'application/octet-stream';
-      
-          // Create Blob URL
-          const byteCharacters = atob(base64);
-          const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: mimeType });
-          const blobUrl = URL.createObjectURL(blob);
-      
-          // Open in new tab
-          const newTab = window.open(blobUrl, '_blank');
-          if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = `document.${fileType}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-      
-        } catch (error) {
-          console.error("Error fetching DocumentView:", error);
-          toast.error(error)
-        }
-      };
 
 
     const isNumeric = (value: any): boolean => {
@@ -966,6 +886,96 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
+
+    
+    const handleDocumentView = async (rowData: any,) => {
+        if ((rowData.RekycDocumentType === undefined || rowData.RekycDocumentType === '')) {
+            setValidationModal({
+                isOpen: true,
+                message: 'Please select a Rekyc Document Type from the dropdown to view the document.',
+                type: 'E'
+            });
+            return;
+        }
+        
+        
+      
+        const J_Ui = Object.entries(showViewDocumentAPI.dsXml.J_Ui)
+          .map(([key, value]) => `"${key}":"${value}"`)
+          .join(',');
+      
+        const X_Filter_Multiple = Object.keys(showViewDocumentAPI.dsXml.X_Filter_Multiple)
+          .filter(key => key in rowData)
+          .map(key => `<${key}>${rowData[key]}</${key}>`)
+          .join('');
+      
+        const xmlData = `<dsXml>
+          <J_Ui>${J_Ui}</J_Ui>
+          <Sql>${showViewDocumentAPI.dsXml.Sql || ''}</Sql>
+          <X_Filter>${showViewDocumentAPI.dsXml.X_Filter || ''}</X_Filter>
+          <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
+          <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+        </dsXml>`;
+      
+        try {
+          const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+            headers: {
+              'Content-Type': 'application/xml',
+              'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+            }
+          });
+
+        // if((response.data.data.rs0[0].Flag === 'E')){
+        //     console.log(response.data.data.rs0[0],'inside if');
+             
+        //     setValidationModal({
+        //         isOpen: true,
+        //         message: response.data.data.rs0[0].Message,
+        //         type: 'E'
+        //     });
+        //   }else{
+            const base64 = response.data.data.rs0.Base64PDF;
+          const fileType = getFileTypeFromBase64(base64); // function you defined earlier
+          const mimeMap: Record<string, string> = {
+            pdf: 'application/pdf',
+            png: 'image/png',
+            jpeg: 'image/jpeg',
+            jpg: 'image/jpeg',
+            gif: 'image/gif',
+            xml: 'application/xml',
+            text: 'text/plain'
+          };
+      
+          const mimeType = mimeMap[fileType] || 'application/octet-stream';
+      
+          // Create Blob URL
+          const byteCharacters = atob(base64);
+          const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          const blobUrl = URL.createObjectURL(blob);
+      
+          // Open in new tab
+          const newTab = window.open(blobUrl, '_blank');
+          if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `document.${fileType}`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        //   }
+            
+       
+          
+      
+        } catch (error) {
+          console.error("Error fetching DocumentView:", error);
+          toast.error(error)
+        }
+      };
+
     return (
         <>
             <Dialog open={isOpen} onClose={() => console.log("close")} className="relative z-[100]" >
@@ -994,17 +1004,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                         >
                                                             View Details
                                                         </button>
-                                                        {showViewDocumentBtn === true &&
-                                                         <button
-                                                         onClick={() => handleDocumentView(row, rowIndex)}
-                                                         className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
-                                                         style={{
-                                                             fontFamily: fonts.content,
-                                                         }}
-                                                     >
-                                                         View Document
-                                                     </button>
-                                                        }
+                                                        
                                                     </div>
                                                 )}
 
@@ -1327,6 +1327,19 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         )}
 
                         <div className="mt-6 flex justify-end gap-4">
+
+                        {showViewDocumentBtn === true &&
+                                                         <button
+                                                         onClick={() => handleDocumentView(localData[0])}
+                                                         className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
+                                                         style={{
+                                                             fontFamily: fonts.content,
+                                                         }}
+                                                     >
+                                                         View Document
+                                                     </button>
+                                                        }
+
                             <button
                                 onClick={handleSave}
                                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
