@@ -141,6 +141,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         placeholder={isLoading ? "Loading options..." : "Select..."}
         className="react-select-container"
         classNamePrefix="react-select"
+        menuPortalTarget={document.body}
         filterOption={() => true} // Bypass default filtering since we're handling it
         styles={{
           control: (base) => ({
@@ -149,6 +150,10 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             backgroundColor: colors.textInputBackground,
             boxShadow: isLoading ? `0 0 0 1px ${colors.primary}` : base.boxShadow,
             minWidth: isHorizontal ? '250px' : 'auto',
+          }),
+          menuPortal: base => ({
+            ...base,
+            zIndex: 9999, 
           }),
           singleValue: (base) => ({
             ...base,
