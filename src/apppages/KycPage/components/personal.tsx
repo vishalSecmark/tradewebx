@@ -11,7 +11,7 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
 
     const { colors, fonts } = useTheme();
-    const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+    const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true" ;
 
     const { setSaving } = useSaveLoading();
     const [localFormData, setLocalFormData] = useState<any>(formFields || {});

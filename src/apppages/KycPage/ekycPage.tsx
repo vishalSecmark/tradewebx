@@ -70,8 +70,9 @@ const Kyc = () => {
         
             const userData = localStorage.getItem("rekycRowData_viewMode");
             const parsedUserData = userData ? JSON.parse(userData) : null;
+            const isKeysPresent = Object.keys(MasterEntry || {}).length > 0;
         
-            const payload = (!viewMode && !ekycChecker) ? MasterEntry.X_Filter : {
+            const payload = isKeysPresent ? MasterEntry.X_Filter : {
                 EntryName: parsedUserData?.EntryName,
                 ClientCode: parsedUserData?.ClientCode,
             }
@@ -105,6 +106,7 @@ const Kyc = () => {
                     Attachments: "attachments"
                 };
                 const key = keyMap[tab.TabName as keyof typeof keyMap];
+                console.log("check key data", key,tab);
                 if (key) {
                     updatedData[key] = {
                         formFields: tab.Data,
@@ -112,6 +114,10 @@ const Kyc = () => {
                         fieldsErrors: {},
                         Settings: tab.Settings || {}
                     };
+                    if(key === "attachments"){
+                        tab?.Settings?.viewMode === "true" ? localStorage.setItem("ekyc_viewMode", "true") : localStorage.setItem("ekyc_viewMode", "false");
+                        tab?.Settings?.viewMode === "true" && localStorage.setItem("ekyc_checker","true")
+                    }
                 }
             });
 
@@ -147,6 +153,7 @@ const Kyc = () => {
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
+                        onClick={()=>setActiveTab(tab.id)}
                         className={`px-4 py-2 text-sm font-medium transition-colors duration-200 flex items-center gap-2 relative ${activeTab === tab.id
                             ? `text-${colors.primary} border-b-2`
                             : `text-${colors.tabText} hover:text-${colors.primary}`}`}

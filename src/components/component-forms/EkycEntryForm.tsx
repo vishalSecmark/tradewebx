@@ -166,15 +166,13 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     viewMode
 }) => {
 
-
-    console.log("check view mode in the form ", viewMode)
     const { colors } = useTheme();
     const searchParams = useSearchParams();
     const router = useRouter();
     const success = searchParams.get('success');
     const id = searchParams.get('id');
     const scope = searchParams.get('scope');
-    console.log('searchParams', searchParams, scope, success, id); const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
+    const [showEmailOtpModal, setShowEmailOtpModal] = useState(false);
     const [showMobileOtpModal, setShowMobileOtpModal] = useState(false);
     const [currentOtpField, setCurrentOtpField] = useState<any>(null);
     const [isThirdPartyLoading, setIsThirdPartyLoading] = useState(false);
@@ -361,7 +359,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
                     const urlNode = xmlDoc.getElementsByTagName('url')[0];
                     const url = urlNode?.textContent;
-                    console.log("check url", url)
+            
                     if (url && field.GetResponseFlag === "true") {
                         window.open(url, '_blank');
                         toast.success('Redirecting to third party URL...');
@@ -375,7 +373,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     console.error('Error parsing ThirdPartyAPI XML:', err);
                 }
             }
-            console.log('ThirdPartyAPI response:', response?.data);
+            
         } catch (error) {
             console.error('ThirdPartyAPI error:', error);
             toast.error('ThirdPartyAPI error!');
@@ -446,7 +444,6 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
 
                 setFormValues(updatedFormValues);
                 setFieldErrors(updatedFieldErrors);
-                console.log("check--->", updatedFormData)
                 setFormData(updatedFormData);
             };
 
@@ -684,8 +681,8 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             <input
                                 type="checkbox"
                                 className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
-                                checked={!!formValues[field.wKey]}
-                                onChange={e => handleInputChange(field.wKey, e.target.checked)}
+                                checked={formValues[field.wKey] === "true" || formValues[field.wKey] === true}
+                                onChange={e => handleInputChange(field.wKey, String(e.target.checked))}
                                 onBlur={() => handleBlur(field)}
                                 disabled={!isEnabled}
                                 style={{ accentColor: colors.textInputText }}

@@ -13,7 +13,7 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
 
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
   const [openAddDemat, setOpenAddDemat] = useState(false);
