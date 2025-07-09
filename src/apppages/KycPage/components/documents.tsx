@@ -16,7 +16,9 @@ import { displayAndDownloadPDF } from '@/utils/helper';
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
-    const viewMode = useLocalStorageListener("ekyc_viewMode", false) || useLocalStorageListener("ekyc_viewMode_for_checker", false);
+    const viewMode1 = useLocalStorageListener("ekyc_viewMode", false);
+    const viewMode2 = useLocalStorageListener("ekyc_viewMode_for_checker", false);
+    const viewMode = viewMode1 || viewMode2; 
     const checker_mode = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const enableSubmitBtn = useLocalStorageListener("ekyc_submit", false);
     const ekycChecker = useLocalStorageListener("ekyc_checker", false);
