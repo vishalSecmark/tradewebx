@@ -11,11 +11,15 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { displayAndDownloadPDF } from '@/utils/helper';
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
-    const viewMode = useLocalStorageListener("ekyc_viewMode", false);
+    const viewMode1 = useLocalStorageListener("ekyc_viewMode", false);
+    const viewMode2 = useLocalStorageListener("ekyc_viewMode_for_checker", false);
+    const viewMode = viewMode1 || viewMode2; 
+    const checker_mode = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const enableSubmitBtn = useLocalStorageListener("ekyc_submit", false);
     const ekycChecker = useLocalStorageListener("ekyc_checker", false);
 
@@ -49,6 +53,10 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const [isGeneratingFinalPdf, setIsGeneratingFinalPdf] = useState(false);
     const [isSigningKra, setIsSigningKra] = useState(false);
     const [isSigningFinal, setIsSigningFinal] = useState(false);
+    const [viewKRAPdf, setViewKRAPdf] = useState(false);
+    const [viewFinalPdf, setViewFinalPdf] = useState(false);
+
+    console.log("check pdf data", kraPdfData, finalPdfData);
 
     // Load state from localStorage on component mount
     useEffect(() => {
@@ -66,6 +74,23 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         };
         loadState();
     }, []);
+
+    useEffect(() => {
+        const isKraSigned = Settings?.IsKRAESigned === "true";
+        const isFinalSigned = Settings?.IsFinalKRAESigned === "true";
+        const checkViewMode = Settings?.viewMode === "true";
+        if (isKraSigned) {
+            setViewKRAPdf(true);
+        }
+        if (isFinalSigned) {
+            setViewFinalPdf(true);
+        } if (checkViewMode) {
+            localStorage.setItem("ekyc_viewMode", "true");
+            localStorage.setItem("ekyc_checker", "true")
+        } if (isKraSigned && !isFinalSigned) {
+            setFinalPdfGenerated(true);
+        }
+    }, [Settings])
 
     // Save state to localStorage whenever it changes
     useEffect(() => {
@@ -87,14 +112,11 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const savedState = localStorage.getItem('ekyc_esign_state');
             if (savedState) {
                 const state = JSON.parse(savedState);
-
                 if (state.currentStep === 'kra_esign_completed') {
-                    setFinalPdfGenerated(true);
-                    toast.success("KRA E-Sign completed successfully");
+                    handleKRACallBack("KRAPDF")
                 } else if (state.currentStep === 'final_esign_completed') {
-                    toast.success("Final E-Sign completed successfully");
+                    handleKRACallBack("FINALPDF")
                 }
-
                 localStorage.removeItem('ekyc_esign_state');
                 router.replace(window.location.pathname);
             }
@@ -226,12 +248,15 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
             if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
                 await handleGenerateRekycPdf('KRAPDF');
-            } else if (response.data?.data?.rs0?.[0]?.Base64PDF) {
-                const pdfData = response.data.data.rs0[0];
+            } else if (response.data?.data?.rs0?.Base64PDF) {
+                const pdfData = response.data.data.rs0;
+                displayAndDownloadPDF(pdfData?.Base64PDF, pdfData?.PDFName || 'KRA.pdf');
                 setKraPdfData(pdfData);
+                setFinalESignEnabled(true);
                 setKraPdfGenerated(true);
-                setKraESignEnabled(true);
-                toast.success("KRA PDF generated successfully");
+                setKraESignEnabled(false);
+                setViewKRAPdf(true);
+                toast.success("pdf wil download in the background");
             } else {
                 toast.error("Failed to generate KRA PDF");
             }
@@ -358,6 +383,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                                 finalESignEnabled: false,
                                 currentStep: 'kra_esign_completed'
                             }));
+                            localStorage.setItem("KRAredirectedField", "kraESign");
                             window.open(url, '_self');
                             return;
                         } else {
@@ -407,11 +433,11 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
             if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
                 await handleGenerateRekycPdf('FINALPDF');
-            } else if (response.data?.data?.rs0?.[0]?.Base64PDF) {
-                setFinalPdfData(response.data.data.rs0[0]);
-                setFinalPdfGenerated(true);
-                setFinalESignEnabled(true);
-                toast.success("Final PDF generated successfully");
+            } else if (response.data?.data?.rs0?.Base64PDF) {
+                const pdfData = response.data.data.rs0;
+                displayAndDownloadPDF(pdfData?.Base64PDF, pdfData?.PDFName || 'KRA.pdf');
+                setFinalPdfData(pdfData);
+                toast.success("pdf wil download in the background");
             } else {
                 toast.error("Failed to generate Final PDF");
             }
@@ -480,7 +506,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
-                         if (url) {
+                        if (url) {
                             localStorage.setItem('ekyc_esign_state', JSON.stringify({
                                 kraPdfData,
                                 finalPdfData,
@@ -490,6 +516,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                                 finalESignEnabled: true,
                                 currentStep: 'final_esign_completed'
                             }));
+                            localStorage.setItem("KRAredirectedField", "kraFinalEsign");
 
                             window.open(url, '_self');
                             return;
@@ -514,6 +541,65 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         }
     };
 
+    const handleKRACallBack = async (reportName: string) => {
+        try {
+            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const entryName = 'REKYC';
+            const clientCode = userId;
+
+            const xmlData = `<dsXml>
+            <J_Ui>"ActionName":"REKYC","Option":"GetEsignDocument","RequestFrom":"W"</J_Ui>
+            <Sql></Sql>
+            <X_Filter></X_Filter>
+            <X_Filter_Multiple></X_Filter_Multiple>
+            <X_Data>
+                <FileType>${reportName}</FileType>
+                <EntryName>${entryName}</EntryName>
+                <ClientCode>${clientCode}</ClientCode>
+            </X_Data>
+            <J_Api>"UserId":"${userId}"</J_Api>
+        </dsXml>`;
+
+            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+
+            if (response.data?.data?.rs0) {
+                localStorage.removeItem("KRAredirectedField");
+
+                // Extract message from XML string in Column1
+                const column1Data = response.data.data.rs0[0].Column1;
+                const messageMatch = column1Data.match(/<Message>(.*?)<\/Message>/);
+                const flagMatch = column1Data.match(/<Flag>(.*?)<\/Flag>/);
+
+                const message = messageMatch ? messageMatch[1] : "Operation completed";
+                const flag = flagMatch ? flagMatch[1] : "S";
+
+                if (flag === "S") {
+                    toast.success(message);
+                    setFinalPdfGenerated(true);
+                    if (reportName === "KRAPDF") {
+                        setViewKRAPdf(true);
+                    } else {
+                        setViewFinalPdf(true);
+                        setViewKRAPdf(true);
+                    }
+                } else {
+                    toast.error(message);
+                }
+
+                console.log("PDF Data:", response.data.data.rs0);
+            } else {
+                toast.error(`Failed to generate ${reportName} PDF`);
+            }
+        } catch (error) {
+            console.error(`Error generating ${reportName} PDF:`, error);
+            toast.error(`Error generating ${reportName} PDF`);
+        }
+    }
     useEffect(() => {
         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
             handleDigiLockerCallBackAPI(Settings);
@@ -561,56 +647,117 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         </button>
                     </div>
                 )}
-                {ekycChecker && (
+                {ekycChecker && !checker_mode && (
                     <div className="text-end">
-                        <button
-                            style={{
-                                backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
-                                color: enableSubmitBtn ? colors.buttonText : '#666666',
-                                cursor: enableSubmitBtn ? 'pointer' : 'not-allowed'
-                            }}
-                            className="px-4 py-1 rounded-lg ml-4"
-                            disabled={!enableSubmitBtn || isGeneratingKraPdf}
-                            onClick={handleGenerateKraPdf}
-                        >
-                            {isGeneratingKraPdf ? 'Generating...' : 'KRA PDF-Gen'}
-                        </button>
-                        <button
-                            style={{
-                                backgroundColor: kraESignEnabled ? colors.buttonBackground : '#cccccc',
-                                color: kraESignEnabled ? colors.buttonText : '#666666',
-                                cursor: kraESignEnabled ? 'pointer' : 'not-allowed'
-                            }}
-                            className="px-4 py-1 rounded-lg ml-4"
-                            disabled={!kraESignEnabled || isSigningKra}
-                            onClick={handleKraESign}
-                        >
-                            {isSigningKra ? 'Signing...' : 'KRA E-Sign'}
-                        </button>
-                        <button
-                            style={{
-                                backgroundColor: finalPdfGenerated ? colors.buttonBackground : '#cccccc',
-                                color: finalPdfGenerated ? colors.buttonText : '#666666',
-                                cursor: finalPdfGenerated ? 'pointer' : 'not-allowed'
-                            }}
-                            className="px-4 py-1 rounded-lg ml-4"
-                            disabled={!finalPdfGenerated || isGeneratingFinalPdf}
-                            onClick={handleGenerateFinalPdf}
-                        >
-                            {isGeneratingFinalPdf ? 'Generating...' : 'Final PDF-Gen'}
-                        </button>
-                        <button
-                            style={{
-                                backgroundColor: finalESignEnabled ? colors.buttonBackground : '#cccccc',
-                                color: finalESignEnabled ? colors.buttonText : '#666666',
-                                cursor: finalESignEnabled ? 'pointer' : 'not-allowed'
-                            }}
-                            className="px-4 py-1 rounded-lg ml-4"
-                            disabled={!finalESignEnabled || isSigningFinal}
-                            onClick={handleFinalESign}
-                        >
-                            {isSigningFinal ? 'Signing...' : 'Final-ESign'}
-                        </button>
+                        {viewKRAPdf ? (
+                            <button
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText,
+                                }}
+                                className="px-4 py-1 rounded-lg ml-4"
+                                onClick={handleGenerateKraPdf}
+                            >
+                                View KRA E-Signed PDF
+                            </button>
+                        ) : (
+                            <>
+                                {kraPdfData ? (
+                                    <button
+                                        style={{
+                                            backgroundColor: colors.buttonBackground,
+                                            color: colors.buttonText,
+                                        }}
+                                        className="px-4 py-1 rounded-lg ml-4"
+                                        onClick={() => displayAndDownloadPDF(kraPdfData.Base64PDF, kraPdfData.PDFName || 'KRA.pdf')}
+                                    >
+                                        View Final PDF
+                                    </button>) : (
+                                    <button
+                                        style={{
+                                            backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
+                                            color: enableSubmitBtn ? colors.buttonText : '#666666',
+                                            cursor: enableSubmitBtn ? 'pointer' : 'not-allowed'
+                                        }}
+                                        className="px-4 py-1 rounded-lg ml-4"
+                                        disabled={!enableSubmitBtn || isGeneratingKraPdf}
+                                        onClick={handleGenerateKraPdf}
+                                    >
+                                        {isGeneratingKraPdf ? 'Generating...' : 'KRA PDF-Gen'}
+                                    </button>
+                                )}
+
+                                <button
+                                    style={{
+                                        backgroundColor: kraESignEnabled ? colors.buttonBackground : '#cccccc',
+                                        color: kraESignEnabled ? colors.buttonText : '#666666',
+                                        cursor: kraESignEnabled ? 'pointer' : 'not-allowed'
+                                    }}
+                                    className="px-4 py-1 rounded-lg ml-4"
+                                    disabled={!kraESignEnabled || isSigningKra}
+                                    onClick={handleKraESign}
+                                >
+                                    {isSigningKra ? 'Signing...' : 'KRA E-Sign'}
+                                </button>
+                            </>
+                        )}
+
+                        {viewFinalPdf ? (
+                            <button
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText
+                                }}
+                                className="px-4 py-1 rounded-lg ml-4"
+                                onClick={handleGenerateFinalPdf}
+                            >
+                                View Final E-Signed PDF
+                            </button>
+                        ) : (
+                            <>
+                                {finalPdfData ? (
+                                    <button
+                                        style={{
+                                            backgroundColor: colors.buttonBackground,
+                                            color: colors.buttonText,
+                                        }}
+                                        className="px-4 py-1 rounded-lg ml-4"
+                                        onClick={() => displayAndDownloadPDF(finalPdfData.Base64PDF, finalPdfData.PDFName || 'KRA.pdf')}
+                                    >
+                                        View PDF
+                                    </button>
+                                ) : (
+
+                                    <button
+                                        style={{
+                                            backgroundColor: finalPdfGenerated ? colors.buttonBackground : '#cccccc',
+                                            color: finalPdfGenerated ? colors.buttonText : '#666666',
+                                            cursor: finalPdfGenerated ? 'pointer' : 'not-allowed'
+                                        }}
+                                        className="px-4 py-1 rounded-lg ml-4"
+                                        disabled={!finalPdfGenerated || isGeneratingFinalPdf}
+                                        onClick={handleGenerateFinalPdf}
+                                    >
+                                        {isGeneratingFinalPdf ? 'Generating...' : 'Final PDF-Gen'}
+                                    </button>
+                                )
+                                }
+
+                                <button
+                                    style={{
+                                        backgroundColor: finalESignEnabled ? colors.buttonBackground : '#cccccc',
+                                        color: finalESignEnabled ? colors.buttonText : '#666666',
+                                        cursor: finalESignEnabled ? 'pointer' : 'not-allowed'
+                                    }}
+                                    className="px-4 py-1 rounded-lg ml-4"
+                                    disabled={!finalESignEnabled || isSigningFinal}
+                                    onClick={handleFinalESign}
+                                >
+                                    {isSigningFinal ? 'Signing...' : 'Final-ESign'}
+                                </button>
+                            </>
+                        )}
+
                     </div>
                 )}
             </div>
@@ -641,3 +788,15 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 }
 
 export default Documents;
+
+// steps for submit data and KRA process
+
+// 1) save the data
+// 2) after that click on submit data if in submit data we receive flag "A" then we have to call digilocker API
+// 3) after calling digilocker API when user redirects back to the page the we have to call the digilocaker call back API
+// 4) after that we have to generate the KRA PDF and then we have to call the KRA E-Sign API
+// 5) after calling the KRA E-Sign API we have to redirect the user to the KRA E-Sign page
+// 6) when user redirect backs to the website after esigning we have to call the getEsignPDF API
+// 7) after that we have to generate the final PDF and then we have to call the final E-Sign API
+// 8) after calling the final E-Sign API we have to redirect the user to the final E-Sign page
+// 9) when user redirect backs to the website after final esigning we have to call the getEsignPDF API again to get the final PDF 

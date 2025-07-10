@@ -12,7 +12,7 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true";
+  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
 
   const [openAddBank, setOpenAddBank] = useState(false);
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});

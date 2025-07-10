@@ -108,3 +108,56 @@ export function getFileTypeFromBase64(base64: string): string {
 }
 
 
+export function displayAndDownloadPDF(base64Data : any, fileName : string) {
+    // Create a blob from the base64 data
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+
+    // Open the PDF in a new tab
+    const newTab = window.open(url, '_blank');
+    
+    // If the new tab is blocked, show a message with download link
+    if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+        // Create a download link
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = fileName;
+        downloadLink.textContent = 'Download PDF';
+        
+        // Create a container for the message
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.top = '0';
+        container.style.left = '0';
+        container.style.right = '0';
+        container.style.backgroundColor = '#f8f9fa';
+        container.style.padding = '20px';
+        container.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        container.style.zIndex = '1000';
+        
+        const message = document.createElement('p');
+        message.textContent = 'The PDF viewer was blocked by your popup blocker. ';
+        message.appendChild(downloadLink);
+        
+        container.appendChild(message);
+        document.body.prepend(container);
+        
+        // Auto-click the download link after a short delay
+        setTimeout(() => {
+            downloadLink.click();
+            // Clean up the URL object after download
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }, 500);
+    } else {
+        // Clean up the URL object when the tab is closed
+        newTab.onbeforeunload = function() {
+            URL.revokeObjectURL(url);
+        };
+    }
+}

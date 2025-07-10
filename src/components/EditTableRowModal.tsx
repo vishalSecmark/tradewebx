@@ -278,7 +278,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         // this condition is specifically for ekyc component form (check for entry name)
         if (rowData?.EntryName === "Rekyc") {
             localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
-            localStorage.setItem("ekyc_viewMode", "true");
+            localStorage.setItem("ekyc_viewMode_for_checker", "true");
             localStorage.setItem("ekyc_activeTab", "personal");
             localStorage.setItem("ekyc_checker", "false");
             setIsKycModalOpen(true);
@@ -1420,7 +1420,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             <button
                                 onClick={() => {
                                     localStorage.setItem('rekycRowData_viewMode', null);
-                                    localStorage.setItem("ekyc_viewMode", "false");
+                                    localStorage.setItem("ekyc_viewMode_for_checker", "false");
                                     setIsKycModalOpen(false);
                                 }}
                                 style={{

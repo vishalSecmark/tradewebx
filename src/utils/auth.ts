@@ -86,5 +86,6 @@ export const clearAuthStorage = () => {
   localStorage.removeItem('redirectedField');
   localStorage.removeItem('ekyc_submit');
   localStorage.removeItem('ekyc_viewMode');
+  localStorage.removeItem("ekyc_viewMode_for_checker");
   localStorage.removeItem('ekyc_checker');
 };
