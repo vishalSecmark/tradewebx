@@ -29,7 +29,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   }>({ isOpen: false, message: '', type: 'M' });
 
   // Generate dynamic columns based on formFields
-  const generateDynamicColumns = () => {
+ const generateDynamicColumns = () => {
     return formFields
       .filter(field => field.isVisibleinTable !== "false") // Only include fields marked as visible
       .map(field => {
@@ -39,12 +39,14 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             key: field.wKey,
             name: field.label,
             renderCell: ({ row }: any) => (
-              <input
-                type="checkbox"
-                checked={row[field.wKey] === "true"}
-                readOnly
-                className="h-4 w-4"
-              />
+              <div style={{ color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' }}>
+                <input
+                  type="checkbox"
+                  checked={row[field.wKey] === "true"}
+                  readOnly
+                  className="h-4 w-4"
+                />
+              </div>
             )
           };
         }
@@ -53,11 +55,15 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         return {
           key: field.wKey,
           name: field.label,
-          sortable: false
+          sortable: false,
+          renderCell: ({ row }: any) => (
+            <span style={{ color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' }}>
+              {row[field.wKey]}
+            </span>
+          )
         };
       });
   };
-
   // Function to create a new empty bank entry
   const createNewBankEntry = () => {
     const newEntry: Record<string, any> = {};

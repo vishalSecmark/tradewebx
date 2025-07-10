@@ -39,12 +39,20 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             key: field.wKey,
             name: field.label,
             renderCell: ({ row }: any) => (
-              <input
-                type="checkbox"
-                checked={row[field.wKey] === "true"}
-                readOnly
-                className="h-4 w-4"
-              />
+              <div style={{ 
+                display: 'inline-block',
+                color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit' 
+              }}>
+                <input
+                  type="checkbox"
+                  checked={row[field.wKey] === "true"}
+                  readOnly
+                  className="h-4 w-4"
+                  style={{
+                    accentColor: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : undefined
+                  }}
+                />
+              </div>
             )
           };
         }
@@ -53,11 +61,17 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         return {
           key: field.wKey,
           name: field.label,
-          sortable: false
+          sortable: false,
+          renderCell: ({ row }: any) => (
+            <span style={{ 
+              color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit' 
+            }}>
+              {row[field.wKey]}
+            </span>
+          )
         };
       });
   };
-
   // Function to create a new empty demat entry
   const createNewDematEntry = () => {
     const newEntry: Record<string, any> = {};

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { APP_METADATA_KEY, BASE_PATH_FRONT_END, BASE_URL } from './constants';
-import { clearLocalStorage } from './helper';
+import { clearIndexedDB, clearLocalStorage } from './helper';
 
 // Create axios instance with default config
 export const api = axios.create({
@@ -39,6 +39,7 @@ export const logout = () => {
   document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
   // Clear all localStorage data
   clearLocalStorage();
+  clearIndexedDB();
   // Redirect to login page
   window.location.href = `${BASE_PATH_FRONT_END}/signin`;
 };
@@ -51,6 +52,7 @@ export const isAuthenticated = () => {
   const expireTime = localStorage.getItem('tokenExpireTime');
   if (expireTime && new Date(expireTime) < new Date()) {
     logout();
+    clearIndexedDB();
     return false;
   }
 
