@@ -56,7 +56,13 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             key: field.wKey,
             name: field.label,
             sortable: false,
-            renderCell: ({ row }: any) => row[field.wKey] ? moment(row[field.wKey], 'YYYYMMDD').format('DD/MM/YYYY') : ''
+            renderCell: ({ row }: any) => (
+              <span style={{ 
+                color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' 
+              }}>
+                {row[field.wKey] ? moment(row[field.wKey], 'YYYYMMDD').format('DD/MM/YYYY') : ''}
+              </span>
+            )
           };
         }
 
@@ -64,7 +70,14 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         return {
           key: field.wKey,
           name: field.label,
-          sortable: false
+          sortable: false,
+          renderCell: ({ row }: any) => (
+            <span style={{ 
+              color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' 
+            }}>
+              {row[field.wKey]}
+            </span>
+          )
         };
       });
 
@@ -80,7 +93,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             className="px-2 py-1 rounded-lg"
             style={{
               backgroundColor: colors.background,
-              border: `1px solid ${colors.buttonBackground}`
+              border: `1px solid ${colors.buttonBackground}`,
+              color: props?.row?.IsInserted === "true" || props?.row?.IsModified === "true" ? 'green' : 'inherit'
             }}
           >
             {viewMode ? "View" : "Edit"}
@@ -91,7 +105,6 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
     return baseColumns;
   };
-
   const createNewNomineeEntry = () => {
     const newEntry: Record<string, any> = {};
 

@@ -161,3 +161,25 @@ export function displayAndDownloadPDF(base64Data : any, fileName : string) {
         };
     }
 }
+
+
+export const clearIndexedDB = () => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase("ekycDB");
+    
+    request.onsuccess = () => {
+      console.log("IndexedDB deleted successfully");
+      resolve(true);
+    };
+    
+    request.onerror = (event) => {
+      console.error("Error deleting IndexedDB:", request.error);
+      reject(request.error);
+    };
+    
+    request.onblocked = () => {
+      console.warn("Database deletion blocked (probably open in another tab)");
+      reject("Database deletion blocked");
+    };
+  });
+};
