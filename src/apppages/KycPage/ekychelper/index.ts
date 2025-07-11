@@ -244,7 +244,9 @@ export const SubmitEkycForm = async (settings: any,data : any,setSaving?: (loadi
 
         }
 
-export const handleDigiLockerCallBackAPI=async (Settings: any, fetchFormData?:any) => {
+export const handleDigiLockerCallBackAPI=async (Settings: any, setCheckKRAMode?:any,fetchFormData?:any,setSaving?:any) => {
+    if (setSaving) setSaving(true);
+
      const { J_Ui = {}, Sql, X_Filter, X_Filter_Multiple = {}, J_Api = {} } = Settings?.DigiLockerCallBackAPI?.dsXml;
     
             let xFilter = '';
@@ -277,13 +279,15 @@ export const handleDigiLockerCallBackAPI=async (Settings: any, fetchFormData?:an
                     localStorage.setItem('redirectedField', null);
                     localStorage.setItem("ekyc_viewMode","true");
                     localStorage.setItem("ekyc_checker","true");
+
                     toast.success("E-verification successfull");
+                    setCheckKRAMode(true);
                     fetchFormData();
                 }
                } catch (error) {
                 console.error('ThirdPartyAPI error:', error);
                 toast.error('ThirdPartyAPI error!');
             } finally {
-               
+                 if (setSaving) setSaving(false);
             }
 }

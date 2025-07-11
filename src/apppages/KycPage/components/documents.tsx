@@ -17,13 +17,15 @@ import { getFromDB } from '@/utils/indexDB';
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings, fetchFormData }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
+    const [checkRAMode,setCheckKRAMode] = useState(false);
     const viewMode1 = useLocalStorageListener("ekyc_viewMode", false);
     const viewMode2 = useLocalStorageListener("ekyc_viewMode_for_checker", false);
-    const viewMode = viewMode1 || viewMode2; 
     const checker_mode = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const enableSubmitBtn = useLocalStorageListener("ekyc_submit", false);
-    const ekycChecker = useLocalStorageListener("ekyc_checker", false);
-
+    const ekycChecker1 = checkRAMode
+    const ekycChecker2 = useLocalStorageListener("ekyc_checker", false);
+    const ekycChecker = ekycChecker1 || ekycChecker2;
+    const viewMode = viewMode1 || viewMode2 || checkRAMode; 
     const searchParams = useSearchParams();
     const router = useRouter();
     const success = searchParams.get('success');
@@ -605,7 +607,8 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     }
     useEffect(() => {
         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
-            handleDigiLockerCallBackAPI(Settings,fetchFormData);
+            handleDigiLockerCallBackAPI(Settings,setCheckKRAMode,fetchFormData,setSaving);
+            localStorage.removeItem("redirectedField");
             router.replace(window.location.pathname);
         }
     }, [scope, success, Settings, router]);
@@ -792,14 +795,4 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
 export default Documents;
 
-// steps for submit data and KRA process
-
-// 1) save the data
-// 2) after that click on submit data if in submit data we receive flag "A" then we have to call digilocker API
-// 3) after calling digilocker API when user redirects back to the page the we have to call the digilocaker call back API
-// 4) after that we have to generate the KRA PDF and then we have to call the KRA E-Sign API
-// 5) after calling the KRA E-Sign API we have to redirect the user to the KRA E-Sign page
-// 6) when user redirect backs to the website after esigning we have to call the getEsignPDF API
-// 7) after that we have to generate the final PDF and then we have to call the final E-Sign API
-// 8) after calling the final E-Sign API we have to redirect the user to the final E-Sign page
-// 9) when user redirect backs to the website after final esigning we have to call the getEsignPDF API again to get the final PDF 
+// please check the file EkycDocument.txt for the KRA Process 
