@@ -36,6 +36,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [requiresOldVerification, setRequiresOldVerification] = useState(false);
   const [requiresNewVerification, setRequiresNewVerification] = useState(false);
+
   // Parse OTPRequire field on component mount
   useEffect(() => {
     if (field.OTPRequire) {
@@ -50,9 +51,24 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
     const messageMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
     return messageMatch ? messageMatch[1] : '';
   };
+
+  const validateNewValue = (): boolean => {
+    if (requiresOldVerification && requiresNewVerification && newValue === oldValue) {
+      setError(`New ${type} cannot be same as old ${type}`);
+      return false;
+    }
+    return true;
+  };
+
   const handleSendOtp = async () => {
     setIsLoading(true);
     setError('');
+
+    // Validate new value before sending OTP
+    if (!validateNewValue()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { J_Ui = {}, X_Filter_Multiple = {}, J_Api = {} } = field.OTPSend.dsXml;
@@ -67,7 +83,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         let fieldValue;
         if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
           const formKey = placeholder.slice(2, -2);
-          fieldValue = newValue
+          fieldValue = newValue;
         } else {
           fieldValue = newValue;
         }
@@ -84,7 +100,6 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
       // If there are missing fields, set errors and show toast
       if (errors.length > 0) {
-        // setFieldErrors(fieldErrors);
         toast.error(`Please fill the required fields: ${errors.join(', ')}`);
         setIsLoading(false);
         return;
@@ -128,6 +143,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       setIsLoading(false);
     }
   };
+
   const handleVerifyOldOtp = async () => {
     setIsLoading(true);
     setError('');
@@ -171,7 +187,6 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
       // If there are missing fields, set errors and show toast
       if (errors.length > 0) {
-        // setFieldErrors(fieldErrors);
         toast.error(`Please fill the required fields: ${errors.join(', ')}`);
         setIsLoading(false);
         return;
@@ -219,6 +234,7 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
       setIsLoading(false);
     }
   };
+
   const handleVerifyNewOtp = async () => {
     setIsLoading(true);
     setError('');
@@ -264,7 +280,6 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
       // If there are missing fields, set errors and show toast
       if (errors.length > 0) {
-        // setFieldErrors(fieldErrors);
         toast.error(`Please fill the required fields: ${errors.join(', ')}`);
         setIsLoading(false);
         return;
@@ -279,7 +294,9 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
         <J_Api>${jApi}</J_Api>
         <X_Filter></X_Filter>
         <X_GFilter></X_GFilter>
-      </dsXml>`; const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+      </dsXml>`;
+
+      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
         headers: {
           'Content-Type': 'application/xml',
           'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
@@ -372,7 +389,10 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
                 type={type === 'email' ? 'email' : 'tel'}
                 className="w-full px-3 py-2 border rounded-md"
                 value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
+                onChange={(e) => {
+                  setNewValue(e.target.value);
+                  setError(''); // Clear error when user types
+                }}
                 placeholder={`Enter new ${type}`}
               />
             </div>
