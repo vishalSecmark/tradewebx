@@ -210,7 +210,7 @@ const Kyc = () => {
         fetchFormData(viewMode);
     }, []);
 
-    const tabs = buildTabs(dynamicData, setDynamicData, setActiveTab);
+    const tabs = buildTabs(dynamicData, setDynamicData, setActiveTab , fetchFormData);
     
     return (
         <div className="p-4 pt-0" style={{ fontFamily: fonts.content }}>

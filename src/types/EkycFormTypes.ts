@@ -115,4 +115,5 @@ export interface EkycComponentProps {
     setActiveTab?: React.Dispatch<React.SetStateAction<string>>;
     Settings?: Record<string, any>;
     setSaving?: (loading: boolean) => void;
+    fetchFormData?: any
 }
