@@ -13,7 +13,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { displayAndDownloadPDF } from '@/utils/helper';
 
-const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
+const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings, fetchFormData }: EkycComponentProps) => {
     const { colors } = useTheme();
     const { setSaving } = useSaveLoading();
     const viewMode1 = useLocalStorageListener("ekyc_viewMode", false);
@@ -602,7 +602,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     }
     useEffect(() => {
         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
-            handleDigiLockerCallBackAPI(Settings);
+            handleDigiLockerCallBackAPI(Settings,fetchFormData);
             router.replace(window.location.pathname);
         }
     }, [scope, success, Settings, router]);

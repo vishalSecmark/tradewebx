@@ -15,7 +15,7 @@ export interface TabData {
   content: React.ReactNode;
 }
 
-export const buildTabs = (dynamicData: any, setDynamicData: any, setActiveTab: any): TabData[] => [
+export const buildTabs = (dynamicData: any, setDynamicData: any, setActiveTab: any , fetchFormData?:any): TabData[] => [
   {
     id: "personal",
     label: "Personal Information",
@@ -50,6 +50,6 @@ export const buildTabs = (dynamicData: any, setDynamicData: any, setActiveTab: a
     id: "attachments",
     label: "Documents",
     icon: <FaFileAlt className="w-4 h-4" />,
-    content: <Documents {...dynamicData.attachments} setFieldData={setDynamicData} setActiveTab={setActiveTab} />
+    content: <Documents {...dynamicData.attachments} setFieldData={setDynamicData} setActiveTab={setActiveTab} fetchFormData={fetchFormData}/>
   }
 ];
