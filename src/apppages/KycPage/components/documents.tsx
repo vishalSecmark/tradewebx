@@ -12,6 +12,7 @@ import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { displayAndDownloadPDF } from '@/utils/helper';
+import { getFromDB } from '@/utils/indexDB';
 
 const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings, fetchFormData }: EkycComponentProps) => {
     const { colors } = useTheme();
@@ -193,30 +194,32 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         }
     };
 
-    const handleSubmit = () => {
-        const rawData = localStorage.getItem("ekyc_dynamicData");
-        const storedFormData = JSON.parse(rawData);
-        const constructPayload: any = {
-            RekycJson: [
-                {
-                    ReKycDetails: [
-                        {
-                            KycMode: "Online",
-                            NomineeOpt: "",
-                            IsNomineeModified: "",
-                            IsBankModified: "",
-                            IsDematModified: ""
-                        }
-                    ],
-                    PersonalDetails: storedFormData?.personalTabData?.tableData || [],
-                    NomineeDetails: storedFormData?.nomineeTabData?.tableData || [],
-                    BankDetails: storedFormData?.bankTabData?.tableData || [],
-                    DematDetails: storedFormData?.dematTabData?.tableData || [],
-                    SegmentDetails: storedFormData?.segmentTabData?.tableData || [],
-                }
-            ]
-        };
+    const handleSubmit = async () => {
+        const storedFormData = await getFromDB('dynamicData');
+        console.log("check data",storedFormData)
+      const constructPayload: any = {
+        RekycJson: [
+          {
+            ReKycDetails: [
+              {
+                KycMode: "Online",
+                NomineeOpt: "",
+                IsNomineeModified: "",
+                IsBankModified: "",
+                IsDematModified: ""
+              }
+            ],
+            PersonalDetails: storedFormData?.personalTabData?.tableData || [],
+            NomineeDetails: storedFormData?.nomineeTabData?.tableData || [],
+            BankDetails: storedFormData?.bankTabData?.tableData || [],
+            DematDetails: storedFormData?.dematTabData?.tableData || [],
+            SegmentDetails: storedFormData?.segmentTabData?.tableData || [],
+          }
+        ]
+      };
+      
         SubmitEkycForm(Settings?.MakerSaveAPI, constructPayload, setSaving, Settings);
+    
     };
 
 
