@@ -139,12 +139,13 @@ const Kyc = () => {
         setIsLoading(true);
         try {
             const { MasterEntry = {} } = pageData && pageData[0]?.Entry || {};
+            console.log("Check data",MasterEntry , pageData);
             const userData = localStorage.getItem("rekycRowData_viewMode");
             const parsedUserData = userData ? JSON.parse(userData) : null;
             const isKeysPresent = Object.keys(MasterEntry || {}).length > 0;
             const payload = isKeysPresent ? MasterEntry?.X_Filter : {
-                EntryName: parsedUserData?.EntryName,
-                ClientCode: parsedUserData?.ClientCode,
+                EntryName: parsedUserData?.EntryName || "Rekyc",
+                ClientCode: parsedUserData?.ClientCode || localStorage.getItem("clientCode"),
             };
 
             const xFilter = Object.entries(payload || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
