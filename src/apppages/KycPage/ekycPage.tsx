@@ -22,7 +22,6 @@ const Kyc = () => {
     const { isSaving } = useSaveLoading();
     const menuItems = useAppSelector(selectAllMenuItems);
     const pageData: any = findPageData(menuItems, "rekyc");
-    const ekycChecker = useLocalStorageListener("ekyc_checker", false);
 
     const [isLoading, setIsLoading] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<string | null>(null);

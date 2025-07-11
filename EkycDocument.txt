@@ -1,0 +1,12 @@
+ steps for submit data and KRA proces
+ 1) when we click on save button in the last tab attachment tab data get saved after that submit button gets enabled
+ 2) after that click on submit data if in submit data we receive flag "A" then we have to call digilocker API which we have in the attachment tab settings in the API
+ 3) after calling digilocker API when user redirects back to the page the we have to call the digilocaker call back API that also we can get it from the attachment tab settings 
+ 4) after that we have to generate the KRA PDF and then we have to call the KRA E-Sign API
+ 5) after calling the KRA E-Sign API we have to redirect the user to the KRA E-Sign page
+ 6) when user redirect backs to the website after esigning we have to call the getEsignPDF API
+ 7) after that we have to generate the final PDF and then we have to call the final E-Sign API
+ 8) after calling the final E-Sign API we have to redirect the user to the final E-Sign page which is third party API
+ 9) when user redirect backs to the website after final esigning we have to call the getEsignPDF API again to get the final PDF 
+
+ whenever use Esigns from third after success we have to show that esigned pdf for that we have 1 API which we are calling when we click in the view E-signed Pdf
