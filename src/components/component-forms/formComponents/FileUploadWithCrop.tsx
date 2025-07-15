@@ -40,6 +40,8 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
       ? '.pdf,.doc,.docx,.xls,.xlsx,.txt' 
       : 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt';
 
+  const isRequired = field.isMandatory === "true"
+
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -197,6 +199,7 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
     <div className="mb-1">
       <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
         {field.label}
+        {isRequired && <span className="text-red-500 ml-1">*</span>}
       </label>
       <input
         type="file"

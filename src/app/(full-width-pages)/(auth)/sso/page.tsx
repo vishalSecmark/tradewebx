@@ -6,6 +6,7 @@ import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
 import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL } from "@/utils/constants"
 import Image from "next/image"
+import { clearIndexedDB } from '@/utils/helper'
 
 // SSO Component that uses useSearchParams
 const SSOContent = () => {
@@ -87,9 +88,8 @@ const SSOContent = () => {
                 localStorage.setItem('loginType', 'SSO')
 
                 // Clean up any existing ekyc data
-                localStorage.removeItem("ekyc_dynamicData")
-                localStorage.removeItem("ekyc_activeTab")
-
+                clearIndexedDB();
+                
                 // Set auth cookie
                 document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`
                 localStorage.removeItem('temp_token')

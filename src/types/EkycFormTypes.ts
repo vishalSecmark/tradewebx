@@ -15,6 +15,7 @@ export interface ApiResponse {
 }
 
 export interface FormField {
+    isMandatory : string;
     isChangeColumn: string;
     isResizable: string;
     fieldJustUpdated: string;
