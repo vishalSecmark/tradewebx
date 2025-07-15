@@ -10,6 +10,8 @@ import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
 import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData } from '@/types';
 import EntryForm from './component-forms/EntryForm';
+import { handleValidationForDisabledField } from './component-forms/form-helper';
+
 
 
 const validateForm = (formData, formValues) => {
@@ -580,6 +582,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         try {
             const entry = pageData[0].Entry;
             const masterEntry = entry.MasterEntry;
+            const isEditData = Object.keys(editData || {}).length > 0;
+            console.log("check isEditData", isEditData);
+
             console.log('fetchMasterEntryData: masterEntry:', masterEntry);
             const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
@@ -601,11 +606,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             // Construct X_Filter with edit data if available
             let xFilter = '';
             Object.entries(masterEntry.X_Filter).forEach(([key, value]) => {
-                // If we have edit data and the key exists in it, use that value
                 if (editData && editData[key] !== undefined && editData[key] !== null) {
                     xFilter += `<${key}>${editData[key]}</${key}>`;
                 }
-                // Otherwise use the default value from masterEntry
                 else if (value === '##InstrumentType##' || value === '##IntRefNo##') {
                     xFilter += `<${key}></${key}>`;
                 } else {
@@ -620,7 +623,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         value !== undefined &&
                         value !== null &&
                         !masterEntry.X_Filter.hasOwnProperty(key) &&
-                        !key.startsWith('_') // Skip internal fields
+                        !key.startsWith('_')
                     ) {
                         xFilter += `<${key}>${value}</${key}>`;
                     }
@@ -628,11 +631,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             const xmlData = `<dsXml>
-                <J_Ui>${jUi}</J_Ui>
-                <Sql>${sql}</Sql>
-                <X_Filter>${xFilter}</X_Filter>
-                <J_Api>${jApi}</J_Api>
-            </dsXml>`;
+            <J_Ui>${jUi}</J_Ui>
+            <Sql>${sql}</Sql>
+            <X_Filter>${xFilter}</X_Filter>
+            <J_Api>${jApi}</J_Api>
+        </dsXml>`;
 
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
                 headers: {
@@ -640,8 +643,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+
             let formData = response?.data?.data?.rs0 || [];
-            // If in view mode, set all FieldEnabledTag to "N"
             if (viewMode) {
                 formData = formData.map((field: any) => ({
                     ...field,
@@ -649,7 +652,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }));
             }
 
-            setMasterFormData(formData);
             setChildEntriesTable(response?.data?.data?.rs1 || []);
 
             // Initialize form values with any preset values
@@ -658,7 +660,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
-                // If we have edit data, use it to pre-fill the form
                 else if (editData) {
                     initialValues[field.wKey] = field.wValue;
                 }
@@ -666,15 +667,49 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             setMasterFormValues(initialValues);
 
-            // Fetch initial dropdown options
-            formData.forEach((field: FormField) => {
-                if (field.type === 'WDropDownBox' && field.wQuery) {
-                    fetchDropdownOptions(field);
-                }
-                // else if(field.type === 'WDropDownBox' && field.dependsOn && isEdit) {
-                //     handleMasterDropdownChange(field);
-                // }
-            });
+            // Collect all validation updates
+            const allUpdates: Array<{
+                fieldKey: string;
+                isDisabled: boolean;
+                tagValue: string;
+            }> = [];
+
+            // Process each field's validation
+            await Promise.all(
+                formData.map(async (field: FormField) => {
+                    if (field.type === 'WDropDownBox' && field.wQuery) {
+                        await fetchDropdownOptions(field);
+                    }
+
+                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData) {
+                        await handleValidationForDisabledField(
+                            field,
+                            editData,
+                            masterFormValues,
+                            (updates) => allUpdates.push(...updates)
+                        );
+                    }
+                })
+            );
+            if (isEditData) {
+                setMasterFormData(() => {
+                    const newFormData = [...formData];
+                    allUpdates.forEach(update => {
+                        const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
+                        if (fieldIndex >= 0) {
+                            newFormData[fieldIndex] = {
+                                ...newFormData[fieldIndex],
+                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                            };
+                        }
+                    });
+                    return newFormData;
+                });
+            } else {
+                setMasterFormData(formData)
+            }
+            // Apply all updates at once
+
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
             if (shouldSetLoading) {
@@ -686,13 +721,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
         }
     };
-
     const fetchChildEntryData = async (editData?: any) => {
         if (!pageData?.[0]?.Entry) return;
-        setIsLoading(true)
+        setIsLoading(true);
+
         try {
             const entry = pageData[0].Entry;
             const childEntry = entry.ChildEntry;
+            const isEditData = Object.keys(editData || {}).length > 0;
+
             const sql = Object.keys(childEntry?.sql || {}).length ? childEntry.sql : "";
 
             // Construct J_Ui - handle 'Option' key specially
@@ -713,11 +750,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             // Construct X_Filter with edit data if available
             let xFilter = '';
             Object.entries(childEntry.X_Filter).forEach(([key, value]) => {
-                // If we have edit data and the key exists in it, use that value
                 if (editData && editData.SerialNo && editData[key] !== undefined && editData[key] !== null) {
                     xFilter += `<${key}>${editData[key]}</${key}>`;
                 }
-                // Otherwise use the default value from childEntry
                 else if (value === '##InstrumentType##') {
                     xFilter += `<${key}>${masterFormValues.InstrumentType || ''}</${key}>`;
                 } else {
@@ -725,14 +760,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            // Add any additional fields from editData that aren't in childEntry.X_Filter
+            // Add additional fields from editData
             if (editData && editData.SerialNo) {
                 Object.entries(editData).forEach(([key, value]) => {
                     if (
                         value !== undefined &&
                         value !== null &&
                         !childEntry.X_Filter.hasOwnProperty(key) &&
-                        !key.startsWith('_') // Skip internal fields
+                        !key.startsWith('_')
                     ) {
                         xFilter += `<${key}>${value}</${key}>`;
                     }
@@ -740,11 +775,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             const xmlData = `<dsXml>
-                <J_Ui>${jUi}</J_Ui>
-                <Sql>${sql}</Sql>
-                <X_Filter>${xFilter}</X_Filter>
-                <J_Api>${jApi}</J_Api>
-            </dsXml>`;
+            <J_Ui>${jUi}</J_Ui>
+            <Sql>${sql}</Sql>
+            <X_Filter>${xFilter}</X_Filter>
+            <J_Api>${jApi}</J_Api>
+        </dsXml>`;
 
             const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
                 headers: {
@@ -752,6 +787,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
                 }
             });
+
             let formData = response?.data?.data?.rs0 || [];
             if (viewMode) {
                 formData = formData.map((field: any) => ({
@@ -759,9 +795,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     FieldEnabledTag: "N"
                 }));
             }
-            setChildFormData(formData);
 
-            // Initialize child form values with any preset values
+            // Initialize child form values
             const initialValues: Record<string, any> = {};
             response.data?.data?.rs0?.forEach((field: FormField) => {
                 if (editData && editData.Id) {
@@ -771,25 +806,57 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 else if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 }
-                // If we have edit data, use it to pre-fill the form
                 else if (editData) {
                     initialValues[field.wKey] = field.wValue;
                 }
             });
             setChildFormValues(initialValues);
 
-            // Fetch initial dropdown options
-            response.data?.data?.rs0?.forEach((field: FormField) => {
-                if (field.type === 'WDropDownBox' && field.wQuery) {
-                    fetchDropdownOptions(field, true);
-                }
-                // else if(field.type === 'WDropDownBox' && field.dependsOn && isEdit) {
-                //     handleChildDropdownChange(field);
-                // }
-            });
+            // Collect all validation updates
+            const allUpdates: Array<{
+                fieldKey: string;
+                isDisabled: boolean;
+                tagValue: string;
+            }> = [];
+
+            console.log("check all updates",allUpdates);
+            // Process each field's validation
+            await Promise.all(
+                response.data?.data?.rs0?.map(async (field: FormField) => {
+                    if (field.type === 'WDropDownBox' && field.wQuery) {
+                        await fetchDropdownOptions(field, true);
+                    }
+                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData) {
+                        await handleValidationForDisabledField(
+                            field,
+                            editData,
+                            masterFormValues,
+                            (updates) => allUpdates.push(...updates),
+                        );
+                    }
+                })
+            );
+            if (isEditData) {
+                // Apply all updates at once
+                setChildFormData(() => {
+                    const newFormData = [...formData];
+                    allUpdates.forEach(update => {
+                        const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
+                        if (fieldIndex >= 0) {
+                            newFormData[fieldIndex] = {
+                                ...newFormData[fieldIndex],
+                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                            };
+                        }
+                    });
+                    return newFormData;
+                });
+            } else {
+                setChildFormData(formData)
+            }
+
         } catch (error) {
             console.error('Error fetching ChildEntry data:', error);
-            setIsLoading(false);
         } finally {
             setIsLoading(false);
         }

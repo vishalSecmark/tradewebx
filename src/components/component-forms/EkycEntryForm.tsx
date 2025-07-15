@@ -50,6 +50,7 @@ const DropdownField: React.FC<{
         const options = dropdownOptions[field?.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
+        const isRequired = field.isMandatory === "true"
 
         useEffect(() => {
             if (options.length > 0) {
@@ -100,6 +101,7 @@ const DropdownField: React.FC<{
             <div key={field?.Srno} className="mb-1">
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {field?.label}
+                    {isRequired && <span className="text-red-500 ml-1">*</span>}
                 </label>
                 <CreatableSelect
                     options={visibleOptions}
@@ -518,6 +520,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         const isEnabled = viewMode ? false : field.FieldEnabledTag === 'Y';
         const hasError = fieldErrors && fieldErrors[field.wKey];
         const isJustUpdated = field.fieldJustUpdated === "true" || field.isChangeColumn === "true";
+        const isRequired = field.isMandatory === "true";
 
         switch (field.type) {
             case 'WDropDownBox':
@@ -544,6 +547,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     <div key={`dateBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
+                            {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <div className="relative">
                             <Flatpickr
@@ -586,6 +590,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         <div key={`textBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                             <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                                 {field.label}
+                                {isRequired && <span className="text-red-500 ml-1">*</span>}
                             </label>
                             <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <input
@@ -644,6 +649,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     <div key={`textBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
+                            {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <input
                             type="text"
@@ -687,7 +693,10 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                                 disabled={!isEnabled}
                                 style={{ accentColor: colors.textInputText }}
                             />
-                            <span className="ml-2">{field.label}</span>
+                            <span className="ml-2">
+                                {field.label}
+                                {isRequired && <span className="text-red-500 ml-1">*</span>}
+                            </span>
                         </label>
                         {hasError && (
                             <span className="text-red-500 text-sm block">{fieldErrors[field.wKey]}</span>
@@ -736,7 +745,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                         >
                             <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                                 {field.label}
-                                {/* {field.isMandatory === "true" && <span className="text-red-500 ml-1">*</span>} */}
+                                {isRequired && <span className="text-red-500 ml-1">*</span>}
                             </label>
 
                             {/* === PREVIEW EXISTING FILE IN EDIT MODE === */}

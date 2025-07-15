@@ -41,6 +41,7 @@ const DropdownField: React.FC<{
         const options = dropdownOptions[field.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
+        const isRequired = field.isMandatory === "true";
 
         useEffect(() => {
             if (options.length > 0) {
@@ -92,6 +93,8 @@ const DropdownField: React.FC<{
             <div key={field.Srno} className="mb-1">
                 <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {field.label}
+                    {isRequired && <span className="text-red-500 ml-1">*</span>}
+
                 </label>
                 <CreatableSelect
                     options={visibleOptions}
@@ -353,6 +356,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     const renderFormField = (field: FormField) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
+        const isRequired = field.isMandatory === "true";
 
         switch (field.type) {
             case 'WDropDownBox':
@@ -381,6 +385,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
+                            {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <DatePicker
                             selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
@@ -415,6 +420,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
+                            {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <input
                             type="text"
@@ -474,7 +480,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     >
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
-                            {/* {field.isMandatory === "true" && <span className="text-red-500 ml-1">*</span>} */}
+                            {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
 
                         {/* === PREVIEW EXISTING FILE IN EDIT MODE === */}

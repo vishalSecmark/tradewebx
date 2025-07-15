@@ -90,4 +90,5 @@ export const clearAuthStorage = () => {
   localStorage.removeItem('ekyc_viewMode');
   localStorage.removeItem("ekyc_viewMode_for_checker");
   localStorage.removeItem('ekyc_checker');
+  clearIndexedDB();
 };
