@@ -117,6 +117,7 @@ const DropdownField: React.FC<{
                     className="react-select-container"
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field.wKey]}
+                    menuPortalTarget={document.body}
                     filterOption={() => true}
                     isDisabled={isDisabled}
                     isValidNewOption={field.iscreatable === "true" ? undefined : () => false}
