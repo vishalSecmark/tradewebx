@@ -1613,12 +1613,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                                                 {/* Actions */}
                                                                 <td
-                                                                    className="flex gap-1 px-4 py-2 border-b text-center"
+                                                                    className="px-4 py-2 text-center border-b"
                                                                     style={{
                                                                         width: columnWidthMap['Actions'] || 'auto',
                                                                         minWidth: columnWidthMap['Actions'] ? '50px' : '120px'
                                                                     }}
                                                                 >
+                                                                    <div className='flex gap-1'> 
                                                                     {viewMode && (
                                                                         <button
                                                                             className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
@@ -1657,6 +1658,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                     >
                                                                         Delete
                                                                     </button>
+                                                                    </div>
                                                                 </td>
 
                                                                 {/* Dynamic values */}

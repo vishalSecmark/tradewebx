@@ -41,6 +41,10 @@ export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors:
     ...base,
     backgroundColor: colors.textInputBackground,
   }),
+  menuPortal:( base : any) => ({
+            ...base,
+            zIndex: 9999, 
+          }),
   placeholder: (base: any) => ({
     ...base,
     color: isDisabled ? '#9ca3af' : base.color,

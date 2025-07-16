@@ -835,9 +835,9 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 handleThirdPartyApi(adharField, "thirdparty");
                 // Clean up localStorage after processing
                 localStorage.removeItem('redirectedField');
+                router.replace(window.location.pathname);
             }
             // Clear query params from URL
-            router.replace(window.location.pathname);
         }
     }, [scope, success, formData]);
 
