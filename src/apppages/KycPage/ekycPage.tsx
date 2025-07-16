@@ -188,6 +188,7 @@ const Kyc = () => {
                         if (isViewMode) {
                             localStorage.setItem("ekyc_viewMode", "true");
                             localStorage.setItem("ekyc_checker", "true");
+                            localStorage.setItem("ekyc_submit","true")
                         } else {
                             localStorage.setItem("ekyc_viewMode", "false");
                         }
