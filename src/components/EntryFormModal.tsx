@@ -164,6 +164,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 
 
 const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
+
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -188,10 +189,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabLoadingDropdowns, setTabLoadingDropdowns] = useState<Record<string, Record<string, boolean>>>({});
     const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
 
+
     console.log(pageData[0]?.Entry?.ChildEntry, 'entry page data');
 
     const childEntryPresent = pageData[0]?.Entry?.ChildEntry;
     const isThereChildEntry = !isTabs && (!childEntryPresent || Object.keys(childEntryPresent).length === 0);
+    const isViewMode = action === "view" ? true : false
 
     const [validationModal, setValidationModal] = useState<{
         isOpen: boolean;
@@ -681,7 +684,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         await fetchDropdownOptions(field);
                     }
 
-                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData) {
+                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
                         await handleValidationForDisabledField(
                             field,
                             editData,
@@ -691,7 +694,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     }
                 })
             );
-            if (isEditData) {
+            if (isEditData && !isViewMode) {
                 setMasterFormData(() => {
                     const newFormData = [...formData];
                     allUpdates.forEach(update => {
@@ -826,7 +829,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     if (field.type === 'WDropDownBox' && field.wQuery) {
                         await fetchDropdownOptions(field, true);
                     }
-                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData) {
+                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
                         await handleValidationForDisabledField(
                             field,
                             editData,
@@ -836,7 +839,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     }
                 })
             );
-            if (isEditData) {
+            if (isEditData && !isViewMode) {
                 // Apply all updates at once
                 setChildFormData(() => {
                     const newFormData = [...formData];
