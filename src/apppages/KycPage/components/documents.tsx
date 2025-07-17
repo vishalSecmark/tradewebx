@@ -67,8 +67,6 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const savedState = localStorage.getItem('ekyc_pdf_state');
             if (savedState) {
                 const state = JSON.parse(savedState);
-                setKraPdfData(state.kraPdfData || null);
-                setFinalPdfData(state.finalPdfData || null);
                 setKraPdfGenerated(state.kraPdfGenerated || false);
                 setKraESignEnabled(state.kraESignEnabled || false);
                 setFinalPdfGenerated(state.finalPdfGenerated || false);
@@ -99,8 +97,6 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     useEffect(() => {
         if (ekycChecker) {
             localStorage.setItem('ekyc_pdf_state', JSON.stringify({
-                kraPdfData,
-                finalPdfData,
                 kraPdfGenerated,
                 kraESignEnabled,
                 finalPdfGenerated,
