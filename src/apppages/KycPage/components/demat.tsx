@@ -27,10 +27,33 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     type: 'M' | 'S' | 'E' | 'D';
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   // Generate dynamic columns based on formFields
   const generateDynamicColumns = () => {
-    return formFields
+    const actionColumn = {
+      key: 'actions',
+      name: 'Actions',
+      width: 100,
+      renderCell: ({ row, rowIdx }: any) => (
+        row.IsInserted === "true" ? (
+          <button
+            onClick={() => handleEditDemat(row, rowIdx)}
+            className="px-2 py-1 rounded-lg"
+            style={{
+              backgroundColor: colors.background,
+              border: `1px solid ${colors.buttonBackground}`,
+              color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit'
+            }}
+          >
+            Edit
+          </button>
+        ) : null
+      )
+    };
+
+    const columns = formFields
       .filter(field => field.isVisibleinTable !== "false") // Only include fields marked as visible
       .map(field => {
         // Special handling for checkbox fields
@@ -39,9 +62,9 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             key: field.wKey,
             name: field.label,
             renderCell: ({ row }: any) => (
-              <div style={{ 
+              <div style={{
                 display: 'inline-block',
-                color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit' 
+                color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit'
               }}>
                 <input
                   type="checkbox"
@@ -63,15 +86,18 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
           name: field.label,
           sortable: false,
           renderCell: ({ row }: any) => (
-            <span style={{ 
-              color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit' 
+            <span style={{
+              color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit'
             }}>
               {row[field.wKey]}
             </span>
           )
         };
       });
+
+    return [...columns, actionColumn];
   };
+
   // Function to create a new empty demat entry
   const createNewDematEntry = () => {
     const newEntry: Record<string, any> = {};
@@ -96,6 +122,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     // Add system fields
     newEntry.IsDefault = "true";
     newEntry.IsInserted = "true";
+    newEntry.IsModified = "false";
 
     return newEntry;
   };
@@ -110,7 +137,18 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     const newDematEntry = createNewDematEntry();
     setCurrentFormData(newDematEntry);
     setOpenAddDemat(true);
+    setIsEditing(false);
+    setEditingIndex(null);
     // Clear errors when adding new demat
+    setFieldErrors({});
+  };
+
+  // Handler to edit demat entry
+  const handleEditDemat = (row: any, rowIndex: number) => {
+    setCurrentFormData({ ...row });
+    setOpenAddDemat(true);
+    setIsEditing(true);
+    setEditingIndex(rowIndex);
     setFieldErrors({});
   };
 
@@ -138,41 +176,63 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
       return;
     }
 
-    // Ensure the new entry is set as default and all others are not
-    const updatedDematData = {
-      ...currentFormData,
-      IsDefault: "true" // Force new entry to be default
-    };
+    if (isEditing && editingIndex !== null) {
+      // Update existing entry
+      setFieldData((prevState: any) => {
+        const prevTableData = prevState.dematTabData.tableData || [];
+        const updatedTableData = [...prevTableData];
 
-    setFieldData((prevState: any) => {
-      const prevTableData = prevState.dematTabData.tableData || [];
+        updatedTableData[editingIndex] = {
+          ...currentFormData,
+        };
 
-      // Unset all other defaults
-      const updatedTableData = prevTableData.map(demat => ({
-        ...demat,
-        IsDefault: "false"
-      }));
-
-      return {
-        ...prevState,
-        dematTabData: {
-          ...prevState.dematTabData,
-          tableData: [
-            ...updatedTableData,
-            updatedDematData
-          ]
-        }
+        return {
+          ...prevState,
+          dematTabData: {
+            ...prevState.dematTabData,
+            tableData: updatedTableData
+          }
+        };
+      });
+    } else {
+      // Add new entry
+      const updatedDematData = {
+        ...currentFormData,
+        // IsDefault: "true" // Force new entry to be default
       };
-    });
+
+      setFieldData((prevState: any) => {
+        const prevTableData = prevState.dematTabData.tableData || [];
+
+        // Unset all other defaults
+        const updatedTableData = prevTableData.map(demat => ({
+          ...demat,
+          IsDefault: "false"
+        }));
+
+        return {
+          ...prevState,
+          dematTabData: {
+            ...prevState.dematTabData,
+            tableData: [
+              ...updatedTableData,
+              updatedDematData
+            ]
+          }
+        };
+      });
+    }
+
     clearFormAndCloseModal();
   };
-
 
   // Function to clear form and close modal
   const clearFormAndCloseModal = () => {
     setCurrentFormData({});
     setFieldErrors({});
     setOpenAddDemat(false);
+    setIsEditing(false);
+    setEditingIndex(null);
   };
 
   const handleSaveAndNext = () => {
@@ -183,11 +243,9 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
     handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "segment", setSaving);
   };
 
-
   const handleNext = () => {
     setActiveTab("segment")
   }
-
 
   useEffect(() => {
     if (formFields && formFields.length > 0) {
@@ -253,7 +311,6 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             </button>
           </div>
         )}
-
       </div>
       <DataGrid
         columns={generateDynamicColumns()}
@@ -272,7 +329,9 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center gap-4 mt-2 mb-4">
-              <h4 className="text-xl font-semibold">Add Demat Details</h4>
+              <h4 className="text-xl font-semibold">
+                {isEditing ? 'Edit Demat Details' : 'Add Demat Details'}
+              </h4>
               <div className="flex gap-4">
                 <button
                   onClick={clearFormAndCloseModal}
@@ -284,7 +343,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
                   onClick={handleSaveDemat}
                   className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
                 >
-                  Save
+                  {isEditing ? 'Update' : 'Save'}
                 </button>
               </div>
             </div>
