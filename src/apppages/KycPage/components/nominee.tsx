@@ -57,8 +57,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             name: field.label,
             sortable: false,
             renderCell: ({ row }: any) => (
-              <span style={{ 
-                color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' 
+              <span style={{
+                color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit'
               }}>
                 {row[field.wKey] ? moment(row[field.wKey], 'YYYYMMDD').format('DD/MM/YYYY') : ''}
               </span>
@@ -72,8 +72,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           name: field.label,
           sortable: false,
           renderCell: ({ row }: any) => (
-            <span style={{ 
-              color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' 
+            <span style={{
+              color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit'
             }}>
               {row[field.wKey]}
             </span>
@@ -130,7 +130,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   const handleAddNomineeClick = () => {
     const maxAllowed = Number(Settings?.maxAllowedRecords) || 0;
-    if (maxAllowed > 0 && tableData.length >= maxAllowed) {
+    if (maxAllowed > 0 && tableData?.length >= maxAllowed) {
       toast.error(`You can only add up to ${maxAllowed} nominees.`);
       return;
     } else {
@@ -372,11 +372,15 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   }, [])
 
   const handleSaveAndNext = () => {
-    const transformedData = tableData.map((item: any) => ({
-      ...item,
-      ...(item?.NomSerial && { IsInserted: "false" })
-    }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "bank", setSaving);
+    if (tableData?.length === 0) {
+      toast.error("please add Nominee data first")
+    } else {
+      const transformedData = tableData?.map((item: any) => ({
+        ...item,
+        ...(item?.NomSerial && { IsInserted: "false" })
+      }));
+      handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "bank", setSaving);
+    }
   }
 
   const handleNext = () => {

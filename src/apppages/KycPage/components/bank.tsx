@@ -1,3 +1,4 @@
+"use client";
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react';
@@ -16,7 +17,6 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   const [openAddBank, setOpenAddBank] = useState(false);
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
-
   const [currentFormData, setCurrentFormData] = useState<any>({});
   const [bankDropdownOptions, setBankDropdownOptions] = useState<Record<string, any[]>>({});
   const [bankLoadingDropdowns, setBankLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -27,10 +27,33 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     type: 'M' | 'S' | 'E' | 'D';
     callback?: (confirmed: boolean) => void;
   }>({ isOpen: false, message: '', type: 'M' });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   // Generate dynamic columns based on formFields
- const generateDynamicColumns = () => {
-    return formFields
+  const generateDynamicColumns = () => {
+    const actionColumn = {
+      key: 'actions',
+      name: 'Actions',
+      width: 100,
+      renderCell: ({ row, rowIdx }: any) => (
+        row.IsInserted === "true" ? (
+          <button
+            onClick={() => handleEditBank(row, rowIdx)}
+            className="px-2 py-1 rounded-lg"
+            style={{
+              backgroundColor: colors.background,
+              border: `1px solid ${colors.buttonBackground}`,
+              color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit'
+            }}
+          >
+            Edit
+          </button>
+        ) : null
+      )
+    };
+
+    const columns = formFields
       .filter(field => field.isVisibleinTable !== "false") // Only include fields marked as visible
       .map(field => {
         // Special handling for checkbox fields
@@ -39,12 +62,18 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             key: field.wKey,
             name: field.label,
             renderCell: ({ row }: any) => (
-              <div style={{ color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' }}>
+              <div style={{
+                display: 'inline-block',
+                color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit'
+              }}>
                 <input
                   type="checkbox"
                   checked={row[field.wKey] === "true"}
                   readOnly
                   className="h-4 w-4"
+                  style={{
+                    accentColor: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : undefined
+                  }}
                 />
               </div>
             )
@@ -57,13 +86,18 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           name: field.label,
           sortable: false,
           renderCell: ({ row }: any) => (
-            <span style={{ color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit' }}>
+            <span style={{
+              color: row.IsInserted === "true" || row.IsModified === "true" ? 'green' : 'inherit'
+            }}>
               {row[field.wKey]}
             </span>
           )
         };
       });
+
+    return [...columns, actionColumn];
   };
+
   // Function to create a new empty bank entry
   const createNewBankEntry = () => {
     const newEntry: Record<string, any> = {};
@@ -88,6 +122,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     // Add system fields
     newEntry.IsDefault = "true";
     newEntry.IsInserted = "true";
+    newEntry.IsModified = "false";
 
     return newEntry;
   };
@@ -102,7 +137,18 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     const newBankEntry = createNewBankEntry();
     setCurrentFormData(newBankEntry);
     setOpenAddBank(true);
+    setIsEditing(false);
+    setEditingIndex(null);
     // Clear errors when adding new bank
+    setFieldErrors({});
+  };
+
+  // Handler to edit bank entry
+  const handleEditBank = (row: any, rowIndex: number) => {
+    setCurrentFormData({ ...row });
+    setOpenAddBank(true);
+    setIsEditing(true);
+    setEditingIndex(rowIndex);
     setFieldErrors({});
   };
 
@@ -130,32 +176,52 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       return;
     }
 
-    // Ensure the new entry is set as default and all others are not
-    const updatedBankData = {
-      ...currentFormData,
-      IsDefault: "true" // Force new entry to be default
-    };
+    if (isEditing && editingIndex !== null) {
+      // Update existing entry
+      setFieldData((prevState: any) => {
+        const prevTableData = prevState.bankTabData.tableData || [];
+        const updatedTableData = [...prevTableData];
 
-    setFieldData((prevState: any) => {
-      const prevTableData = prevState.bankTabData.tableData || [];
+        updatedTableData[editingIndex] = {
+          ...currentFormData,
+        };
 
-      // Unset all other defaults
-      const updatedTableData = prevTableData.map(bank => ({
-        ...bank,
-        IsDefault: "false"
-      }));
-
-      return {
-        ...prevState,
-        bankTabData: {
-          ...prevState.bankTabData,
-          tableData: [
-            ...updatedTableData,
-            updatedBankData
-          ]
-        }
+        return {
+          ...prevState,
+          bankTabData: {
+            ...prevState.bankTabData,
+            tableData: updatedTableData
+          }
+        };
+      });
+    } else {
+      // Add new entry
+      const updatedBankData = {
+        ...currentFormData,
+        IsDefault: "true" // Force new entry to be default
       };
-    });
+
+      setFieldData((prevState: any) => {
+        const prevTableData = prevState.bankTabData.tableData || [];
+
+        // Unset all other defaults
+        const updatedTableData = prevTableData.map(bank => ({
+          ...bank,
+          IsDefault: "false"
+        }));
+
+        return {
+          ...prevState,
+          bankTabData: {
+            ...prevState.bankTabData,
+            tableData: [
+              ...updatedTableData,
+              updatedBankData
+            ]
+          }
+        };
+      });
+    }
 
     clearFormAndCloseModal();
   };
@@ -165,6 +231,8 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
     setCurrentFormData({});
     setFieldErrors({});
     setOpenAddBank(false);
+    setIsEditing(false);
+    setEditingIndex(null);
   };
 
   const handleSaveAndNext = () => {
@@ -178,7 +246,6 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   const handleNext = () => {
     setActiveTab("demat")
   }
-
 
   useEffect(() => {
     if (formFields && formFields.length > 0) {
@@ -213,7 +280,6 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
         {viewMode ? (
           <div className="text-end">
-
             <button
               className="rounded-lg px-4 py-1"
               style={{
@@ -246,7 +312,6 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             </button>
           </div>
         )}
-
       </div>
       <DataGrid
         columns={generateDynamicColumns()}
@@ -265,7 +330,9 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center gap-4 mt-2 mb-4">
-              <h4 className="text-xl font-semibold">Add Bank Details</h4>
+              <h4 className="text-xl font-semibold">
+                {isEditing ? 'Edit Bank Details' : 'Add Bank Details'}
+              </h4>
               <div className="flex gap-4">
                 <button
                   onClick={clearFormAndCloseModal}
@@ -277,7 +344,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                   onClick={handleSaveBank}
                   className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
                 >
-                  Save
+                  {isEditing ? 'Update' : 'Save'}
                 </button>
               </div>
             </div>
