@@ -250,7 +250,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             // calling the function to  handle the flags
             const columnData = response?.data?.data?.rs0[0]?.Column1
             if (columnData) {
-                handleValidationApiResponse(columnData, field.wKey);
+                handleValidationApiResponse(columnData, field.wKey, field);
             }
         } catch (error) {
             console.error('Validation API error:', error);
@@ -261,7 +261,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
 
     // this function is used to show the respected flags according to the response from the API
-    const handleValidationApiResponse = (response, currFieldName) => {
+    const handleValidationApiResponse = (response:any, currFieldName:any, field:any) => {
         if (!response?.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;
         }
@@ -287,6 +287,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                 const tagName = tag.tagName;
                                 const tagValue = tag.textContent;
                                 setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                                // handleBlur(field)
                             });
                         } else {
                             setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
@@ -297,20 +298,26 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 break;
 
             case 'S':
-                setValidationModal({
-                    isOpen: true,
-                    message: message || 'Please press ok to proceed',
-                    type: 'S',
-                    callback: () => {
-                        dynamicTags.forEach((tag) => {
+                // setValidationModal({
+                //     isOpen: true,
+                //     message: message || 'Please press ok to proceed',
+                //     type: 'S',
+                //     callback: () => {
+                //         dynamicTags.forEach((tag) => {
+                //             const tagName = tag.tagName;
+                //             const tagValue = tag.textContent;
+                //             setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
+                //             setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error
+                //         });
+                //         setValidationModal({ isOpen: false, message: '', type: 'S' });
+                //     }
+                // });
+                 dynamicTags.forEach((tag) => {
                             const tagName = tag.tagName;
                             const tagValue = tag.textContent;
                             setFormValues(prev => ({ ...prev, [tagName]: tagValue }));
                             setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error
-                        });
-                        setValidationModal({ isOpen: false, message: '', type: 'S' });
-                    }
-                });
+                            });
                 break;
 
             case 'E':
@@ -328,7 +335,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
                     if (tagFlag === 'true' || tagFlag === 'false') {
                         setFormValues(prev => ({ ...prev, [tagName]: "" }));
+                        console.log("check value---->",isDisabled);
                         if (isDisabled) {
+                            // handleBlur(field);
                             setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error for disabled fields
                         }
                     } else {
@@ -344,7 +353,6 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 });
                 setFormData(updatedFormData);
                 break;
-
             default:
                 console.error("Unknown flag received:", flag);
         }

@@ -822,7 +822,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 tagValue: string;
             }> = [];
 
-            console.log("check all updates",allUpdates);
+            console.log("check all updates", allUpdates);
             // Process each field's validation
             await Promise.all(
                 response.data?.data?.rs0?.map(async (field: FormField) => {
@@ -1619,65 +1619,70 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         minWidth: columnWidthMap['Actions'] ? '50px' : '120px'
                                                                     }}
                                                                 >
-                                                                    <div className='flex gap-1'> 
-                                                                    {viewMode && (
+                                                                    <div className='flex gap-1'>
+                                                                        {viewMode && (
+                                                                            <button
+                                                                                className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                                onClick={() => {
+                                                                                    setChildFormValues(entry);
+                                                                                    handleChildEditNonSavedData(entry);
+                                                                                }}
+                                                                            >
+                                                                                view
+                                                                            </button>
+                                                                        )}
                                                                         <button
-                                                                            className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                                : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
+                                                                                }`}
                                                                             onClick={() => {
                                                                                 setChildFormValues(entry);
                                                                                 handleChildEditNonSavedData(entry);
-                                                                            }}
-                                                                        >
-                                                                            view
-                                                                        </button>
-                                                                    )}
-                                                                    <button
-                                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                            : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
-                                                                            }`}
-                                                                        onClick={() => {
-                                                                            setChildFormValues(entry);
-                                                                            handleChildEditNonSavedData(entry);
 
-                                                                        }}
-                                                                        disabled={viewMode}
-                                                                    >
-                                                                        Edit
-                                                                    </button>
-                                                                    <button
-                                                                        className={`px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                            : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
-                                                                            }`}
-                                                                        onClick={() => {
-                                                                            setChildFormValues(entry);
-                                                                            setIsConfirmationModalOpen(true);
-                                                                        }}
-                                                                        disabled={viewMode}
-                                                                    >
-                                                                        Delete
-                                                                    </button>
+                                                                            }}
+                                                                            disabled={viewMode}
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            className={`px-3 py-1 rounded-md transition-colors ${viewMode
+                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                                : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
+                                                                                }`}
+                                                                            onClick={() => {
+                                                                                setChildFormValues(entry);
+                                                                                setIsConfirmationModalOpen(true);
+                                                                            }}
+                                                                            disabled={viewMode}
+                                                                        >
+                                                                            Delete
+                                                                        </button>
                                                                     </div>
                                                                 </td>
 
                                                                 {/* Dynamic values */}
-                                                                {dynamicColumns.map((key) => (
-                                                                    <td
-                                                                        key={key}
-                                                                        className="px-4 py-2 border-b text-center"
-                                                                        style={{
-                                                                            width: columnWidthMap[key] || 'auto',
-                                                                            minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
-                                                                            maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px'
-                                                                        }}
-                                                                    >
-                                                                        {safeEntry[key] == null || safeEntry[key] === ""
-                                                                            ? "-"
-                                                                            : String(safeEntry[key])
-                                                                        }
-                                                                    </td>
-                                                                ))}
+                                                                {dynamicColumns.map((key) => {
+                                                                    const cellValue = safeEntry[key] == null || safeEntry[key] === "" ? "-" : String(safeEntry[key]);
+
+                                                                    return (
+                                                                        <td
+                                                                            key={key}
+                                                                            className="px-4 py-2 border-b text-center truncate"
+                                                                            style={{
+                                                                                width: columnWidthMap[key] || 'auto',
+                                                                                minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
+                                                                                maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px',
+                                                                                whiteSpace: 'nowrap',
+                                                                                overflow: 'hidden',
+                                                                                textOverflow: 'ellipsis',
+                                                                            }}
+                                                                            title={cellValue} // Show full text on hover
+                                                                        >
+                                                                            {cellValue}
+                                                                        </td>
+                                                                    );
+                                                                })}
                                                             </tr>
                                                         );
                                                     })}
