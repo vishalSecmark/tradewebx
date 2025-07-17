@@ -1719,6 +1719,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         setChildDropdownOptions({});
                         setChildFormData([]);
                         setChildFormValues({});
+                        resetChildForm();
                     }}
                     isLoading={isLoading}
                     setChildEntriesTable={setChildEntriesTable}
