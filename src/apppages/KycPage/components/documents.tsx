@@ -187,7 +187,8 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 transformedData,
                 setActiveTab,
                 "attachments",
-                setSaving
+                setSaving,
+                "finalPage"
             );
         }
     };
