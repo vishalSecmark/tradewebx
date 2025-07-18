@@ -37,7 +37,7 @@ export default function ForgotPasswordForm() {
         setError("");
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":${ACTION_NAME}, "Option":"ForgotPassword","Level":1</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"ForgotPassword","Level":1</J_Ui>
             <Sql></Sql>
             <X_Filter></X_Filter>
             <X_Data><ClientCode>${clientCode}</ClientCode></X_Data>
@@ -86,7 +86,7 @@ export default function ForgotPasswordForm() {
         setError("");
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":${ACTION_NAME}, "Option":"ChangePassword","Level":1</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"ChangePassword","Level":1</J_Ui>
             <Sql></Sql>
             <X_Filter></X_Filter>
             <X_Data>
