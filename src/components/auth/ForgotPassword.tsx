@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL } from "@/utils/constants";
+import { BASE_URL, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, ACTION_NAME } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import { toast } from "react-toastify";
@@ -37,7 +37,7 @@ export default function ForgotPasswordForm() {
         setError("");
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"tradeweb", "Option":"ForgotPassword","Level":1</J_Ui>
+            <J_Ui>"ActionName":${ACTION_NAME}, "Option":"ForgotPassword","Level":1</J_Ui>
             <Sql></Sql>
             <X_Filter></X_Filter>
             <X_Data><ClientCode>${clientCode}</ClientCode></X_Data>
@@ -56,12 +56,12 @@ export default function ForgotPasswordForm() {
             });
 
             if (response.data.success) {
-                console.log(clientCode,'1212121');
-                
+                console.log(clientCode, '1212121');
+
                 setCurrentStep(2);
-                
+
                 toast.success(response.data.data.rs0[0].Message);
-                console.log(clientCode,'client 221');
+                console.log(clientCode, 'client 221');
             } else {
                 setError(response.data.message || 'Failed to process request');
             }
@@ -86,7 +86,7 @@ export default function ForgotPasswordForm() {
         setError("");
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"tradeweb", "Option":"ChangePassword","Level":1</J_Ui>
+            <J_Ui>"ActionName":${ACTION_NAME}, "Option":"ChangePassword","Level":1</J_Ui>
             <Sql></Sql>
             <X_Filter></X_Filter>
             <X_Data>
@@ -177,7 +177,7 @@ export default function ForgotPasswordForm() {
                                 <Input
                                     type="text"
                                     value={clientCode}
-                                    onChange={(e) => {setClientCode(e.target.value)}}
+                                    onChange={(e) => { setClientCode(e.target.value) }}
                                     placeholder="Enter your client code"
                                     className="mt-1 transition-all duration-200 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
                                 />
@@ -204,7 +204,7 @@ export default function ForgotPasswordForm() {
                             <div>
                                 <Label className="text-gray-700 dark:text-gray-300 font-medium">OTP</Label>
                                 <Input
-                                 key={currentStep === 2 ? "otp-field" : "other"}
+                                    key={currentStep === 2 ? "otp-field" : "other"}
                                     type="text"
                                     value={otp}
                                     name="otp"
