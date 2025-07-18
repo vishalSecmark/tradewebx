@@ -47,7 +47,8 @@ export const handleSaveSinglePageData = async (
     JsonData: any, 
     setActiveTab?: any, 
     tabName?: string,
-    setSaving?: (loading: boolean) => void
+    setSaving?: (loading: boolean) => void,
+    page? : string
 ) => {
     if (!settings) return;
     
@@ -100,7 +101,7 @@ export const handleSaveSinglePageData = async (
                 toast.success(responseData.Message || "Data saved successfully");
                 if (setActiveTab && tabName) {
                     setActiveTab(tabName);
-                    if(tabName === "attachments"){
+                    if(page === "finalPage"){
                         localStorage.setItem("ekyc_submit", "true");
                     }
                 }
