@@ -81,6 +81,7 @@ const SSOContent = () => {
                 // Store auth data in localStorage
                 localStorage.setItem('userId', data.data[0].ClientCode)
                 localStorage.setItem('temp_token', data.token)
+                localStorage.setItem('refreshToken', data.refreshToken)
                 localStorage.setItem('tokenExpireTime', data.tokenExpireTime)
                 localStorage.setItem('clientCode', data.data[0].ClientCode)
                 localStorage.setItem('clientName', data.data[0].ClientName)
@@ -89,9 +90,11 @@ const SSOContent = () => {
 
                 // Clean up any existing ekyc data
                 clearIndexedDB();
-                
-                // Set auth cookie
+
+                // Set both cookie and localStorage  
                 document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`
+                localStorage.setItem('auth_token', data.token);
+
                 localStorage.removeItem('temp_token')
 
                 // Navigate directly to dashboard (no OTP for SSO)

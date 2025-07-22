@@ -300,8 +300,11 @@ export default function SignInForm() {
     if (currentLoginData.LoginType === "2FA") {
       router.push('/otp-verification');
     } else {
-      // Set cookie
+      // Set both cookie and localStorage
       document.cookie = `auth_token=${currentLoginData.token}; path=/; expires=${new Date(currentLoginData.tokenExpireTime).toUTCString()}`;
+      localStorage.setItem('auth_token', currentLoginData.token);
+      localStorage.setItem('refreshToken', currentLoginData.refreshToken);
+      localStorage.setItem('tokenExpireTime', currentLoginData.tokenExpireTime);
       localStorage.removeItem('temp_token');
       router.push('/dashboard');
     }

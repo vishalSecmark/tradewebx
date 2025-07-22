@@ -16,6 +16,7 @@ import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
 import LoaderOverlay from "../Loaders/LoadingSpinner";
 import Flatpickr from 'react-flatpickr';
 import { FaCalendar } from "react-icons/fa";
+import apiService from "@/utils/apiService";
 
 
 const DropdownField: React.FC<{
@@ -256,12 +257,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         </dsXml>`;
 
         try {
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             const columnData = response?.data?.data?.rs0?.[0]?.Column1;
             if (columnData) {
@@ -341,12 +337,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 setIsThirdPartyLoading(true);
             }
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             // Extract and parse the XML from response
             const columnData = response?.data?.data?.rs0?.[0]?.Column1;
@@ -361,7 +352,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
                     const urlNode = xmlDoc.getElementsByTagName('url')[0];
                     const url = urlNode?.textContent;
-            
+
                     if (url && field.GetResponseFlag === "true") {
                         window.open(url, '_blank');
                         toast.success('Redirecting to third party URL...');
@@ -375,7 +366,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     console.error('Error parsing ThirdPartyAPI XML:', err);
                 }
             }
-            
+
         } catch (error) {
             console.error('ThirdPartyAPI error:', error);
             toast.error('ThirdPartyAPI error!');

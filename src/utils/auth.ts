@@ -60,9 +60,7 @@ export const isAuthenticated = () => {
 };
 
 export const getAuthToken = () => {
-  const cookies = document.cookie.split(';');
-  const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth_token='));
-  return authCookie ? authCookie.split('=')[1] : null;
+  return localStorage.getItem('auth_token');
 };
 
 export const getUserData = () => {
