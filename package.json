@@ -19,7 +19,6 @@
     "@types/react-datepicker": "^7.0.0",
     "@types/react-icons": "^3.0.0",
     "@types/react-select": "^5.0.1",
-    "antd": "^5.26.6",
     "apexcharts": "^4.3.0",
     "autoprefixer": "^10.4.20",
     "axios": "^1.8.2",
