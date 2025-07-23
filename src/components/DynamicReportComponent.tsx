@@ -1059,106 +1059,156 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 fontFamily: `${fonts.content} !important`
             }}
         >
-            {/* Tabs - Only show if there are multiple levels */}
-            {safePageData.isValid && safePageData.getLevels().length > 1 && (
-                <div className="flex  border-b border-gray-200">
-                    <div className="flex flex-1 gap-2">
-                        {levelStack.map((level, index) => (
-                            <button
-                                key={index}
-                                style={{ backgroundColor: colors.cardBackground }}
-                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
-                                    ? `bg-${colors.primary} text-${colors.buttonText}`
-                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
-                                    }`}
-                                onClick={() => handleTabClick(level, index)}
-                            >
-                                {level === 0
-                                    ? safePageData.getSetting('level') || 'Main'
-                                    : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
-                                }
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex gap-2">
-                        {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
-                            <button
-                                className="p-2 rounded"
-                                onClick={() => setIsEditTableRowModalOpen(true)}
-                                style={{ color: colors.text }}
-                            >
-                                <FaEdit size={20} />
-                            </button>
+            {/* Tabs and Action Buttons */}
+            {safePageData.isValid && (
+                <div className="flex border-b border-gray-200">
+                    {/* Tabs - Only show if there are multiple levels */}
+                    {safePageData.getLevels().length > 1 && (
+                        <div className="flex flex-1 gap-2">
+                            {levelStack.map((level, index) => (
+                                <button
+                                    key={index}
+                                    style={{ backgroundColor: colors.cardBackground }}
+                                    className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
+                                        ? `bg-${colors.primary} text-${colors.buttonText}`
+                                        : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                        }`}
+                                    onClick={() => handleTabClick(level, index)}
+                                >
+                                    {level === 0
+                                        ? safePageData.getSetting('level') || 'Main'
+                                        : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
+                                    }
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
+                    {/* Action Icons - Always show */}
+                    <div className={`flex gap-2 ${safePageData.getLevels().length <= 1 ? 'ml-auto' : ''}`}>
+                        {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => setIsEditTableRowModalOpen(true)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaEdit size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Edit Selected Rows
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
                         )}
                         {(componentType === 'entry' || componentType === "multientry") && (
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => {
+                                        console.log('Plus button clicked, componentType:', componentType);
+                                        console.log('pageData available:', !!pageData);
+                                        console.log('pageData structure:', pageData);
+                                        setIsEntryModalOpen(true);
+                                    }}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaPlus size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Add New Entry
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
+                        )}
+                        <div className="relative group">
                             <button
-                                className="p-2 rounded"
+                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaFileExcel size={20} />
+                            </button>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                Export to Excel
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            </div>
+                        </div>
+                        <div className="relative group">
+                            <button
+                                className="p-2 rounded hover:bg-gray-100 transition-colors"
                                 onClick={() => {
-                                    console.log('Plus button clicked, componentType:', componentType);
-                                    console.log('pageData available:', !!pageData);
-                                    console.log('pageData structure:', pageData);
-                                    setIsEntryModalOpen(true);
+                                    setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
+                                    setIsConfirmModalOpen(true);
                                 }}
                                 style={{ color: colors.text }}
                             >
-                                <FaPlus size={20} />
+                                <FaEnvelope size={20} />
                             </button>
-                        )}
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFileExcel size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => {
-                                setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
-                                setIsConfirmModalOpen(true);
-                            }}
-                            style={{ color: colors.text }}
-                        >
-                            <FaEnvelope size={20} />
-                        </button>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                Email Report
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            </div>
+                        </div>
                         {showTypeList && (
-                            <button
-                                className="p-2 rounded"
-                                onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
-                                style={{ color: colors.text }}
-                            >
-                                <FaDownload size={20} />
-                            </button>
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaDownload size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Download Options
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
                         )}
                         {Object.keys(additionalTables).length == 0 && (
                             <>
-                                <button
-                                    className="p-2 rounded"
-                                    onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaFileCsv size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaFileCsv size={20} />
+                                    </button>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Export to CSV
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
+                                </div>
 
-                                <button
-                                    className="p-2 rounded"
-                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaFilePdf size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaFilePdf size={20} />
+                                    </button>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Export to PDF
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
+                                </div>
                             </>
                         )}
                         {apiData && apiData.length > 0 && (
-                            <div className="relative search-container">
+                            <div className="relative search-container group">
                                 <button
-                                    className="p-2 rounded"
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
                                     onClick={handleSearchToggle}
                                     style={{ color: colors.text }}
                                 >
                                     <FaSearch size={20} />
                                 </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Search Records
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
 
                                 {/* Absolute Search Box */}
                                 {isSearchActive && (
@@ -1204,21 +1254,33 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 )}
                             </div>
                         )}
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => fetchData()}
-                            style={{ color: colors.text }}
-                        >
-                            <FaSync size={20} />
-                        </button>
-                        {!showFilterHorizontally && safePageData.hasFilters() && (
+                        <div className="relative group">
                             <button
-                                className="p-2 rounded"
-                                onClick={() => setIsFilterModalOpen(true)}
+                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                onClick={() => fetchData()}
                                 style={{ color: colors.text }}
                             >
-                                <FaFilter size={20} />
+                                <FaSync size={20} />
                             </button>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                Refresh Data
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            </div>
+                        </div>
+                        {!showFilterHorizontally && safePageData.hasFilters() && (
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => setIsFilterModalOpen(true)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFilter size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Apply Filters
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
