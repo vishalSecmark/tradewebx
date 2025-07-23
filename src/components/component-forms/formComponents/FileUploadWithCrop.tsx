@@ -34,12 +34,7 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const acceptedTypes = field.fileType === 'image' 
-    ? 'image/*' 
-    : !(field.FileType.includes("jpg") || field.FileType.includes("png")) 
-      ? '.pdf,.doc,.docx,.xls,.xlsx,.txt' 
-      : 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt';
-
+  const acceptedTypes = field.FileType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',');
   const isRequired = field.isMandatory === "true"
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
