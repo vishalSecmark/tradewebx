@@ -7,6 +7,7 @@ interface AuthState {
     userId: string | null;
     tempToken: string | null;  // Used during OTP verification
     authToken: string | null;  // Final token after OTP verification
+    refreshToken: string | null;
     tokenExpireTime: string | null;
     clientCode: string | null;
     clientName: string | null;
@@ -22,6 +23,7 @@ const defaultInitialState: AuthState = {
     userId: null,
     tempToken: null,
     authToken: null,
+    refreshToken: null,
     tokenExpireTime: null,
     clientCode: null,
     clientName: null,
@@ -39,6 +41,7 @@ const loadInitialState = (): AuthState => {
         userId: localStorage.getItem('userId'),
         tempToken: localStorage.getItem('temp_token'),
         authToken: document.cookie.match(/auth_token=([^;]+)/)?.[1] || null,
+        refreshToken: localStorage.getItem('refreshToken'),
         tokenExpireTime: localStorage.getItem('tokenExpireTime'),
         clientCode: localStorage.getItem('clientCode'),
         clientName: localStorage.getItem('clientName'),
@@ -64,6 +67,7 @@ const authSlice = createSlice({
         setAuthData: (state, action: PayloadAction<{
             userId: string;
             token: string;
+            refreshToken: string;
             tokenExpireTime: string;
             clientCode: string;
             clientName: string;
@@ -72,6 +76,7 @@ const authSlice = createSlice({
         }>) => {
             state.userId = action.payload.userId;
             state.tempToken = action.payload.token;
+            state.refreshToken = action.payload.refreshToken;
             state.tokenExpireTime = action.payload.tokenExpireTime;
             state.clientCode = action.payload.clientCode;
             state.clientName = action.payload.clientName;
@@ -80,6 +85,7 @@ const authSlice = createSlice({
         },
         setFinalAuthData: (state, action: PayloadAction<{
             token: string;
+            refreshToken?: string;
             tokenExpireTime: string;
             clientCode: string;
             clientName: string;
@@ -88,6 +94,9 @@ const authSlice = createSlice({
             state.isAuthenticated = true;
             state.authToken = action.payload.token;
             state.tempToken = null; // Clear temp token
+            if (action.payload.refreshToken) {
+                state.refreshToken = action.payload.refreshToken;
+            }
             state.tokenExpireTime = action.payload.tokenExpireTime;
             state.clientCode = action.payload.clientCode;
             state.clientName = action.payload.clientName;

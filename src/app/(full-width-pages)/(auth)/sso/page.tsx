@@ -71,6 +71,7 @@ const SSOContent = () => {
                 dispatch(setAuthData({
                     userId: data.data[0].ClientCode,
                     token: data.token,
+                    refreshToken: data.refreshToken,
                     tokenExpireTime: data.tokenExpireTime,
                     clientCode: data.data[0].ClientCode,
                     clientName: data.data[0].ClientName,

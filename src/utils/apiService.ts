@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { BASE_URL, OTP_VERIFICATION_URL } from './constants';
 
 // Types for API responses
 export interface ApiResponse<T = any> {
@@ -95,6 +96,7 @@ class ApiService {
 
     // Handle refresh token failure
     private handleRefreshFailure(): void {
+        console.log('handleRefreshFailure');
         this.clearAuth();
         // Redirect to login or emit event for app to handle
         if (typeof window !== 'undefined') {
@@ -119,6 +121,7 @@ class ApiService {
         const refreshToken = this.getRefreshToken();
 
         if (!refreshToken) {
+            console.log('No refresh token available');
             throw new Error('No refresh token available');
         }
 
@@ -129,12 +132,17 @@ class ApiService {
     <X_Data>
         <RefreshToken>${refreshToken}</RefreshToken>
     </X_Data>
-    <J_Api>"UserId":"", "UserType":"User"</J_Api>
+    <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
 </dsXml>`;
 
+        console.log('Attempting to refresh token...');
+
         try {
-            const response = await axios.post<RefreshTokenResponse>(
-                'https://trade-plus.in/EstroAPI/api/Main/InitializeLogin',
+            // Create a new axios instance to bypass interceptors for refresh token requests
+            const refreshAxios = axios.create();
+
+            const response = await refreshAxios.post<RefreshTokenResponse>(
+                BASE_URL + OTP_VERIFICATION_URL,
                 refreshData,
                 {
                     headers: {
@@ -144,17 +152,31 @@ class ApiService {
                 }
             );
 
+            console.log('Refresh token API response:', response.status, response.data);
+
             if (response.data.success && response.data.data.rs0.length > 0) {
                 const tokenData = response.data.data.rs0[0];
 
                 // Update tokens in localStorage
                 localStorage.setItem('auth_token', tokenData.AccessToken);
                 localStorage.setItem('refreshToken', tokenData.RefreshToken);
+                console.log('Tokens refreshed successfully');
             } else {
+                console.error('Refresh token API returned unsuccessful response:', response.data);
                 throw new Error('Failed to refresh token');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Token refresh failed:', error);
+            console.log('Error status:', error.response?.status);
+            console.log('Error data:', error.response?.data);
+
+            // If refresh token API itself returns 401, immediately logout the user
+            if (error.response?.status === 401) {
+                console.warn('Refresh token is invalid or expired (401). Logging out user.');
+                this.handleRefreshFailure();
+                throw new Error('Refresh token expired - user logged out');
+            }
+
             throw error;
         }
     }
@@ -261,9 +283,13 @@ class ApiService {
     clearAuth(): void {
         if (typeof document !== 'undefined') {
             document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refreshToken');
         }
         if (typeof window !== 'undefined') {
             localStorage.removeItem('userId');
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refreshToken');
         }
     }
 }
