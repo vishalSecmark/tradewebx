@@ -1406,119 +1406,131 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     <Loader />
                 </div>
             }
-            {!apiData && !isLoading && hasFetchAttempted && <div>No Data Found</div>}
-            {/* Data Display */}
 
-            {!isLoading && apiData && (
-                <div className="space-y-0">
-                    <div className="text-sm text-gray-500">
-                        <div className="flex flex-col sm:flex-row justify-between">
-                            <div className="flex flex-col gap-2 my-1">
-                                {/* Report Header */}
-                                {/* {jsonDataUpdated?.XmlData?.ReportHeader && (
+            {/* Data Display */}
+            {!isLoading && (
+                (!apiData || apiData.length === 0) && hasFetchAttempted ? (
+                    <div className="flex items-center justify-center py-8 border rounded-lg" style={{
+                        backgroundColor: colors.cardBackground,
+                        borderColor: '#e5e7eb'
+                    }}>
+                        <div className="text-center">
+                            <div className="text-lg font-medium mb-2" style={{ color: colors.text }}>No Records Found</div>
+                            <div className="text-sm text-gray-500">
+                                No data matches your current criteria. Try adjusting your filters or search terms.
+                            </div>
+                        </div>
+                    </div>
+                ) : apiData && (
+                    <div className="space-y-0">
+                        <div className="text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row justify-between">
+                                <div className="flex flex-col gap-2 my-1">
+                                    {/* Report Header */}
+                                    {/* {jsonDataUpdated?.XmlData?.ReportHeader && (
                                     <div className="text-lg font-bold mb-2" style={{ color: colors.text }}>
                                         {jsonDataUpdated.XmlData.ReportHeader}
                                     </div>
                                 )} */}
 
-                                {/* Headings */}
-                                <div className="flex flex-wrap gap-2">
-                                    {jsonDataUpdated?.XmlData?.Headings?.Heading ? (
-                                        Array.isArray(jsonDataUpdated.XmlData.Headings.Heading) ? (
-                                            jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                    {/* Headings */}
+                                    <div className="flex flex-wrap gap-2">
+                                        {jsonDataUpdated?.XmlData?.Headings?.Heading ? (
+                                            Array.isArray(jsonDataUpdated.XmlData.Headings.Heading) ? (
+                                                jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                        style={{
+                                                            backgroundColor: colors.cardBackground,
+                                                            color: colors.text
+                                                        }}
+                                                    >
+                                                        {headingText}
+                                                    </span>
+                                                ))
+                                            ) : (
                                                 <span
-                                                    key={index}
                                                     className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                                     style={{
                                                         backgroundColor: colors.cardBackground,
                                                         color: colors.text
                                                     }}
                                                 >
-                                                    {headingText}
+                                                    {jsonDataUpdated.XmlData.Headings.Heading}
                                                 </span>
-                                            ))
-                                        ) : (
-                                            <span
-                                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                                style={{
-                                                    backgroundColor: colors.cardBackground,
-                                                    color: colors.text
-                                                }}
-                                            >
-                                                {jsonDataUpdated.XmlData.Headings.Heading}
-                                            </span>
-                                        )
-                                    ) : null}
+                                            )
+                                        ) : null}
+                                    </div>
+                                </div>
+                                <div className="text-xs">
+                                    {searchTerm ?
+                                        `Showing ${filteredApiData.length} of ${apiData.length} records` :
+                                        `Total Records: ${apiData.length}`
+                                    } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
                                 </div>
                             </div>
-                            <div className="text-xs">
-                                {searchTerm ?
-                                    `Showing ${filteredApiData.length} of ${apiData.length} records` :
-                                    `Total Records: ${apiData.length}`
-                                } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
-                            </div>
                         </div>
-                    </div>
-                    <DataTable
-                        data={filteredApiData}
-                        settings={{
-                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                            webColumns: rs1Settings?.webColumns?.[0] || [],
-                            // Add level-specific settings
-                            ...(currentLevel > 0 ? {
-                                // Override responsive columns for second level if needed
+                        <DataTable
+                            data={filteredApiData}
+                            settings={{
+                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
                                 mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                 tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                webColumns: rs1Settings?.webColumns?.[0] || []
-                            } : {})
-                        }}
-                        summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                        onRowClick={handleRecordClick}
-                        onRowSelect={handleRowSelect}
-                        tableRef={tableRef}
-                        isEntryForm={componentType === "entry" || componentType === "multientry"}
-                        handleAction={handleTableAction}
-                        fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
-                        showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
-                    />
-                    {Object.keys(additionalTables).length > 0 && (
-                        <div>
-                            {Object.entries(additionalTables).map(([tableKey, tableData]) => {
-                                // Get the title from jsonData based on the table key
-                                const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
-                                return (
-                                    <div key={tableKey} className="mt-3">
-                                        <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
-                                            {tableTitle}
-                                        </h3>
-                                        <DataTable
-                                            data={tableData}
-                                            settings={{
-                                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                webColumns: rs1Settings?.webColumns?.[0] || [],
-                                                // Add level-specific settings
-                                                ...(currentLevel > 0 ? {
-                                                    // Override responsive columns for second level if needed
+                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                // Add level-specific settings
+                                ...(currentLevel > 0 ? {
+                                    // Override responsive columns for second level if needed
+                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                    webColumns: rs1Settings?.webColumns?.[0] || []
+                                } : {})
+                            }}
+                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                            onRowClick={handleRecordClick}
+                            onRowSelect={handleRowSelect}
+                            tableRef={tableRef}
+                            isEntryForm={componentType === "entry" || componentType === "multientry"}
+                            handleAction={handleTableAction}
+                            fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
+                            showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
+                        />
+                        {Object.keys(additionalTables).length > 0 && (
+                            <div>
+                                {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                    // Get the title from jsonData based on the table key
+                                    const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                    return (
+                                        <div key={tableKey} className="mt-3">
+                                            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                                {tableTitle}
+                                            </h3>
+                                            <DataTable
+                                                data={tableData}
+                                                settings={{
+                                                    ...safePageData.getCurrentLevel(currentLevel)?.settings,
                                                     mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                                     tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                    webColumns: rs1Settings?.webColumns?.[0] || []
-                                                } : {})
-                                            }}
-                                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                                            tableRef={tableRef}
-                                            fullHeight={false}
-                                        />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
+                                                    webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                    // Add level-specific settings
+                                                    ...(currentLevel > 0 ? {
+                                                        // Override responsive columns for second level if needed
+                                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                        webColumns: rs1Settings?.webColumns?.[0] || []
+                                                    } : {})
+                                                }}
+                                                summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                                                tableRef={tableRef}
+                                                fullHeight={false}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                ))}
 
             {(componentType === 'entry' || componentType === "multientry") && safePageData.isValid && (
                 <EntryFormModal
