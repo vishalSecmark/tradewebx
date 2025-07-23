@@ -176,48 +176,85 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
       return;
     }
 
+    //updated logic by pavan for defualt tag
+
     if (isEditing && editingIndex !== null) {
-      // Update existing entry
+      // Edit logic
       setFieldData((prevState: any) => {
         const prevTableData = prevState.dematTabData.tableData || [];
         const updatedTableData = [...prevTableData];
-
-        updatedTableData[editingIndex] = {
-          ...currentFormData,
-        };
-
+        const isDefaultChecked = currentFormData.IsDefault === "true";
+    
+        let newTableData;
+    
+        if (isDefaultChecked) {
+          // Unset all others
+          newTableData = updatedTableData.map((entry, index) => {
+            if (index === editingIndex) {
+              return {
+                ...currentFormData,
+                IsDefault: "true"
+              };
+            } else {
+              return {
+                ...entry,
+                IsDefault: "false"
+              };
+            }
+          });
+        } else {
+          // Keep other defaults intact, or restore old if none found
+          newTableData = updatedTableData.map((entry, index) => {
+            if (index === editingIndex) {
+              return {
+                ...currentFormData,
+                IsDefault: "false"
+              };
+            }
+            return { ...entry };
+          });
+    
+          // Check if any entry is marked as default
+          const hasDefault = newTableData.some((entry) => entry.IsDefault === "true");
+          if (!hasDefault) {
+            const firstOldIndex = newTableData.findIndex((_, idx) => idx !== editingIndex);
+            if (firstOldIndex !== -1) {
+              newTableData[firstOldIndex].IsDefault = "true";
+            }
+          }
+        }
+    
         return {
           ...prevState,
           dematTabData: {
             ...prevState.dematTabData,
-            tableData: updatedTableData
+            tableData: newTableData
           }
         };
       });
     } else {
-      // Add new entry
-      const updatedDematData = {
+      // Add new entry logic
+      const isDefaultChecked = currentFormData.IsDefault === "true";
+      const newEntry = {
         ...currentFormData,
-        // IsDefault: "true" // Force new entry to be default
+        IsDefault: isDefaultChecked ? "true" : "false"
       };
-
+    
       setFieldData((prevState: any) => {
         const prevTableData = prevState.dematTabData.tableData || [];
-
-        // Unset all other defaults
-        const updatedTableData = prevTableData.map(demat => ({
-          ...demat,
-          IsDefault: "false"
-        }));
-
+    
+        const updatedTableData = isDefaultChecked
+          ? prevTableData.map((demat) => ({
+              ...demat,
+              IsDefault: "false"
+            }))
+          : prevTableData;
+    
         return {
           ...prevState,
           dematTabData: {
             ...prevState.dematTabData,
-            tableData: [
-              ...updatedTableData,
-              updatedDematData
-            ]
+              tableData: [...updatedTableData, newEntry]
           }
         };
       });
