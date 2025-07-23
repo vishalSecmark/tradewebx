@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 // Types for API responses
 export interface ApiResponse<T = any> {
@@ -8,14 +8,155 @@ export interface ApiResponse<T = any> {
     error?: string;
 }
 
+// Types for refresh token response
+interface RefreshTokenResponse {
+    success: boolean;
+    data: {
+        rs0: Array<{
+            AccessToken: string;
+            RefreshToken: string;
+        }>;
+    };
+}
+
 // API Service Class
 class ApiService {
     private defaultTimeout: number = 50000;
+    private isRefreshing: boolean = false;
+    private failedQueue: Array<{
+        resolve: (value?: any) => void;
+        reject: (error?: any) => void;
+    }> = [];
+
+    constructor() {
+        this.setupInterceptors();
+    }
+
+    // Setup axios interceptors for automatic token refresh
+    private setupInterceptors(): void {
+        // Response interceptor to handle 401 errors
+        axios.interceptors.response.use(
+            (response: AxiosResponse) => response,
+            async (error: AxiosError) => {
+                const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+                if (error.response?.status === 401 && !originalRequest._retry) {
+                    if (this.isRefreshing) {
+                        // If already refreshing, queue the request
+                        return new Promise((resolve, reject) => {
+                            this.failedQueue.push({ resolve, reject });
+                        }).then(() => {
+                            return axios(originalRequest);
+                        }).catch(err => {
+                            return Promise.reject(err);
+                        });
+                    }
+
+                    originalRequest._retry = true;
+                    this.isRefreshing = true;
+
+                    try {
+                        await this.refreshAuthToken();
+                        this.processQueue(null);
+
+                        // Update the authorization header with new token
+                        const newToken = this.getAuthToken();
+                        if (newToken && originalRequest.headers) {
+                            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                        }
+
+                        return axios(originalRequest);
+                    } catch (refreshError) {
+                        this.processQueue(refreshError);
+                        this.handleRefreshFailure();
+                        return Promise.reject(refreshError);
+                    } finally {
+                        this.isRefreshing = false;
+                    }
+                }
+
+                return Promise.reject(error);
+            }
+        );
+    }
+
+    // Process queued requests after token refresh
+    private processQueue(error: any): void {
+        this.failedQueue.forEach(({ resolve, reject }) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve();
+            }
+        });
+
+        this.failedQueue = [];
+    }
+
+    // Handle refresh token failure
+    private handleRefreshFailure(): void {
+        this.clearAuth();
+        // Redirect to login or emit event for app to handle
+        if (typeof window !== 'undefined') {
+            window.location.href = '/signin';
+        }
+    }
 
     // Get authorization token from localStorage
     private getAuthToken(): string | null {
         const authToken = localStorage.getItem('auth_token');
         return authToken;
+    }
+
+    // Get refresh token from localStorage
+    private getRefreshToken(): string | null {
+        const refreshToken = localStorage.getItem('refreshToken');
+        return refreshToken;
+    }
+
+    // Refresh authentication token
+    private async refreshAuthToken(): Promise<void> {
+        const refreshToken = this.getRefreshToken();
+
+        if (!refreshToken) {
+            throw new Error('No refresh token available');
+        }
+
+        const refreshData = `<dsXml>
+    <J_Ui>"ActionName":"TradeWeb","Option":"Refresh"</J_Ui>
+    <Sql/>
+    <X_Filter></X_Filter>
+    <X_Data>
+        <RefreshToken>${refreshToken}</RefreshToken>
+    </X_Data>
+    <J_Api>"UserId":"", "UserType":"User"</J_Api>
+</dsXml>`;
+
+        try {
+            const response = await axios.post<RefreshTokenResponse>(
+                'https://trade-plus.in/EstroAPI/api/Main/InitializeLogin',
+                refreshData,
+                {
+                    headers: {
+                        'Content-Type': 'application/xml'
+                    },
+                    timeout: this.defaultTimeout
+                }
+            );
+
+            if (response.data.success && response.data.data.rs0.length > 0) {
+                const tokenData = response.data.data.rs0[0];
+
+                // Update tokens in localStorage
+                localStorage.setItem('auth_token', tokenData.AccessToken);
+                localStorage.setItem('refreshToken', tokenData.RefreshToken);
+            } else {
+                throw new Error('Failed to refresh token');
+            }
+        } catch (error) {
+            console.error('Token refresh failed:', error);
+            throw error;
+        }
     }
 
     // Create default headers with authorization
