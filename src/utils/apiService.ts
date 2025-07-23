@@ -100,7 +100,7 @@ class ApiService {
         this.clearAuth();
         // Redirect to login or emit event for app to handle
         if (typeof window !== 'undefined') {
-            window.location.href = '/signin';
+            window.location.href = '/';
         }
     }
 

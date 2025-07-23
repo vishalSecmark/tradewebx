@@ -301,7 +301,7 @@ export default function SignInForm() {
       router.push('/otp-verification');
     } else {
       // Set both cookie and localStorage
-      document.cookie = `auth_token=${currentLoginData.token}; path=/; expires=${new Date(currentLoginData.tokenExpireTime).toUTCString()}`;
+      document.cookie = `auth_token=${currentLoginData.token}; path=/`;
       localStorage.setItem('auth_token', currentLoginData.token);
       localStorage.setItem('refreshToken', currentLoginData.refreshToken);
       localStorage.setItem('tokenExpireTime', currentLoginData.tokenExpireTime);

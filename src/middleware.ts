@@ -13,11 +13,11 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/sso');
 
   // If user is not authenticated and trying to access protected route
-  // if (!authToken && !isAuthPage) {
-  //   const signInUrl = new URL(`${BASE_PATH_FRONT_END}/signin`, request.url);
-  //   signInUrl.searchParams.set('clearLocalStorage', 'true'); // Add query param
-  //   return NextResponse.redirect(signInUrl);
-  // }
+  if (!authToken && !isAuthPage) {
+    const signInUrl = new URL(`${BASE_PATH_FRONT_END}/signin`, request.url);
+    signInUrl.searchParams.set('clearLocalStorage', 'true'); // Add query param
+    return NextResponse.redirect(signInUrl);
+  }
 
   // If user is authenticated and trying to access auth pages
   if (authToken && isAuthPage) {
