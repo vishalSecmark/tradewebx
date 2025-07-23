@@ -1,12 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+// import axios from 'axios';
 import { ACTION_NAME, PATH_URL } from '@/utils/constants';
 import { BASE_URL } from '@/utils/constants';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
-import {isEqual} from "lodash"
+import { isEqual } from "lodash"
+import apiService from '@/utils/apiService';
 // Define theme types
 export type ThemeType = 'dark' | 'light' | 'lightDark' | 'blue';
 
@@ -174,7 +175,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [themes, setThemes] = useState<Record<ThemeType, ThemeColors>>(initialThemes);
   const [fonts, setFonts] = useState<FontSettings>(defaultFonts);
   const [isLoading, setIsLoading] = useState(true);
-  const {userId: UserId, userType: UserType, isAuthenticated} = useSelector((state:RootState)=> state.auth) 
+  const { userId: UserId, userType: UserType, isAuthenticated } = useSelector((state: RootState) => state.auth)
   // Add fetchThemes function
   const fetchThemes = async () => {
     try {
@@ -194,12 +195,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-        headers: {
-          'Content-Type': 'application/xml',
-          'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-        }
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
       if (response.data?.data?.rs0?.[0]?.LevelSetting) {
         const parsedThemeSettings = JSON.parse(response.data.data.rs0[0].LevelSetting);
 
@@ -227,10 +223,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const localSavedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
         try {
           const parsedLocalThemeColors = JSON.parse(localSavedThemeColors);
-          if(!isEqual(parsedLocalThemeColors, parsedThemeSettings)) {
+          if (!isEqual(parsedLocalThemeColors, parsedThemeSettings)) {
             localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
           }
-        }catch(err) {
+        } catch (err) {
           localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
         }
       }
@@ -240,7 +236,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const savedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
       if (savedThemeColors) {
         setThemes(JSON.parse(savedThemeColors));
-      }else {
+      } else {
         setThemes(initialThemes);
       }
     }
@@ -253,7 +249,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const savedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
         if (savedThemeColors) {
           setThemes(JSON.parse(savedThemeColors));
-        }else {
+        } else {
           setThemes(initialThemes);
         }
 
@@ -323,7 +319,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     // Fetch theme if user is authenticated successfully
-    if(UserId && UserType && isAuthenticated) {
+    if (UserId && UserType && isAuthenticated) {
       fetchThemes();
     }
   }, [UserId, UserType, isAuthenticated])

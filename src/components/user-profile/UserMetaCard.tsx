@@ -6,6 +6,7 @@ import { useTheme } from "../../context/ThemeContext";
 import Image from "next/image";
 import axios from "axios";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "../../utils/constants";
+import apiService from "@/utils/apiService";
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -32,12 +33,7 @@ export default function UserMetaCard() {
     </dsXml>`;
 
     try {
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-        headers: {
-          'Content-Type': 'application/xml',
-          'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-        }
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       if (response.data?.data?.rs0?.[0]) {
         setProfileData(response.data.data.rs0[0]);

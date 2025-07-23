@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchLastTradingDate, fetchInitializeLogin } from '@/redux/features/common/commonSlice';
 import Select from 'react-select';
 import CommonCustomDropdown from '@/components/form/DropDown/CommonDropDown';
+import apiService from '@/utils/apiService';
 
 const ReactApexChart = nextDynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -427,13 +428,7 @@ function Dashboard() {
                 <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                timeout: 300000
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData1);
 
             const result = response?.data?.data?.rs0;
 
@@ -505,13 +500,7 @@ function Dashboard() {
                 <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 300000
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             console.log(response.data.data.rs0, 'response.data.data.rs0');
             const newData = response.data.data.rs0 || [];
             setDashboardData(newData);
@@ -560,7 +549,7 @@ function Dashboard() {
 
     // Handle client selection changes and load data accordingly
     useEffect(() => {
-        if (selectedClient && (auth.userType === 'branch' || auth.userType === 'user' )) {
+        if (selectedClient && (auth.userType === 'branch' || auth.userType === 'user')) {
             // Check if we have persisted data for this client
             const persistedDataKey = `dashboardData_${selectedClient.value}`;
             const savedData = localStorage.getItem(persistedDataKey);

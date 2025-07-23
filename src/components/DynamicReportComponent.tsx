@@ -19,6 +19,7 @@ import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
 import Loader from './Loader';
+import apiService from '@/utils/apiService';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -621,13 +622,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 600000
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             const endTime = performance.now();
             setApiResponseTime(Math.round(endTime - startTime));
@@ -840,12 +835,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             if (response?.data?.success) {
                 fetchData();
             }

@@ -12,6 +12,7 @@ import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
 import { clearMakerSates } from "@/utils/helper";
 import { getFileTypeFromBase64 } from "@/utils/helper";
+import apiService from "@/utils/apiService";
 
 interface RowData {
     [key: string]: any;
@@ -115,7 +116,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     const showViewDocumentBtn = settings.ShowViewDocument
 
-    
+
     const showViewDocumentAPI = settings.ShowViewDocumentAPI
 
     const editableColumns = settings.EditableColumn || [];
@@ -163,12 +164,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Fetching page data for EntryFormModal:', xmlData);
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             console.log('Page data response:', response.data.data);
 
@@ -457,12 +453,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         <J_Api>${jApi}</J_Api>
     </dsXml>`;
         try {
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const result = response?.data?.data?.rs0?.[0]?.Column1;
             if (result) {
                 const messageMatch = result.match(/<Message>(.*?)<\/Message>/);
@@ -557,15 +548,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const handleSave = async () => {
         const xmlData = generateDsXml(localData);
         try {
-            const response = await axios.post(
+            const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
-                {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                    }
-                }
             );
 
             console.log('Save response:', response.data);
@@ -704,15 +689,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Dropdown request XML:', xmlData);
 
-            const response = await axios.post(
+            const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
-                {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                    }
-                }
             );
 
             const rs0Data = response.data?.data?.rs0;
@@ -832,15 +811,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Dependent dropdown request XML:', xmlData);
 
-            const response = await axios.post(
+            const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
-                {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                    }
-                }
             );
 
             console.log('Dependent dropdown response:', response.data);
@@ -887,7 +860,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
 
-    
+
     const handleDocumentView = async (rowData: any,) => {
         if ((rowData.RekycDocumentType === undefined || rowData.RekycDocumentType === '')) {
             setValidationModal({
@@ -897,18 +870,18 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             });
             return;
         }
-        
-        
-      
+
+
+
         const J_Ui = Object.entries(showViewDocumentAPI.dsXml.J_Ui)
-          .map(([key, value]) => `"${key}":"${value}"`)
-          .join(',');
-      
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
         const X_Filter_Multiple = Object.keys(showViewDocumentAPI.dsXml.X_Filter_Multiple)
-          .filter(key => key in rowData)
-          .map(key => `<${key}>${rowData[key]}</${key}>`)
-          .join('');
-      
+            .filter(key => key in rowData)
+            .map(key => `<${key}>${rowData[key]}</${key}>`)
+            .join('');
+
         const xmlData = `<dsXml>
           <J_Ui>${J_Ui}</J_Ui>
           <Sql>${showViewDocumentAPI.dsXml.Sql || ''}</Sql>
@@ -916,65 +889,60 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
           <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
           <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
         </dsXml>`;
-      
-        try {
-          const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-            headers: {
-              'Content-Type': 'application/xml',
-              'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-            }
-          });
 
-        // if((response.data.data.rs0[0].Flag === 'E')){
-        //     console.log(response.data.data.rs0[0],'inside if');
-             
-        //     setValidationModal({
-        //         isOpen: true,
-        //         message: response.data.data.rs0[0].Message,
-        //         type: 'E'
-        //     });
-        //   }else{
+        try {
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+            // if((response.data.data.rs0[0].Flag === 'E')){
+            //     console.log(response.data.data.rs0[0],'inside if');
+
+            //     setValidationModal({
+            //         isOpen: true,
+            //         message: response.data.data.rs0[0].Message,
+            //         type: 'E'
+            //     });
+            //   }else{
             const base64 = response.data.data.rs0.Base64PDF;
-          const fileType = getFileTypeFromBase64(base64); // function you defined earlier
-          const mimeMap: Record<string, string> = {
-            pdf: 'application/pdf',
-            png: 'image/png',
-            jpeg: 'image/jpeg',
-            jpg: 'image/jpeg',
-            gif: 'image/gif',
-            xml: 'application/xml',
-            text: 'text/plain'
-          };
-      
-          const mimeType = mimeMap[fileType] || 'application/octet-stream';
-      
-          // Create Blob URL
-          const byteCharacters = atob(base64);
-          const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: mimeType });
-          const blobUrl = URL.createObjectURL(blob);
-      
-          // Open in new tab
-          const newTab = window.open(blobUrl, '_blank');
-          if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = `document.${fileType}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        //   }
-            
-       
-          
-      
+            const fileType = getFileTypeFromBase64(base64); // function you defined earlier
+            const mimeMap: Record<string, string> = {
+                pdf: 'application/pdf',
+                png: 'image/png',
+                jpeg: 'image/jpeg',
+                jpg: 'image/jpeg',
+                gif: 'image/gif',
+                xml: 'application/xml',
+                text: 'text/plain'
+            };
+
+            const mimeType = mimeMap[fileType] || 'application/octet-stream';
+
+            // Create Blob URL
+            const byteCharacters = atob(base64);
+            const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Open in new tab
+            const newTab = window.open(blobUrl, '_blank');
+            if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `document.${fileType}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            //   }
+
+
+
+
         } catch (error) {
-          console.error("Error fetching DocumentView:", error);
-          toast.error(error)
+            console.error("Error fetching DocumentView:", error);
+            toast.error(error)
         }
-      };
+    };
 
     return (
         <>
@@ -1004,7 +972,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                         >
                                                             View Details
                                                         </button>
-                                                        
+
                                                     </div>
                                                 )}
 
@@ -1328,17 +1296,17 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                         <div className="mt-6 flex justify-end gap-4">
 
-                        {showViewDocumentBtn === true &&
-                                                         <button
-                                                         onClick={() => handleDocumentView(localData[0])}
-                                                         className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
-                                                         style={{
-                                                             fontFamily: fonts.content,
-                                                         }}
-                                                     >
-                                                         View Document
-                                                     </button>
-                                                        }
+                            {showViewDocumentBtn === true &&
+                                <button
+                                    onClick={() => handleDocumentView(localData[0])}
+                                    className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
+                                    style={{
+                                        fontFamily: fonts.content,
+                                    }}
+                                >
+                                    View Document
+                                </button>
+                            }
 
                             <button
                                 onClick={handleSave}

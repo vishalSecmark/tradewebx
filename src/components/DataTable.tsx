@@ -17,6 +17,7 @@ import { BASE_URL } from '@/utils/constants';
 import { buildFilterXml } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
+import apiService from '@/utils/apiService';
 
 interface DataTableProps {
     data: any[];
@@ -1282,13 +1283,7 @@ export const exportTableToPdf = async (
                     <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
                 </dsXml>`;
 
-            const emailResponse = await axios.post(BASE_URL + PATH_URL, emailXml, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    Authorization: `Bearer ${authToken}`,
-                },
-                timeout: 300000,
-            });
+            const emailResponse = await apiService.postWithAuth(BASE_URL + PATH_URL, emailXml);
 
             const result = emailResponse?.data;
             const columnMsg = result?.data?.rs0?.[0]?.Column1 || '';
@@ -1316,13 +1311,7 @@ export const exportTableToPdf = async (
                         <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
                     </dsXml>`;
 
-                const fetchResponse = await axios.post(BASE_URL + PATH_URL, fetchXml, {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                    timeout: 300000,
-                });
+                const fetchResponse = await apiService.postWithAuth(BASE_URL + PATH_URL, fetchXml);
 
                 const rs0 = fetchResponse?.data?.data?.rs0;
                 if (!Array.isArray(rs0) || rs0.length === 0 || !rs0[0]?.Base64PDF) {
@@ -1375,13 +1364,7 @@ export const downloadOption = async (
     </dsXml>`;
 
     try {
-        const response = await axios.post(BASE_URL + PATH_URL, xmlData1, {
-            headers: {
-                'Content-Type': 'application/xml',
-                Authorization: `Bearer ${authToken}`,
-            },
-            timeout: 300000,
-        });
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData1);
 
         // Pull out the first rs0 entry
         const rs0 = response.data?.data?.rs0;
