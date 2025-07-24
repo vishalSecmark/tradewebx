@@ -4,7 +4,7 @@ import { useState } from "react";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import axios from "axios";
+import apiService from "@/utils/apiService";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
 
@@ -60,22 +60,12 @@ export default function ChangePassword() {
         </dsXml>`;
 
         try {
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 50000
-            });
-
-            // && response.data.data.rs0[0]
+            const apiUrl = BASE_URL + PATH_URL;
+            const response = await apiService.postWithAuth(apiUrl, xmlData);
 
             if (response.data.success && response.data.data.rs0) {
                 console.log('inside 11');
-                // console.log(,'response change password');
                 const result = response.data.data.rs0
-
-                // console.log(result.Flag,'result11');
 
                 if (result.Flag === 'S') {
                     setSuccess(result.Message);

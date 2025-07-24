@@ -21,18 +21,18 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor to handle token expiration
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      logout();
-      window.location.href = `${BASE_PATH_FRONT_END}/signin`;
-    }
-    return Promise.reject(error);
-  }
-);
+// // Add response interceptor to handle token expiration
+// api.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error.response?.status === 401) {
+//       // Token expired or invalid
+//       logout();
+//       window.location.href = `${BASE_PATH_FRONT_END}/signin`;
+//     }
+//     return Promise.reject(error);
+//   }
+// );
 
 export const logout = () => {
   // Clear cookies
@@ -49,20 +49,18 @@ export const isAuthenticated = () => {
   if (!token) return false;
 
   // Check if token is expired
-  const expireTime = localStorage.getItem('tokenExpireTime');
-  if (expireTime && new Date(expireTime) < new Date()) {
-    logout();
-    clearIndexedDB();
-    return false;
-  }
+  // const expireTime = localStorage.getItem('tokenExpireTime');
+  // if (expireTime && new Date(expireTime) < new Date()) {
+  //   logout();
+  //   clearIndexedDB();
+  //   return false;
+  // }
 
   return true;
 };
 
 export const getAuthToken = () => {
-  const cookies = document.cookie.split(';');
-  const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth_token='));
-  return authCookie ? authCookie.split('=')[1] : null;
+  return localStorage.getItem('auth_token');
 };
 
 export const getUserData = () => {

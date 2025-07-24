@@ -3,14 +3,17 @@ import type { NextRequest } from 'next/server'
 import { BASE_PATH_FRONT_END } from './utils/constants';
 
 export function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('auth_token');
+  // Get auth token from cookies (server-side accessible)
+  const authToken = request.cookies.get('auth_token')?.value;
+  console.log('authToken', authToken);
+
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') ||
     request.nextUrl.pathname.startsWith('/otp-verification') ||
     request.nextUrl.pathname.startsWith('/forgot-password') ||
     request.nextUrl.pathname.startsWith('/sso');
 
   // If user is not authenticated and trying to access protected route
- if (!authToken && !isAuthPage) {
+  if (!authToken && !isAuthPage) {
     const signInUrl = new URL(`${BASE_PATH_FRONT_END}/signin`, request.url);
     signInUrl.searchParams.set('clearLocalStorage', 'true'); // Add query param
     return NextResponse.redirect(signInUrl);
