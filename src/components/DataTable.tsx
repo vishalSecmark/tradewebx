@@ -796,7 +796,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     }
                 }}
             />
-            <TableStyling onRowClick={onRowClick} />
+            <TableStyling onRowClick={onRowClick} screenSize={screenSize} />
         </div>
     );
 };
