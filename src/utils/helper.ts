@@ -183,3 +183,25 @@ export const clearIndexedDB = () => {
         };
     });
 };
+
+export const dynamicXmlGenratingFn = (ApiData,rowData) => {
+    const J_Ui = Object.entries(ApiData.dsXml.J_Ui)
+        .map(([key, value]) => `"${key}":"${value}"`)
+        .join(',');
+    
+      const X_Filter_Multiple = Object.keys(ApiData.dsXml.X_Filter_Multiple)
+        .filter(key => key in rowData)
+        .map(key => `<${key}>${rowData[key]}</${key}>`)
+        .join('');
+
+        const xmlData = `<dsXml>
+        <J_Ui>${J_Ui}</J_Ui>
+        <Sql>${ApiData.dsXml.Sql || ''}</Sql>
+        <X_Filter>${ApiData.dsXml.X_Filter || ''}</X_Filter>
+        <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
+        <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+      </dsXml>`;
+
+      return xmlData
+
+}
