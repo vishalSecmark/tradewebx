@@ -10,8 +10,9 @@ import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
-import { clearMakerSates } from "@/utils/helper";
+import { clearMakerSates, dynamicXmlGenratingFn } from "@/utils/helper";
 import { getFileTypeFromBase64 } from "@/utils/helper";
+import apiService from "@/utils/apiService";
 
 interface RowData {
     [key: string]: any;
@@ -52,6 +53,8 @@ interface EditTableRowModalProps {
     tableData: RowData[];
     wPage: string;
     settings: {
+        SavebName: any;
+        ViewDocumentName: string;
         ShowView: boolean;
         EditableColumn: EditableColumn[];
         leftAlignedColumns?: string;
@@ -62,6 +65,7 @@ interface EditTableRowModalProps {
         }>;
         hideMultiEditColumn?: string;
         ShowViewDocument?: boolean;
+      
         ShowViewDocumentAPI?: {
             dsXml: {
                 J_Ui: any;
@@ -71,6 +75,18 @@ interface EditTableRowModalProps {
                 J_Api: any;
             };
         };
+
+        ViewAPI?: {
+            dsXml: {
+                J_Ui: any;
+                Sql: string;
+                X_Filter: string;
+                X_Filter_Multiple?: any;
+                J_Api: any;
+            };
+        };
+
+
     };
     showViewDocument?: boolean;
 }
@@ -104,19 +120,31 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [pageData, setPageData] = useState<any>(null);
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
-
+    const [processResponseData, setProcessResponseData] = useState<any[]>([]);
+    const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+    const [isProcessButtonEnabled, setIsProcessButtonEnabled] = useState(false);
+    const [viewApiXml,setViewApiXml] = useState('');
+    const [viewLogHeader,setViewLogHeader] = useState({})
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
 
-    // console.log(tableData,'tableData222');
-    // console.log(settings.ShowView,'settings in edit');
-
     const showViewTable = settings.ShowView
 
-    const showViewDocumentBtn = settings.ShowViewDocument
+    const showViewDocumentBtn = settings.ShowViewDocument    
 
+    const showViewDocumentLabel = settings.ViewDocumentName
+
+    const saveBtnDocumentName = settings.SavebName
     
     const showViewDocumentAPI = settings.ShowViewDocumentAPI
+
+    const showViewApi = settings.ViewAPI
+
+    
+
+
+   
+    
 
     const editableColumns = settings.EditableColumn || [];
 
@@ -163,12 +191,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Fetching page data for EntryFormModal:', xmlData);
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             console.log('Page data response:', response.data.data);
 
@@ -457,12 +480,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         <J_Api>${jApi}</J_Api>
     </dsXml>`;
         try {
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const result = response?.data?.data?.rs0?.[0]?.Column1;
             if (result) {
                 const messageMatch = result.match(/<Message>(.*?)<\/Message>/);
@@ -553,19 +571,32 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 </dsXml>`;
     };
 
+    const hadleViewLog = async (rowData: any) => {
+        if ((rowData.ExportType === undefined || rowData.ExportType === '')) {
+            setValidationModal({
+                isOpen: true,
+                message: 'Please select a Export Type from the dropdown.',
+                type: 'E'
+            });
+            return;
+        }
+
+     setViewApiXml(dynamicXmlGenratingFn(showViewApi,rowData))
+    
+     
+     setViewLogHeader(rowData)
+            // Enable Process button
+    setIsProcessButtonEnabled(true);
+     
+
+      }
 
     const handleSave = async () => {
         const xmlData = generateDsXml(localData);
         try {
-            const response = await axios.post(
+            const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
-                {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                    }
-                }
             );
 
             console.log('Save response:', response.data);
@@ -626,6 +657,38 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             showValidationMessage(errorMessage, 'E');
         }
     };
+
+
+    const handleProcess = async () => {
+        try {
+            const response = await axios.post(BASE_URL + PATH_URL, viewApiXml, {
+                headers: {
+                    'Content-Type': 'application/xml',
+                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
+                }
+            });
+    
+            const rs0 = response?.data?.data?.rs0 || [];
+    
+            if (!Array.isArray(rs0) || rs0.length === 0) {
+                toast.error('No logs found.');
+                return;
+            }
+    
+            setProcessResponseData(rs0);
+                
+            setIsProcessModalOpen(true);
+            // setIsProcessButtonEnabled(false);
+    
+        } catch (error) {
+            console.error('Error in handleProcess:', error);
+            toast.error('Failed to process request.');
+            setIsProcessButtonEnabled(false);
+        }
+    };
+    
+    
+
 
     const getEditableColumn = (key: string) => {
         return editableColumns.find((col) => col.wKey === key);
@@ -704,15 +767,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Dropdown request XML:', xmlData);
 
-            const response = await axios.post(
+            const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
-                {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                    }
-                }
             );
 
             const rs0Data = response.data?.data?.rs0;
@@ -832,15 +889,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Dependent dropdown request XML:', xmlData);
 
-            const response = await axios.post(
+            const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
-                {
-                    headers: {
-                        'Content-Type': 'application/xml',
-                        'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]?.split(';')[0]}`
-                    }
-                }
             );
 
             console.log('Dependent dropdown response:', response.data);
@@ -887,7 +938,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
 
-    
+
     const handleDocumentView = async (rowData: any,) => {
         if ((rowData.RekycDocumentType === undefined || rowData.RekycDocumentType === '')) {
             setValidationModal({
@@ -897,18 +948,18 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             });
             return;
         }
-        
-        
-      
+
+
+
         const J_Ui = Object.entries(showViewDocumentAPI.dsXml.J_Ui)
-          .map(([key, value]) => `"${key}":"${value}"`)
-          .join(',');
-      
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
         const X_Filter_Multiple = Object.keys(showViewDocumentAPI.dsXml.X_Filter_Multiple)
-          .filter(key => key in rowData)
-          .map(key => `<${key}>${rowData[key]}</${key}>`)
-          .join('');
-      
+            .filter(key => key in rowData)
+            .map(key => `<${key}>${rowData[key]}</${key}>`)
+            .join('');
+
         const xmlData = `<dsXml>
           <J_Ui>${J_Ui}</J_Ui>
           <Sql>${showViewDocumentAPI.dsXml.Sql || ''}</Sql>
@@ -916,65 +967,62 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
           <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
           <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
         </dsXml>`;
-      
-        try {
-          const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-            headers: {
-              'Content-Type': 'application/xml',
-              'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-            }
-          });
 
-        // if((response.data.data.rs0[0].Flag === 'E')){
-        //     console.log(response.data.data.rs0[0],'inside if');
-             
-        //     setValidationModal({
-        //         isOpen: true,
-        //         message: response.data.data.rs0[0].Message,
-        //         type: 'E'
-        //     });
-        //   }else{
+        try {
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+            // if((response.data.data.rs0[0].Flag === 'E')){
+            //     console.log(response.data.data.rs0[0],'inside if');
+
+            //     setValidationModal({
+            //         isOpen: true,
+            //         message: response.data.data.rs0[0].Message,
+            //         type: 'E'
+            //     });
+            //   }else{
             const base64 = response.data.data.rs0.Base64PDF;
-          const fileType = getFileTypeFromBase64(base64); // function you defined earlier
-          const mimeMap: Record<string, string> = {
-            pdf: 'application/pdf',
-            png: 'image/png',
-            jpeg: 'image/jpeg',
-            jpg: 'image/jpeg',
-            gif: 'image/gif',
-            xml: 'application/xml',
-            text: 'text/plain'
-          };
-      
-          const mimeType = mimeMap[fileType] || 'application/octet-stream';
-      
-          // Create Blob URL
-          const byteCharacters = atob(base64);
-          const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: mimeType });
-          const blobUrl = URL.createObjectURL(blob);
-      
-          // Open in new tab
-          const newTab = window.open(blobUrl, '_blank');
-          if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = `document.${fileType}`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        //   }
-            
-       
-          
-      
+            const fileType = getFileTypeFromBase64(base64); // function you defined earlier
+            const mimeMap: Record<string, string> = {
+                pdf: 'application/pdf',
+                png: 'image/png',
+                jpeg: 'image/jpeg',
+                jpg: 'image/jpeg',
+                gif: 'image/gif',
+                xml: 'application/xml',
+                text: 'text/plain'
+            };
+
+            const mimeType = mimeMap[fileType] || 'application/octet-stream';
+
+            // Create Blob URL
+            const byteCharacters = atob(base64);
+            const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: mimeType });
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Open in new tab
+            const newTab = window.open(blobUrl, '_blank');
+            if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `document.${fileType}`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            //   }
+
+
+
+
         } catch (error) {
-          console.error("Error fetching DocumentView:", error);
-          toast.error(error)
+            console.error("Error fetching DocumentView:", error);
+            toast.error(error)
         }
-      };
+    };
+
+   
 
     return (
         <>
@@ -1004,7 +1052,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                         >
                                                             View Details
                                                         </button>
-                                                        
+
                                                     </div>
                                                 )}
 
@@ -1330,21 +1378,23 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                         {showViewDocumentBtn === true &&
                                                          <button
-                                                         onClick={() => handleDocumentView(localData[0])}
+                                                         onClick={(showViewDocumentBtn && showViewDocumentLabel ? ()  => hadleViewLog(localData[0]):() => handleDocumentView(localData[0]))}
                                                          className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
                                                          style={{
                                                              fontFamily: fonts.content,
                                                          }}
                                                      >
-                                                         View Document
+                                                         {(showViewDocumentBtn && showViewDocumentLabel? showViewDocumentLabel:'View Document')}
                                                      </button>
                                                         }
 
                             <button
-                                onClick={handleSave}
-                                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                                disabled={(showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled}
+                                onClick= {(showViewDocumentBtn && showViewDocumentLabel? handleProcess:handleSave)}
+                                className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 ml-2 ${showViewDocumentBtn && showViewDocumentLabel && !isProcessButtonEnabled
+                                    ? 'opacity-50 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                             >
-                                Save
+                                 {(showViewDocumentBtn && showViewDocumentLabel? saveBtnDocumentName:'Save')}
                             </button>
                             <button
                                 onClick={onClose}
@@ -1437,6 +1487,64 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                     </div>
                 </div>
             )}
+
+{isProcessModalOpen && (
+    <Dialog open={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} className="relative z-[200]">
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+            <DialogPanel className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[80vh] overflow-auto">
+                <DialogTitle className="text-lg font-semibold mb-4">Client Export Logs</DialogTitle>
+
+              {/* Header Info */}
+              <div className="grid grid-cols-3 gap-4 text-sm font-medium mb-4">
+                {Object.keys(showViewApi.dsXml.X_Filter_Multiple)
+                    .filter(key => key in localData[0])
+                    .map(key => (
+                    <div key={key}>
+                        <strong>{key.replace(/([A-Z])/g, ' $1').trim()}:</strong> {localData[0][key]}
+                    </div>
+                    ))}
+                </div>
+
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-300 text-sm">
+                      <thead>
+                          <tr className="bg-gray-100">
+                              {processResponseData.length > 0 &&
+                                  Object.keys(processResponseData[0]).map((key) => (
+                                      <th key={key} className="border px-4 py-2 text-left">{key}</th>
+                                  ))}
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {processResponseData.map((row, idx) => (
+                              <tr key={idx} className="hover:bg-gray-50">
+                                  {Object.keys(row).map((key) => (
+                                      <td key={key} className="border px-4 py-2 break-all">
+                                          {row[key]}
+                                      </td>
+                                  ))}
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+              </div>
+
+                <div className="mt-4 flex justify-end">
+                    <button
+                        onClick={() => setIsProcessModalOpen(false)}
+                        className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                    >
+                        Close
+                    </button>
+                </div>
+            </DialogPanel>
+        </div>
+    </Dialog>
+)}
+
+
         </>
     );
 };

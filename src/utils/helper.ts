@@ -94,7 +94,7 @@ export const clearMakerSates = () => {
 
 export function getFileTypeFromBase64(base64: string): string {
     const header = base64.slice(0, 30);
-  
+
     if (header.startsWith('JVBERi0')) return 'pdf'; // PDF
     if (header.startsWith('/9j/')) return 'jpeg';    // JPEG
     if (header.startsWith('iVBORw0KGgo')) return 'png'; // PNG
@@ -103,12 +103,12 @@ export function getFileTypeFromBase64(base64: string): string {
     if (header.includes('R0lGOD')) return 'gif';     // GIF
     if (header.includes('AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAQAAAAAAAAAAAAAAA')) return 'ico'; // ICO
     if (/^[A-Za-z0-9+\/=]+\s*$/.test(base64)) return 'text'; // generic fallback for plain text
-  
+
     return 'unknown';
 }
 
 
-export function displayAndDownloadPDF(base64Data : any, fileName : string) {
+export function displayAndDownloadPDF(base64Data: any, fileName: string) {
     // Create a blob from the base64 data
     const byteCharacters = atob(base64Data);
     const byteNumbers = new Array(byteCharacters.length);
@@ -121,7 +121,7 @@ export function displayAndDownloadPDF(base64Data : any, fileName : string) {
 
     // Open the PDF in a new tab
     const newTab = window.open(url, '_blank');
-    
+
     // If the new tab is blocked, show a message with download link
     if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
         // Create a download link
@@ -129,7 +129,7 @@ export function displayAndDownloadPDF(base64Data : any, fileName : string) {
         downloadLink.href = url;
         downloadLink.download = fileName;
         downloadLink.textContent = 'Download PDF';
-        
+
         // Create a container for the message
         const container = document.createElement('div');
         container.style.position = 'fixed';
@@ -140,14 +140,14 @@ export function displayAndDownloadPDF(base64Data : any, fileName : string) {
         container.style.padding = '20px';
         container.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
         container.style.zIndex = '1000';
-        
+
         const message = document.createElement('p');
         message.textContent = 'The PDF viewer was blocked by your popup blocker. ';
         message.appendChild(downloadLink);
-        
+
         container.appendChild(message);
         document.body.prepend(container);
-        
+
         // Auto-click the download link after a short delay
         setTimeout(() => {
             downloadLink.click();
@@ -156,7 +156,7 @@ export function displayAndDownloadPDF(base64Data : any, fileName : string) {
         }, 500);
     } else {
         // Clean up the URL object when the tab is closed
-        newTab.onbeforeunload = function() {
+        newTab.onbeforeunload = function () {
             URL.revokeObjectURL(url);
         };
     }
@@ -164,22 +164,44 @@ export function displayAndDownloadPDF(base64Data : any, fileName : string) {
 
 
 export const clearIndexedDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.deleteDatabase("ekycDB");
-    
-    request.onsuccess = () => {
-      console.log("IndexedDB deleted successfully");
-      resolve(true);
-    };
-    
-    request.onerror = (event) => {
-      console.error("Error deleting IndexedDB:", request.error);
-      reject(request.error);
-    };
-    
-    request.onblocked = () => {
-      console.warn("Database deletion blocked (probably open in another tab)");
-      reject("Database deletion blocked");
-    };
-  });
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.deleteDatabase("ekycDB");
+
+        request.onsuccess = () => {
+            console.log("IndexedDB deleted successfully");
+            resolve(true);
+        };
+
+        request.onerror = (event) => {
+            console.error("Error deleting IndexedDB:", request.error);
+            reject(request.error);
+        };
+
+        request.onblocked = () => {
+            console.warn("Database deletion blocked (probably open in another tab)");
+            reject("Database deletion blocked");
+        };
+    });
 };
+
+export const dynamicXmlGenratingFn = (ApiData,rowData) => {
+    const J_Ui = Object.entries(ApiData.dsXml.J_Ui)
+        .map(([key, value]) => `"${key}":"${value}"`)
+        .join(',');
+    
+      const X_Filter_Multiple = Object.keys(ApiData.dsXml.X_Filter_Multiple)
+        .filter(key => key in rowData)
+        .map(key => `<${key}>${rowData[key]}</${key}>`)
+        .join('');
+
+        const xmlData = `<dsXml>
+        <J_Ui>${J_Ui}</J_Ui>
+        <Sql>${ApiData.dsXml.Sql || ''}</Sql>
+        <X_Filter>${ApiData.dsXml.X_Filter || ''}</X_Filter>
+        <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
+        <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+      </dsXml>`;
+
+      return xmlData
+
+}

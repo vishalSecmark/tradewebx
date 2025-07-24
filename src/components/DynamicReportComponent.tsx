@@ -19,6 +19,7 @@ import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
 import Loader from './Loader';
+import apiService from '@/utils/apiService';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -621,13 +622,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
             </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                },
-                timeout: 600000
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             const endTime = performance.now();
             setApiResponseTime(Math.round(endTime - startTime));
@@ -840,12 +835,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             if (response?.data?.success) {
                 fetchData();
             }
@@ -1059,106 +1049,156 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 fontFamily: `${fonts.content} !important`
             }}
         >
-            {/* Tabs - Only show if there are multiple levels */}
-            {safePageData.isValid && safePageData.getLevels().length > 1 && (
-                <div className="flex  border-b border-gray-200">
-                    <div className="flex flex-1 gap-2">
-                        {levelStack.map((level, index) => (
-                            <button
-                                key={index}
-                                style={{ backgroundColor: colors.cardBackground }}
-                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
-                                    ? `bg-${colors.primary} text-${colors.buttonText}`
-                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
-                                    }`}
-                                onClick={() => handleTabClick(level, index)}
-                            >
-                                {level === 0
-                                    ? safePageData.getSetting('level') || 'Main'
-                                    : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
-                                }
-                            </button>
-                        ))}
-                    </div>
-                    <div className="flex gap-2">
-                        {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
-                            <button
-                                className="p-2 rounded"
-                                onClick={() => setIsEditTableRowModalOpen(true)}
-                                style={{ color: colors.text }}
-                            >
-                                <FaEdit size={20} />
-                            </button>
+            {/* Tabs and Action Buttons */}
+            {safePageData.isValid && (
+                <div className="flex border-b border-gray-200">
+                    {/* Tabs - Only show if there are multiple levels */}
+                    {safePageData.getLevels().length > 1 && (
+                        <div className="flex flex-1 gap-2">
+                            {levelStack.map((level, index) => (
+                                <button
+                                    key={index}
+                                    style={{ backgroundColor: colors.cardBackground }}
+                                    className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
+                                        ? `bg-${colors.primary} text-${colors.buttonText}`
+                                        : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                        }`}
+                                    onClick={() => handleTabClick(level, index)}
+                                >
+                                    {level === 0
+                                        ? safePageData.getSetting('level') || 'Main'
+                                        : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
+                                    }
+                                </button>
+                            ))}
+                        </div>
+                    )}
 
+                    {/* Action Icons - Always show */}
+                    <div className={`flex gap-2 ${safePageData.getLevels().length <= 1 ? 'ml-auto' : ''}`}>
+                        {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => setIsEditTableRowModalOpen(true)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaEdit size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Edit Selected Rows
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
                         )}
                         {(componentType === 'entry' || componentType === "multientry") && (
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => {
+                                        console.log('Plus button clicked, componentType:', componentType);
+                                        console.log('pageData available:', !!pageData);
+                                        console.log('pageData structure:', pageData);
+                                        setIsEntryModalOpen(true);
+                                    }}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaPlus size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Add New Entry
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
+                        )}
+                        <div className="relative group">
                             <button
-                                className="p-2 rounded"
+                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
+                                style={{ color: colors.text }}
+                            >
+                                <FaFileExcel size={20} />
+                            </button>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                Export to Excel
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            </div>
+                        </div>
+                        <div className="relative group">
+                            <button
+                                className="p-2 rounded hover:bg-gray-100 transition-colors"
                                 onClick={() => {
-                                    console.log('Plus button clicked, componentType:', componentType);
-                                    console.log('pageData available:', !!pageData);
-                                    console.log('pageData structure:', pageData);
-                                    setIsEntryModalOpen(true);
+                                    setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
+                                    setIsConfirmModalOpen(true);
                                 }}
                                 style={{ color: colors.text }}
                             >
-                                <FaPlus size={20} />
+                                <FaEnvelope size={20} />
                             </button>
-                        )}
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
-                            style={{ color: colors.text }}
-                        >
-                            <FaFileExcel size={20} />
-                        </button>
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => {
-                                setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
-                                setIsConfirmModalOpen(true);
-                            }}
-                            style={{ color: colors.text }}
-                        >
-                            <FaEnvelope size={20} />
-                        </button>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                Email Report
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            </div>
+                        </div>
                         {showTypeList && (
-                            <button
-                                className="p-2 rounded"
-                                onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
-                                style={{ color: colors.text }}
-                            >
-                                <FaDownload size={20} />
-                            </button>
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaDownload size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Download Options
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
                         )}
                         {Object.keys(additionalTables).length == 0 && (
                             <>
-                                <button
-                                    className="p-2 rounded"
-                                    onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaFileCsv size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaFileCsv size={20} />
+                                    </button>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Export to CSV
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
+                                </div>
 
-                                <button
-                                    className="p-2 rounded"
-                                    onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaFilePdf size={20} />
-                                </button>
+                                <div className="relative group">
+                                    <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaFilePdf size={20} />
+                                    </button>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Export to PDF
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
+                                </div>
                             </>
                         )}
                         {apiData && apiData.length > 0 && (
-                            <div className="relative search-container">
+                            <div className="relative search-container group">
                                 <button
-                                    className="p-2 rounded"
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
                                     onClick={handleSearchToggle}
                                     style={{ color: colors.text }}
                                 >
                                     <FaSearch size={20} />
                                 </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Search Records
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
 
                                 {/* Absolute Search Box */}
                                 {isSearchActive && (
@@ -1204,21 +1244,33 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 )}
                             </div>
                         )}
-                        <button
-                            className="p-2 rounded"
-                            onClick={() => fetchData()}
-                            style={{ color: colors.text }}
-                        >
-                            <FaSync size={20} />
-                        </button>
-                        {!showFilterHorizontally && safePageData.hasFilters() && (
+                        <div className="relative group">
                             <button
-                                className="p-2 rounded"
-                                onClick={() => setIsFilterModalOpen(true)}
+                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                onClick={() => fetchData()}
                                 style={{ color: colors.text }}
                             >
-                                <FaFilter size={20} />
+                                <FaSync size={20} />
                             </button>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                Refresh Data
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            </div>
+                        </div>
+                        {!showFilterHorizontally && safePageData.hasFilters() && (
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => setIsFilterModalOpen(true)}
+                                    style={{ color: colors.text }}
+                                >
+                                    <FaFilter size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    Apply Filters
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -1344,119 +1396,131 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     <Loader />
                 </div>
             }
-            {!apiData && !isLoading && hasFetchAttempted && <div>No Data Found</div>}
-            {/* Data Display */}
 
-            {!isLoading && apiData && (
-                <div className="space-y-0">
-                    <div className="text-sm text-gray-500">
-                        <div className="flex flex-col sm:flex-row justify-between">
-                            <div className="flex flex-col gap-2 my-1">
-                                {/* Report Header */}
-                                {/* {jsonDataUpdated?.XmlData?.ReportHeader && (
+            {/* Data Display */}
+            {!isLoading && (
+                (!apiData || apiData.length === 0) && hasFetchAttempted ? (
+                    <div className="flex items-center justify-center py-8 border rounded-lg" style={{
+                        backgroundColor: colors.cardBackground,
+                        borderColor: '#e5e7eb'
+                    }}>
+                        <div className="text-center">
+                            <div className="text-lg font-medium mb-2" style={{ color: colors.text }}>No Records Found</div>
+                            <div className="text-sm text-gray-500">
+                                No data matches your current criteria. Try adjusting your filters or search terms.
+                            </div>
+                        </div>
+                    </div>
+                ) : apiData && (
+                    <div className="space-y-0">
+                        <div className="text-sm text-gray-500">
+                            <div className="flex flex-col sm:flex-row justify-between">
+                                <div className="flex flex-col gap-2 my-1">
+                                    {/* Report Header */}
+                                    {/* {jsonDataUpdated?.XmlData?.ReportHeader && (
                                     <div className="text-lg font-bold mb-2" style={{ color: colors.text }}>
                                         {jsonDataUpdated.XmlData.ReportHeader}
                                     </div>
                                 )} */}
 
-                                {/* Headings */}
-                                <div className="flex flex-wrap gap-2">
-                                    {jsonDataUpdated?.XmlData?.Headings?.Heading ? (
-                                        Array.isArray(jsonDataUpdated.XmlData.Headings.Heading) ? (
-                                            jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                    {/* Headings */}
+                                    <div className="flex flex-wrap gap-2">
+                                        {jsonDataUpdated?.XmlData?.Headings?.Heading ? (
+                                            Array.isArray(jsonDataUpdated.XmlData.Headings.Heading) ? (
+                                                jsonDataUpdated.XmlData.Headings.Heading.map((headingText, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                        style={{
+                                                            backgroundColor: colors.cardBackground,
+                                                            color: colors.text
+                                                        }}
+                                                    >
+                                                        {headingText}
+                                                    </span>
+                                                ))
+                                            ) : (
                                                 <span
-                                                    key={index}
                                                     className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                                     style={{
                                                         backgroundColor: colors.cardBackground,
                                                         color: colors.text
                                                     }}
                                                 >
-                                                    {headingText}
+                                                    {jsonDataUpdated.XmlData.Headings.Heading}
                                                 </span>
-                                            ))
-                                        ) : (
-                                            <span
-                                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                                style={{
-                                                    backgroundColor: colors.cardBackground,
-                                                    color: colors.text
-                                                }}
-                                            >
-                                                {jsonDataUpdated.XmlData.Headings.Heading}
-                                            </span>
-                                        )
-                                    ) : null}
+                                            )
+                                        ) : null}
+                                    </div>
+                                </div>
+                                <div className="text-xs">
+                                    {searchTerm ?
+                                        `Showing ${filteredApiData.length} of ${apiData.length} records` :
+                                        `Total Records: ${apiData.length}`
+                                    } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
                                 </div>
                             </div>
-                            <div className="text-xs">
-                                {searchTerm ?
-                                    `Showing ${filteredApiData.length} of ${apiData.length} records` :
-                                    `Total Records: ${apiData.length}`
-                                } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
-                            </div>
                         </div>
-                    </div>
-                    <DataTable
-                        data={filteredApiData}
-                        settings={{
-                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                            webColumns: rs1Settings?.webColumns?.[0] || [],
-                            // Add level-specific settings
-                            ...(currentLevel > 0 ? {
-                                // Override responsive columns for second level if needed
+                        <DataTable
+                            data={filteredApiData}
+                            settings={{
+                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
                                 mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                 tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                webColumns: rs1Settings?.webColumns?.[0] || []
-                            } : {})
-                        }}
-                        summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                        onRowClick={handleRecordClick}
-                        onRowSelect={handleRowSelect}
-                        tableRef={tableRef}
-                        isEntryForm={componentType === "entry" || componentType === "multientry"}
-                        handleAction={handleTableAction}
-                        fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
-                        showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
-                    />
-                    {Object.keys(additionalTables).length > 0 && (
-                        <div>
-                            {Object.entries(additionalTables).map(([tableKey, tableData]) => {
-                                // Get the title from jsonData based on the table key
-                                const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
-                                return (
-                                    <div key={tableKey} className="mt-3">
-                                        <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
-                                            {tableTitle}
-                                        </h3>
-                                        <DataTable
-                                            data={tableData}
-                                            settings={{
-                                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                webColumns: rs1Settings?.webColumns?.[0] || [],
-                                                // Add level-specific settings
-                                                ...(currentLevel > 0 ? {
-                                                    // Override responsive columns for second level if needed
+                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                // Add level-specific settings
+                                ...(currentLevel > 0 ? {
+                                    // Override responsive columns for second level if needed
+                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                    webColumns: rs1Settings?.webColumns?.[0] || []
+                                } : {})
+                            }}
+                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                            onRowClick={handleRecordClick}
+                            onRowSelect={handleRowSelect}
+                            tableRef={tableRef}
+                            isEntryForm={componentType === "entry" || componentType === "multientry"}
+                            handleAction={handleTableAction}
+                            fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
+                            showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
+                        />
+                        {Object.keys(additionalTables).length > 0 && (
+                            <div>
+                                {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                    // Get the title from jsonData based on the table key
+                                    const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                    return (
+                                        <div key={tableKey} className="mt-3">
+                                            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                                {tableTitle}
+                                            </h3>
+                                            <DataTable
+                                                data={tableData}
+                                                settings={{
+                                                    ...safePageData.getCurrentLevel(currentLevel)?.settings,
                                                     mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                                     tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                    webColumns: rs1Settings?.webColumns?.[0] || []
-                                                } : {})
-                                            }}
-                                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                                            tableRef={tableRef}
-                                            fullHeight={false}
-                                        />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
+                                                    webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                    // Add level-specific settings
+                                                    ...(currentLevel > 0 ? {
+                                                        // Override responsive columns for second level if needed
+                                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                        webColumns: rs1Settings?.webColumns?.[0] || []
+                                                    } : {})
+                                                }}
+                                                summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                                                tableRef={tableRef}
+                                                fullHeight={false}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                ))}
 
             {(componentType === 'entry' || componentType === "multientry") && safePageData.isValid && (
                 <EntryFormModal

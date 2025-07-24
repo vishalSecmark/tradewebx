@@ -11,6 +11,7 @@ import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import KycPage from "@/apppages/KycPage";
 import MarginPledgeOnline from "@/apppages/MarginPledgeOnline";
 import Ipo from "@/apppages/Ipo";
+import AccountClosure from "@/apppages/KycPage/account-closure";
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,
@@ -19,6 +20,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   theme: <ThemePage />,
   downloads: <Downloads />,
   rekyc: <KycPage />,
+  clientclosure:<AccountClosure/>,
   marginPledge: <MarginPledgeOnline />,
   ipo: <Ipo />
 };
