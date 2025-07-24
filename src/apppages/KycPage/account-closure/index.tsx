@@ -2,12 +2,12 @@
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
-import { findPageData } from "@/utils/helper";
+import { displayAndDownloadPDF, findPageData } from "@/utils/helper";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTheme } from "@/context/ThemeContext";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { FaExternalLinkAlt, FaFilePdf } from "react-icons/fa";
 import DematHoldingModal from "./DematHolding";
 import DematLedgerModal from "./DematLedgerBalance";
 import TradingBalanceModal from "./TradingBalance";
@@ -54,6 +54,9 @@ interface ApiResponse {
       ClientCode?: string;
       Status?: string;
       Remark?: string;
+      Flag?: string;
+      Base64PDF?: string;
+      PDFName?: string;
     }[];
     rs1?: {
       Flag: string;
@@ -74,11 +77,14 @@ const AccountClosure = () => {
   const [reason, setReason] = useState("");
   const [newBoid, setNewBoid] = useState("");
   const [cmrFile, setCmrFile] = useState<File | null>(null);
-  
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfData, setPdfData] = useState<any>(null);
+
   // Modal states
   const [showDematHolding, setShowDematHolding] = useState(false);
   const [showDematLedger, setShowDematLedger] = useState(false);
   const [showTradingLedger, setShowTradingLedger] = useState(false);
+  const [genPDF, setGenPDF] = useState(true);
 
   const pageData = findPageData(menuItems, "ClientClosure");
 
@@ -92,6 +98,86 @@ const AccountClosure = () => {
   const hasTradingBalance = parseBalance(data?.TradingLedgerBalance || "0") > 0;
   const hasDematBalance = parseBalance(data?.DPLedgerBalance || "0") > 0;
   const hasHoldingValue = parseBalance(data?.DPHoldingValue || "0") > 0;
+
+
+  const handleGenerateClosurePdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const userId = localStorage.getItem('userId') || '';
+      const clientCode = data?.ClientCode || '';
+
+      const xmlData = `<dsXml>
+        <J_Ui>"ActionName":"TradeWeb","Option":"CLOSUREPDF","RequestFrom":"W"</J_Ui>
+        <Sql></Sql>
+        <X_Filter></X_Filter>
+        <X_Filter_Multiple><ClientCode>${clientCode}</ClientCode><EntryName>Account closure</EntryName></X_Filter_Multiple>
+        <J_Api>"UserId":"${userId}"</J_Api>
+      </dsXml>`;
+
+      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+        headers: {
+          'Content-Type': 'application/xml',
+          Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+        }
+      });
+
+      if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
+        await handleGenerateRekycPdf('CLOSUREPDF');
+      } else if (response.data?.data?.rs0?.[0]?.Base64PDF) {
+        const pdfData = response.data.data.rs0[0];
+        displayAndDownloadPDF(pdfData?.Base64PDF, pdfData?.PDFName || 'AccountClosure.pdf');
+        setPdfData(pdfData);
+        toast.success("PDF will download in the background");
+      } else {
+        toast.error("Failed to generate account closure PDF");
+      }
+    } catch (error) {
+      console.error("Error generating account closure PDF:", error);
+      toast.error("Error generating account closure PDF");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleGenerateRekycPdf = async (reportName: string) => {
+    try {
+      const userId = localStorage.getItem('userId') || '';
+      const clientCode = data?.ClientCode || '';
+      const entryName = 'REKYC';
+
+      const xmlData = `<dsXml>
+        <J_Ui>"ActionName":"TradeWeb","Option":"GenerateRekycPDF","RequestFrom":"W","ReportDisplay":"D"</J_Ui>
+        <Sql></Sql>
+        <X_Filter></X_Filter>
+        <X_Filter_Multiple></X_Filter_Multiple>
+        <X_Data>
+          <ReportName>${reportName}</ReportName>
+          <EntryName>${entryName}</EntryName>
+          <ClientCode>${clientCode}</ClientCode>
+        </X_Data>
+        <J_Api>"UserId":"${userId}"</J_Api>
+      </dsXml>`;
+
+      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
+        headers: {
+          'Content-Type': 'application/xml',
+          Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
+        }
+      });
+
+      if (response.data?.data?.rs0?.[0]?.Base64PDF) {
+        const pdfData = response.data.data.rs0[0];
+        displayAndDownloadPDF(pdfData?.Base64PDF, pdfData?.PDFName || 'AccountClosure.pdf');
+        setPdfData(pdfData);
+        toast.success("Account closure PDF generated successfully");
+      } else {
+        toast.error(`Failed to generate ${reportName} PDF`);
+      }
+    } catch (error) {
+      console.error(`Error generating ${reportName} PDF:`, error);
+      toast.error(`Error generating ${reportName} PDF`);
+    }
+  };
 
   const handleGetData = async () => {
     setLoading(true);
@@ -141,14 +227,13 @@ const AccountClosure = () => {
       if (!responseData) {
         throw new Error("No data received from API");
       }
-      setData(responseData)
-      // setData({
-      //   ...responseData,
-      //   TradingLedgerBalance : 0,
-      //   DPLedgerBalance : 0,
-      //   DPHoldingValue:0
-      // });
-      
+      setData({
+        ...responseData,
+        TradingLedgerBalance: "0",
+        DPLedgerBalance: "0",
+        DPHoldingValue: "0"
+      });
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       setError(errorMessage);
@@ -172,10 +257,10 @@ const AccountClosure = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Validation
-    if (parseBalance(data.TradingLedgerBalance) || parseBalance(data.DPLedgerBalance)) {
-        toast.warning("You have balance in your Accounts")
-        return;
-      }
+    if (parseBalance(data?.TradingLedgerBalance || "0") > 0 || parseBalance(data?.DPLedgerBalance || "0") > 0) {
+      toast.warning("You have balance in your Accounts");
+      return;
+    }
     if (!reason) {
       toast.error("Please provide reason for account closure");
       return;
@@ -194,7 +279,7 @@ const AccountClosure = () => {
     try {
       setLoading(true);
       const userId = localStorage.getItem("userId") || "";
-      
+
       const payload = {
         ClientCode: data?.ClientCode || "",
         DPAcNo: data?.DPAcno || "",
@@ -220,9 +305,15 @@ const AccountClosure = () => {
           Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
         }
       });
-
+      const statusFlag = response.data.data.rs0[0]?.Status;
+      const remark = response.data.data.rs0[0]?.Remark;
       if (response.data?.success) {
-        toast.success("Account closure request submitted successfully");
+        if (statusFlag === "Y") {
+          toast.success(remark || "Request submitted successfully");
+          setGenPDF(true);
+        } else {
+          toast.success(remark || "Request submitted successfully");
+        }
       } else {
         toast.error(response.data?.message || "Failed to submit account closure request");
       }
@@ -293,14 +384,14 @@ const AccountClosure = () => {
         clientCode={data.ClientCode}
         dpAccountNo={data.DPAcno}
       />
-      
+
       <DematLedgerModal
         isOpen={showDematLedger}
         onClose={() => setShowDematLedger(false)}
         clientCode={data.ClientCode}
         dpAccountNo={data.DPAcno}
       />
-      
+
       <TradingBalanceModal
         isOpen={showTradingLedger}
         onClose={() => setShowTradingLedger(false)}
@@ -312,18 +403,38 @@ const AccountClosure = () => {
         <h1 className="text-2xl font-bold">
           Account Closure
         </h1>
-        <button
-          type="submit"
-          form="closureForm"
-          className="py-2 px-4 rounded text-white font-semibold flex items-center"
-          style={{
-            backgroundColor: colors.buttonBackground,
-            color: colors.buttonText
-          }}
-        >
-          Submit Request
-          <CiSaveUp2 className="ml-2"/>
-        </button>
+
+        <div className="flex gap-2">
+          {genPDF ? (
+            <button
+              onClick={handleGenerateClosurePdf}
+              className="py-2 px-4 rounded text-white flex items-center"
+              style={{
+                backgroundColor: colors.buttonBackground,
+                color: colors.buttonText
+              }}
+              disabled={isGeneratingPdf}
+            >
+              {isGeneratingPdf ? 'Generating...' : 'Gen PDF'}
+              <FaFilePdf className="ml-2" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              form="closureForm"
+              className="py-2 px-4 rounded text-white flex items-center"
+              style={{
+                backgroundColor: colors.buttonBackground,
+                color: colors.buttonText
+              }}
+              disabled={isGeneratingPdf}
+            >
+              Submit Request
+              <CiSaveUp2 className="ml-2" />
+            </button>
+
+          )}
+        </div>
       </div>
 
       {/* Account Balance Cards */}
@@ -339,15 +450,15 @@ const AccountClosure = () => {
           </div>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span 
+              <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowTradingLedger(true)}
               >
-                Ledger Balance: <FaExternalLinkAlt className="text-sm"/> 
+                Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className={`font-semibold ${(data.TradingLedgerBalance || '').includes('-')
-                  ? 'text-red-600'
-                  : 'text-green-600'
+                ? 'text-red-600'
+                : 'text-green-600'
                 }`}>
                 {data.TradingLedgerBalance ?? "--"}
               </span>
@@ -366,30 +477,30 @@ const AccountClosure = () => {
           </div>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span 
+              <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowDematLedger(true)}
               >
-                Ledger Balance: <FaExternalLinkAlt className="text-sm"/>
+                Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className={`font-semibold ${(data.DPLedgerBalance || '').includes('-')
-                  ? 'text-red-600'
-                  : 'text-green-600'
+                ? 'text-red-600'
+                : 'text-green-600'
                 }`}>
                 {data.DPLedgerBalance ?? "--"}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span 
+              <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowDematHolding(true)}
               >
-                Holding Value: <FaExternalLinkAlt className="text-sm"/>
+                Holding Value: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className=
                 {`font-semibold ${(data.DPHoldingValue || '').includes('-')
-                    ? 'text-red-600'
-                    : 'text-green-600'
+                  ? 'text-red-600'
+                  : 'text-green-600'
                   }`}
               >{data.DPHoldingValue ?? "--"}</span>
             </div>
@@ -419,7 +530,7 @@ const AccountClosure = () => {
               />
               <span className="ml-3 font-medium">Close Trading Account ({data.ClientCode ?? "--"})</span>
             </label>
-            
+
             <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasDematBalance ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
               <input
                 type="radio"
@@ -432,7 +543,7 @@ const AccountClosure = () => {
               />
               <span className="ml-3 font-medium">Close Demat Account ({data.DPAcno ?? "--"})</span>
             </label>
-            
+
             <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasTradingBalance || hasDematBalance ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
               <input
                 type="radio"
@@ -447,7 +558,7 @@ const AccountClosure = () => {
             </label>
           </div>
 
-          {/* Reason for account closure */}  
+          {/* Reason for account closure */}
           <div className="mb-4">
             <label className="block font-medium mb-1">Reason for Account Closure:</label>
             <textarea
@@ -515,7 +626,7 @@ const AccountClosure = () => {
                       color: colors.buttonText
                     }}
                   >
-                    <MdOutlineDriveFolderUpload className="mr-2"/> 
+                    <MdOutlineDriveFolderUpload className="mr-2" />
                     Choose File
                   </span>
                   <input
@@ -542,3 +653,5 @@ const AccountClosure = () => {
 };
 
 export default AccountClosure;
+
+
