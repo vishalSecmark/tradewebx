@@ -429,7 +429,27 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                 width: 30,
                 colSpan: (props: any) => {
                     if (props.type === 'ROW' && props.row._expanded) {
-                        return columnsToShow.length;
+                        // Calculate the total number of visible columns
+                        let totalColumns = 0;
+
+                        // Add selection column if enabled
+                        if (settings?.EditableColumn) {
+                            totalColumns += 1;
+                        }
+
+                        // Add the expand column itself
+                        totalColumns += 1;
+
+                        // Add visible data columns (columnsToShow minus hidden columns)
+                        const visibleDataColumns = columnsToShow.filter(col => !columnsToHide.includes(col));
+                        totalColumns += visibleDataColumns.length;
+
+                        // Add actions column if isEntryForm
+                        if (isEntryForm) {
+                            totalColumns += 1;
+                        }
+
+                        return totalColumns;
                     }
                     return undefined;
                 },
@@ -457,7 +477,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                 </div>
                                 <div className="expanded-details">
                                     {Object.entries(row)
-                                        .filter(([key]) => !key.startsWith('_'))
+                                        .filter(([key]) => {
+                                            // Filter out internal keys and hidden columns
+                                            if (key.startsWith('_')) return false;
+
+                                            // Use the same column hiding logic as the main table
+                                            return !columnsToHide.includes(key);
+                                        })
                                         .map(([key, value]) => {
                                             // Use the same formatter logic as the main table
                                             const isLeftAligned = leftAlignedColumns.includes(key);
