@@ -422,7 +422,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     )
                 }]
                 : []),
-            {
+            // Only show expand column for mobile and tablet, not for web
+            ...((screenSize === 'mobile' || screenSize === 'tablet') ? [{
                 key: '_expanded',
                 name: '',
                 minWidth: 30,
@@ -437,8 +438,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             totalColumns += 1;
                         }
 
-                        // Add the expand column itself
-                        totalColumns += 1;
+                        // Add the expand column itself (only if mobile or tablet)
+                        if (screenSize === 'mobile' || screenSize === 'tablet') {
+                            totalColumns += 1;
+                        }
 
                         // Add visible data columns (columnsToShow minus hidden columns)
                         const visibleDataColumns = columnsToShow.filter(col => !columnsToHide.includes(col));
@@ -453,12 +456,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     }
                     return undefined;
                 },
-                // cellClass: (row: any) => {
-                //     if (row._expanded) {
-                //         return 'expanded-row';
-                //     }
-                //     return undefined;
-                // },
                 renderCell: ({ row, tabIndex, onRowChange }: any) => {
                     if (row._expanded) {
                         return (
@@ -563,7 +560,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         </div>
                     );
                 },
-            },
+            }] : []),
             ...columnsToShow.map((key: any) => {
                 const isLeftAligned = leftAlignedColumns.includes(key);
                 const isNumericColumn = !isLeftAligned && formattedData.some((row: any) => {
@@ -681,7 +678,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             )
         }
         return baseColumns;
-    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows]);
+    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
