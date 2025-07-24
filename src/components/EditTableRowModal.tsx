@@ -572,10 +572,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     const hadleViewLog = async (rowData: any) => {
-        console.log('hadleViewLog');
-        console.log(rowData,'rowData');
-        console.log(showViewApi,'showViewApi');
-
         if ((rowData.ExportType === undefined || rowData.ExportType === '')) {
             setValidationModal({
                 isOpen: true,
@@ -594,12 +590,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
      
 
       }
-
-      useEffect(() => {
-        console.log(viewLogHeader,'viewLogHeader');
-        
-      },[viewLogHeader])
-
 
     const handleSave = async () => {
         const xmlData = generateDsXml(localData);
