@@ -60,13 +60,15 @@ export default function OTPVerificationForm() {
           userType: data.data[0].UserType,
         }));
 
-        // Set cookie
-        document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`;
+        // Set both cookie and localStorage
+        document.cookie = `auth_token=${data.token}; path=/`;
 
         // Update localStorage
         localStorage.setItem('clientCode', data.data[0].ClientCode);
         localStorage.setItem('clientName', data.data[0].ClientName);
         localStorage.setItem('userType', data.data[0].UserType);
+        localStorage.setItem('auth_token', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
 
         // Clean up temporary token

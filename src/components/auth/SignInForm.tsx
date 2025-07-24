@@ -300,8 +300,11 @@ export default function SignInForm() {
     if (currentLoginData.LoginType === "2FA") {
       router.push('/otp-verification');
     } else {
-      // Set cookie
-      document.cookie = `auth_token=${currentLoginData.token}; path=/; expires=${new Date(currentLoginData.tokenExpireTime).toUTCString()}`;
+      // Set both cookie and localStorage
+      document.cookie = `auth_token=${currentLoginData.token}; path=/`;
+      localStorage.setItem('auth_token', currentLoginData.token);
+      localStorage.setItem('refreshToken', currentLoginData.refreshToken);
+      localStorage.setItem('tokenExpireTime', currentLoginData.tokenExpireTime);
       localStorage.removeItem('temp_token');
       router.push('/dashboard');
     }
@@ -477,6 +480,7 @@ export default function SignInForm() {
         dispatch(setAuthData({
           userId: userId,
           token: data.token,
+          refreshToken: data.refreshToken,
           tokenExpireTime: data.tokenExpireTime,
           clientCode: data.data[0].ClientCode,
           clientName: data.data[0].ClientName,
@@ -486,6 +490,7 @@ export default function SignInForm() {
 
         localStorage.setItem('userId', userId);
         localStorage.setItem('temp_token', data.token);
+        localStorage.setItem('refreshToken', data.refreshToken);
         localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
         localStorage.setItem('clientCode', data.data[0].ClientCode);
         localStorage.setItem('clientName', data.data[0].ClientName);
@@ -497,6 +502,7 @@ export default function SignInForm() {
         // Store login data for navigation after version check
         const currentLoginData = {
           token: data.token,
+          refreshToken: data.refreshToken,
           tokenExpireTime: data.tokenExpireTime,
           LoginType: data.data[0].LoginType
         };
