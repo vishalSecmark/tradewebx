@@ -9,7 +9,6 @@ import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
-import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { displayAndDownloadPDF } from '@/utils/helper';
 import { getFromDB } from '@/utils/indexDB';

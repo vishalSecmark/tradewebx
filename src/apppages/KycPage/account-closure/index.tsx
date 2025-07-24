@@ -14,6 +14,7 @@ import Loader from "@/components/Loader";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { CiSaveUp2 } from "react-icons/ci";
 import apiService from "@/utils/apiService";
+import { useRouter, useSearchParams } from "next/navigation";
 
 
 interface DPHolding {
@@ -46,27 +47,6 @@ interface ClientData {
   SignedPdf: SignedPdf[];
 }
 
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    rs0?: {
-      Data?: ClientData;
-      ClientCode?: string;
-      Status?: string;
-      Remark?: string;
-      Flag?: string;
-      Base64PDF?: string;
-      PDFName?: string;
-    }[];
-    rs1?: {
-      Flag: string;
-      Message: string;
-    }[];
-  };
-  datarows?: string[];
-}
-
 const AccountClosure = () => {
   const { colors, fonts } = useTheme();
   const menuItems = useAppSelector(selectAllMenuItems);
@@ -85,9 +65,19 @@ const AccountClosure = () => {
   const [showDematHolding, setShowDematHolding] = useState(false);
   const [showDematLedger, setShowDematLedger] = useState(false);
   const [showTradingLedger, setShowTradingLedger] = useState(false);
-  const [genPDF, setGenPDF] = useState(true);
+  const [genPDF, setGenPDF] = useState(false);
+  const [viewFinalEsignPDF,setViewFinalEsignPDF] = useState(false);
 
   const pageData = findPageData(menuItems, "ClientClosure");
+
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const success = searchParams.get('success');
+  const id = searchParams.get('id');
+  const signerIdentifier = searchParams.get('signerIdentifier');
+  const esp = searchParams.get('esp');
+
 
   // Helper functions to parse balance values
   const parseBalance = (balance: string) => {
@@ -115,19 +105,17 @@ const AccountClosure = () => {
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-        headers: {
-          'Content-Type': 'application/xml',
-          Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
-        }
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+      console.log(response)
 
       if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
         await handleGenerateRekycPdf('CLOSUREPDF');
-      } else if (response.data?.data?.rs0?.[0]?.Base64PDF) {
-        const pdfData = response.data.data.rs0[0];
+      } else if (response.data?.data?.rs0?.Base64PDF) {
+        const pdfData = response.data.data.rs0;
+        console.log(pdfData)
         displayAndDownloadPDF(pdfData?.Base64PDF, pdfData?.PDFName || 'AccountClosure.pdf');
         setPdfData(pdfData);
+
         toast.success("PDF will download in the background");
       } else {
         toast.error("Failed to generate account closure PDF");
@@ -159,12 +147,7 @@ const AccountClosure = () => {
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-        headers: {
-          'Content-Type': 'application/xml',
-          Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
-        }
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       if (response.data?.data?.rs0?.[0]?.Base64PDF) {
         const pdfData = response.data.data.rs0[0];
@@ -181,13 +164,13 @@ const AccountClosure = () => {
   };
 
   const handleGetData = async () => {
+    if (!pageData || !pageData.length || !pageData[0].levels || !pageData[0].levels.length) {
+        return ;
+      }
     setLoading(true);
     setError(null);
 
     try {
-      if (!pageData || !pageData.length || !pageData[0].levels || !pageData[0].levels.length) {
-        throw new Error("Page configuration data not found");
-      }
       const page = pageData[0].levels[0];
       const J_Ui = page.J_Ui
         ? Object.entries(page.J_Ui)
@@ -209,9 +192,9 @@ const AccountClosure = () => {
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
-      const response = await apiService.postWithAuth<ApiResponse>(`${BASE_URL}${PATH_URL}`,xmlData);
+      const response = await apiService.postWithAuth(`${BASE_URL}${PATH_URL}`, xmlData);
 
-      if (response.status !== 200 || !response.data.success) {
+      if (!response.data.success) {
         throw new Error(response.data.message || "API request failed");
       }
 
@@ -219,13 +202,22 @@ const AccountClosure = () => {
       if (!responseData) {
         throw new Error("No data received from API");
       }
-      setData({
-        ...responseData,
-        TradingLedgerBalance: "0",
-        DPLedgerBalance: "0",
-        DPHoldingValue: "0"
-      });
-
+       setData(responseData)
+      // setData({
+      //   ...responseData,
+      //   TradingLedgerBalance: "0",
+      //   DPLedgerBalance: "0",
+      //   DPHoldingValue: "0"
+      // });
+      if(responseData?.ViewFlag === "true"){
+        setGenPDF(true)
+      }
+      if(responseData?.FINALPDFFlag === "true"){
+        setViewFinalEsignPDF(true);
+      }
+      else{
+        setGenPDF(false)
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       setError(errorMessage);
@@ -290,7 +282,7 @@ const AccountClosure = () => {
         <X_DataJson>${JSON.stringify(payload)}</X_DataJson>
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
-     
+
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
       const statusFlag = response.data.data.rs0[0]?.Status;
       const remark = response.data.data.rs0[0]?.Remark;
@@ -313,6 +305,84 @@ const AccountClosure = () => {
     }
   };
 
+
+  const handleFinalESign = async () => {
+    if (!pdfData) {
+      toast.error("No Final PDF available for E-Sign");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const userId = localStorage.getItem('userId') || 'ADMIN';
+
+      const J_Ui = {
+        ActionName: "Rekyc",
+        Option: "EsignRequest"
+      };
+      const Sql = null;
+      const X_Filter = "";
+      const X_Filter_Multiple = {
+        ClientCode: userId,
+        base64: pdfData.Base64PDF,
+        pdfpage: pdfData.TotalPages.toString(),
+        FileType: "FINALPDF"
+      };
+      const J_Api = {
+        UserId: userId
+      };
+
+      let xFilterMultiple = '';
+      Object.entries(X_Filter_Multiple).forEach(([key, value]) => {
+        xFilterMultiple += `<${key}>${value}</${key}>`;
+      });
+
+      const jUi = Object.entries(J_Ui).map(([key, value]) => `"${key}":"${value}"`).join(',');
+      const jApi = Object.entries(J_Api).map(([key, value]) => `"${key}":"${value}"`).join(',');
+
+      const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${Sql || ''}</Sql>
+                <X_Filter>${X_Filter}</X_Filter>
+                <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+      if (response.data?.success) {
+        const columnData = response.data?.data?.rs0?.[0]?.Column1;
+        if (columnData) {
+          try {
+            // Parse the XML string to extract the Url
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(columnData, 'text/html');
+            const url = doc.querySelector('Url')?.textContent;
+            if (url) {
+              localStorage.setItem("ClosureredirectedField", "ClosureFinalEsign");
+              window.open(url, '_self');
+              return;
+            }
+            else {
+              toast.error("No URL found in E-Sign response");
+            }
+          } catch (err) {
+            console.error("Error parsing E-Sign response:", err);
+            toast.error("Error processing Final E-Sign response");
+          }
+        }
+      } else {
+        toast.error(response.data?.message || "Failed to initiate Final E-Sign");
+      }
+    } catch (error) {
+      console.error("Error during Final E-Sign:", error);
+      toast.error("Error during Final E-Sign");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   // Auto-enable transfer fields when needed
   useEffect(() => {
     if ((closureType === "D" || closureType === "B") && hasHoldingValue) {
@@ -321,6 +391,66 @@ const AccountClosure = () => {
       setTransferBalance(false);
     }
   }, [closureType, hasHoldingValue]);
+
+  const handleKRACallBack = async (reportName: string) => {
+    try {
+      const userId = localStorage.getItem('userId') || 'ADMIN';
+      const entryName = 'REKYC';
+      const clientCode = userId;
+
+      const xmlData = `<dsXml>
+            <J_Ui>"ActionName":"REKYC","Option":"GetEsignDocument","RequestFrom":"W"</J_Ui>
+            <Sql></Sql>
+            <X_Filter></X_Filter>
+            <X_Filter_Multiple></X_Filter_Multiple>
+            <X_Data>
+                <FileType>${reportName}</FileType>
+                <EntryName>${entryName}</EntryName>
+                <ClientCode>${clientCode}</ClientCode>
+            </X_Data>
+            <J_Api>"UserId":"${userId}"</J_Api>
+        </dsXml>`;
+
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+      if (response.data?.data?.rs0) {
+        localStorage.removeItem("ClosureredirectedField");
+
+        // Extract message from XML string in Column1
+        const column1Data = response.data.data.rs0[0].Column1;
+        const messageMatch = column1Data.match(/<Message>(.*?)<\/Message>/);
+        const flagMatch = column1Data.match(/<Flag>(.*?)<\/Flag>/);
+
+        const message = messageMatch ? messageMatch[1] : "Operation completed";
+        const flag = flagMatch ? flagMatch[1] : "S";
+
+        if (flag === "S") {
+          toast.success(message);
+          setViewFinalEsignPDF(true);
+          setGenPDF(true)
+        } else {
+          toast.error(message);
+        }
+        console.log("PDF Data:", response.data.data.rs0);
+      } else {
+        toast.error(`Failed to generate ${reportName} PDF`);
+      }
+    } catch (error) {
+      console.error(`Error generating ${reportName} PDF:`, error);
+      toast.error(`Error generating ${reportName} PDF`);
+    }
+  }
+
+
+  // Handle E-Sign callback
+  useEffect(() => {
+    if (success === 'true' && id && signerIdentifier && esp) {
+      handleKRACallBack("FINALPDF")
+      router.replace(window.location.pathname);
+
+    }
+  }, [success, id, signerIdentifier, esp]);
+
 
   if (loading) {
     return (
@@ -394,34 +524,67 @@ const AccountClosure = () => {
 
         <div className="flex gap-2">
           {genPDF ? (
+            <>
+              {(pdfData || viewFinalEsignPDF) ? (
+                <button
+                  onClick={handleGenerateClosurePdf}
+                  className="py-2 px-4 rounded text-white flex items-center"
+                  style={{
+                    backgroundColor: colors.buttonBackground,
+                    color: colors.buttonText
+                  }}
+                  disabled={isGeneratingPdf}
+                >
+                  {viewFinalEsignPDF ? "View E-signed PDF" : "View PDF"} 
+                  <FaFilePdf className="ml-2" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleGenerateClosurePdf}
+                  className="py-2 px-4 rounded text-white flex items-center"
+                  style={{
+                    backgroundColor: colors.buttonBackground,
+                    color: colors.buttonText
+                  }}
+                  disabled={isGeneratingPdf}
+                >
+                  {isGeneratingPdf ? 'Generating...' : 'Gen PDF'}
+                  <FaFilePdf className="ml-2" />
+                </button>
+              )}
+            </>) : (
+              <button
+            type="submit"
+            form="closureForm"
+            className="py-2 px-4 rounded text-white flex items-center"
+            style={{
+              backgroundColor: colors.buttonBackground,
+              color: colors.buttonText
+            }}
+            disabled={isGeneratingPdf}
+          >
+            Submit
+            <CiSaveUp2 className="ml-2" />
+          </button>
+          
+            )}
+
+          {pdfData && !viewFinalEsignPDF && (
             <button
-              onClick={handleGenerateClosurePdf}
-              className="py-2 px-4 rounded text-white flex items-center"
-              style={{
-                backgroundColor: colors.buttonBackground,
-                color: colors.buttonText
-              }}
-              disabled={isGeneratingPdf}
-            >
-              {isGeneratingPdf ? 'Generating...' : 'Gen PDF'}
-              <FaFilePdf className="ml-2" />
-            </button>
-          ) : (
-            <button
-              type="submit"
+              type="button"
               form="closureForm"
               className="py-2 px-4 rounded text-white flex items-center"
               style={{
                 backgroundColor: colors.buttonBackground,
                 color: colors.buttonText
               }}
+              onClick={handleFinalESign}
               disabled={isGeneratingPdf}
             >
-              Submit Request
-              <CiSaveUp2 className="ml-2" />
+              E-sign
             </button>
-
           )}
+
         </div>
       </div>
 
