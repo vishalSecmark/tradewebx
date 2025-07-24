@@ -5,7 +5,7 @@ import { BASE_PATH_FRONT_END } from './utils/constants';
 export function middleware(request: NextRequest) {
   // Get auth token from cookies (server-side accessible)
   const authToken = request.cookies.get('auth_token')?.value;
-  console.log('authToken', authToken);
+  // console.log('authToken', authToken);
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') ||
     request.nextUrl.pathname.startsWith('/otp-verification') ||
