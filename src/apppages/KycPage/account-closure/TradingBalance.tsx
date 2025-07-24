@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 import { DataGrid } from "react-data-grid";
 import Loader from "@/components/Loader";
+import apiService from "@/utils/apiService";
+
 
 interface TradingLedgerData {
     Date: string;
@@ -70,12 +71,7 @@ const TradingBalanceModal = ({ isOpen, onClose, clientCode }: TradingBalanceModa
         <J_Api>"UserId":"${clientCode}", "UserType":"user"</J_Api>
       </dsXml>`;
 
-            const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             if (response.data?.data?.rs0) {
                 setData(response.data.data.rs0);
