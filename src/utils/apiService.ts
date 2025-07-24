@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants';
+import { toast } from 'react-toastify';
 
 // Router instance for navigation
 let routerInstance: any = null;
@@ -106,6 +107,7 @@ class ApiService {
     private handleRefreshFailure(): void {
         console.log('handleRefreshFailure');
         this.clearAuth();
+        toast.error("Session expired");
 
         // Use Next.js router for client-side navigation if available
         if (routerInstance) {
@@ -297,6 +299,8 @@ class ApiService {
             document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             localStorage.removeItem('auth_token');
             localStorage.removeItem('refreshToken');
+
+
         }
         if (typeof window !== 'undefined') {
             localStorage.removeItem('userId');
