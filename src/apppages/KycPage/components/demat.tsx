@@ -188,7 +188,7 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         let newTableData;
     
         if (isDefaultChecked) {
-          // Unset all others
+            // If the current one is checked, uncheck others
           newTableData = updatedTableData.map((entry, index) => {
             if (index === editingIndex) {
               return {
@@ -196,6 +196,14 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
                 IsDefault: "true"
               };
             } else {
+              // If any old default is being unchecked, mark it as modified
+              if (entry.IsDefault === "true" && entry.DematId) {
+                return {
+                  ...entry,
+                  IsDefault: "false",
+                  IsModified: "true"
+                };
+              }
               return {
                 ...entry,
                 IsDefault: "false"
@@ -203,23 +211,45 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             }
           });
         } else {
-          // Keep other defaults intact, or restore old if none found
+          // If current is unchecked
           newTableData = updatedTableData.map((entry, index) => {
             if (index === editingIndex) {
-              return {
+              const wasPreviouslyDefault = entry.IsDefault === "true";
+              const isOld = !!entry.DematId;
+          
+              const modifiedEntry = {
                 ...currentFormData,
                 IsDefault: "false"
               };
+              return modifiedEntry;
             }
-            return { ...entry };
-          });
+          
+            // If any old account (DematId exists) and it was default, remove it
+            if (entry.DematId && entry.IsDefault === "true") {
+              delete entry.IsModified;
+            }
+          
+            return { ...entry }; // Keep other entries as is
+          }).filter(Boolean); // Filter out removed (null) entries
+          
     
-          // Check if any entry is marked as default
+          // Ensure at least one default exists
           const hasDefault = newTableData.some((entry) => entry.IsDefault === "true");
           if (!hasDefault) {
-            const firstOldIndex = newTableData.findIndex((_, idx) => idx !== editingIndex);
+            const firstOldIndex = newTableData.findIndex(
+              (entry, idx) => idx !== editingIndex && !!entry.DematId
+            );
+          
             if (firstOldIndex !== -1) {
-              newTableData[firstOldIndex].IsDefault = "true";
+          
+              const restoredEntry = {
+                ...newTableData[firstOldIndex],
+                IsDefault: "true"
+              };
+          
+              delete restoredEntry.IsModified; // Ensure IsModified is not sent
+          
+              newTableData[firstOldIndex] = restoredEntry;
             }
           }
         }
@@ -244,10 +274,20 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         const prevTableData = prevState.dematTabData.tableData || [];
     
         const updatedTableData = isDefaultChecked
-          ? prevTableData.map((demat) => ({
-              ...demat,
-              IsDefault: "false"
-            }))
+          ? prevTableData.map((demat) => {
+              // Uncheck old defaults if they exist and mark them modified
+              if (demat.IsDefault === "true" && demat.DematId) {
+                return {
+                  ...demat,
+                  IsDefault: "false",
+                  IsModified: "true"
+                };
+              }
+              return {
+                ...demat,
+                IsDefault: "false"
+              };
+            })
           : prevTableData;
     
         return {

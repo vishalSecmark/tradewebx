@@ -187,7 +187,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         let newTableData;
     
         if (isDefaultChecked) {
-          // Make current bank default and others false
+          // If current is set as default, uncheck others
           newTableData = updatedTableData.map((entry, index) => {
             if (index === editingIndex) {
               return {
@@ -195,6 +195,13 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                 IsDefault: "true"
               };
             } else {
+              if (entry.IsDefault === "true" && entry.BankID) {
+                return {
+                  ...entry,
+                  IsDefault: "false",
+                  IsModified: "true"
+                };
+              }
               return {
                 ...entry,
                 IsDefault: "false"
@@ -202,22 +209,43 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             }
           });
         } else {
-          // Don't touch other defaults
+          // If current is unchecked
           newTableData = updatedTableData.map((entry, index) => {
             if (index === editingIndex) {
-              return {
+              const wasPreviouslyDefault = entry.IsDefault === "true";
+              const isOld = !!entry.BankID;
+    
+              const modifiedEntry = {
                 ...currentFormData,
                 IsDefault: "false"
               };
+    
+              return modifiedEntry;
             }
+    
+            // Remove IsModified from old defaults if any
+            if (entry.BankID && entry.IsDefault === "true") {
+              delete entry.IsModified;
+            }
+    
             return { ...entry };
           });
-        // Check if any entry is marked as default
-          const hasDefault = newTableData.some(entry => entry.IsDefault === "true");
+    
+          // Ensure at least one default remains
+          const hasDefault = newTableData.some((entry) => entry.IsDefault === "true");
           if (!hasDefault) {
-            const firstOldIndex = newTableData.findIndex((_, idx) => idx !== editingIndex);
+            const firstOldIndex = newTableData.findIndex(
+              (entry, idx) => idx !== editingIndex && !!entry.BankID
+            );
+    
             if (firstOldIndex !== -1) {
-              newTableData[firstOldIndex].IsDefault = "true";
+              const restoredEntry = {
+                ...newTableData[firstOldIndex],
+                IsDefault: "true"
+              };
+    
+              delete restoredEntry.IsModified; // Ensure IsModified is not sent
+              newTableData[firstOldIndex] = restoredEntry;
             }
           }
         }
@@ -231,7 +259,6 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         };
       });
     } else {
-      // Adding new bank entry
       const isDefaultChecked = currentFormData.IsDefault === "true";
       const newEntry = {
         ...currentFormData,
@@ -242,10 +269,19 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         const prevTableData = prevState.bankTabData.tableData || [];
     
         const updatedTableData = isDefaultChecked
-          ? prevTableData.map(bank => ({
-              ...bank,
-              IsDefault: "false"
-            }))
+          ? prevTableData.map((bank) => {
+              if (bank.IsDefault === "true" && bank.BankID) {
+                return {
+                  ...bank,
+                  IsDefault: "false",
+                  IsModified: "true"
+                };
+              }
+              return {
+                ...bank,
+                IsDefault: "false"
+              };
+            })
           : prevTableData;
     
         return {
