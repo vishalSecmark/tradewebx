@@ -34,7 +34,7 @@ const SSOContent = () => {
                     PDate: PDate,
                     Product: PRODUCT,
                     key: LOGIN_KEY,
-                    loginAs: LOGIN_AS
+                    loginAs: "C"
                 }
                 console.log('SSO Login request (ID/PDate format):', requestData)
             } else if (TradeWebUName && PANNo) {
@@ -44,7 +44,7 @@ const SSOContent = () => {
                     PANNo: PANNo,
                     Product: PRODUCT,
                     key: LOGIN_KEY,
-                    loginAs: LOGIN_AS
+                    loginAs: "C"
                 }
                 console.log('SSO Login request (TradeWebUName/PANNo format):', requestData)
             } else {
