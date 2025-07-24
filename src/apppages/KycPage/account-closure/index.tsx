@@ -3,7 +3,6 @@ import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { findPageData } from "@/utils/helper";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTheme } from "@/context/ThemeContext";
@@ -14,6 +13,8 @@ import TradingBalanceModal from "./TradingBalance";
 import Loader from "@/components/Loader";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { CiSaveUp2 } from "react-icons/ci";
+import apiService from "@/utils/apiService";
+
 
 interface DPHolding {
   ISINCode: string;
@@ -122,16 +123,7 @@ const AccountClosure = () => {
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post<ApiResponse>(
-        `${BASE_URL}${PATH_URL}`,
-        xmlData,
-        {
-          headers: {
-            "Content-Type": "application/xml",
-            "Authorization": `Bearer ${authToken}`,
-          },
-        }
-      );
+      const response = await apiService.postWithAuth<ApiResponse>(`${BASE_URL}${PATH_URL}`,xmlData);
 
       if (response.status !== 200 || !response.data.success) {
         throw new Error(response.data.message || "API request failed");
@@ -214,12 +206,7 @@ const AccountClosure = () => {
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + PATH_URL, xmlData, {
-        headers: {
-          'Content-Type': 'application/xml',
-          Authorization: `Bearer ${document.cookie.split('auth_token=')[1]}`
-        }
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       if (response.data?.success) {
         toast.success("Account closure request submitted successfully");

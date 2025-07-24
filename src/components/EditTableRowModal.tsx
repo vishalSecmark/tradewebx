@@ -594,12 +594,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const handleSave = async () => {
         const xmlData = generateDsXml(localData);
         try {
-            const response = await apiService.postWithAuth(
-                BASE_URL + PATH_URL,
-                xmlData,
-            );
-
-            console.log('Save response:', response.data);
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL,xmlData);
 
             // Check if the response indicates failure
             if (response.data && response.data.success === false) {
@@ -661,22 +656,14 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     const handleProcess = async () => {
         try {
-            const response = await axios.post(BASE_URL + PATH_URL, viewApiXml, {
-                headers: {
-                    'Content-Type': 'application/xml',
-                    'Authorization': `Bearer ${document.cookie.split('auth_token=')[1]}`
-                }
-            });
-    
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, viewApiXml);
             const rs0 = response?.data?.data?.rs0 || [];
     
             if (!Array.isArray(rs0) || rs0.length === 0) {
                 toast.error('No logs found.');
                 return;
             }
-    
-            setProcessResponseData(rs0);
-                
+            setProcessResponseData(rs0);   
             setIsProcessModalOpen(true);
             // setIsProcessButtonEnabled(false);
     
@@ -889,10 +876,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Dependent dropdown request XML:', xmlData);
 
-            const response = await apiService.postWithAuth(
-                BASE_URL + PATH_URL,
-                xmlData,
-            );
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL,xmlData);
 
             console.log('Dependent dropdown response:', response.data);
 
