@@ -93,7 +93,7 @@ const SSOContent = () => {
                 clearIndexedDB();
 
                 // Set both cookie and localStorage  
-                document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`
+                document.cookie = `auth_token=${data.token}; path=/`;
                 localStorage.setItem('auth_token', data.token);
 
                 localStorage.removeItem('temp_token')

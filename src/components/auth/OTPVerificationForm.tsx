@@ -61,7 +61,7 @@ export default function OTPVerificationForm() {
         }));
 
         // Set both cookie and localStorage
-        document.cookie = `auth_token=${data.token}; path=/; expires=${new Date(data.tokenExpireTime).toUTCString()}`;
+        document.cookie = `auth_token=${data.token}; path=/`;
 
         // Update localStorage
         localStorage.setItem('clientCode', data.data[0].ClientCode);
