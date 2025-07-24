@@ -1,5 +1,8 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { BASE_URL, OTP_VERIFICATION_URL } from './constants';
+import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants';
+
+// Router instance for navigation
+let routerInstance: any = null;
 
 // Types for API responses
 export interface ApiResponse<T = any> {
@@ -31,6 +34,11 @@ class ApiService {
 
     constructor() {
         this.setupInterceptors();
+    }
+
+    // Set router instance for navigation
+    setRouter(router: any): void {
+        routerInstance = router;
     }
 
     // Setup axios interceptors for automatic token refresh
@@ -98,9 +106,13 @@ class ApiService {
     private handleRefreshFailure(): void {
         console.log('handleRefreshFailure');
         this.clearAuth();
-        // Redirect to login or emit event for app to handle
-        if (typeof window !== 'undefined') {
-            window.location.href = '/';
+
+        // Use Next.js router for client-side navigation if available
+        if (routerInstance) {
+            routerInstance.push('/' + BASE_PATH_FRONT_END);
+        } else if (typeof window !== 'undefined') {
+            // Fallback to window.location.href if router is not set
+            window.location.href = '/' + BASE_PATH_FRONT_END;
         }
     }
 
@@ -296,4 +308,11 @@ class ApiService {
 
 // Create and export singleton instance
 const apiService = new ApiService();
+
+// Helper function to set up router for the API service
+// Usage: import { useRouter } from 'next/navigation'; setupApiRouter(useRouter());
+export const setupApiRouter = (router: any): void => {
+    apiService.setRouter(router);
+};
+
 export default apiService; 
