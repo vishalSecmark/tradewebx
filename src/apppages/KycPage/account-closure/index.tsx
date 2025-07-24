@@ -75,7 +75,7 @@ const AccountClosure = () => {
   const [reason, setReason] = useState("");
   const [newBoid, setNewBoid] = useState("");
   const [cmrFile, setCmrFile] = useState<File | null>(null);
-  
+
   // Modal states
   const [showDematHolding, setShowDematHolding] = useState(false);
   const [showDematLedger, setShowDematLedger] = useState(false);
@@ -123,10 +123,10 @@ const AccountClosure = () => {
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
-      const response = await apiService.postWithAuth<ApiResponse>(`${BASE_URL}${PATH_URL}`,xmlData);
+      const response = await apiService.postWithAuth(`${BASE_URL}${PATH_URL}`, xmlData);
 
-      if (response.status !== 200 || !response.data.success) {
-        throw new Error(response.data.message || "API request failed");
+      if (!response.success) {
+        throw new Error(response.message || "API request failed");
       }
 
       const responseData = response.data.data?.rs0?.[0]?.Data;
@@ -140,7 +140,7 @@ const AccountClosure = () => {
       //   DPLedgerBalance : 0,
       //   DPHoldingValue:0
       // });
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       setError(errorMessage);
@@ -165,9 +165,9 @@ const AccountClosure = () => {
     e.preventDefault();
     // Validation
     if (parseBalance(data.TradingLedgerBalance) || parseBalance(data.DPLedgerBalance)) {
-        toast.warning("You have balance in your Accounts")
-        return;
-      }
+      toast.warning("You have balance in your Accounts")
+      return;
+    }
     if (!reason) {
       toast.error("Please provide reason for account closure");
       return;
@@ -186,7 +186,7 @@ const AccountClosure = () => {
     try {
       setLoading(true);
       const userId = localStorage.getItem("userId") || "";
-      
+
       const payload = {
         ClientCode: data?.ClientCode || "",
         DPAcNo: data?.DPAcno || "",
@@ -208,10 +208,10 @@ const AccountClosure = () => {
 
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
-      if (response.data?.success) {
+      if (response.success) {
         toast.success("Account closure request submitted successfully");
       } else {
-        toast.error(response.data?.message || "Failed to submit account closure request");
+        toast.error(response.message || "Failed to submit account closure request");
       }
     } catch (error) {
       console.error("Error submitting account closure:", error);
@@ -280,14 +280,14 @@ const AccountClosure = () => {
         clientCode={data.ClientCode}
         dpAccountNo={data.DPAcno}
       />
-      
+
       <DematLedgerModal
         isOpen={showDematLedger}
         onClose={() => setShowDematLedger(false)}
         clientCode={data.ClientCode}
         dpAccountNo={data.DPAcno}
       />
-      
+
       <TradingBalanceModal
         isOpen={showTradingLedger}
         onClose={() => setShowTradingLedger(false)}
@@ -309,7 +309,7 @@ const AccountClosure = () => {
           }}
         >
           Submit Request
-          <CiSaveUp2 className="ml-2"/>
+          <CiSaveUp2 className="ml-2" />
         </button>
       </div>
 
@@ -326,15 +326,15 @@ const AccountClosure = () => {
           </div>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span 
+              <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowTradingLedger(true)}
               >
-                Ledger Balance: <FaExternalLinkAlt className="text-sm"/> 
+                Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className={`font-semibold ${(data.TradingLedgerBalance || '').includes('-')
-                  ? 'text-red-600'
-                  : 'text-green-600'
+                ? 'text-red-600'
+                : 'text-green-600'
                 }`}>
                 {data.TradingLedgerBalance ?? "--"}
               </span>
@@ -353,30 +353,30 @@ const AccountClosure = () => {
           </div>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <span 
+              <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowDematLedger(true)}
               >
-                Ledger Balance: <FaExternalLinkAlt className="text-sm"/>
+                Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className={`font-semibold ${(data.DPLedgerBalance || '').includes('-')
-                  ? 'text-red-600'
-                  : 'text-green-600'
+                ? 'text-red-600'
+                : 'text-green-600'
                 }`}>
                 {data.DPLedgerBalance ?? "--"}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span 
+              <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowDematHolding(true)}
               >
-                Holding Value: <FaExternalLinkAlt className="text-sm"/>
+                Holding Value: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className=
                 {`font-semibold ${(data.DPHoldingValue || '').includes('-')
-                    ? 'text-red-600'
-                    : 'text-green-600'
+                  ? 'text-red-600'
+                  : 'text-green-600'
                   }`}
               >{data.DPHoldingValue ?? "--"}</span>
             </div>
@@ -406,7 +406,7 @@ const AccountClosure = () => {
               />
               <span className="ml-3 font-medium">Close Trading Account ({data.ClientCode ?? "--"})</span>
             </label>
-            
+
             <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasDematBalance ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
               <input
                 type="radio"
@@ -419,7 +419,7 @@ const AccountClosure = () => {
               />
               <span className="ml-3 font-medium">Close Demat Account ({data.DPAcno ?? "--"})</span>
             </label>
-            
+
             <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasTradingBalance || hasDematBalance ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
               <input
                 type="radio"
@@ -434,7 +434,7 @@ const AccountClosure = () => {
             </label>
           </div>
 
-          {/* Reason for account closure */}  
+          {/* Reason for account closure */}
           <div className="mb-4">
             <label className="block font-medium mb-1">Reason for Account Closure:</label>
             <textarea
@@ -502,7 +502,7 @@ const AccountClosure = () => {
                       color: colors.buttonText
                     }}
                   >
-                    <MdOutlineDriveFolderUpload className="mr-2"/> 
+                    <MdOutlineDriveFolderUpload className="mr-2" />
                     Choose File
                   </span>
                   <input
