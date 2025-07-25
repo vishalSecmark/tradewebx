@@ -1,24 +1,12 @@
 import { useState, useEffect } from "react";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
-import { DataGrid } from "react-data-grid";
 import Loader from "@/components/Loader";
 import apiService from "@/utils/apiService";
-
-interface DematLedgerData {
-    ClientCode: string;
-    ClientName: string;
-    Date: string;
-    voucherNo: string;
-    Narration: string;
-    DebitofCredit: string;
-    ChequeNo: string;
-    DebitAmount: number;
-    CreditAmount: number;
-    Balance: number;
-    BalanceTag: string;
-}
-
+import DataTable from "@/components/DataTable";
+import { findPageData, parseSettingsFromXml } from "@/utils/helper";
+import { useAppSelector } from "@/redux/hooks";
+import { selectAllMenuItems } from "@/redux/features/menuSlice";
 interface DematLedgerModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -28,17 +16,12 @@ interface DematLedgerModalProps {
 
 const DematLedgerModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematLedgerModalProps) => {
     const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<DematLedgerData[]>([]);
-
-    const columns = [
-        { key: "Date", name: "Date" },
-        { key: "voucherNo", name: "Voucher No" },
-        { key: "Narration", name: "Narration" },
-        { key: "DebitAmount", name: "Debit" },
-        { key: "CreditAmount", name: "Credit" },
-        { key: "Balance", name: "Balance" },
-        { key: "BalanceTag", name: "Dr/Cr" }
-    ];
+    const [data, setData] = useState<any[]>([]);
+    const [rs1Settings, setRs1Settings] = useState<any>(null);
+        const menuItems = useAppSelector(selectAllMenuItems);
+        const pageData = findPageData(menuItems, "Dpledger");
+        const pageSettings = pageData[0].levels[0].settings
+    
 
     const fetchDematLedger = async () => {
         try {
@@ -54,8 +37,20 @@ const DematLedgerModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematLed
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             if (response.data?.data?.rs0) {
-                setData(response.data.data.rs0);
-            } else {
+                           const rowData = response.data?.data?.rs0 || [];
+                           const dataWithId = rowData.map((row: any, index: number) => ({
+                               ...row,
+                               _id: index
+                           }));
+           
+                           setData(dataWithId);
+                       } if (response.data.data.rs1?.[0]?.Settings) {
+                           const xmlString = response.data.data.rs1[0].Settings;
+                           const settingsJson = parseSettingsFromXml(xmlString)
+                           setRs1Settings(settingsJson);
+           
+           
+                       } else {
                 toast.error("Failed to fetch Demat ledger");
             }
         } catch (error) {
@@ -97,11 +92,22 @@ const DematLedgerModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematLed
                     </div>
                 ) : (
                     <div className="h-[70vh]">
-                        <DataGrid
-                            columns={columns}
-                            rows={data}
-                            className="rdg-light border-0"
-                        />
+                        {!data?.length ? (
+                            <div className="text-center">
+                                <h1>No Data Available</h1>
+                            </div>
+                        )
+                            : (
+                                <DataTable
+                                    data={data}
+                                    settings={{
+                                        ...pageSettings,
+                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                        webColumns: rs1Settings?.webColumns?.[0] || [],
+                                    }}
+                                />
+                            )}
                     </div>
                 )}
             </div>

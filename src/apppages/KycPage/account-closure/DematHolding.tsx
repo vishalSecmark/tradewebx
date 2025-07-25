@@ -1,21 +1,12 @@
 import { useState, useEffect } from "react";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
-import { DataGrid } from "react-data-grid";
 import Loader from "@/components/Loader";
 import apiService from "@/utils/apiService";
-
-
-interface DematHoldingData {
-    ClientCode: string;
-    ClientName: string;
-    ISINName: string;
-    ISIN: string;
-    BalanceType: string;
-    Qty: number;
-    Rate: number;
-    Value: number;
-}
+import DataTable from "@/components/DataTable";
+import { findPageData, parseSettingsFromXml } from "@/utils/helper";
+import { useAppSelector } from "@/redux/hooks";
+import { selectAllMenuItems } from "@/redux/features/menuSlice";
 
 interface DematHoldingModalProps {
     isOpen: boolean;
@@ -26,16 +17,15 @@ interface DematHoldingModalProps {
 
 const DematHoldingModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematHoldingModalProps) => {
     const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<DematHoldingData[]>([]);
+    const [data, setData] = useState<any[]>([]);
+    const [rs1Settings, setRs1Settings] = useState<any>(null);
+    const menuItems = useAppSelector(selectAllMenuItems);
+    const pageData = findPageData(menuItems, "Dpholding");
+    const pageSettings = pageData[0].levels[0].settings
 
-    const columns = [
-        { key: "ISIN", name: "ISIN" },
-        { key: "ISINName", name: "Security Name" },
-        { key: "BalanceType", name: "Type" },
-        { key: "Qty", name: "Quantity" },
-        { key: "Rate", name: "Rate" },
-        { key: "Value", name: "Value" }
-    ];
+    console.log("check page data", pageData)
+
+
 
     const fetchDematHoldings = async () => {
         try {
@@ -51,7 +41,19 @@ const DematHoldingModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematHo
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             if (response.data?.data?.rs0) {
-                setData(response.data.data.rs0);
+                const rowData = response.data?.data?.rs0 || [];
+                const dataWithId = rowData.map((row: any, index: number) => ({
+                    ...row,
+                    _id: index
+                }));
+
+                setData(dataWithId);
+            } if (response.data.data.rs1?.[0]?.Settings) {
+                const xmlString = response.data.data.rs1[0].Settings;
+                const settingsJson = parseSettingsFromXml(xmlString)
+                setRs1Settings(settingsJson);
+
+
             } else {
                 toast.error("Failed to fetch Demat holdings");
             }
@@ -94,11 +96,23 @@ const DematHoldingModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematHo
                     </div>
                 ) : (
                     <div className="h-[70vh]">
-                        <DataGrid
-                            columns={columns}
-                            rows={data}
-                            className="rdg-light border-0"
-                        />
+                        {!data?.length ? (
+                            <div className="text-center">
+                                <h1>No Data Available</h1>
+                            </div>
+                        )
+                            : (
+                                <DataTable
+                                    data={data}
+                                    settings={{
+                                        ...pageSettings,
+                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                        webColumns: rs1Settings?.webColumns?.[0] || [],
+                                    }}
+                                />
+                            )}
+
                     </div>
                 )}
             </div>
@@ -107,3 +121,9 @@ const DematHoldingModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematHo
 };
 
 export default DematHoldingModal;
+
+
+// Dpledger
+// Dpholding
+// Ledger
+// Holding

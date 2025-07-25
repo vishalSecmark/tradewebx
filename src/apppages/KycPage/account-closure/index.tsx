@@ -16,7 +16,6 @@ import { CiSaveUp2 } from "react-icons/ci";
 import apiService from "@/utils/apiService";
 import { useRouter, useSearchParams } from "next/navigation";
 
-
 interface DPHolding {
   ISINCode: string;
   ISINName: string;
@@ -61,15 +60,23 @@ const AccountClosure = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfData, setPdfData] = useState<any>(null);
 
+  console.log("check CRM FIle",cmrFile)
+  // Validation errors
+  const [errors, setErrors] = useState({
+    closureType: "",
+    reason: "",
+    newBoid: "",
+    cmrFile: ""
+  });
+
   // Modal states
   const [showDematHolding, setShowDematHolding] = useState(false);
   const [showDematLedger, setShowDematLedger] = useState(false);
   const [showTradingLedger, setShowTradingLedger] = useState(false);
   const [genPDF, setGenPDF] = useState(false);
-  const [viewFinalEsignPDF,setViewFinalEsignPDF] = useState(false);
+  const [viewFinalEsignPDF, setViewFinalEsignPDF] = useState(false);
 
   const pageData = findPageData(menuItems, "ClientClosure");
-
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -77,7 +84,6 @@ const AccountClosure = () => {
   const id = searchParams.get('id');
   const signerIdentifier = searchParams.get('signerIdentifier');
   const esp = searchParams.get('esp');
-
 
   // Helper functions to parse balance values
   const parseBalance = (balance: string) => {
@@ -90,6 +96,57 @@ const AccountClosure = () => {
   const hasDematBalance = parseBalance(data?.DPLedgerBalance || "0") > 0;
   const hasHoldingValue = parseBalance(data?.DPHoldingValue || "0") > 0;
 
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    console.log("check file",file)
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const newErrors = {
+      closureType: "",
+      reason: "",
+      newBoid: "",
+      cmrFile: ""
+    };
+
+    if (!closureType) {
+      newErrors.closureType = "Please select an account closure type";
+    }
+
+    if (!reason) {
+      newErrors.reason = "Please provide a reason for account closure";
+    }
+
+    if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance && !newBoid) {
+      newErrors.newBoid = "Please provide Transfer BOID for holdings transfer";
+    }
+
+    if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance && !cmrFile) {
+      newErrors.cmrFile = "Please upload CMR Form for holdings transfer";
+    }
+
+    setErrors(newErrors);
+    return Object.values(newErrors).every(error => error === "");
+  };
+
+  // Check if form is valid for submit button
+  const isFormValid = () => {
+    if (!closureType || !reason) return false;
+    if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance) {
+      if (!newBoid || !cmrFile) return false;
+    }
+    return true;
+  };
 
   const handleGenerateClosurePdf = async () => {
     setIsGeneratingPdf(true);
@@ -130,7 +187,7 @@ const AccountClosure = () => {
 
   const handleGenerateRekycPdf = async (reportName: string) => {
     try {
-      const userId = localStorage.getItem('userId') || '';
+      const userId = localStorage.getItem('clientCode') || '';
       const clientCode = data?.ClientCode || '';
       const entryName = 'REKYC';
 
@@ -202,13 +259,13 @@ const AccountClosure = () => {
       if (!responseData) {
         throw new Error("No data received from API");
       }
-       setData(responseData)
-      // setData({
-      //   ...responseData,
-      //   TradingLedgerBalance: "0",
-      //   DPLedgerBalance: "0",
-      //   DPHoldingValue: "0"
-      // });
+      //  setData(responseData)
+        setData({
+        ...responseData,
+        TradingLedgerBalance: "0",
+        DPLedgerBalance: "0",
+        DPHoldingValue: "1"
+      });
       if(responseData?.ViewFlag === "true"){
         setGenPDF(true)
       }
@@ -235,28 +292,20 @@ const AccountClosure = () => {
   const handleCMRUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setCmrFile(e.target.files[0]);
+      setErrors(prev => ({...prev, cmrFile: ""}));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Validation
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    // Additional validation
     if (parseBalance(data?.TradingLedgerBalance || "0") > 0 || parseBalance(data?.DPLedgerBalance || "0") > 0) {
       toast.warning("You have balance in your Accounts");
-      return;
-    }
-    if (!reason) {
-      toast.error("Please provide reason for account closure");
-      return;
-    }
-
-    if ((closureType === "D" || closureType === "B") && hasHoldingValue && !newBoid) {
-      toast.error("Please provide Transfer BOID for holdings transfer");
-      return;
-    }
-
-    if ((closureType === "D" || closureType === "B") && hasHoldingValue && !cmrFile) {
-      toast.error("Please upload CMR Form for holdings transfer");
       return;
     }
 
@@ -264,14 +313,26 @@ const AccountClosure = () => {
       setLoading(true);
       const userId = localStorage.getItem("userId") || "";
 
-      const payload = {
+       let cmrBase64 = "";
+      if (cmrFile) {
+        try {
+          cmrBase64 = await fileToBase64(cmrFile);
+        } catch (error) {
+          console.error("Error converting file to base64:", error);
+          toast.error("Error processing uploaded file");
+          return;
+        }
+      }
+
+     const payload = {
         ClientCode: data?.ClientCode || "",
         DPAcNo: data?.DPAcno || "",
         ClosureType: closureType,
         ClosureReason: reason,
-        CMRAttachment: cmrFile ? "File attached" : "",
+        CMRAttachment: cmrBase64,
         BOID: newBoid,
-        HoldingBalance: data?.DPHoldingValue || "0"
+        HoldingBalance: data?.DPHoldingValue || "0",
+        FileName: cmrFile?.name || ""
       };
 
       const xmlData = `<dsXml>
@@ -304,7 +365,6 @@ const AccountClosure = () => {
       setLoading(false);
     }
   };
-
 
   const handleFinalESign = async () => {
     if (!pdfData) {
@@ -382,7 +442,6 @@ const AccountClosure = () => {
     }
   };
 
-
   // Auto-enable transfer fields when needed
   useEffect(() => {
     if ((closureType === "D" || closureType === "B") && hasHoldingValue) {
@@ -441,16 +500,13 @@ const AccountClosure = () => {
     }
   }
 
-
   // Handle E-Sign callback
   useEffect(() => {
     if (success === 'true' && id && signerIdentifier && esp) {
       handleKRACallBack("FINALPDF")
       router.replace(window.location.pathname);
-
     }
   }, [success, id, signerIdentifier, esp]);
-
 
   if (loading) {
     return (
@@ -554,19 +610,18 @@ const AccountClosure = () => {
               )}
             </>) : (
               <button
-            type="submit"
-            form="closureForm"
-            className="py-2 px-4 rounded text-white flex items-center"
-            style={{
-              backgroundColor: colors.buttonBackground,
-              color: colors.buttonText
-            }}
-            disabled={isGeneratingPdf}
-          >
-            Submit
-            <CiSaveUp2 className="ml-2" />
-          </button>
-          
+                type="submit"
+                form="closureForm"
+                className="py-2 px-4 rounded text-white flex items-center"
+                style={{
+                  backgroundColor: !isFormValid() ? "lightgrey" : colors.buttonBackground,
+                  color: !isFormValid() ? "black" : colors.buttonText
+                }}
+                disabled={!isFormValid() || isGeneratingPdf}
+              >
+                Submit
+                <CiSaveUp2 className="ml-2" />
+              </button>
             )}
 
           {pdfData && !viewFinalEsignPDF && (
@@ -584,7 +639,6 @@ const AccountClosure = () => {
               E-sign
             </button>
           )}
-
         </div>
       </div>
 
@@ -676,7 +730,10 @@ const AccountClosure = () => {
                 name="closureType"
                 value="T"
                 checked={closureType === "T"}
-                onChange={() => setClosureType("T")}
+                onChange={() => {
+                  setClosureType("T");
+                  setErrors(prev => ({...prev, closureType: ""}));
+                }}
                 disabled={hasTradingBalance}
               />
               <span className="ml-3 font-medium">Close Trading Account ({data.ClientCode ?? "--"})</span>
@@ -689,7 +746,10 @@ const AccountClosure = () => {
                 name="closureType"
                 value="D"
                 checked={closureType === "D"}
-                onChange={() => setClosureType("D")}
+                onChange={() => {
+                  setClosureType("D");
+                  setErrors(prev => ({...prev, closureType: ""}));
+                }}
                 disabled={hasDematBalance}
               />
               <span className="ml-3 font-medium">Close Demat Account ({data.DPAcno ?? "--"})</span>
@@ -702,11 +762,17 @@ const AccountClosure = () => {
                 name="closureType"
                 value="B"
                 checked={closureType === "B"}
-                onChange={() => setClosureType("B")}
+                onChange={() => {
+                  setClosureType("B");
+                  setErrors(prev => ({...prev, closureType: ""}));
+                }}
                 disabled={hasTradingBalance || hasDematBalance}
               />
               <span className="ml-3 font-medium">Close Both</span>
             </label>
+            {errors.closureType && (
+              <div className="text-red-500 text-sm mt-1">{errors.closureType}</div>
+            )}
           </div>
 
           {/* Reason for account closure */}
@@ -715,13 +781,19 @@ const AccountClosure = () => {
             <textarea
               className="w-full border rounded px-3 py-2 min-h-[100px] text-sm focus:ring focus:ring-opacity-50"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              onChange={(e) => {
+                setReason(e.target.value);
+                setErrors(prev => ({...prev, reason: ""}));
+              }}
               required
               style={{
                 color: colors.text,
                 borderColor: colors.buttonBackground
               }}
             />
+            {errors.reason && (
+              <div className="text-red-500 text-sm mt-1">{errors.reason}</div>
+            )}
           </div>
         </div>
 
@@ -754,13 +826,19 @@ const AccountClosure = () => {
                 className="w-full border rounded px-3 py-2 text-sm focus:ring focus:ring-opacity-50"
                 placeholder="Enter new BOID"
                 value={newBoid}
-                onChange={(e) => setNewBoid(e.target.value)}
+                onChange={(e) => {
+                  setNewBoid(e.target.value);
+                  setErrors(prev => ({...prev, newBoid: ""}));
+                }}
                 required={(closureType === "D" || closureType === "B") && hasHoldingValue}
                 style={{
                   color: colors.text,
                   borderColor: colors.buttonBackground
                 }}
               />
+              {errors.newBoid && (
+                <div className="text-red-500 text-sm mt-1">{errors.newBoid}</div>
+              )}
             </div>
           )}
 
@@ -785,7 +863,6 @@ const AccountClosure = () => {
                     accept="application/pdf,image/*"
                     onChange={handleCMRUpload}
                     className="hidden"
-                    required={(closureType === "D" || closureType === "B") && hasHoldingValue}
                   />
                 </label>
                 {cmrFile && (
@@ -794,6 +871,9 @@ const AccountClosure = () => {
                   </span>
                 )}
               </div>
+              {errors.cmrFile && (
+                <div className="text-red-500 text-sm mt-1">{errors.cmrFile}</div>
+              )}
               <p className="text-xs text-gray-500 mt-1">Upload scanned copy of Client Master Report</p>
             </div>
           )}
@@ -804,5 +884,3 @@ const AccountClosure = () => {
 };
 
 export default AccountClosure;
-
-

@@ -205,3 +205,46 @@ export const dynamicXmlGenratingFn = (ApiData,rowData) => {
       return xmlData
 
 }
+
+export const parseXmlList = (xmlString: string, tag: string): string[] => {
+        const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
+        const matches = xmlString.match(regex);
+        return matches ? matches.map((match: any) => match.replace(new RegExp(`</?${tag}>`, 'g'), '').split(',')) : [];
+    };
+export const parseXmlValue = (xmlString: string, tag: string): string => {
+        const regex = new RegExp(`<${tag}>(.*?)</${tag}>`);
+        const match = xmlString.match(regex);
+        return match ? match[1] : '';
+    };
+export  const parseHeadings = (xmlString: string): any => {
+        // Implement heading parsing logic if needed
+        return {};
+    };
+
+
+export const parseSettingsFromXml = (xmlString: string) => {
+    // Create and return the settings object
+    return {
+        totalList: parseXmlList(xmlString, 'TotalList'),
+        rightList: parseXmlList(xmlString, 'RightList'),
+        hideList: parseXmlList(xmlString, 'HideList'),
+        dateFormat: parseXmlValue(xmlString, 'DateFormat'),
+        dateFormatList: parseXmlList(xmlString, 'DateFormatList'),
+        dec2List: parseXmlList(xmlString, 'Dec2List'),
+        dec4List: parseXmlList(xmlString, 'Dec4List'),
+        drCRColorList: parseXmlList(xmlString, 'DrCRColorList'),
+        pnLColorList: parseXmlList(xmlString, 'PnLColorList'),
+        primaryKey: parseXmlValue(xmlString, 'PrimaryKey'),
+        companyName: parseXmlValue(xmlString, 'CompanyName'),
+        companyAdd1: parseXmlValue(xmlString, 'CompanyAdd1'),
+        companyAdd2: parseXmlValue(xmlString, 'CompanyAdd2'),
+        companyAdd3: parseXmlValue(xmlString, 'CompanyAdd3'),
+        reportHeader: parseXmlValue(xmlString, 'ReportHeader'),
+        pdfWidth: parseXmlValue(xmlString, 'PDFWidth'),
+        pdfHeight: parseXmlValue(xmlString, 'PDFHeight'),
+        mobileColumns: parseXmlList(xmlString, 'MobileColumns'),
+        tabletColumns: parseXmlList(xmlString, 'TabletColumns'),
+        webColumns: parseXmlList(xmlString, 'WebColumns'),
+        headings: parseHeadings(xmlString)
+    };
+};
