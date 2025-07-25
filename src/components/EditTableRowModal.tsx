@@ -65,7 +65,7 @@ interface EditTableRowModalProps {
         }>;
         hideMultiEditColumn?: string;
         ShowViewDocument?: boolean;
-      
+
         ShowViewDocumentAPI?: {
             dsXml: {
                 J_Ui: any;
@@ -123,28 +123,30 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [processResponseData, setProcessResponseData] = useState<any[]>([]);
     const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
     const [isProcessButtonEnabled, setIsProcessButtonEnabled] = useState(false);
-    const [viewApiXml,setViewApiXml] = useState('');
-    const [viewLogHeader,setViewLogHeader] = useState({})
+    const [viewApiXml, setViewApiXml] = useState('');
+    const [viewLogHeader, setViewLogHeader] = useState({})
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
+    // loading state for save/process button
+    const [isSaving, setIsSaving] = useState(false);
 
     const showViewTable = settings.ShowView
 
-    const showViewDocumentBtn = settings.ShowViewDocument    
+    const showViewDocumentBtn = settings.ShowViewDocument
 
     const showViewDocumentLabel = settings.ViewDocumentName
 
     const saveBtnDocumentName = settings.SavebName
-    
+
     const showViewDocumentAPI = settings.ShowViewDocumentAPI
 
     const showViewApi = settings.ViewAPI
 
-    
 
 
-   
-    
+
+
+
 
     const editableColumns = settings.EditableColumn || [];
 
@@ -581,20 +583,21 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             return;
         }
 
-     setViewApiXml(dynamicXmlGenratingFn(showViewApi,rowData))
-    
-     
-     setViewLogHeader(rowData)
-            // Enable Process button
-    setIsProcessButtonEnabled(true);
-     
+        setViewApiXml(dynamicXmlGenratingFn(showViewApi, rowData))
 
-      }
+
+        setViewLogHeader(rowData)
+        // Enable Process button
+        setIsProcessButtonEnabled(true);
+
+
+    }
 
     const handleSave = async () => {
+        setIsSaving(true);
         const xmlData = generateDsXml(localData);
         try {
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL,xmlData);
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             // Check if the response indicates failure
             if (response.data && response.data.success === false) {
@@ -650,31 +653,36 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             }
 
             showValidationMessage(errorMessage, 'E');
+        } finally {
+            setIsSaving(false);
         }
     };
 
 
     const handleProcess = async () => {
+        setIsSaving(true);
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, viewApiXml);
             const rs0 = response?.data?.data?.rs0 || [];
-    
+
             if (!Array.isArray(rs0) || rs0.length === 0) {
                 toast.error('No logs found.');
                 return;
             }
-            setProcessResponseData(rs0);   
+            setProcessResponseData(rs0);
             setIsProcessModalOpen(true);
             // setIsProcessButtonEnabled(false);
-    
+
         } catch (error) {
             console.error('Error in handleProcess:', error);
             toast.error('Failed to process request.');
             setIsProcessButtonEnabled(false);
+        } finally {
+            setIsSaving(false);
         }
     };
-    
-    
+
+
 
 
     const getEditableColumn = (key: string) => {
@@ -876,7 +884,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
             console.log('Dependent dropdown request XML:', xmlData);
 
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL,xmlData);
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             console.log('Dependent dropdown response:', response.data);
 
@@ -1006,7 +1014,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-   
+
 
     return (
         <>
@@ -1360,25 +1368,52 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                         <div className="mt-6 flex justify-end gap-4">
 
-                        {showViewDocumentBtn === true &&
-                                                         <button
-                                                         onClick={(showViewDocumentBtn && showViewDocumentLabel ? ()  => hadleViewLog(localData[0]):() => handleDocumentView(localData[0]))}
-                                                         className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
-                                                         style={{
-                                                             fontFamily: fonts.content,
-                                                         }}
-                                                     >
-                                                         {(showViewDocumentBtn && showViewDocumentLabel? showViewDocumentLabel:'View Document')}
-                                                     </button>
-                                                        }
+                            {showViewDocumentBtn === true &&
+                                <button
+                                    onClick={(showViewDocumentBtn && showViewDocumentLabel ? () => hadleViewLog(localData[0]) : () => handleDocumentView(localData[0]))}
+                                    className="bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 px-4 py-2 rounded-md transition-colors ml-4"
+                                    style={{
+                                        fontFamily: fonts.content,
+                                    }}
+                                >
+                                    {(showViewDocumentBtn && showViewDocumentLabel ? showViewDocumentLabel : 'View Document')}
+                                </button>
+                            }
 
                             <button
-                                disabled={(showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled}
-                                onClick= {(showViewDocumentBtn && showViewDocumentLabel? handleProcess:handleSave)}
-                                className={`px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 ml-2 ${showViewDocumentBtn && showViewDocumentLabel && !isProcessButtonEnabled
-                                    ? 'opacity-50 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+                                disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
+                                onClick={(showViewDocumentBtn && showViewDocumentLabel ? handleProcess : handleSave)}
+                                className={`px-4 py-2 rounded ml-2 flex items-center gap-2 ${isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-green-600 hover:bg-green-700'
+                                    } text-white`}
                             >
-                                 {(showViewDocumentBtn && showViewDocumentLabel? saveBtnDocumentName:'Save')}
+                                {isSaving && (
+                                    <svg
+                                        className="animate-spin h-4 w-4"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                        />
+                                        <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        />
+                                    </svg>
+                                )}
+                                {isSaving
+                                    ? 'Processing...'
+                                    : (showViewDocumentBtn && showViewDocumentLabel ? saveBtnDocumentName : 'Save')
+                                }
                             </button>
                             <button
                                 onClick={onClose}
@@ -1472,61 +1507,61 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 </div>
             )}
 
-{isProcessModalOpen && (
-    <Dialog open={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} className="relative z-[200]">
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-            <DialogPanel className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[80vh] overflow-auto">
-                <DialogTitle className="text-lg font-semibold mb-4">Client Export Logs</DialogTitle>
+            {isProcessModalOpen && (
+                <Dialog open={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} className="relative z-[200]">
+                    <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                    <div className="fixed inset-0 flex items-center justify-center p-4">
+                        <DialogPanel className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[80vh] overflow-auto">
+                            <DialogTitle className="text-lg font-semibold mb-4">Client Export Logs</DialogTitle>
 
-              {/* Header Info */}
-              <div className="grid grid-cols-3 gap-4 text-sm font-medium mb-4">
-                {Object.keys(showViewApi.dsXml.X_Filter_Multiple)
-                    .filter(key => key in localData[0])
-                    .map(key => (
-                    <div key={key}>
-                        <strong>{key.replace(/([A-Z])/g, ' $1').trim()}:</strong> {localData[0][key]}
+                            {/* Header Info */}
+                            <div className="grid grid-cols-3 gap-4 text-sm font-medium mb-4">
+                                {Object.keys(showViewApi.dsXml.X_Filter_Multiple)
+                                    .filter(key => key in localData[0])
+                                    .map(key => (
+                                        <div key={key}>
+                                            <strong>{key.replace(/([A-Z])/g, ' $1').trim()}:</strong> {localData[0][key]}
+                                        </div>
+                                    ))}
+                            </div>
+
+
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full border border-gray-300 text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-100">
+                                            {processResponseData.length > 0 &&
+                                                Object.keys(processResponseData[0]).map((key) => (
+                                                    <th key={key} className="border px-4 py-2 text-left">{key}</th>
+                                                ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {processResponseData.map((row, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                {Object.keys(row).map((key) => (
+                                                    <td key={key} className="border px-4 py-2 break-all">
+                                                        {row[key]}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="mt-4 flex justify-end">
+                                <button
+                                    onClick={() => setIsProcessModalOpen(false)}
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </DialogPanel>
                     </div>
-                    ))}
-                </div>
-
-
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-300 text-sm">
-                      <thead>
-                          <tr className="bg-gray-100">
-                              {processResponseData.length > 0 &&
-                                  Object.keys(processResponseData[0]).map((key) => (
-                                      <th key={key} className="border px-4 py-2 text-left">{key}</th>
-                                  ))}
-                          </tr>
-                      </thead>
-                      <tbody>
-                          {processResponseData.map((row, idx) => (
-                              <tr key={idx} className="hover:bg-gray-50">
-                                  {Object.keys(row).map((key) => (
-                                      <td key={key} className="border px-4 py-2 break-all">
-                                          {row[key]}
-                                      </td>
-                                  ))}
-                              </tr>
-                          ))}
-                      </tbody>
-                  </table>
-              </div>
-
-                <div className="mt-4 flex justify-end">
-                    <button
-                        onClick={() => setIsProcessModalOpen(false)}
-                        className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                    >
-                        Close
-                    </button>
-                </div>
-            </DialogPanel>
-        </div>
-    </Dialog>
-)}
+                </Dialog>
+            )}
 
 
         </>
