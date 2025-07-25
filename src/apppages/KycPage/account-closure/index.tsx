@@ -100,6 +100,7 @@ const AccountClosure = () => {
   const hasTradingBalance = parseBalance(data?.TradingLedgerBalance || "0") > 0;
   const hasDematBalance = parseBalance(data?.DPLedgerBalance || "0") > 0;
   const hasHoldingValue = parseBalance(data?.DPHoldingValue || "0") > 0;
+  const hasDematAccount = data?.DPAcno && data.DPAcno.trim() !== ""; // Check if Demat account number exists
 
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -269,12 +270,6 @@ const AccountClosure = () => {
       }
 
       setData(responseData)
-      // setData({
-      //   ...responseData,
-      //   TradingLedgerBalance: "0",
-      //   DPLedgerBalance: "0",
-      //   DPHoldingValue: "1"
-      // });
       if (responseData?.ViewFlag === "true") {
         setGenPDF(true)
       }
@@ -508,8 +503,6 @@ const AccountClosure = () => {
       toast.error(`Error generating ${reportName} PDF`);
     }
   }
-
-
 
   // Handle E-Sign callback
   useEffect(() => {
@@ -750,7 +743,7 @@ const AccountClosure = () => {
               <span className="ml-3 font-medium">Close Trading Account ({data.ClientCode ?? "--"})</span>
             </label>
 
-            <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasDematBalance ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
+            <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasDematBalance || !hasDematAccount ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
               <input
                 type="radio"
                 className="form-radio h-5 w-5 text-blue-600"
@@ -761,12 +754,12 @@ const AccountClosure = () => {
                   setClosureType("D");
                   setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
-                disabled={hasDematBalance}
+                disabled={hasDematBalance || !hasDematAccount}
               />
               <span className="ml-3 font-medium">Close Demat Account ({data.DPAcno ?? "--"})</span>
             </label>
 
-            <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasTradingBalance || hasDematBalance ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
+            <label className={`flex items-center p-3 rounded-lg border border-gray-200 transition-colors ${hasTradingBalance || hasDematBalance || !hasDematAccount ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500'}`}>
               <input
                 type="radio"
                 className="form-radio h-5 w-5 text-blue-600"
@@ -777,7 +770,7 @@ const AccountClosure = () => {
                   setClosureType("B");
                   setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
-                disabled={hasTradingBalance || hasDematBalance}
+                disabled={hasTradingBalance || hasDematBalance || !hasDematAccount}
               />
               <span className="ml-3 font-medium">Close Both</span>
             </label>
