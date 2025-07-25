@@ -60,7 +60,7 @@ const AccountClosure = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfData, setPdfData] = useState<any>(null);
 
-  console.log("check CRM FIle",cmrFile)
+  console.log("check CRM FIle", cmrFile)
   // Validation errors
   const [errors, setErrors] = useState({
     closureType: "",
@@ -92,13 +92,18 @@ const AccountClosure = () => {
     return isNaN(num) ? 0 : Math.abs(num);
   };
 
+  const validateBoid = (boid: string) => {
+    // Check if it's exactly 16 digits and doesn't contain 'e' (scientific notation)
+    return /^\d{16}$/.test(boid);
+  };
+
   const hasTradingBalance = parseBalance(data?.TradingLedgerBalance || "0") > 0;
   const hasDematBalance = parseBalance(data?.DPLedgerBalance || "0") > 0;
   const hasHoldingValue = parseBalance(data?.DPHoldingValue || "0") > 0;
 
 
   const fileToBase64 = (file: File): Promise<string> => {
-    console.log("check file",file)
+    console.log("check file", file)
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -127,8 +132,12 @@ const AccountClosure = () => {
       newErrors.reason = "Please provide a reason for account closure";
     }
 
-    if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance && !newBoid) {
-      newErrors.newBoid = "Please provide Transfer BOID for holdings transfer";
+    if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance) {
+      if (!newBoid) {
+        newErrors.newBoid = "Please provide Transfer BOID for holdings transfer";
+      } else if (!validateBoid(newBoid)) {
+        newErrors.newBoid = "BOID must be a 16-digit number";
+      }
     }
 
     if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance && !cmrFile) {
@@ -138,12 +147,11 @@ const AccountClosure = () => {
     setErrors(newErrors);
     return Object.values(newErrors).every(error => error === "");
   };
-
   // Check if form is valid for submit button
   const isFormValid = () => {
     if (!closureType || !reason) return false;
     if ((closureType === "D" || closureType === "B") && hasHoldingValue && transferBalance) {
-      if (!newBoid || !cmrFile) return false;
+      if (!newBoid || !validateBoid(newBoid) || !cmrFile) return false;
     }
     return true;
   };
@@ -222,8 +230,8 @@ const AccountClosure = () => {
 
   const handleGetData = async () => {
     if (!pageData || !pageData.length || !pageData[0].levels || !pageData[0].levels.length) {
-        return ;
-      }
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -259,20 +267,21 @@ const AccountClosure = () => {
       if (!responseData) {
         throw new Error("No data received from API");
       }
-      //  setData(responseData)
-        setData({
-        ...responseData,
-        TradingLedgerBalance: "0",
-        DPLedgerBalance: "0",
-        DPHoldingValue: "1"
-      });
-      if(responseData?.ViewFlag === "true"){
+
+      setData(responseData)
+      // setData({
+      //   ...responseData,
+      //   TradingLedgerBalance: "0",
+      //   DPLedgerBalance: "0",
+      //   DPHoldingValue: "1"
+      // });
+      if (responseData?.ViewFlag === "true") {
         setGenPDF(true)
       }
-      if(responseData?.FINALPDFFlag === "true"){
+      if (responseData?.FINALPDFFlag === "true") {
         setViewFinalEsignPDF(true);
       }
-      else{
+      else {
         setGenPDF(false)
       }
     } catch (error) {
@@ -292,13 +301,13 @@ const AccountClosure = () => {
   const handleCMRUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setCmrFile(e.target.files[0]);
-      setErrors(prev => ({...prev, cmrFile: ""}));
+      setErrors(prev => ({ ...prev, cmrFile: "" }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -313,7 +322,7 @@ const AccountClosure = () => {
       setLoading(true);
       const userId = localStorage.getItem("userId") || "";
 
-       let cmrBase64 = "";
+      let cmrBase64 = "";
       if (cmrFile) {
         try {
           cmrBase64 = await fileToBase64(cmrFile);
@@ -324,7 +333,7 @@ const AccountClosure = () => {
         }
       }
 
-     const payload = {
+      const payload = {
         ClientCode: data?.ClientCode || "",
         DPAcNo: data?.DPAcno || "",
         ClosureType: closureType,
@@ -500,6 +509,8 @@ const AccountClosure = () => {
     }
   }
 
+
+
   // Handle E-Sign callback
   useEffect(() => {
     if (success === 'true' && id && signerIdentifier && esp) {
@@ -591,7 +602,7 @@ const AccountClosure = () => {
                   }}
                   disabled={isGeneratingPdf}
                 >
-                  {viewFinalEsignPDF ? "View E-signed PDF" : "View PDF"} 
+                  {viewFinalEsignPDF ? "View E-signed PDF" : "View PDF"}
                   <FaFilePdf className="ml-2" />
                 </button>
               ) : (
@@ -609,20 +620,20 @@ const AccountClosure = () => {
                 </button>
               )}
             </>) : (
-              <button
-                type="submit"
-                form="closureForm"
-                className="py-2 px-4 rounded text-white flex items-center"
-                style={{
-                  backgroundColor: !isFormValid() ? "lightgrey" : colors.buttonBackground,
-                  color: !isFormValid() ? "black" : colors.buttonText
-                }}
-                disabled={!isFormValid() || isGeneratingPdf}
-              >
-                Submit
-                <CiSaveUp2 className="ml-2" />
-              </button>
-            )}
+            <button
+              type="submit"
+              form="closureForm"
+              className="py-2 px-4 rounded text-white flex items-center"
+              style={{
+                backgroundColor: !isFormValid() ? "lightgrey" : colors.buttonBackground,
+                color: !isFormValid() ? "black" : colors.buttonText
+              }}
+              disabled={!isFormValid() || isGeneratingPdf}
+            >
+              Submit
+              <CiSaveUp2 className="ml-2" />
+            </button>
+          )}
 
           {pdfData && !viewFinalEsignPDF && (
             <button
@@ -732,7 +743,7 @@ const AccountClosure = () => {
                 checked={closureType === "T"}
                 onChange={() => {
                   setClosureType("T");
-                  setErrors(prev => ({...prev, closureType: ""}));
+                  setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
                 disabled={hasTradingBalance}
               />
@@ -748,7 +759,7 @@ const AccountClosure = () => {
                 checked={closureType === "D"}
                 onChange={() => {
                   setClosureType("D");
-                  setErrors(prev => ({...prev, closureType: ""}));
+                  setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
                 disabled={hasDematBalance}
               />
@@ -764,7 +775,7 @@ const AccountClosure = () => {
                 checked={closureType === "B"}
                 onChange={() => {
                   setClosureType("B");
-                  setErrors(prev => ({...prev, closureType: ""}));
+                  setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
                 disabled={hasTradingBalance || hasDematBalance}
               />
@@ -783,7 +794,7 @@ const AccountClosure = () => {
               value={reason}
               onChange={(e) => {
                 setReason(e.target.value);
-                setErrors(prev => ({...prev, reason: ""}));
+                setErrors(prev => ({ ...prev, reason: "" }));
               }}
               required
               style={{
@@ -827,8 +838,10 @@ const AccountClosure = () => {
                 placeholder="Enter new BOID"
                 value={newBoid}
                 onChange={(e) => {
-                  setNewBoid(e.target.value);
-                  setErrors(prev => ({...prev, newBoid: ""}));
+                  // Only allow numeric input and limit to 16 digits
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                  setNewBoid(value);
+                  setErrors(prev => ({ ...prev, newBoid: "" }));
                 }}
                 required={(closureType === "D" || closureType === "B") && hasHoldingValue}
                 style={{
