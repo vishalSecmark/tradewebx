@@ -866,7 +866,7 @@ const AccountClosure = () => {
                 backgroundColor: colors.buttonBackground,
                 color: colors.buttonText
               }}
-              onClick={() => displayAndDownloadFile(base64CRM,"crm")}
+              onClick={() => displayAndDownloadFile(base64CRM)}
               disabled={isGeneratingPdf}
 
             >
