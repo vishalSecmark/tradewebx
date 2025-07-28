@@ -2,7 +2,7 @@
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
-import { displayAndDownloadPDF, findPageData } from "@/utils/helper";
+import { displayAndDownloadPDF, findPageData, displayAndDownloadFile} from "@/utils/helper";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTheme } from "@/context/ThemeContext";
@@ -57,10 +57,12 @@ const AccountClosure = () => {
   const [reason, setReason] = useState("");
   const [newBoid, setNewBoid] = useState("");
   const [cmrFile, setCmrFile] = useState<File | null>(null);
+  const [base64CRM, setBase64CRM] = useState(null)
+  const [base64CRMI, setBase64CRMI] = useState(null);
+
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfData, setPdfData] = useState<any>(null);
 
-  console.log("check CRM FIle", cmrFile)
   // Validation errors
   const [errors, setErrors] = useState({
     closureType: "",
@@ -75,6 +77,7 @@ const AccountClosure = () => {
   const [showTradingLedger, setShowTradingLedger] = useState(false);
   const [genPDF, setGenPDF] = useState(false);
   const [viewFinalEsignPDF, setViewFinalEsignPDF] = useState(false);
+  const [viewMode, setViewMode] = useState(false)
 
   const pageData = findPageData(menuItems, "ClientClosure");
 
@@ -104,7 +107,6 @@ const AccountClosure = () => {
 
 
   const fileToBase64 = (file: File): Promise<string> => {
-    console.log("check file", file)
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
@@ -172,13 +174,12 @@ const AccountClosure = () => {
       </dsXml>`;
 
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-      console.log(response)
 
       if (response.data?.data?.rs0?.[0]?.Flag === 'E') {
         await handleGenerateRekycPdf('CLOSUREPDF');
       } else if (response.data?.data?.rs0?.Base64PDF) {
         const pdfData = response.data.data.rs0;
-        console.log(pdfData)
+
         displayAndDownloadPDF(pdfData?.Base64PDF, pdfData?.PDFName || 'AccountClosure.pdf');
         setPdfData(pdfData);
 
@@ -269,15 +270,17 @@ const AccountClosure = () => {
         throw new Error("No data received from API");
       }
 
-      setData(responseData)
+      setData(responseData || null)
+      setClosureType(responseData?.ClosureType || null)
+      setReason(responseData?.ClosureReason || null);
+      setBase64CRM(responseData?.CMRAttachment[0]?.Attachment || null)
+      setNewBoid(responseData?.BOID || null)
       if (responseData?.ViewFlag === "true") {
         setGenPDF(true)
+        setViewMode(true);
       }
       if (responseData?.FINALPDFFlag === "true") {
         setViewFinalEsignPDF(true);
-      }
-      else {
-        setGenPDF(false)
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
@@ -295,9 +298,19 @@ const AccountClosure = () => {
 
   const handleCMRUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setCmrFile(e.target.files[0]);
-      setErrors(prev => ({ ...prev, cmrFile: "" }));
-    }
+      const file = e.target.files?.[0];
+      if (file) {
+         setCmrFile(e.target.files[0]);
+         setErrors(prev => ({ ...prev, cmrFile: "" }));
+         const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          setBase64CRMI(base64)
+        };
+        reader.readAsDataURL(file);
+      }
+
+     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -316,29 +329,23 @@ const AccountClosure = () => {
     try {
       setLoading(true);
       const userId = localStorage.getItem("userId") || "";
-
-      let cmrBase64 = "";
-      if (cmrFile) {
-        try {
-          cmrBase64 = await fileToBase64(cmrFile);
-        } catch (error) {
-          console.error("Error converting file to base64:", error);
-          toast.error("Error processing uploaded file");
-          return;
-        }
+      if (!base64CRMI) {
+        toast.error("please upload CRM file");
+        return
       }
-
+      const cleanBase64 = base64CRMI.replace(/^data:\w+\/\w+;base64,/, "");
+      console.log("check cleaned base64", cleanBase64)
       const payload = {
         ClientCode: data?.ClientCode || "",
         DPAcNo: data?.DPAcno || "",
         ClosureType: closureType,
         ClosureReason: reason,
-        CMRAttachment: cmrBase64,
+        CMRAttachment: cleanBase64,
         BOID: newBoid,
         HoldingBalance: data?.DPHoldingValue || "0",
         FileName: cmrFile?.name || ""
       };
-
+      
       const xmlData = `<dsXml>
         <J_Ui>"ActionName":"TradeWeb","Option":"MakerClientClosure","RequestFrom":"W"</J_Ui>
         <Sql/>
@@ -738,7 +745,7 @@ const AccountClosure = () => {
                   setClosureType("T");
                   setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
-                disabled={hasTradingBalance}
+                disabled={hasTradingBalance || viewMode}
               />
               <span className="ml-3 font-medium">Close Trading Account ({data.ClientCode ?? "--"})</span>
             </label>
@@ -754,7 +761,7 @@ const AccountClosure = () => {
                   setClosureType("D");
                   setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
-                disabled={hasDematBalance || !hasDematAccount}
+                disabled={hasDematBalance || !hasDematAccount || viewMode}
               />
               <span className="ml-3 font-medium">Close Demat Account ({data.DPAcno ?? "--"})</span>
             </label>
@@ -770,7 +777,7 @@ const AccountClosure = () => {
                   setClosureType("B");
                   setErrors(prev => ({ ...prev, closureType: "" }));
                 }}
-                disabled={hasTradingBalance || hasDematBalance || !hasDematAccount}
+                disabled={hasTradingBalance || hasDematBalance || !hasDematAccount || viewMode}
               />
               <span className="ml-3 font-medium">Close Both</span>
             </label>
@@ -794,6 +801,7 @@ const AccountClosure = () => {
                 color: colors.text,
                 borderColor: colors.buttonBackground
               }}
+              disabled={viewMode}
             />
             {errors.reason && (
               <div className="text-red-500 text-sm mt-1">{errors.reason}</div>
@@ -815,7 +823,7 @@ const AccountClosure = () => {
                     setTransferBalance(e.target.checked);
                   }
                 }}
-                disabled={!((closureType === "D" || closureType === "B") && hasHoldingValue)}
+                disabled={!((closureType === "D" || closureType === "B") && hasHoldingValue) || viewMode}
               />
               <span className="ml-2 font-medium">Transfer Holdings to Another Account</span>
             </label>
@@ -841,6 +849,7 @@ const AccountClosure = () => {
                   color: colors.text,
                   borderColor: colors.buttonBackground
                 }}
+                disabled={viewMode}
               />
               {errors.newBoid && (
                 <div className="text-red-500 text-sm mt-1">{errors.newBoid}</div>
@@ -848,41 +857,62 @@ const AccountClosure = () => {
             </div>
           )}
 
-          {/* CMR Upload */}
-          {transferBalance && (
-            <div className="mb-2">
-              <label className="block font-medium mb-1">Upload CMR Form:</label>
-              <div className="flex items-center">
-                <label className="cursor-pointer">
-                  <span
-                    className="py-2 px-4 rounded mr-2 text-white flex items-center"
-                    style={{
-                      backgroundColor: colors.buttonBackground,
-                      color: colors.buttonText
-                    }}
-                  >
-                    <MdOutlineDriveFolderUpload className="mr-2" />
-                    Choose File
-                  </span>
-                  <input
-                    type="file"
-                    accept="application/pdf,image/*"
-                    onChange={handleCMRUpload}
-                    className="hidden"
-                  />
-                </label>
-                {cmrFile && (
-                  <span className="text-sm truncate max-w-xs ml-2">
-                    {cmrFile.name}
-                  </span>
-                )}
-              </div>
-              {errors.cmrFile && (
-                <div className="text-red-500 text-sm mt-1">{errors.cmrFile}</div>
+          {base64CRM ? (
+            <button
+              type="button"
+              form="closureForm"
+              className="py-2 px-4 rounded text-white flex items-center"
+              style={{
+                backgroundColor: colors.buttonBackground,
+                color: colors.buttonText
+              }}
+              onClick={() => displayAndDownloadFile(base64CRM,"crm")}
+              disabled={isGeneratingPdf}
+
+            >
+              View CRM File
+            </button>
+          ) : (
+            <>
+              {/* CMR Upload */}
+              {transferBalance && (
+                <div className="mb-2">
+                  <label className="block font-medium mb-1">Upload CMR Form:</label>
+                  <div className="flex items-center">
+                    <label className="cursor-pointer">
+                      <span
+                        className="py-2 px-4 rounded mr-2 text-white flex items-center"
+                        style={{
+                          backgroundColor: colors.buttonBackground,
+                          color: colors.buttonText
+                        }}
+                      >
+                        <MdOutlineDriveFolderUpload className="mr-2" />
+                        Choose File
+                      </span>
+                      <input
+                        type="file"
+                        accept="application/pdf,image/*"
+                        onChange={handleCMRUpload}
+                        className="hidden"
+                        disabled={viewMode}
+                      />
+                    </label>
+                    {cmrFile && (
+                      <span className="text-sm truncate max-w-xs ml-2">
+                        {cmrFile.name}
+                      </span>
+                    )}
+                  </div>
+                  {errors.cmrFile && (
+                    <div className="text-red-500 text-sm mt-1">{errors.cmrFile}</div>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Upload scanned copy of Client Master Report</p>
+                </div>
               )}
-              <p className="text-xs text-gray-500 mt-1">Upload scanned copy of Client Master Report</p>
-            </div>
+            </>
           )}
+
         </div>
       </form>
     </div>
