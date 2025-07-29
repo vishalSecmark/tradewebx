@@ -72,12 +72,6 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfData, setPdfData] = useState<any>(null);
 
-  console.log(accountClouserOpen,'accountClouserOpen 2222');
-
-  console.log(accountClouserDataPass,'accountClouserDataPass');
-  
-  
-
   // Validation errors
   const [errors, setErrors] = useState({
     closureType: "",
@@ -120,20 +114,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
   const hasHoldingValue = parseBalance(data?.DPHoldingValue || "0") > 0;
   const hasDematAccount = data?.DPAcno && data.DPAcno.trim() !== ""; // Check if Demat account number exists
 
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64String = (reader.result as string).split(',')[1];
-        resolve(base64String);
-      };
-      reader.onerror = error => reject(error);
-    });
-  };
-
-  // Validate form
+ // Validate form
   const validateForm = () => {
     const newErrors = {
       closureType: "",
