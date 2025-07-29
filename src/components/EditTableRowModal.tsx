@@ -122,7 +122,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
     const [processResponseData, setProcessResponseData] = useState<any[]>([]);
     const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+    //can be use in future
     // const [viewLogHeader, setViewLogHeader] = useState({})
+    //end
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
     // loading state for save/process button
@@ -603,14 +605,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         } finally {
             setIsSaving(false);
         }
-        
-
+        //can be use in future
         // setViewLogHeader(rowData)
-        // Enable Process button
-        
-
-
-
+        // End
 
     }
 
@@ -680,6 +677,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
 
+    //this logic can be use in future
+
     // const handleProcess = async () => {
     //     setIsSaving(true);
     //     try {
@@ -702,6 +701,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     //         setIsSaving(false);
     //     }
     // };
+
+    //end
 
 
 
@@ -1402,8 +1403,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             }
 
                             <button
+                                //this logic can be used in future
                                 // disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
                                 // (showViewDocumentBtn && showViewDocumentLabel ? handleProcess :
+                                //end
                                 onClick={ handleSave}
                                 className="px-4 py-2 rounded ml-2 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                             >
