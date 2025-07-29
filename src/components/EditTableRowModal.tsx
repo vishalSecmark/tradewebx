@@ -10,9 +10,10 @@ import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
-import { clearMakerSates, dynamicXmlGenratingFn } from "@/utils/helper";
+import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn } from "@/utils/helper";
 import { getFileTypeFromBase64 } from "@/utils/helper";
 import apiService from "@/utils/apiService";
+import AccountClosure from "@/apppages/KycPage/account-closure";
 
 interface RowData {
     [key: string]: any;
@@ -127,6 +128,22 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [viewLogHeader, setViewLogHeader] = useState({})
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
+    const [accountClouserOpen,setAccountClosureOpen] = useState(false)
+    const [accountClouserDataPass,setAccountClosureDataPass] = useState({
+        "name": "Account Closure",
+        "primaryHeaderKey": "",
+        "primaryKey": "",
+        "level": 1,
+        "summary": {},
+        "J_Ui": {
+            "ActionName": "TradeWeb",
+            "Option": "ClientClosure",
+            "Level": 1,
+            "RequestFrom": "W"
+        },
+        "settings": {},
+        "clientCode":''
+    })
     // loading state for save/process button
     const [isSaving, setIsSaving] = useState(false);
 
@@ -141,12 +158,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const showViewDocumentAPI = settings.ShowViewDocumentAPI
 
     const showViewApi = settings.ViewAPI
-
-
-
-
-
-
 
     const editableColumns = settings.EditableColumn || [];
 
@@ -300,15 +311,25 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         console.log('Row Index:', rowIndex);
         console.log('wPage:', wPage);
 
+        const entryName = rowData?.EntryName?.trim().toLowerCase();
+
         // this condition is specifically for ekyc component form (check for entry name)
-        if (rowData?.EntryName === "Rekyc") {
+        if (entryName === "rekyc") {
             localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
             localStorage.setItem("ekyc_viewMode_for_checker", "true");
             localStorage.setItem("ekyc_activeTab", "personal");
             localStorage.setItem("ekyc_checker", "false");
             setIsKycModalOpen(true);
             clearMakerSates();
-        } else {
+        } if(entryName === "account closure") {
+            console.log( rowData.ClientCode,' inside Account Closure');
+            setAccountClosureOpen(true)
+            setAccountClosureDataPass(prev => ({
+                ...prev,
+                clientCode: rowData.ClientCode
+            }));            
+        }
+        else {
             fetchPageDataForView(rowData);
         }
     };
@@ -962,47 +983,38 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            // if((response.data.data.rs0[0].Flag === 'E')){
-            //     console.log(response.data.data.rs0[0],'inside if');
-
-            //     setValidationModal({
-            //         isOpen: true,
-            //         message: response.data.data.rs0[0].Message,
-            //         type: 'E'
-            //     });
-            //   }else{
             const base64 = response.data.data.rs0.Base64PDF;
-            const fileType = getFileTypeFromBase64(base64); // function you defined earlier
-            const mimeMap: Record<string, string> = {
-                pdf: 'application/pdf',
-                png: 'image/png',
-                jpeg: 'image/jpeg',
-                jpg: 'image/jpeg',
-                gif: 'image/gif',
-                xml: 'application/xml',
-                text: 'text/plain'
-            };
+            displayAndDownloadFile(base64)
+            // const fileType = getFileTypeFromBase64(base64); // function you defined earlier
+            // const mimeMap: Record<string, string> = {
+            //     pdf: 'application/pdf',
+            //     png: 'image/png',
+            //     jpeg: 'image/jpeg',
+            //     jpg: 'image/jpeg',
+            //     gif: 'image/gif',
+            //     xml: 'application/xml',
+            //     text: 'text/plain'
+            // };
 
-            const mimeType = mimeMap[fileType] || 'application/octet-stream';
+            // const mimeType = mimeMap[fileType] || 'application/octet-stream';
 
-            // Create Blob URL
-            const byteCharacters = atob(base64);
-            const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: mimeType });
-            const blobUrl = URL.createObjectURL(blob);
+            // // Create Blob URL
+            // const byteCharacters = atob(base64);
+            // const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
+            // const byteArray = new Uint8Array(byteNumbers);
+            // const blob = new Blob([byteArray], { type: mimeType });
+            // const blobUrl = URL.createObjectURL(blob);
 
-            // Open in new tab
-            const newTab = window.open(blobUrl, '_blank');
-            if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = `document.${fileType}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
+            // // Open in new tab
+            // const newTab = window.open(blobUrl, '_blank');
+            // if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+            //     const link = document.createElement('a');
+            //     link.href = blobUrl;
+            //     link.download = `document.${fileType}`;
+            //     document.body.appendChild(link);
+            //     link.click();
+            //     document.body.removeChild(link);
+            // }
             //   }
 
 
@@ -1561,6 +1573,32 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         </DialogPanel>
                     </div>
                 </Dialog>
+            )}
+
+
+                {accountClouserOpen && (
+                <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                    <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[85vh] max-h-[85vh]">
+                        <div className="flex justify-end items-center pr-4 mb-2">
+                            <button
+                                onClick={() => {
+                                    setAccountClosureOpen(false);
+                                }}
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText,
+                                }}
+                                className="px-4 py-1 rounded-lg ml-4"
+
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <div className="mt-4 border-2 border-solid">
+                        <AccountClosure accountClouserOpen = {accountClouserOpen} accountClouserDataPass={accountClouserDataPass}/>
+                        </div>
+                    </div>
+                </div>
             )}
 
 

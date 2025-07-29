@@ -46,7 +46,16 @@ interface ClientData {
   SignedPdf: SignedPdf[];
 }
 
-const AccountClosure = () => {
+interface AccountClosureProps {
+  accountClouserOpen?: boolean;
+  accountClouserDataPass?: any;
+}
+
+
+const AccountClosure: React.FC<AccountClosureProps> = ({
+  accountClouserOpen,
+  accountClouserDataPass
+}) => {
   const { colors, fonts } = useTheme();
   const menuItems = useAppSelector(selectAllMenuItems);
   const [loading, setLoading] = useState(true);
@@ -62,6 +71,12 @@ const AccountClosure = () => {
 
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfData, setPdfData] = useState<any>(null);
+
+  console.log(accountClouserOpen,'accountClouserOpen 2222');
+
+  console.log(accountClouserDataPass,'accountClouserDataPass');
+  
+  
 
   // Validation errors
   const [errors, setErrors] = useState({
@@ -231,54 +246,62 @@ const AccountClosure = () => {
   };
 
   const handleGetData = async () => {
-    if (!pageData || !pageData.length || !pageData[0].levels || !pageData[0].levels.length) {
-      return;
-    }
+    console.log(pageData, 'pageData[0].levels[0]');
+  
+    const currentPage = accountClouserOpen ? accountClouserDataPass : pageData?.[0]?.levels?.[0];
+    if (!currentPage) return;
+
+    console.log(pageData?.[0]?.levels?.[0],'pageData?.[0]?.levels?.[0]');
+    
+  
     setLoading(true);
     setError(null);
-
+  
     try {
-      const page = pageData[0].levels[0];
-      const J_Ui = page.J_Ui
-        ? Object.entries(page.J_Ui)
+      const J_Ui = currentPage.J_Ui
+        ? Object.entries(currentPage.J_Ui)
           .map(([key, value]) => `"${key}":"${value}"`)
           .join(",")
         : "";
-
+  
+      const clientCode = accountClouserOpen ? accountClouserDataPass?.clientCode : '';
+  
       const userId = localStorage.getItem("userId");
       if (!userId) throw new Error("User ID not found in local storage");
-
+  
       const authToken = document.cookie.split("auth_token=")[1];
       if (!authToken) throw new Error("Authentication token not found");
-
+  
       const xmlData = `<dsXml>
         <J_Ui>${J_Ui}</J_Ui>
         <Sql></Sql>
         <X_Filter></X_Filter>
-        <X_Filter_Multiple></X_Filter_Multiple>
+        <X_Filter_Multiple><ClientCode>${clientCode}</ClientCode></X_Filter_Multiple>
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
-
+  
       const response = await apiService.postWithAuth(`${BASE_URL}${PATH_URL}`, xmlData);
-
+  
       if (!response.data.success) {
         throw new Error(response.data.message || "API request failed");
       }
-
+  
       const responseData = response.data.data?.rs0?.[0]?.Data;
       if (!responseData) {
         throw new Error("No data received from API");
       }
-
-      setData(responseData || null)
-      setClosureType(responseData?.ClosureType || null)
+  
+      setData(responseData || null);
+      setClosureType(responseData?.ClosureType || null);
       setReason(responseData?.ClosureReason || null);
-      setBase64CRM(responseData?.CMRAttachment[0]?.Attachment || null)
-      setNewBoid(responseData?.BOID || null)
+      setBase64CRM(responseData?.CMRAttachment?.[0]?.Attachment || null);
+      setNewBoid(responseData?.BOID || null);
+  
       if (responseData?.ViewFlag === "true") {
-        setGenPDF(true)
+        setGenPDF(true);
         setViewMode(true);
       }
+  
       if (responseData?.FINALPDFFlag === "true") {
         setViewFinalEsignPDF(true);
       }
@@ -290,11 +313,13 @@ const AccountClosure = () => {
       setLoading(false);
     }
   };
+  
+
+
 
   useEffect(() => {
-    handleGetData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pageData]);
+     handleGetData();
+  }, [pageData,accountClouserOpen]);
 
   const handleCMRUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -595,7 +620,7 @@ const AccountClosure = () => {
               {(pdfData || viewFinalEsignPDF) ? (
                 <button
                   onClick={handleGenerateClosurePdf}
-                  className="py-2 px-4 rounded text-white flex items-center"
+                  className="py-2 px-4 rounded text-white flex items-center mt-3"
                   style={{
                     backgroundColor: colors.buttonBackground,
                     color: colors.buttonText
@@ -669,6 +694,7 @@ const AccountClosure = () => {
               <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowTradingLedger(true)}
+                
               >
                 Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
