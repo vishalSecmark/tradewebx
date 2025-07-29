@@ -123,9 +123,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
     const [processResponseData, setProcessResponseData] = useState<any[]>([]);
     const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
-    const [isProcessButtonEnabled, setIsProcessButtonEnabled] = useState(false);
-    const [viewApiXml, setViewApiXml] = useState('');
-    const [viewLogHeader, setViewLogHeader] = useState({})
+    //can be use in future
+    // const [viewLogHeader, setViewLogHeader] = useState({})
+    //end
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
     const [accountClouserOpen,setAccountClosureOpen] = useState(false)
@@ -603,13 +603,31 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             return;
         }
 
-        setViewApiXml(dynamicXmlGenratingFn(showViewApi, rowData))
+        try {
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, dynamicXmlGenratingFn(showViewApi, rowData));
+            const rs0 = response?.data?.data?.rs0 || [];
 
+            console.log(response,'responseeeee');
+            
 
-        setViewLogHeader(rowData)
-        // Enable Process button
-        setIsProcessButtonEnabled(true);
+            if (!Array.isArray(rs0) || rs0.length === 0) {
+                toast.error('No logs found.');
+                return;
+            }
+            setProcessResponseData(rs0);
+            setIsProcessModalOpen(true);
+ 
 
+        } catch (error) {
+            console.error('Error in handleProcess:', error);
+            toast.error('Failed to process request.');
+          
+        } finally {
+            setIsSaving(false);
+        }
+        //can be use in future
+        // setViewLogHeader(rowData)
+        // End
 
     }
 
@@ -679,28 +697,32 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
 
-    const handleProcess = async () => {
-        setIsSaving(true);
-        try {
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, viewApiXml);
-            const rs0 = response?.data?.data?.rs0 || [];
+    //this logic can be use in future
 
-            if (!Array.isArray(rs0) || rs0.length === 0) {
-                toast.error('No logs found.');
-                return;
-            }
-            setProcessResponseData(rs0);
-            setIsProcessModalOpen(true);
-            // setIsProcessButtonEnabled(false);
+    // const handleProcess = async () => {
+    //     setIsSaving(true);
+    //     try {
+    //         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, viewApiXml);
+    //         const rs0 = response?.data?.data?.rs0 || [];
 
-        } catch (error) {
-            console.error('Error in handleProcess:', error);
-            toast.error('Failed to process request.');
-            setIsProcessButtonEnabled(false);
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    //         if (!Array.isArray(rs0) || rs0.length === 0) {
+    //             toast.error('No logs found.');
+    //             return;
+    //         }
+    //         setProcessResponseData(rs0);
+    //         setIsProcessModalOpen(true);
+    //         // setIsProcessButtonEnabled(false);
+
+    //     } catch (error) {
+    //         console.error('Error in handleProcess:', error);
+    //         toast.error('Failed to process request.');
+    //         setIsProcessButtonEnabled(false);
+    //     } finally {
+    //         setIsSaving(false);
+    //     }
+    // };
+
+    //end
 
 
 
@@ -1361,12 +1383,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             }
 
                             <button
-                                disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
-                                onClick={(showViewDocumentBtn && showViewDocumentLabel ? handleProcess : handleSave)}
-                                className={`px-4 py-2 rounded ml-2 flex items-center gap-2 ${isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-green-600 hover:bg-green-700'
-                                    } text-white`}
+                                //this logic can be used in future
+                                // disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
+                                // (showViewDocumentBtn && showViewDocumentLabel ? handleProcess :
+                                //end
+                                onClick={ handleSave}
+                                className="px-4 py-2 rounded ml-2 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                             >
                                 {isSaving && (
                                     <svg
