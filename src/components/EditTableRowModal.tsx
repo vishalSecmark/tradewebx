@@ -10,9 +10,10 @@ import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
-import { clearMakerSates, dynamicXmlGenratingFn } from "@/utils/helper";
+import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn } from "@/utils/helper";
 import { getFileTypeFromBase64 } from "@/utils/helper";
 import apiService from "@/utils/apiService";
+import AccountClosure from "@/apppages/KycPage/account-closure";
 
 interface RowData {
     [key: string]: any;
@@ -127,6 +128,22 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [viewLogHeader, setViewLogHeader] = useState({})
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
+    const [accountClouserOpen,setAccountClosureOpen] = useState(false)
+    const [accountClouserDataPass,setAccountClosureDataPass] = useState({
+        "name": "Account Closure",
+        "primaryHeaderKey": "",
+        "primaryKey": "",
+        "level": 1,
+        "summary": {},
+        "J_Ui": {
+            "ActionName": "TradeWeb",
+            "Option": "ClientClosure",
+            "Level": 1,
+            "RequestFrom": "W"
+        },
+        "settings": {},
+        "clientCode":''
+    })
     // loading state for save/process button
     const [isSaving, setIsSaving] = useState(false);
 
@@ -141,12 +158,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const showViewDocumentAPI = settings.ShowViewDocumentAPI
 
     const showViewApi = settings.ViewAPI
-
-
-
-
-
-
 
     const editableColumns = settings.EditableColumn || [];
 
@@ -300,15 +311,24 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         console.log('Row Index:', rowIndex);
         console.log('wPage:', wPage);
 
+        const entryName = rowData?.EntryName?.trim().toLowerCase();
+
         // this condition is specifically for ekyc component form (check for entry name)
-        if (rowData?.EntryName === "Rekyc") {
+        if (entryName === "rekyc") {
             localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
             localStorage.setItem("ekyc_viewMode_for_checker", "true");
             localStorage.setItem("ekyc_activeTab", "personal");
             localStorage.setItem("ekyc_checker", "false");
             setIsKycModalOpen(true);
             clearMakerSates();
-        } else {
+        } if(entryName === "account closure") {
+            setAccountClosureOpen(true)
+            setAccountClosureDataPass(prev => ({
+                ...prev,
+                clientCode: rowData.ClientCode
+            }));            
+        }
+        else {
             fetchPageDataForView(rowData);
         }
     };
@@ -962,51 +982,13 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            // if((response.data.data.rs0[0].Flag === 'E')){
-            //     console.log(response.data.data.rs0[0],'inside if');
-
-            //     setValidationModal({
-            //         isOpen: true,
-            //         message: response.data.data.rs0[0].Message,
-            //         type: 'E'
-            //     });
-            //   }else{
-            const base64 = response.data.data.rs0.Base64PDF;
-            const fileType = getFileTypeFromBase64(base64); // function you defined earlier
-            const mimeMap: Record<string, string> = {
-                pdf: 'application/pdf',
-                png: 'image/png',
-                jpeg: 'image/jpeg',
-                jpg: 'image/jpeg',
-                gif: 'image/gif',
-                xml: 'application/xml',
-                text: 'text/plain'
-            };
-
-            const mimeType = mimeMap[fileType] || 'application/octet-stream';
-
-            // Create Blob URL
-            const byteCharacters = atob(base64);
-            const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: mimeType });
-            const blobUrl = URL.createObjectURL(blob);
-
-            // Open in new tab
-            const newTab = window.open(blobUrl, '_blank');
-            if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = `document.${fileType}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+            const base64 = response?.data?.data?.rs0?.Base64PDF;
+            if(base64){
+                 displayAndDownloadFile(base64)
             }
-            //   }
-
-
-
+            if(response?.data?.data?.rs0[0].Flag === "E"){
+                toast.error(response?.data?.data?.rs0[0]?.Message || "something went wrong")
+            }
 
         } catch (error) {
             console.error("Error fetching DocumentView:", error);
@@ -1014,22 +996,20 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-
-
     return (
         <>
             <Dialog open={isOpen} onClose={() => console.log("close")} className="relative z-[100]" >
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 max-h-[80vh] min-h-[70vh] flex flex-col">
-                        <DialogTitle className="text-lg font-semibold mb-4">{title}</DialogTitle>
+                    <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 flex flex-col">
+                        <DialogTitle className="text-lg font-semibold mb-2">{title}</DialogTitle>
                         {localData.length > 0 ? (
                             showViewDocument ? (
                                 // Form layout for ShowViewDocument
-                                <div className="overflow-auto flex-1 p-4">
-                                    <div className="max-w-4xl mx-auto">
+                                <div className="overflow-auto">
+                                    <div className="mx-auto">
                                         {localData.map((row, rowIndex) => (
-                                            <div key={rowIndex} className="mb-8">
+                                            <div key={rowIndex} className="mb-2">
                                                 {rowIndex > 0 && <hr className="my-6 border-gray-300" />}
 
                                                 {/* Action buttons for view */}
@@ -1049,13 +1029,13 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                 )}
 
                                                 {/* Form fields */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                     {getOrderedColumns(Object.keys(row)).map((key) => {
                                                         const value = row[key];
                                                         const editable = getEditableColumn(key);
 
                                                         return (
-                                                            <div key={key} className="mb-4">
+                                                            <div key={key} className="mb-2">
                                                                 <label
                                                                     className="block text-sm font-medium mb-2"
                                                                     style={{
@@ -1181,7 +1161,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 </div>
                             ) : (
                                 // Table layout for normal editing
-                                <div className="overflow-auto flex-1">
+                                <div className="overflow-auto">
                                     <table className="border text-sm">
                                         <thead>
                                             <tr>
@@ -1366,7 +1346,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             <p className="text-gray-600">No data available.</p>
                         )}
 
-                        <div className="mt-6 flex justify-end gap-4">
+                        <div className="mt-2 flex justify-end gap-4">
 
                             {showViewDocumentBtn === true &&
                                 <button
@@ -1561,6 +1541,32 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         </DialogPanel>
                     </div>
                 </Dialog>
+            )}
+
+
+                {accountClouserOpen && (
+                <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                    <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[70vh] max-h-[75vh]">
+                        <div className="flex justify-end items-center pr-4 mb-2">
+                            <button
+                                onClick={() => {
+                                    setAccountClosureOpen(false);
+                                }}
+                                style={{
+                                    backgroundColor: colors.buttonBackground,
+                                    color: colors.buttonText,
+                                }}
+                                className="px-4 py-1 rounded-lg ml-4"
+
+                            >
+                                Close
+                            </button>
+                        </div>
+                        <div className="mt-4 border-t-2 border-solid p-4">
+                        <AccountClosure accountClouserOpen = {accountClouserOpen} accountClouserDataPass={accountClouserDataPass}/>
+                        </div>
+                    </div>
+                </div>
             )}
 
 
