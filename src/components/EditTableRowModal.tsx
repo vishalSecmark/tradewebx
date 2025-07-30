@@ -669,9 +669,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                     successMessage = response.data.message;
                 }
             }
-            let RemarkArray = response?.data?.data?.rs0[0]?.Remark[0]
+            const RemarkArray = response?.data?.data?.rs0[0]?.Remark[0]
             if(RemarkArray?.fileContents){
-                let base64 = RemarkArray?.fileContents
+                const base64 = RemarkArray?.fileContents
                 displayAndDownloadFile(base64)
                 
             }
