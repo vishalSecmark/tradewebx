@@ -178,7 +178,7 @@ export const SubmitEkycForm = async (settings: any, data: any, setSaving?: (load
 
 
 
-const handleThirdPartyApi = async (Settings: any) => {
+export const handleThirdPartyApi = async (Settings: any) => {
 
     const { J_Ui = {}, Sql, X_Filter, X_Filter_Multiple = {}, J_Api = {} } = Settings?.DigiLockerAPI?.dsXml;
 

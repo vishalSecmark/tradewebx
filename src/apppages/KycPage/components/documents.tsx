@@ -1,7 +1,7 @@
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react'
-import { fetchEkycDropdownOptions, handleDigiLockerCallBackAPI, handleSaveSinglePageData, SubmitEkycForm } from '../ekychelper';
+import { fetchEkycDropdownOptions, handleDigiLockerCallBackAPI, handleSaveSinglePageData, SubmitEkycForm, handleThirdPartyApi } from '../ekychelper';
 import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { useTheme } from '@/context/ThemeContext';
@@ -593,7 +593,23 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 >
                     <IoArrowBack size={20} />
                 </button>
-                {(!viewMode && !ekycChecker) && (
+                {
+
+                (viewMode && Settings?.existsDigiLockerAPI === "false") ? (
+                    <button
+                     style={{
+                            backgroundColor: colors.buttonBackground,
+                            color: colors.buttonText,
+                           }}
+                    className="px-4 py-1 rounded-lg ml-4"
+                    onClick={()=>{
+                         handleThirdPartyApi(Settings)
+                         localStorage.setItem('redirectedField', "FinalFormSubmission");
+                    }}
+                    >verify aadhar</button>
+                ) : (
+                    <>
+                      {(!viewMode && !ekycChecker) && (
                     <div className="text-end">
                         <button
                             className="px-4 py-1 rounded-lg ml-4"
@@ -733,6 +749,10 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
                     </div>
                 )}
+                </>
+                )
+              
+            }
             </div>
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}
