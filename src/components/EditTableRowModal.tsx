@@ -660,12 +660,20 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             if (response.data?.message) {
                 // Extract message from XML format if present
                 const messageMatch = response.data.message.match(/<Message>(.*?)<\/Message>/);
+                console.log('inside sucess of handle save');
+                
                 if (messageMatch) {
                     successMessage = messageMatch[1];
                 } else {
                     // If not in XML format, use the message directly
                     successMessage = response.data.message;
                 }
+            }
+            const RemarkArray = response?.data?.data?.rs0[0]?.Remark[0]
+            if(RemarkArray?.fileContents){
+                const base64 = RemarkArray?.fileContents
+                displayAndDownloadFile(base64)
+                
             }
 
             // Show success toast message

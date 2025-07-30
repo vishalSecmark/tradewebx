@@ -259,7 +259,8 @@ export function displayAndDownloadFile(base64: string) {
          jpg: 'image/jpeg',
          gif: 'image/gif',
          xml: 'application/xml',
-         text: 'text/plain'
+         text: 'text/plain',
+         zip:  'application/zip',
      };
    
     const mimeType = mimeMap[fileType] || 'application/octet-stream'
