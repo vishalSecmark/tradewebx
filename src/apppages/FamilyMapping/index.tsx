@@ -281,7 +281,7 @@ export default function Family() {
       </div>
 
       {/* 🟠 Modal 1: UCC Code */}
-      <Modal isOpen={isUccModalOpen} onClose={closeUccModal} className="max-w-[400px] p-6">
+      <Modal isOpen={isUccModalOpen} onClose={closeUccModal}  isOutsideClickAllowed={false} className="max-w-[400px] p-6">
         <h4 className="text-lg font-semibold mb-4"> UCC/Code</h4>
         {/* <Label>UCC Code</Label> */}
         <Input value={ucc} onChange={(e) => setUcc(e.target.value)} placeholder="Enter UCC Code" />
@@ -293,7 +293,7 @@ export default function Family() {
       </Modal>
 
       {/*  Modal 2: Login & OTP */}
-      <Modal isOpen={isLoginModalOpen} onClose={closeLoginModal} className="max-w-[500px] p-6">
+      <Modal isOpen={isLoginModalOpen} onClose={closeLoginModal}  isOutsideClickAllowed={false} className="max-w-[500px] p-6">
         <h4 className="text-lg font-semibold mb-4">{otpRequired ? "Verify OTP" : "Verify User"}</h4>
 
         {!otpRequired && (
