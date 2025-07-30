@@ -12,6 +12,7 @@ import KycPage from "@/apppages/KycPage";
 import MarginPledgeOnline from "@/apppages/MarginPledgeOnline";
 import Ipo from "@/apppages/Ipo";
 import AccountClosure from "@/apppages/KycPage/account-closure";
+import Family from "@/apppages/FamilyMapping";
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,
@@ -22,7 +23,8 @@ const staticRoutes: Record<string, React.ReactNode> = {
   rekyc: <KycPage />,
   clientclosure:<AccountClosure/>,
   marginPledge: <MarginPledgeOnline />,
-  ipo: <Ipo />
+  ipo: <Ipo />,
+  familymapping:<Family />
 };
 
 // Define the type for params explicitly
