@@ -3,18 +3,19 @@
 import { useEffect, useState } from "react";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import Button from "@/components/ui/button/Button";
 import { DataGrid } from "react-data-grid";
 import { Modal } from "@/components/ui/modal";
 import axios from "axios";
 import { toast } from "react-toastify";  //  Import toast
 import { BASE_URL, OTP_VERIFICATION_URL, LOGIN_KEY, PRODUCT, LOGIN_AS } from "@/utils/constants";
 import CryptoJS from "crypto-js";
+import { useTheme } from "@/context/ThemeContext";
 
 const passKey = "TradeWebX1234567";
 
 export default function Family() {
   // States
+  const { colors, fonts } = useTheme();
   const [rows, setRows] = useState<any[]>([]);
   const [isUccModalOpen, setIsUccModalOpen] = useState(false);
   const [ucc, setUcc] = useState("");
@@ -58,7 +59,7 @@ export default function Family() {
     } catch (err) {
         toast.error(" Ipify lookup failed, using backup service...");
       try {
-        // 🟠 Fallback to ipapi
+        // Fallback to ipapi
         const backupRes = await fetch("https://ipapi.co/json/");
         if (!backupRes.ok) throw new Error("ipapi failed");
         const backupData = await backupRes.json();
@@ -265,14 +266,20 @@ export default function Family() {
         {/*  Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold">Family Mapping</h2>
-          <Button onClick={openUccModal} className="bg-blue-600 text-white">
+          <button
+           onClick={openUccModal}
+           className="py-2 px-4 rounded text-white flex items-center mt-3"
+           style={{
+             backgroundColor: colors.buttonBackground,
+             color: colors.buttonText
+           }}>
             Add
-          </Button>
+          </button>
         </div>
 
-        {/* 🟢 Grid or Empty Message */}
+        {/* Grid or Empty Message */}
         {rows.length === 0 ? (
-          <p className="text-center text-gray-500 py-6">No Family Mapping yet.</p>
+          <p className="text-center text-gray-500 py-6">No member mapped yet.</p>
         ) : (
           <div className="mt-6">
             <DataGrid columns={columns} rows={rows} />
@@ -280,15 +287,28 @@ export default function Family() {
         )}
       </div>
 
-      {/* 🟠 Modal 1: UCC Code */}
+      {/* Modal 1: UCC Code */}
       <Modal isOpen={isUccModalOpen} onClose={closeUccModal}  isOutsideClickAllowed={false} className="max-w-[400px] p-6">
-        <h4 className="text-lg font-semibold mb-4"> UCC/Code</h4>
+        <h4 className="text-lg font-semibold mb-4 mt-4"> UCC/Code</h4>
         {/* <Label>UCC Code</Label> */}
         <Input value={ucc} onChange={(e) => setUcc(e.target.value)} placeholder="Enter UCC Code" />
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
         <div className="flex justify-end gap-3 mt-5">
-          <Button variant="outline" size="sm" onClick={closeUccModal}>Cancel</Button>
-          <Button size="sm" onClick={handleUccNext}>Next</Button>
+          <button 
+          className="py-2 px-4 rounded text-black bg-white flex items-center mt-3 border-2 border-solid"
+
+            onClick={closeUccModal}
+            >Cancel
+            </button>
+          <button
+            className="py-2 px-4 rounded text-white flex items-center mt-3"
+            style={{
+              backgroundColor: colors.buttonBackground,
+              color: colors.buttonText
+            }}  
+            onClick={handleUccNext}
+            >Next
+            </button>
         </div>
       </Modal>
 
@@ -316,15 +336,34 @@ export default function Family() {
         )}
 
         <div className="flex justify-end gap-3 mt-6">
-          <Button variant="outline" size="sm" onClick={closeLoginModal}>Cancel</Button>
+          <button 
+          className="py-2 px-4 rounded text-black bg-white flex items-center mt-3 border-2 border-solid"
+          onClick={closeLoginModal}
+          >Cancel
+          </button>
           {!otpRequired ? (
-            <Button size="sm" onClick={handleLogin} disabled={isLoading}>
+            <button 
+              className="py-2 px-4 rounded text-white flex items-center mt-3"
+              style={{
+                backgroundColor: colors.buttonBackground,
+                color: colors.buttonText
+              }}
+              onClick={handleLogin}
+              disabled={isLoading}>
               {isLoading ? "Verifying..." : "Verify"}
-            </Button>
+            </button>
           ) : (
-            <Button size="sm" onClick={handleOTPVerify} disabled={isLoading}>
+            <button 
+              className="py-2 px-4 rounded text-white flex items-center mt-3"
+              style={{
+                backgroundColor: colors.buttonBackground,
+                color: colors.buttonText
+              }}
+              onClick={handleOTPVerify} 
+              disabled={isLoading}
+              >
               {isLoading ? "Verifying..." : "Verify OTP"}
-            </Button>
+            </button>
           )}
         </div>
       </Modal>
