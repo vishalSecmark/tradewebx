@@ -579,8 +579,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             .join('');
         const userId = localStorage.getItem('userId') || 'ADMIN';
         const userType = localStorage.getItem('userType') || 'Branch';
+        const optiontag = (showViewDocumentBtn && showViewDocumentLabel ? 'Process' : 'Edit')
         return `<dsXml>
-                    <J_Ui>"ActionName":"${wPage}","Option":"Edit","RequestFrom":"W"</J_Ui>
+                    <J_Ui>"ActionName":"${wPage}","Option":"${optiontag}","RequestFrom":"W"</J_Ui>
                     <Sql/>
                     <X_Filter/>
                     <X_Filter_Multiple></X_Filter_Multiple>
