@@ -798,7 +798,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
             <label className="block font-medium mb-1">Reason for Account Closure:</label>
             <textarea
               className="w-full border rounded px-3 py-2 min-h-[100px] text-sm focus:ring focus:ring-opacity-50"
-              value={reason}
+              value={reason || undefined}
               onChange={(e) => {
                 setReason(e.target.value);
                 setErrors(prev => ({ ...prev, reason: "" }));
