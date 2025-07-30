@@ -1,3 +1,0 @@
-1)  check for autoprefixer package if we are using it or not if not then remove it from the package.json
-2) check for react-dnd and react-dnd-html5-backend  package and remove it if not needed 
-3) check for swiper and remove it if not needed 
