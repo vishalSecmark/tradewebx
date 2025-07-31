@@ -22,6 +22,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const viewMode2 = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const checker_mode = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const enableSubmitBtn = useLocalStorageListener("ekyc_submit", false);
+    const hideVerifyAadhar = useLocalStorageListener("hideVerifyAadhar",false);
     const ekycChecker1 = checkRAMode
     const ekycChecker2 = useLocalStorageListener("ekyc_checker", false);
     const ekycChecker = ekycChecker1 || ekycChecker2;
@@ -58,8 +59,6 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const [isSigningFinal, setIsSigningFinal] = useState(false);
     const [viewKRAPdf, setViewKRAPdf] = useState(false);
     const [viewFinalPdf, setViewFinalPdf] = useState(false);
-
-    console.log("check pdf data", kraPdfData, finalPdfData);
 
     // Load state from localStorage on component mount
     useEffect(() => {
@@ -595,7 +594,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 </button>
                 {
 
-                (viewMode && Settings?.existsDigiLockerAPI === "false" && !checker_mode) ? (
+                (viewMode && Settings?.existsDigiLockerAPI === "false" && !checker_mode && !hideVerifyAadhar) ? (
                     <button
                      style={{
                             backgroundColor: colors.buttonBackground,
