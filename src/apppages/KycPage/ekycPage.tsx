@@ -149,7 +149,13 @@ const Kyc = () => {
                 FormNo: parsedUserData?.FormNo || ""
             };
 
-            const xFilter = Object.entries(payload || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
+            const xFilter = Object.entries(payload || {}).map(([k, v]) => {
+                if (k === "FormNo") {
+                    return `<${k}>${v || ""}</${k}>`;
+                } else {
+                    return `<${k}>${v}</${k}>`;
+                }
+            }).join("");
 
             const xmlData = `<dsXml>
                 <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Master_Edit"</J_Ui>
