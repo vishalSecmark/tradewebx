@@ -1,7 +1,8 @@
 "use client";
+import Loader from "@/components/Loader";
 import UserMetaCard from "@/components/user-profile/UserMetaCard";
 import { useTheme } from "@/context/ThemeContext";
-import React from "react";
+import React , { Suspense } from "react";
 
 export default function Profile() {
   const { colors } = useTheme();
@@ -22,7 +23,9 @@ export default function Profile() {
           Profile
         </h3>
         <div className="space-y-6">
-          <UserMetaCard />
+           <Suspense fallback={<Loader/>}>
+              <UserMetaCard />
+            </Suspense>
         </div>
       </div>
     </div>
