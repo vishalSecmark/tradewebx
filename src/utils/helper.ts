@@ -1,6 +1,7 @@
 import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeContext";
 import { APP_METADATA_KEY } from "./constants";
 import { toast } from "react-toastify";
+import { log } from "node:console";
 
 export const clearLocalStorage = () => {
     const appMetadata = localStorage.getItem(APP_METADATA_KEY);
@@ -250,35 +251,44 @@ export const parseSettingsFromXml = (xmlString: string) => {
 };
 
 
-export function displayAndDownloadFile(base64: string) {
-   const fileType = getFileTypeFromBase64(base64); // function you defined earlier
-     const mimeMap: Record<string, string> = {
-         pdf: 'application/pdf',
-         png: 'image/png',
-         jpeg: 'image/jpeg',
-         jpg: 'image/jpeg',
-         gif: 'image/gif',
-         xml: 'application/xml',
-         text: 'text/plain',
-         zip:  'application/zip',
-     };
-   
-    const mimeType = mimeMap[fileType] || 'application/octet-stream'
-    // Create Blob URL
+export function displayAndDownloadFile(base64: string, fileDownloadName?: string) {
+    const fileType = getFileTypeFromBase64(base64);
+    const mimeMap: Record<string, string> = {
+        pdf: 'application/pdf',
+        png: 'image/png',
+        jpeg: 'image/jpeg',
+        jpg: 'image/jpeg',
+        gif: 'image/gif',
+        xml: 'application/xml',
+        text: 'text/plain',
+        zip: 'application/zip',
+    };
+
+    const mimeType = mimeMap[fileType] || 'application/octet-stream';
+
     const byteCharacters = atob(base64);
     const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: mimeType });
-    const blobUrl = URL.createObjectURL(blob)
-    // Open in new tab
-    const newTab = window.open(blobUrl, '_blank');
-    if (!newTab || newTab.closed || typeof newTab.closed === 'undefined') {
+    const blobUrl = URL.createObjectURL(blob);
+
+    if (fileDownloadName) {
+        const safeName = fileDownloadName.replace(/[<>:"/\\|?*]+/g, '-');
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = `document.${fileType}`;
+        link.download = safeName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    } else {
+        window.open(blobUrl, '_blank');
     }
 }
+
+
+
+
+
+
+
 

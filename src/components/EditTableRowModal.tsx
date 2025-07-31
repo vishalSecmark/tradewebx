@@ -632,78 +632,65 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
     }
 
+
     const handleSave = async () => {
         setIsSaving(true);
         const xmlData = generateDsXml(localData);
+    
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            // Check if the response indicates failure
-            if (response.data && response.data.success === false) {
+            const responseData = response.data?.data?.rs0?.[0];
+    
+            // Check API-level failure
+            if (response.data?.success === false) {
                 let errorMessage = response.data.message || 'An error occurred while saving';
-
-                // Extract message from XML format if present
                 const messageMatch = errorMessage.match(/<Message>(.*?)<\/Message>/);
-                if (messageMatch) {
-                    errorMessage = messageMatch[1];
-                }
-
-                // Show error message using existing validation modal
+                if (messageMatch) errorMessage = messageMatch[1];
+    
                 showValidationMessage(errorMessage, 'E');
-                return; // Don't close the modal on error
+                return;
             }
-
-            // If we get here, the save was successful
-            // Extract success message from API response
+    
+            // Check business logic error from rs0[0]
+            if (responseData?.Flag === "E") {
+                const businessError = responseData?.Message || "Business error occurred";
+                showValidationMessage(businessError, "E");
+                return;
+            }
+    
+            // Success handling
             let successMessage = 'Record saved successfully';
-
             if (response.data?.message) {
-                // Extract message from XML format if present
-                const messageMatch = response.data.message.match(/<Message>(.*?)<\/Message>/);
-                console.log('inside sucess of handle save');
-                
-                if (messageMatch) {
-                    successMessage = messageMatch[1];
-                } else {
-                    // If not in XML format, use the message directly
-                    successMessage = response.data.message;
-                }
+                const match = response.data.message.match(/<Message>(.*?)<\/Message>/);
+                if (match) successMessage = match[1];
+                else successMessage = response.data.message;
             }
-            const RemarkArray = response?.data?.data?.rs0[0]?.Remark[0]
-            if(RemarkArray?.fileContents){
-                const base64 = RemarkArray?.fileContents
-                displayAndDownloadFile(base64)
-                
+    
+            const RemarkArray = responseData?.Remark?.[0];
+            if (RemarkArray?.fileContents) {
+                const base64 = RemarkArray.fileContents;
+                const fileDownloadName = RemarkArray.fileDownloadName;
+                displayAndDownloadFile(base64, fileDownloadName);
             }
-
-            // Show success toast message
+    
             toast.success(successMessage);
-
-            // Close the modal after showing success message
             onClose();
-
         } catch (error) {
             console.error('Error saving data:', error);
-
-            // Handle network errors or other exceptions
             let errorMessage = 'An error occurred while saving. Please try again.';
-
-            // Check if the error response has our expected structure
+    
             if (error.response?.data?.success === false) {
                 errorMessage = error.response.data.message || errorMessage;
-
-                // Extract message from XML format if present
-                const messageMatch = errorMessage.match(/<Message>(.*?)<\/Message>/);
-                if (messageMatch) {
-                    errorMessage = messageMatch[1];
-                }
+                const match = errorMessage.match(/<Message>(.*?)<\/Message>/);
+                if (match) errorMessage = match[1];
             }
-
+    
             showValidationMessage(errorMessage, 'E');
         } finally {
             setIsSaving(false);
         }
     };
+    
 
 
     //this logic can be use in future
@@ -1014,6 +1001,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const base64 = response?.data?.data?.rs0?.Base64PDF;
+            const fileName = response?.data?.data?.rs0?.PDFName
+            console.log(response?.data?.data?.rs0,'response?.data?.data?.rs0?');
+            
             if(base64){
                  displayAndDownloadFile(base64)
             }
