@@ -151,7 +151,7 @@ const Kyc = () => {
 
             const xFilter = Object.entries(payload || {}).map(([k, v]) => {
                 if (k === "FormNo") {
-                    return `<${k}>${v || ""}</${k}>`;
+                    return `<${k}>${v === "##FormNo##" ? "" : v}</${k}>`;
                 } else {
                     return `<${k}>${v}</${k}>`;
                 }
