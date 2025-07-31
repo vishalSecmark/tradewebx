@@ -595,7 +595,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 </button>
                 {
 
-                (viewMode && Settings?.existsDigiLockerAPI === "false") ? (
+                (viewMode && Settings?.existsDigiLockerAPI === "false" && !checker_mode) ? (
                     <button
                      style={{
                             backgroundColor: colors.buttonBackground,
