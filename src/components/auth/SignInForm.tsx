@@ -32,9 +32,6 @@ function Encryption(data: string) {
   return encrypted.toString();
 }
 
-// Default options to use if JSON file is not available
-const DEFAULT_LOGIN_OPTIONS = [];
-
 // Interface for version updates
 interface VersionItem {
   Name: string;
@@ -64,9 +61,9 @@ const VersionUpdateModal = ({
   // Check if there are any mandatory updates
   const hasMandatoryUpdates = updates.some(update => update.Status === 'M');
 
-  // Determine if user has update rights based on loginAs value
-  // Client (loginAs: "C") cannot update, Branch (loginAs: "B") can update
-  const canUpdate = userType !== "C"; // Only Client (loginAs: "C") cannot update
+  // Determine if user has update rights based on UserType from login response
+  // "user" = normal user (cannot update), anything else = admin (can update)
+  const canUpdate = userType.toLowerCase() !== "user";
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
@@ -84,7 +81,7 @@ const VersionUpdateModal = ({
               </svg>
               <div>
                 <strong>Access Restricted:</strong>
-                <p className="mt-1">You cannot login as Client until the mandatory system update is completed. Please contact your branch administrator to update the system, or login as Branch if you have the required permissions.</p>
+                <p className="mt-1">You cannot login as User until the mandatory system update is completed. Please contact your administrator to update the system.</p>
               </div>
             </div>
           </div>
@@ -130,7 +127,7 @@ const VersionUpdateModal = ({
         </div>
 
         <div className="flex justify-end gap-4">
-          {/* For clients with mandatory updates: Only OK button that closes modal and prevents login */}
+          {/* For users with mandatory updates: Only OK button that closes modal and prevents login */}
           {hasMandatoryUpdates && !canUpdate ? (
             <button
               onClick={onClose}
@@ -154,7 +151,7 @@ const VersionUpdateModal = ({
                     : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200'
                     }`}
                 >
-                  {userType === "C" ? "OK" : "Skip for Now"}
+                  {userType.toLowerCase() === "user" ? "OK" : "Skip for Now"}
                 </button>
               )}
 
@@ -198,12 +195,7 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [loginAsOptions, setLoginAsOptions] = useState(DEFAULT_LOGIN_OPTIONS);
   const { companyInfo, status } = useSelector((state: RootState) => state.common);
-  // Initialize with first option's values
-  const [selectedName, setSelectedName] = useState("");
-  const [selectedLoginAs, setSelectedLoginAs] = useState("");
-  const [selectedLoginKey, setSelectedLoginKey] = useState("");
 
   // State for version update modal
   const [showVersionModal, setShowVersionModal] = useState(false);
@@ -211,20 +203,17 @@ export default function SignInForm() {
   const [version, setVersion] = useState("2.0.0.0"); // Default version
   const [loginData, setLoginData] = useState<any>(null); // Store login data for navigation after version check
   const [isUpdating, setIsUpdating] = useState(false); // Loading state for update button
+  const [currentUserType, setCurrentUserType] = useState<string>(""); // Store user type from login response
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
     try {
-      // Get login as value
-      const loginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
-
       const xmlData = `
         <dsXml>
           <J_Ui>"ActionName":"${ACTION_NAME}","Option":"CheckVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
           <Sql/>
           <X_Filter>
               <ApplicationName>${ACTION_NAME}</ApplicationName>
-              <LoginAs>${loginAs}</LoginAs>
               <Product>${PRODUCT}</Product>
               <Version>${VERSION}</Version>
           </X_Filter>
@@ -247,36 +236,7 @@ export default function SignInForm() {
       console.error('Version check error:', error);
       throw error;
     }
-  }, [loginAsOptions, selectedLoginAs, version]);
-
-  // Load login options from JSON file with fallback
-  useEffect(() => {
-    const loadLoginOptions = async () => {
-      try {
-        // Dynamically import the JSON file
-        const options = await import("../../../loginOptions.json")
-          .then(module => module.default)
-          .catch(() => {
-            console.log("Login options JSON file not found, using defaults");
-            return DEFAULT_LOGIN_OPTIONS;
-          });
-
-        setLoginAsOptions(options);
-
-        // Set initial selected values from the first option
-        if (options && options.length > 0) {
-          setSelectedName(options[0].name || "");
-          setSelectedLoginAs(options[0].loginAs || "");
-          setSelectedLoginKey(options[0].key || "");
-        }
-      } catch (error) {
-        console.error("Error loading login options:", error);
-        // Keep using the default options that were set initially
-      }
-    };
-
-    loadLoginOptions();
-  }, []);
+  }, [version]);
 
   // Function to proceed with navigation after version check
   const proceedAfterVersionCheck = useCallback((dataToUse?: any, forceLogout = false) => {
@@ -292,8 +252,8 @@ export default function SignInForm() {
       // Reset form
       setUserId("");
       setPassword("");
-      setError("System update required. Please contact your branch administrator to update the system.");
-      dispatch(setAuthError("System update required. Please contact your branch administrator to update the system."));
+      setError("System update required. Please contact your administrator to update the system.");
+      dispatch(setAuthError("System update required. Please contact your administrator to update the system."));
       return;
     }
 
@@ -362,16 +322,12 @@ export default function SignInForm() {
     setError(""); // Clear any previous errors
 
     try {
-      // Create XML with the correct login as value
-      const loginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
-
       const xmlData = `
         <dsXml>
           <J_Ui>"ActionName":"${ACTION_NAME}","Option":"UpdateVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
           <Sql/>
           <X_Filter>
               <ApplicationName>TradeWeb</ApplicationName>
-              <LoginAs>${loginAs}</LoginAs>
               <Product>${PRODUCT}</Product>
               <Version>${VERSION}</Version>
           </X_Filter>
@@ -424,25 +380,13 @@ export default function SignInForm() {
         proceedAfterVersionCheck(loginData);
       }
     }
-  }, [loginAsOptions, selectedLoginAs, version, loginData, proceedAfterVersionCheck, versionUpdates]);
-
-  const handleLoginAsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedIndex = e.target.selectedIndex;
-    const selectedOption = loginAsOptions[selectedIndex];
-    setSelectedName(selectedOption?.name || "");
-    setSelectedLoginAs(selectedOption?.loginAs || "");
-    setSelectedLoginKey(selectedOption?.key || "");
-  };
+  }, [version, loginData, proceedAfterVersionCheck, versionUpdates]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
-
-    // Use fallback values if no login options are available
-    const loginKey = loginAsOptions.length > 0 ? selectedLoginKey : LOGIN_KEY;
-    const loginAsValue = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
 
     const xmlData = `<dsXml>
     <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
@@ -452,8 +396,8 @@ export default function SignInForm() {
         <UserId>${userId}</UserId>
         
         <EPassword>${Encryption(password)}</EPassword>
-        <Key>${loginKey}</Key>
-        <LoginAs>${loginAsValue}</LoginAs>
+        <Key></Key>
+        
         <Product>${PRODUCT}</Product>
         <ICPV></ICPV>
         <Feature></Feature>
@@ -477,6 +421,10 @@ export default function SignInForm() {
       console.log('Login Response:', data);
 
       if (data.status) {
+        // Store the UserType from login response
+        const userType = data.data[0].UserType;
+        setCurrentUserType(userType);
+
         dispatch(setAuthData({
           userId: userId,
           token: data.token,
@@ -484,7 +432,7 @@ export default function SignInForm() {
           tokenExpireTime: data.tokenExpireTime,
           clientCode: data.data[0].ClientCode,
           clientName: data.data[0].ClientName,
-          userType: data.data[0].UserType,
+          userType: userType,
           loginType: data.data[0].LoginType,
         }));
 
@@ -494,7 +442,7 @@ export default function SignInForm() {
         localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
         localStorage.setItem('clientCode', data.data[0].ClientCode);
         localStorage.setItem('clientName', data.data[0].ClientName);
-        localStorage.setItem('userType', data.data[0].UserType);
+        localStorage.setItem('userType', userType);
         localStorage.setItem('loginType', data.data[0].LoginType);
         localStorage.removeItem("ekyc_dynamicData");
         localStorage.removeItem("ekyc_activeTab");
@@ -612,27 +560,6 @@ export default function SignInForm() {
               </div>
             </div>
 
-            {/* Only show the dropdown if login options are available */}
-            {loginAsOptions.length > 0 && (
-              <div>
-                <Label className="text-gray-700 dark:text-gray-300 font-medium">Login As</Label>
-                <select
-                  className="w-full mt-1 px-4 py-2 border rounded-lg text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                  value={selectedName}
-                  onChange={handleLoginAsChange}
-                >
-                  {loginAsOptions.map((option: any, index: number) => (
-                    <option
-                      key={index}
-                      value={option.name}
-                    >
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <Button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-all duration-200 mt-2"
@@ -676,21 +603,21 @@ export default function SignInForm() {
 
           // Check if there are mandatory updates and user doesn't have update rights
           const hasMandatoryUpdates = versionUpdates.some(update => update.Status === 'M');
-          // Use selectedLoginAs to determine user type (C = Client, B = Branch)
-          const currentLoginAs = loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS;
-          const canUpdate = currentLoginAs !== "C"; // Only Client (loginAs: "C") cannot update
+          // Use UserType from login response to determine user permissions
+          // "user" = normal user (cannot update), anything else = admin (can update)
+          const canUpdate = currentUserType.toLowerCase() !== "user";
 
           if (hasMandatoryUpdates && !canUpdate) {
-            // Force logout for clients with mandatory updates
+            // Force logout for users with mandatory updates who cannot update
             proceedAfterVersionCheck(loginData, true);
           } else {
-            // Allow normal login flow for optional updates or branch users
+            // Allow normal login flow for optional updates or admin users
             proceedAfterVersionCheck(loginData);
           }
         }}
         updates={versionUpdates}
         onConfirm={handleUpdateConfirm}
-        userType={loginAsOptions.length > 0 ? selectedLoginAs : LOGIN_AS}
+        userType={currentUserType}
         isUpdating={isUpdating}
       />
     </div>
