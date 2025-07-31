@@ -321,7 +321,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             localStorage.setItem("ekyc_checker", "false");
             setIsKycModalOpen(true);
             clearMakerSates();
-        } if(entryName === "account closure") {
+        }else if(entryName === "account closure") {
             setAccountClosureOpen(true)
             setAccountClosureDataPass(prev => ({
                 ...prev,

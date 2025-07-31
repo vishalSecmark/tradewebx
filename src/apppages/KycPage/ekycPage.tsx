@@ -146,6 +146,7 @@ const Kyc = () => {
             const payload = isKeysPresent ? MasterEntry?.X_Filter : {
                 EntryName: parsedUserData?.EntryName || "Rekyc",
                 ClientCode: parsedUserData?.ClientCode || localStorage.getItem("clientCode"),
+                FormNo: parsedUserData?.FormNo || ""
             };
 
             const xFilter = Object.entries(payload || {}).map(([k, v]) => `<${k}>${v}</${k}>`).join("");
