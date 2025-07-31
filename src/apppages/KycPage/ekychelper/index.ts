@@ -156,6 +156,7 @@ export const SubmitEkycForm = async (settings: any, data: any, setSaving?: (load
                 toast.success(responseData.Message || "Data saved successfully");
                 localStorage.setItem("ekyc_viewMode", "true");
                 localStorage.setItem("ekyc_checker", "true");
+                localStorage.setItem("hideVerifyAadhar","true");
 
             } else if (responseData?.Flag === "A") {
                 handleThirdPartyApi(MasterSettings)
