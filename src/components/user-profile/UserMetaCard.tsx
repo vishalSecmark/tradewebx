@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useModal } from "../../hooks/useModal";
 import { useTheme } from "../../context/ThemeContext";
+import { useSearchParams } from "next/navigation";
 
 import Image from "next/image";
 import axios from "axios";
@@ -11,6 +12,7 @@ import apiService from "@/utils/apiService";
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
   const { colors } = useTheme();
+  const searchParams = useSearchParams();
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,6 +22,9 @@ export default function UserMetaCard() {
 
   const getUserDetails = async () => {
     setIsLoading(true);
+
+    // Get userid from URL parameters, fallback to localStorage
+    const urlUserId = searchParams.get('userid');
     const userData = {
       userId: localStorage.getItem('userId') || ''
     };
@@ -28,6 +33,7 @@ export default function UserMetaCard() {
         <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"UserProfile","Level":1, "RequestFrom":"M"</J_Ui>
         <Sql></Sql>
         <X_Filter></X_Filter>
+        <X_Filter_Multiple>${urlUserId ? `<ClientCode>${urlUserId}</ClientCode>` : ''}</X_Filter_Multiple>
         <X_GFilter></X_GFilter>
         <J_Api>"UserId":"${userData.userId}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
     </dsXml>`;
@@ -148,18 +154,14 @@ export default function UserMetaCard() {
               value = [address1, address2, address3].filter(Boolean).join(", ");
             }
 
-            // Only render the field if it has a value
-            if (value && value.trim()) {
-              return (
-                <div key={field.key} className="flex justify-between">
-                  <span className="text-sm" style={secondaryTextStyle}>{field.label}</span>
-                  <span className={`text-sm font-medium ${field.isAddress ? 'text-right' : ''}`} style={textStyle}>
-                    {value}
-                  </span>
-                </div>
-              );
-            }
-            return null;
+            return (
+              <div key={field.key} className="flex justify-between">
+                <span className="text-sm" style={secondaryTextStyle}>{field.label}</span>
+                <span className={`text-sm font-medium ${field.isAddress ? 'text-right' : ''}`} style={textStyle}>
+                  {value || '-'}
+                </span>
+              </div>
+            );
           })}
         </div>
       </div>

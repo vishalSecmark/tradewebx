@@ -647,23 +647,43 @@ function Dashboard() {
         >
             {(auth.userType === 'branch' || auth.userType === 'user') && (
                 <div className="mb-4">
-                    <CommonCustomDropdown
-                        options={userDashData.map(item => ({
-                            value: item.Value,
-                            label: item.DisplayName
-                        }))}
-                        value={selectedClient}
-                        onChange={handleClientChange}
-                        placeholder="Select client..."
-                        resetOnOpen={false}
-                        colors={{
-                            text: colors.text,
-                            primary: colors.primary,
-                            buttonText: colors.buttonText,
-                            color3: colors.color3,
-                            cardBackground: colors.cardBackground,
-                        }}
-                    />
+                    <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                            <CommonCustomDropdown
+                                options={userDashData.map(item => ({
+                                    value: item.Value,
+                                    label: item.DisplayName
+                                }))}
+                                value={selectedClient}
+                                onChange={handleClientChange}
+                                placeholder="Select client..."
+                                resetOnOpen={false}
+                                colors={{
+                                    text: colors.text,
+                                    primary: colors.primary,
+                                    buttonText: colors.buttonText,
+                                    color3: colors.color3,
+                                    cardBackground: colors.cardBackground,
+                                }}
+                            />
+                        </div>
+
+                        {selectedClient && (
+                            <Link
+                                href={`/profile?userid=${selectedClient.value}`}
+                                style={{
+                                    backgroundColor: colors.primary,
+                                    color: colors.buttonText
+                                }}
+                                className="px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center gap-2 whitespace-nowrap"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                View Profile
+                            </Link>
+                        )}
+                    </div>
                 </div>
             )}
 
