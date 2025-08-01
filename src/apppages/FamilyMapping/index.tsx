@@ -86,7 +86,7 @@ export default function Family() {
         <X_Filter></X_Filter>
         <X_Filter_Multiple></X_Filter_Multiple>
         <X_Data></X_Data>
-        <J_Api>"UserId":${localStorage.getItem('userId')}</J_Api>
+        <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
@@ -146,6 +146,7 @@ export default function Family() {
       return;
     }
 
+
     setIsLoading(true);
     try {
       const xmlData = `<dsXml>
@@ -154,8 +155,6 @@ export default function Family() {
         <X_Data>
           <UserId>${loginData.userId}</UserId>
           <EPassword>${Encryption(loginData.password)}</EPassword>
-          <Key>${LOGIN_KEY}</Key>
-          <LoginAs>${LOGIN_AS}</LoginAs>
           <Product>${PRODUCT}</Product>
           <ICPV></ICPV>
           <Feature></Feature>
@@ -207,7 +206,7 @@ export default function Family() {
         <J_Ui>"ActionName":"TradeWeb","Option":"Verify2FA","Level":1,"RequestFrom":"M"</J_Ui>
         <Sql/>
         <X_Data><OTP>${otp}</OTP></X_Data>
-        <J_Api>"UserId":"${loginData.userId}", "UserType":"User"</J_Api>
+        <J_Api>"UserId":"${loginData.userId}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
       </dsXml>`;
 
       await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
