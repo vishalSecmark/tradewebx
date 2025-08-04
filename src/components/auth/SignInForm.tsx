@@ -8,13 +8,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME, ENABLE_CAPTCHA } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import { clearAuthStorage } from '@/utils/auth';
 import Link from "next/link";
 import CryptoJS from 'crypto-js';
 import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
+import CaptchaComponent from './CaptchaComponent';
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -205,6 +206,7 @@ export default function SignInForm() {
   const [loginData, setLoginData] = useState<any>(null); // Store login data for navigation after version check
   const [isUpdating, setIsUpdating] = useState(false); // Loading state for update button
   const [currentUserType, setCurrentUserType] = useState<string>(""); // Store user type from login response
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false); // CAPTCHA validation state
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
@@ -384,6 +386,14 @@ export default function SignInForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // CAPTCHA validation
+    if (ENABLE_CAPTCHA && !isCaptchaValid) {
+      setError('Please complete the security verification');
+      dispatch(setAuthError('Please complete the security verification'));
+      return;
+    }
+
     setIsLoading(true);
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
@@ -604,10 +614,17 @@ export default function SignInForm() {
               </div>
             </div>
 
+            {ENABLE_CAPTCHA && (
+              <CaptchaComponent
+                onCaptchaChange={setIsCaptchaValid}
+                className="mt-4"
+              />
+            )}
+
             <Button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-all duration-200 mt-2"
-              disabled={isLoading}
+              disabled={isLoading || (ENABLE_CAPTCHA && !isCaptchaValid)}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -617,7 +634,7 @@ export default function SignInForm() {
                   </svg>
                   Signing in...
                 </div>
-              ) : 'Sign in'}
+              ) : ENABLE_CAPTCHA && !isCaptchaValid ? 'Complete verification to continue' : 'Sign in'}
             </Button>
           </form>
           <div className="flex justify-center items-center mt-2">
