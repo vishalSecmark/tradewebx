@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   output: 'standalone',
+  poweredByHeader: false, // Disable X-Powered-By header
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
