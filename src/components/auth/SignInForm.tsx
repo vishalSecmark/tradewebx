@@ -14,6 +14,7 @@ import { RootState } from "@/redux/store";
 import { clearAuthStorage } from '@/utils/auth';
 import Link from "next/link";
 import CryptoJS from 'crypto-js';
+import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -387,6 +388,38 @@ export default function SignInForm() {
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
 
+    // Security: Check for HTTPS in production (allow localhost and testing URLs)
+    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+      const hostname = window.location.hostname;
+
+      if (!isAllowedHttpHost(hostname)) {
+        setError('Security Error: HTTPS required for login');
+        dispatch(setAuthError('Security Error: HTTPS required for login'));
+        setIsLoading(false);
+        dispatch(setLoading(false));
+        return;
+      }
+    }
+
+    // Security: Rate limiting check
+    const loginAttempts = localStorage.getItem('login_attempts') || '0';
+    const attemptCount = parseInt(loginAttempts);
+    const lastAttemptTime = localStorage.getItem('last_login_attempt') || '0';
+    const timeSinceLastAttempt = Date.now() - parseInt(lastAttemptTime);
+
+    if (attemptCount >= SECURITY_CONFIG.RATE_LIMITING.MAX_LOGIN_ATTEMPTS &&
+      timeSinceLastAttempt < SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION) {
+      setError(`Too many login attempts. Please try again in ${Math.ceil(SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION / 60000)} minutes.`);
+      dispatch(setAuthError(`Too many login attempts. Please try again in ${Math.ceil(SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION / 60000)} minutes.`));
+      setIsLoading(false);
+      dispatch(setLoading(false));
+      return;
+    }
+
+    // Update login attempts
+    localStorage.setItem('login_attempts', (attemptCount + 1).toString());
+    localStorage.setItem('last_login_attempt', Date.now().toString());
+
     const xmlData = `<dsXml>
     <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
     <Sql/>
@@ -420,9 +453,20 @@ export default function SignInForm() {
       console.log('Login Response:', data);
 
       if (data.status) {
+        // Security: Validate response integrity
+        if (!data.token || !data.refreshToken) {
+          setError('Invalid response from server');
+          dispatch(setAuthError('Invalid response from server'));
+          return;
+        }
+
         // Store the UserType from login response
         const userType = data.data[0].UserType;
         setCurrentUserType(userType);
+
+        // Security: Clear login attempts on successful login
+        localStorage.removeItem('login_attempts');
+        localStorage.removeItem('last_login_attempt');
 
         dispatch(setAuthData({
           userId: userId,
@@ -435,6 +479,7 @@ export default function SignInForm() {
           loginType: data.data[0].LoginType,
         }));
 
+        // Security: Store tokens with integrity checks (handled by API service)
         localStorage.setItem('userId', userId);
         localStorage.setItem('temp_token', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);

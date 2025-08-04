@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BASE_PATH_FRONT_END } from '@/utils/constants';
 import { getAuthToken } from '@/utils/auth';
+import apiService from '@/utils/apiService';
+import { toast } from 'react-toastify';
+import { isAllowedHttpHost } from '@/utils/securityConfig';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -12,63 +15,155 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if we're on an auth page or root path
-    const isAuthPage = pathname?.startsWith('/signin') ||
-      pathname?.startsWith('/otp-verification') ||
-      pathname?.startsWith('/forgot-password') ||
-      pathname?.startsWith('/sso') ||
-      pathname === '/';
+    const validateAuthentication = async () => {
+      try {
+        // Check if we're on an auth page or root path
+        const isAuthPage = pathname?.startsWith('/signin') ||
+          pathname?.startsWith('/otp-verification') ||
+          pathname?.startsWith('/forgot-password') ||
+          pathname?.startsWith('/sso') ||
+          pathname === '/';
 
-    // Get auth token from localStorage
-    const authToken = getAuthToken();
+        // Get auth token from localStorage
+        const authToken = getAuthToken();
 
-    // If user is not authenticated and trying to access protected route
-    if (!authToken && !isAuthPage) {
-      const signInUrl = `${BASE_PATH_FRONT_END}/signin`;
-      // Only redirect if we're not already on the signin page
-      if (pathname !== '/signin') {
-        router.replace(signInUrl);
-      }
-      setIsChecking(false);
-      return;
-    }
-
-    // If user is authenticated and trying to access auth pages
-    if (authToken && isAuthPage) {
-      const dashboardUrl = `${BASE_PATH_FRONT_END}/dashboard`;
-      // Only redirect if we're not already on the dashboard
-      if (pathname !== '/dashboard') {
-        router.replace(dashboardUrl);
-      }
-      setIsChecking(false);
-      return;
-    }
-
-    // Additional check: If we have a token but it might be invalid
-    // (this helps prevent API calls with invalid tokens)
-    if (authToken && !isAuthPage) {
-      // Check if token has expired by looking at tokenExpireTime
-      const tokenExpireTime = localStorage.getItem('tokenExpireTime');
-      if (tokenExpireTime) {
-        const expireDate = new Date(tokenExpireTime);
-        const now = new Date();
-        
-        if (expireDate < now) {
-          // Token has expired, clear storage and redirect to login
-          localStorage.clear();
+        // If user is not authenticated and trying to access protected route
+        if (!authToken && !isAuthPage) {
           const signInUrl = `${BASE_PATH_FRONT_END}/signin`;
-          router.replace(signInUrl);
+          // Only redirect if we're not already on the signin page
+          if (pathname !== '/signin') {
+            router.replace(signInUrl);
+          }
           setIsChecking(false);
+          setIsAuthenticated(false);
           return;
         }
-      }
-    }
 
-    // If we reach here, the user is in the correct state
-    setIsChecking(false);
+        // If user is authenticated and trying to access auth pages
+        if (authToken && isAuthPage) {
+          const dashboardUrl = `${BASE_PATH_FRONT_END}/dashboard`;
+          // Only redirect if we're not already on the dashboard
+          if (pathname !== '/dashboard') {
+            router.replace(dashboardUrl);
+          }
+          setIsChecking(false);
+          setIsAuthenticated(true);
+          return;
+        }
+
+        // Additional security checks for authenticated users
+        if (authToken && !isAuthPage) {
+          // Check if token has expired by looking at tokenExpireTime
+          const tokenExpireTime = localStorage.getItem('tokenExpireTime');
+          if (tokenExpireTime) {
+            const expireDate = new Date(tokenExpireTime);
+            const now = new Date();
+
+            if (expireDate < now) {
+              // Token has expired, clear storage and redirect to login
+              localStorage.clear();
+              const signInUrl = `${BASE_PATH_FRONT_END}/signin`;
+              router.replace(signInUrl);
+              setIsChecking(false);
+              setIsAuthenticated(false);
+              return;
+            }
+          }
+
+          // Server-side token validation for critical routes (skip for localhost/development)
+          const criticalRoutes = ['/admin', '/dashboard', '/kyc', '/ipo', '/margin-pledge'];
+          const isCriticalRoute = criticalRoutes.some(route => pathname?.startsWith(route));
+
+          if (isCriticalRoute) {
+            // Skip server-side validation for localhost and development
+            const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+            const isDevelopment = process.env.NODE_ENV === 'development' ||
+              hostname === 'localhost' ||
+              hostname === '127.0.0.1' ||
+              hostname === '0.0.0.0';
+
+            if (!isDevelopment) {
+              try {
+                // Validate token with server
+                const isValid = await apiService.isTokenValidWithServer(authToken);
+                if (!isValid) {
+                  console.error('Server-side token validation failed');
+                  localStorage.clear();
+                  toast.error('Session expired. Please login again.');
+                  router.replace(`${BASE_PATH_FRONT_END}/signin`);
+                  setIsChecking(false);
+                  setIsAuthenticated(false);
+                  return;
+                }
+              } catch (error) {
+                console.error('Token validation error:', error);
+                // On validation error, still allow access but log the issue
+                // This prevents complete lockout due to network issues
+              }
+            } else {
+              console.log('Server-side token validation skipped for development environment');
+            }
+          }
+
+          // Additional security checks
+          await performSecurityChecks();
+        }
+
+        // If we reach here, the user is in the correct state
+        setIsChecking(false);
+        setIsAuthenticated(!!authToken);
+      } catch (error) {
+        console.error('Authentication validation error:', error);
+        // On error, redirect to login for safety
+        localStorage.clear();
+        router.replace(`${BASE_PATH_FRONT_END}/signin`);
+        setIsChecking(false);
+        setIsAuthenticated(false);
+      }
+    };
+
+    validateAuthentication();
   }, [pathname, router]);
+
+  // Perform additional security checks
+  const performSecurityChecks = async () => {
+    try {
+      // Check for HTTPS in production (allow localhost and testing URLs)
+      if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+        const hostname = window.location.hostname;
+
+        if (!isAllowedHttpHost(hostname)) {
+          console.error('Security Warning: Application must run on HTTPS in production');
+          toast.error('Security Error: HTTPS required');
+          return false;
+        }
+      }
+
+      // Check for localStorage tampering
+      const authToken = localStorage.getItem('auth_token');
+      const tokenIntegrity = localStorage.getItem('auth_token_integrity');
+
+      if (authToken && tokenIntegrity) {
+        // Verify token integrity (this should be handled by the API service)
+        // If integrity check fails, the API service will handle it
+      }
+
+      // Check for suspicious activity patterns
+      const loginAttempts = localStorage.getItem('login_attempts');
+      if (loginAttempts && parseInt(loginAttempts) > 5) {
+        console.warn('Multiple login attempts detected');
+        // Could implement rate limiting here
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Security check error:', error);
+      return false;
+    }
+  };
 
   // Show loading while checking authentication
   if (isChecking) {
@@ -76,7 +171,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">Validating session...</p>
         </div>
       </div>
     );

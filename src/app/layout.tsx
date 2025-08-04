@@ -15,6 +15,7 @@ import { useEffect } from "react";
 import TableStyling from "@/components/ui/table/TableStyling";
 import { setupApiRouter } from "@/utils/apiService";
 import AuthGuard from "@/components/auth/AuthGuard";
+import DevelopmentModeIndicator from "@/components/common/DevelopmentModeIndicator";
 
 const appMetadata = (() => {
   try {
@@ -59,6 +60,7 @@ export default function RootLayout({
               <AuthGuard>
                 {children}
               </AuthGuard>
+              <DevelopmentModeIndicator />
               <TableStyling />
               <ToastContainer />
             </SidebarProvider>
