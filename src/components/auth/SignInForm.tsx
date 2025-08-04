@@ -461,10 +461,13 @@ export default function SignInForm() {
 
       const data = response.data;
       console.log('Login Response:', data);
+      console.log('Response status:', data.status);
+      console.log('Response token:', data.token);
+      console.log('Response refreshToken:', data.refreshToken);
 
       if (data.status) {
         // Security: Validate response integrity
-        if (!data.token || !data.refreshToken) {
+        if (!data.token) {
           setError('Invalid response from server');
           dispatch(setAuthError('Invalid response from server'));
           return;
@@ -474,17 +477,43 @@ export default function SignInForm() {
         const userType = data.data[0].UserType;
         setCurrentUserType(userType);
 
+        // For user type, refreshToken comes after OTP verification
+        // For branch type, refreshToken comes in initial login response
+        if (userType.toLowerCase() === 'branch' && !data.refreshToken) {
+          setError('Invalid response from server');
+          dispatch(setAuthError('Invalid response from server'));
+          return;
+        }
+
         // Security: Clear login attempts on successful login
         localStorage.removeItem('login_attempts');
         localStorage.removeItem('last_login_attempt');
 
+        // Handle different field names based on UserType
+        const clientCode = data.data[0].ClientCode || data.data[0].UserCode || '';
+        const clientName = data.data[0].ClientName || data.data[0].UserName || '';
+
+        // Debug logging to help identify field mapping issues
+        console.log('Login response data:', data.data[0]);
+        console.log('UserType:', userType);
+        console.log('Mapped clientCode:', clientCode);
+        console.log('Mapped clientName:', clientName);
+
+        // Validate that we have the required data
+        if (!clientCode || !clientName) {
+          console.error('Missing required user data:', { clientCode, clientName, userType });
+          setError('Invalid user data received from server');
+          dispatch(setAuthError('Invalid user data received from server'));
+          return;
+        }
+
         dispatch(setAuthData({
           userId: userId,
           token: data.token,
-          refreshToken: data.refreshToken,
+          refreshToken: data.refreshToken || '', // Use empty string if refreshToken not present
           tokenExpireTime: data.tokenExpireTime,
-          clientCode: data.data[0].ClientCode,
-          clientName: data.data[0].ClientName,
+          clientCode: clientCode,
+          clientName: clientName,
           userType: userType,
           loginType: data.data[0].LoginType,
         }));
@@ -492,10 +521,13 @@ export default function SignInForm() {
         // Security: Store tokens with integrity checks (handled by API service)
         localStorage.setItem('userId', userId);
         localStorage.setItem('temp_token', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        // Only store refreshToken if it exists (for branch users)
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
         localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
-        localStorage.setItem('clientCode', data.data[0].ClientCode);
-        localStorage.setItem('clientName', data.data[0].ClientName);
+        localStorage.setItem('clientCode', clientCode);
+        localStorage.setItem('clientName', clientName);
         localStorage.setItem('userType', userType);
         localStorage.setItem('loginType', data.data[0].LoginType);
         localStorage.removeItem("ekyc_dynamicData");
@@ -504,7 +536,7 @@ export default function SignInForm() {
         // Store login data for navigation after version check
         const currentLoginData = {
           token: data.token,
-          refreshToken: data.refreshToken,
+          refreshToken: data.refreshToken || '', // Use empty string if refreshToken not present
           tokenExpireTime: data.tokenExpireTime,
           LoginType: data.data[0].LoginType
         };

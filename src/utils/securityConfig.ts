@@ -36,19 +36,81 @@ export const SECURITY_CONFIG = {
 
     // Rate limiting configuration
     RATE_LIMITING: {
-        MAX_LOGIN_ATTEMPTS: 5,
+        MAX_LOGIN_ATTEMPTS: 30,
         LOCKOUT_DURATION: 15 * 60 * 1000, // 15 minutes in milliseconds
         API_RATE_LIMIT: 100, // requests per minute
     },
 
     // Security headers configuration
     SECURITY_HEADERS: {
-        CSP_POLICY: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';",
+        // Content Security Policy - Controls resources the browser is allowed to load
+        CSP_POLICY: [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+            "img-src 'self' data: https: blob:",
+            "font-src 'self' data: https://fonts.gstatic.com",
+            "connect-src 'self' https: wss:",
+            "media-src 'self' https:",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+            "upgrade-insecure-requests"
+        ].join('; '),
+
+        // HTTP Strict Transport Security - Forces HTTPS connections
         HSTS_MAX_AGE: '31536000', // 1 year
+        HSTS_INCLUDE_SUBDOMAINS: true,
+        HSTS_PRELOAD: true,
+
+        // X-Frame-Options - Prevents clickjacking by restricting iframe embedding
         X_FRAME_OPTIONS: 'DENY',
+
+        // X-Content-Type-Options - Stops MIME type sniffing vulnerabilities
         X_CONTENT_TYPE_OPTIONS: 'nosniff',
+
+        // X-XSS-Protection - Additional XSS protection (legacy but still useful)
         X_XSS_PROTECTION: '1; mode=block',
+
+        // Referrer-Policy - Controls the amount of referrer information sent
         REFERRER_POLICY: 'strict-origin-when-cross-origin',
+
+        // Permissions-Policy - Restricts access to powerful browser features
+        PERMISSIONS_POLICY: [
+            'accelerometer=()',
+            'ambient-light-sensor=()',
+            'autoplay=()',
+            'battery=()',
+            'camera=()',
+            'cross-origin-isolated=()',
+            'display-capture=()',
+            'document-domain=()',
+            'encrypted-media=()',
+            'execution-while-not-rendered=()',
+            'execution-while-out-of-viewport=()',
+            'fullscreen=()',
+            'geolocation=()',
+            'gyroscope=()',
+            'keyboard-map=()',
+            'magnetometer=()',
+            'microphone=()',
+            'midi=()',
+            'navigation-override=()',
+            'payment=()',
+            'picture-in-picture=()',
+            'publickey-credentials-get=()',
+            'screen-wake-lock=()',
+            'sync-xhr=()',
+            'usb=()',
+            'web-share=()',
+            'xr-spatial-tracking=()'
+        ].join(', '),
+
+        // Additional security headers
+        X_DNS_PREFETCH_CONTROL: 'off',
+        X_DOWNLOAD_OPTIONS: 'noopen',
+        X_PERMITTED_CROSS_DOMAIN_POLICIES: 'none',
     },
 
     // Token validation cache duration (5 minutes)
@@ -92,12 +154,32 @@ export function isHttpsRequired(hostname: string): boolean {
 // Helper function to get security headers
 export function getSecurityHeaders(): Record<string, string> {
     return {
+        // Content Security Policy
         'Content-Security-Policy': SECURITY_CONFIG.SECURITY_HEADERS.CSP_POLICY,
+
+        // X-Frame-Options - Prevents clickjacking
         'X-Frame-Options': SECURITY_CONFIG.SECURITY_HEADERS.X_FRAME_OPTIONS,
+
+        // X-Content-Type-Options - Prevents MIME type sniffing
         'X-Content-Type-Options': SECURITY_CONFIG.SECURITY_HEADERS.X_CONTENT_TYPE_OPTIONS,
+
+        // X-XSS-Protection - Additional XSS protection
         'X-XSS-Protection': SECURITY_CONFIG.SECURITY_HEADERS.X_XSS_PROTECTION,
+
+        // Referrer-Policy - Controls referrer information
         'Referrer-Policy': SECURITY_CONFIG.SECURITY_HEADERS.REFERRER_POLICY,
-        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+
+        // Permissions-Policy - Restricts browser features
+        'Permissions-Policy': SECURITY_CONFIG.SECURITY_HEADERS.PERMISSIONS_POLICY,
+
+        // Additional security headers
+        'X-DNS-Prefetch-Control': SECURITY_CONFIG.SECURITY_HEADERS.X_DNS_PREFETCH_CONTROL,
+        'X-Download-Options': SECURITY_CONFIG.SECURITY_HEADERS.X_DOWNLOAD_OPTIONS,
+        'X-Permitted-Cross-Domain-Policies': SECURITY_CONFIG.SECURITY_HEADERS.X_PERMITTED_CROSS_DOMAIN_POLICIES,
+
+        // Remove server information
+        'X-Powered-By': '',
+        'Server': '',
     };
 }
 
@@ -107,7 +189,17 @@ export function getHstsHeader(): string | null {
         return null;
     }
 
-    return `max-age=${SECURITY_CONFIG.SECURITY_HEADERS.HSTS_MAX_AGE}; includeSubDomains; preload`;
+    const hstsParts = [`max-age=${SECURITY_CONFIG.SECURITY_HEADERS.HSTS_MAX_AGE}`];
+
+    if (SECURITY_CONFIG.SECURITY_HEADERS.HSTS_INCLUDE_SUBDOMAINS) {
+        hstsParts.push('includeSubDomains');
+    }
+
+    if (SECURITY_CONFIG.SECURITY_HEADERS.HSTS_PRELOAD) {
+        hstsParts.push('preload');
+    }
+
+    return hstsParts.join('; ');
 }
 
 // Environment-specific configuration
