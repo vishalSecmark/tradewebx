@@ -92,8 +92,7 @@ const SSOContent = () => {
                 // Clean up any existing ekyc data
                 clearIndexedDB();
 
-                // Set both cookie and localStorage  
-                document.cookie = `auth_token=${data.token}; path=/`;
+                // Set localStorage only
                 localStorage.setItem('auth_token', data.token);
 
                 localStorage.removeItem('temp_token')

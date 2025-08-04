@@ -51,7 +51,7 @@ export default function OTPVerificationForm() {
       const data = response.data;
 
       if (data.status && data.status_code === 200) {
-        // Store in Redux and set cookie
+        // Store in Redux and localStorage
         dispatch(setFinalAuthData({
           token: data.token,
           tokenExpireTime: data.tokenExpireTime,
@@ -59,9 +59,6 @@ export default function OTPVerificationForm() {
           clientName: data.data[0].ClientName,
           userType: data.data[0].UserType,
         }));
-
-        // Set both cookie and localStorage
-        document.cookie = `auth_token=${data.token}; path=/`;
 
         // Update localStorage
         localStorage.setItem('clientCode', data.data[0].ClientCode);

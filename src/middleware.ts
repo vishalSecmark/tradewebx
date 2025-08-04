@@ -3,27 +3,22 @@ import type { NextRequest } from 'next/server'
 import { BASE_PATH_FRONT_END } from './utils/constants';
 
 export function middleware(request: NextRequest) {
-  // Get auth token from cookies (server-side accessible)
-  const authToken = request.cookies.get('auth_token')?.value;
-  // console.log('authToken', authToken);
+  // Since we're moving to localStorage only, we can't check auth tokens in middleware
+  // as middleware runs on the server side and can't access localStorage
+  // We'll handle authentication checks on the client side instead
 
   const isAuthPage = request.nextUrl.pathname.startsWith('/signin') ||
     request.nextUrl.pathname.startsWith('/otp-verification') ||
     request.nextUrl.pathname.startsWith('/forgot-password') ||
     request.nextUrl.pathname.startsWith('/sso');
 
-  // If user is not authenticated and trying to access protected route
-  if (!authToken && !isAuthPage) {
-    const signInUrl = new URL(`${BASE_PATH_FRONT_END}/signin`, request.url);
-    signInUrl.searchParams.set('clearLocalStorage', 'true'); // Add query param
-    return NextResponse.redirect(signInUrl);
+  // For auth pages, allow access
+  if (isAuthPage) {
+    return NextResponse.next();
   }
 
-  // If user is authenticated and trying to access auth pages
-  if (authToken && isAuthPage) {
-    return NextResponse.redirect(new URL(`${BASE_PATH_FRONT_END}/dashboard`, request.url));
-  }
-
+  // For all other pages, allow access and let client-side handle authentication
+  // The client-side will redirect to login if no token is found in localStorage
   return NextResponse.next();
 }
 

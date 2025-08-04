@@ -1288,7 +1288,6 @@ export const exportTableToPdf = async (
         const currentLevelData = pageData[0]?.levels[currentLevel];
         const userId = localStorage.getItem('userId') || '';
         const userType = localStorage.getItem('userType') || '';
-        const authToken = document?.cookie?.split('auth_token=')[1]?.split(';')[0] || '';
 
         const filterXml = buildFilterXml(filters, userId);
 
@@ -1372,7 +1371,6 @@ export const downloadOption = async (
 ) => {
 
     const userId = localStorage.getItem('userId') || '';
-    const authToken = document.cookie.split('auth_token=')[1]?.split(';')[0] || '';
 
     const filterXml = buildFilterXml(filters, userId);
 

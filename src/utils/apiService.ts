@@ -28,6 +28,7 @@ interface RefreshTokenResponse {
 class ApiService {
     private defaultTimeout: number = 50000;
     private isRefreshing: boolean = false;
+    private isHandlingSessionExpiry: boolean = false;
     private failedQueue: Array<{
         resolve: (value?: any) => void;
         reject: (error?: any) => void;
@@ -105,17 +106,32 @@ class ApiService {
 
     // Handle refresh token failure
     private handleRefreshFailure(): void {
+        // Prevent multiple session expiry handlers from running simultaneously
+        if (this.isHandlingSessionExpiry) {
+            return;
+        }
+        
+        this.isHandlingSessionExpiry = true;
         console.log('handleRefreshFailure');
         this.clearAuth();
-        toast.error("Session expired");
+        
+        // Only show toast if we're not already on the signin page
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/signin')) {
+            toast.error("Session expired");
+        }
 
         // Use Next.js router for client-side navigation if available
         if (routerInstance) {
-            routerInstance.push('/' + BASE_PATH_FRONT_END);
+            routerInstance.replace('/signin');
         } else if (typeof window !== 'undefined') {
             // Fallback to window.location.href if router is not set
-            window.location.href = '/' + BASE_PATH_FRONT_END;
+            window.location.href = '/signin';
         }
+        
+        // Reset the flag after a delay to allow for navigation
+        setTimeout(() => {
+            this.isHandlingSessionExpiry = false;
+        }, 1000);
     }
 
     // Get authorization token from localStorage
@@ -295,13 +311,6 @@ class ApiService {
 
     // Clear authentication
     clearAuth(): void {
-        if (typeof document !== 'undefined') {
-            document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('refreshToken');
-
-
-        }
         if (typeof window !== 'undefined') {
             localStorage.removeItem('userId');
             localStorage.removeItem('auth_token');

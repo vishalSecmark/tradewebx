@@ -371,7 +371,6 @@ function Dashboard() {
     const getUserDashboardData = async () => {
         try {
             const userId = localStorage.getItem('userId');
-            const authToken = document.cookie.split('auth_token=')[1] || '';
             const userType = localStorage.getItem('userType') || '';
 
             // Try to get cached dropdown options first
