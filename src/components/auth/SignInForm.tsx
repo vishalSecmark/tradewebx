@@ -246,6 +246,13 @@ export default function SignInForm() {
     const currentLoginData = dataToUse || loginData;
     if (!currentLoginData) return;
 
+    // Debug: Log the navigation flow
+    console.log('proceedAfterVersionCheck called:', {
+      loginType: currentLoginData.LoginType,
+      forceLogout,
+      hasTempToken: !!localStorage.getItem('temp_token')
+    });
+
     // If forceLogout is true (mandatory update for non-admin users), clear everything and stay on login
     if (forceLogout) {
 
@@ -261,6 +268,7 @@ export default function SignInForm() {
     }
 
     if (currentLoginData.LoginType === "2FA") {
+      console.log('Redirecting to OTP verification');
       router.push('/otp-verification');
     } else {
       // Set localStorage only
@@ -268,6 +276,7 @@ export default function SignInForm() {
       localStorage.setItem('refreshToken', currentLoginData.refreshToken);
       localStorage.setItem('tokenExpireTime', currentLoginData.tokenExpireTime);
       localStorage.removeItem('temp_token');
+      console.log('Redirecting to dashboard');
       router.push('/dashboard');
     }
   }, [loginData, router, dispatch]);
@@ -284,13 +293,19 @@ export default function SignInForm() {
         setError(errorMessage);
         dispatch(setAuthError(errorMessage));
 
-        // Clear login data and reset form
-        clearAuthStorage();
-
-        // Reset form state
-        setUserId("");
-        setPassword("");
-        setLoginData(null);
+        // Only clear auth storage for non-2FA users
+        // For 2FA users, keep the temp_token so they can proceed to OTP verification
+        if (currentLoginData.LoginType !== "2FA") {
+          clearAuthStorage();
+          // Reset form state
+          setUserId("");
+          setPassword("");
+          setLoginData(null);
+        } else {
+          // For 2FA users, allow them to proceed even if version check fails
+          console.log('Version check failed for 2FA user, but allowing to proceed to OTP verification');
+          proceedAfterVersionCheck(currentLoginData);
+        }
         return; // Don't proceed to next page
       }
 
@@ -308,13 +323,19 @@ export default function SignInForm() {
       setError(errorMessage);
       dispatch(setAuthError(errorMessage));
 
-      // Clear login data and reset form
-      clearAuthStorage();
-
-      // Reset form state
-      setUserId("");
-      setPassword("");
-      setLoginData(null);
+      // Only clear auth storage for non-2FA users
+      // For 2FA users, keep the temp_token so they can proceed to OTP verification
+      if (currentLoginData.LoginType !== "2FA") {
+        clearAuthStorage();
+        // Reset form state
+        setUserId("");
+        setPassword("");
+        setLoginData(null);
+      } else {
+        // For 2FA users, allow them to proceed even if version check fails
+        console.log('Version check error for 2FA user, but allowing to proceed to OTP verification');
+        proceedAfterVersionCheck(currentLoginData);
+      }
     }
   }, [checkVersion, proceedAfterVersionCheck, dispatch]);
 
@@ -521,6 +542,14 @@ export default function SignInForm() {
         // Security: Store tokens with integrity checks (handled by API service)
         localStorage.setItem('userId', userId);
         localStorage.setItem('temp_token', data.token);
+
+        // Debug: Log token storage
+        console.log('Token stored for 2FA:', {
+          tempToken: data.token ? 'Stored' : 'Missing',
+          loginType: data.data[0].LoginType,
+          userType: userType
+        });
+
         // Only store refreshToken if it exists (for branch users)
         if (data.refreshToken) {
           localStorage.setItem('refreshToken', data.refreshToken);
