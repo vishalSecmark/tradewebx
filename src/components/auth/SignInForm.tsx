@@ -8,12 +8,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME, ENABLE_CAPTCHA } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import { clearAuthStorage } from '@/utils/auth';
 import Link from "next/link";
 import CryptoJS from 'crypto-js';
+import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
+import CaptchaComponent from './CaptchaComponent';
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -204,6 +206,7 @@ export default function SignInForm() {
   const [loginData, setLoginData] = useState<any>(null); // Store login data for navigation after version check
   const [isUpdating, setIsUpdating] = useState(false); // Loading state for update button
   const [currentUserType, setCurrentUserType] = useState<string>(""); // Store user type from login response
+  const [isCaptchaValid, setIsCaptchaValid] = useState(false); // CAPTCHA validation state
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
@@ -260,8 +263,7 @@ export default function SignInForm() {
     if (currentLoginData.LoginType === "2FA") {
       router.push('/otp-verification');
     } else {
-      // Set both cookie and localStorage
-      document.cookie = `auth_token=${currentLoginData.token}; path=/`;
+      // Set localStorage only
       localStorage.setItem('auth_token', currentLoginData.token);
       localStorage.setItem('refreshToken', currentLoginData.refreshToken);
       localStorage.setItem('tokenExpireTime', currentLoginData.tokenExpireTime);
@@ -384,9 +386,49 @@ export default function SignInForm() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // CAPTCHA validation
+    if (ENABLE_CAPTCHA && !isCaptchaValid) {
+      setError('Please complete the security verification');
+      dispatch(setAuthError('Please complete the security verification'));
+      return;
+    }
+
     setIsLoading(true);
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
+
+    // Security: Check for HTTPS in production (allow localhost and testing URLs)
+    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+      const hostname = window.location.hostname;
+
+      if (!isAllowedHttpHost(hostname)) {
+        setError('Security Error: HTTPS required for login');
+        dispatch(setAuthError('Security Error: HTTPS required for login'));
+        setIsLoading(false);
+        dispatch(setLoading(false));
+        return;
+      }
+    }
+
+    // Security: Rate limiting check
+    const loginAttempts = localStorage.getItem('login_attempts') || '0';
+    const attemptCount = parseInt(loginAttempts);
+    const lastAttemptTime = localStorage.getItem('last_login_attempt') || '0';
+    const timeSinceLastAttempt = Date.now() - parseInt(lastAttemptTime);
+
+    if (attemptCount >= SECURITY_CONFIG.RATE_LIMITING.MAX_LOGIN_ATTEMPTS &&
+      timeSinceLastAttempt < SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION) {
+      setError(`Too many login attempts. Please try again in ${Math.ceil(SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION / 60000)} minutes.`);
+      dispatch(setAuthError(`Too many login attempts. Please try again in ${Math.ceil(SECURITY_CONFIG.RATE_LIMITING.LOCKOUT_DURATION / 60000)} minutes.`));
+      setIsLoading(false);
+      dispatch(setLoading(false));
+      return;
+    }
+
+    // Update login attempts
+    localStorage.setItem('login_attempts', (attemptCount + 1).toString());
+    localStorage.setItem('last_login_attempt', Date.now().toString());
 
     const xmlData = `<dsXml>
     <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
@@ -419,29 +461,73 @@ export default function SignInForm() {
 
       const data = response.data;
       console.log('Login Response:', data);
+      console.log('Response status:', data.status);
+      console.log('Response token:', data.token);
+      console.log('Response refreshToken:', data.refreshToken);
 
       if (data.status) {
+        // Security: Validate response integrity
+        if (!data.token) {
+          setError('Invalid response from server');
+          dispatch(setAuthError('Invalid response from server'));
+          return;
+        }
+
         // Store the UserType from login response
         const userType = data.data[0].UserType;
         setCurrentUserType(userType);
 
+        // For user type, refreshToken comes after OTP verification
+        // For branch type, refreshToken comes in initial login response
+        if (userType.toLowerCase() === 'branch' && !data.refreshToken) {
+          setError('Invalid response from server');
+          dispatch(setAuthError('Invalid response from server'));
+          return;
+        }
+
+        // Security: Clear login attempts on successful login
+        localStorage.removeItem('login_attempts');
+        localStorage.removeItem('last_login_attempt');
+
+        // Handle different field names based on UserType
+        const clientCode = data.data[0].ClientCode || data.data[0].UserCode || '';
+        const clientName = data.data[0].ClientName || data.data[0].UserName || '';
+
+        // Debug logging to help identify field mapping issues
+        console.log('Login response data:', data.data[0]);
+        console.log('UserType:', userType);
+        console.log('Mapped clientCode:', clientCode);
+        console.log('Mapped clientName:', clientName);
+
+        // Validate that we have the required data
+        if (!clientCode || !clientName) {
+          console.error('Missing required user data:', { clientCode, clientName, userType });
+          setError('Invalid user data received from server');
+          dispatch(setAuthError('Invalid user data received from server'));
+          return;
+        }
+
         dispatch(setAuthData({
           userId: userId,
           token: data.token,
-          refreshToken: data.refreshToken,
+          refreshToken: data.refreshToken || '', // Use empty string if refreshToken not present
           tokenExpireTime: data.tokenExpireTime,
-          clientCode: data.data[0].ClientCode,
-          clientName: data.data[0].ClientName,
+          clientCode: clientCode,
+          clientName: clientName,
           userType: userType,
           loginType: data.data[0].LoginType,
         }));
 
+        // Security: Store tokens with integrity checks (handled by API service)
         localStorage.setItem('userId', userId);
         localStorage.setItem('temp_token', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        // Only store refreshToken if it exists (for branch users)
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
         localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
-        localStorage.setItem('clientCode', data.data[0].ClientCode);
-        localStorage.setItem('clientName', data.data[0].ClientName);
+        localStorage.setItem('clientCode', clientCode);
+        localStorage.setItem('clientName', clientName);
         localStorage.setItem('userType', userType);
         localStorage.setItem('loginType', data.data[0].LoginType);
         localStorage.removeItem("ekyc_dynamicData");
@@ -450,7 +536,7 @@ export default function SignInForm() {
         // Store login data for navigation after version check
         const currentLoginData = {
           token: data.token,
-          refreshToken: data.refreshToken,
+          refreshToken: data.refreshToken || '', // Use empty string if refreshToken not present
           tokenExpireTime: data.tokenExpireTime,
           LoginType: data.data[0].LoginType
         };
@@ -560,10 +646,17 @@ export default function SignInForm() {
               </div>
             </div>
 
+            {ENABLE_CAPTCHA && (
+              <CaptchaComponent
+                onCaptchaChange={setIsCaptchaValid}
+                className="mt-4"
+              />
+            )}
+
             <Button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium transition-all duration-200 mt-2"
-              disabled={isLoading}
+              disabled={isLoading || (ENABLE_CAPTCHA && !isCaptchaValid)}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -573,7 +666,7 @@ export default function SignInForm() {
                   </svg>
                   Signing in...
                 </div>
-              ) : 'Sign in'}
+              ) : ENABLE_CAPTCHA && !isCaptchaValid ? 'Complete verification to continue' : 'Sign in'}
             </Button>
           </form>
           <div className="flex justify-center items-center mt-2">

@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import TableStyling from "@/components/ui/table/TableStyling";
 import { setupApiRouter } from "@/utils/apiService";
+import AuthGuard from "@/components/auth/AuthGuard";
+import DevelopmentModeIndicator from "@/components/common/DevelopmentModeIndicator";
 
 const appMetadata = (() => {
   try {
@@ -39,11 +41,6 @@ export default function RootLayout({
   useEffect(() => {
     // Set up the router for API service
     setupApiRouter(router);
-
-    // Redirect if the initial path is "/"
-    if (window.location.pathname === "/") {
-      router.replace(`${BASE_PATH_FRONT_END}/signin`);
-    }
   }, [router]);
 
   return (
@@ -60,7 +57,10 @@ export default function RootLayout({
         <Provider store={store}>
           <ThemeProvider>
             <SidebarProvider>
-              {children}
+              <AuthGuard>
+                {children}
+              </AuthGuard>
+              <DevelopmentModeIndicator />
               <TableStyling />
               <ToastContainer />
             </SidebarProvider>

@@ -1,6 +1,9 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants';
 import { toast } from 'react-toastify';
+import CryptoJS from 'crypto-js';
+import { SECURITY_CONFIG, isAllowedHttpHost } from './securityConfig';
+import { clearAllAuthData } from './auth';
 
 // Router instance for navigation
 let routerInstance: any = null;
@@ -11,6 +14,7 @@ export interface ApiResponse<T = any> {
     data?: T;
     message?: string;
     error?: string;
+    signature?: string; // Add signature for response validation
 }
 
 // Types for refresh token response
@@ -24,17 +28,34 @@ interface RefreshTokenResponse {
     };
 }
 
+// Types for token validation response
+interface TokenValidationResponse {
+    success: boolean;
+    isValid: boolean;
+    userData?: {
+        userId: string;
+        userType: string;
+        permissions: string[];
+    };
+    message?: string;
+}
+
 // API Service Class
 class ApiService {
-    private defaultTimeout: number = 50000;
+    private defaultTimeout: number = SECURITY_CONFIG.REQUEST_TIMEOUT;
     private isRefreshing: boolean = false;
+    private isHandlingSessionExpiry: boolean = false;
     private failedQueue: Array<{
         resolve: (value?: any) => void;
         reject: (error?: any) => void;
     }> = [];
+    private requestCount: number = 0;
+    private lastTokenValidation: number = 0;
+    private tokenValidationCache: { [key: string]: { isValid: boolean; timestamp: number } } = {};
 
     constructor() {
         this.setupInterceptors();
+        this.setupSecurityChecks();
     }
 
     // Set router instance for navigation
@@ -42,11 +63,228 @@ class ApiService {
         routerInstance = router;
     }
 
-    // Setup axios interceptors for automatic token refresh
+    // Setup security checks
+    private setupSecurityChecks(): void {
+        // Check if running on HTTPS in production (allow localhost and testing URLs)
+        if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+            const hostname = window.location.hostname;
+
+            if (!isAllowedHttpHost(hostname)) {
+                console.error('Security Warning: Application must run on HTTPS in production');
+                toast.error('Security Error: HTTPS required');
+            }
+        }
+
+        // Prevent localStorage tampering detection
+        this.setupLocalStorageProtection();
+    }
+
+    // Setup localStorage protection
+    private setupLocalStorageProtection(): void {
+        if (typeof window === 'undefined') return;
+
+        // Skip localStorage protection for localhost and development
+        const hostname = window.location.hostname;
+        const isDevelopment = process.env.NODE_ENV === 'development' ||
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0';
+
+        if (isDevelopment) {
+            console.log('LocalStorage protection disabled for development environment');
+            return;
+        }
+
+        const originalSetItem = localStorage.setItem;
+        const originalGetItem = localStorage.getItem;
+        const originalRemoveItem = localStorage.removeItem;
+
+        // Override setItem to add integrity check
+        localStorage.setItem = (key: string, value: string) => {
+            if (key === 'auth_token' || key === 'refreshToken') {
+                // Add integrity hash to sensitive data
+                const integrityHash = CryptoJS.SHA256(value + SECURITY_CONFIG.REQUEST_SIGNATURE_KEY).toString();
+                originalSetItem.call(localStorage, key, value);
+                originalSetItem.call(localStorage, `${key}_integrity`, integrityHash);
+            } else {
+                originalSetItem.call(localStorage, key, value);
+            }
+        };
+
+        // Override getItem to verify integrity
+        localStorage.getItem = (key: string) => {
+            const value = originalGetItem.call(localStorage, key);
+            if (key === 'auth_token' || key === 'refreshToken') {
+                const storedIntegrity = originalGetItem.call(localStorage, `${key}_integrity`);
+                if (value && storedIntegrity) {
+                    const expectedIntegrity = CryptoJS.SHA256(value + SECURITY_CONFIG.REQUEST_SIGNATURE_KEY).toString();
+                    if (storedIntegrity !== expectedIntegrity) {
+                        console.error('Token integrity check failed - possible tampering detected');
+                        this.handleSecurityViolation('Token tampering detected');
+                        return null;
+                    }
+                }
+            }
+            return value;
+        };
+
+        // Override removeItem to clean up integrity hashes
+        localStorage.removeItem = (key: string) => {
+            originalRemoveItem.call(localStorage, key);
+            originalRemoveItem.call(localStorage, `${key}_integrity`);
+        };
+    }
+
+    // Handle security violations
+    private handleSecurityViolation(violation: string): void {
+        console.error('Security Violation:', violation);
+
+        // Skip security violations for localhost and development
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const isDevelopment = process.env.NODE_ENV === 'development' ||
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0';
+
+        if (isDevelopment) {
+            console.warn('Security violation ignored for development environment:', violation);
+            return;
+        }
+
+        this.clearAuth();
+        toast.error('Security violation detected. Please login again.');
+
+        if (routerInstance) {
+            routerInstance.replace('/signin');
+        } else if (typeof window !== 'undefined') {
+            window.location.href = '/signin';
+        }
+    }
+
+    // Generate request signature
+    private generateRequestSignature(data: any, timestamp: number): string {
+        const payload = JSON.stringify(data) + timestamp + SECURITY_CONFIG.REQUEST_SIGNATURE_KEY;
+        return CryptoJS.SHA256(payload).toString();
+    }
+
+    // Validate response signature
+    private validateResponseSignature(response: any, signature: string): boolean {
+        if (!signature) return false;
+        const expectedSignature = CryptoJS.SHA256(JSON.stringify(response) + SECURITY_CONFIG.REQUEST_SIGNATURE_KEY).toString();
+        return signature === expectedSignature;
+    }
+
+    // Validate token with server
+    private async validateTokenWithServer(token: string): Promise<TokenValidationResponse> {
+        try {
+            const timestamp = Date.now();
+            const signature = this.generateRequestSignature({ token }, timestamp);
+
+            const response = await axios.post(`${BASE_URL}${SECURITY_CONFIG.TOKEN_VALIDATION_ENDPOINT}`, {
+                token,
+                timestamp,
+                signature
+            }, {
+                timeout: 10000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Request-Signature': signature
+                }
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error('Token validation failed:', error);
+            return { success: false, isValid: false, message: 'Token validation failed' };
+        }
+    }
+
+    // Check if token is valid (with caching)
+    public async isTokenValidWithServer(token: string): Promise<boolean> {
+        const now = Date.now();
+        const cacheKey = CryptoJS.SHA256(token).toString();
+
+        // Check cache first (5 minute cache)
+        if (this.tokenValidationCache[cacheKey] &&
+            (now - this.tokenValidationCache[cacheKey].timestamp) < 300000) {
+            return this.tokenValidationCache[cacheKey].isValid;
+        }
+
+        // Validate with server
+        const validation = await this.validateTokenWithServer(token);
+
+        // Cache result
+        this.tokenValidationCache[cacheKey] = {
+            isValid: validation.success && validation.isValid,
+            timestamp: now
+        };
+
+        return validation.success && validation.isValid;
+    }
+
+    // Setup axios interceptors for automatic token refresh and security
     private setupInterceptors(): void {
-        // Response interceptor to handle 401 errors
+        // Request interceptor for security
+        axios.interceptors.request.use(
+            async (config) => {
+                // Add request ID for tracking
+                config.headers['X-Request-ID'] = `req_${Date.now()}_${++this.requestCount}`;
+
+                // Add timestamp for replay attack prevention
+                config.headers['X-Timestamp'] = Date.now().toString();
+
+                // Add request signature
+                if (config.data) {
+                    const signature = this.generateRequestSignature(config.data, Date.now());
+                    config.headers['X-Request-Signature'] = signature;
+                }
+
+                // Validate token before making authenticated requests (skip for localhost/development)
+                const token = this.getAuthToken();
+                if (token && config.url && !config.url.includes('/auth/')) {
+                    // Skip server-side token validation for localhost and development
+                    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+                    const isDevelopment = process.env.NODE_ENV === 'development' ||
+                        hostname === 'localhost' ||
+                        hostname === '127.0.0.1' ||
+                        hostname === '0.0.0.0';
+
+                    if (!isDevelopment) {
+                        const isValid = await this.isTokenValidWithServer(token);
+                        if (!isValid) {
+                            this.handleSecurityViolation('Invalid token detected');
+                            return Promise.reject(new Error('Invalid token'));
+                        }
+                    }
+                }
+
+                return config;
+            },
+            (error) => {
+                return Promise.reject(error);
+            }
+        );
+
+        // Response interceptor to handle 401 errors and security
         axios.interceptors.response.use(
-            (response: AxiosResponse) => response,
+            (response: AxiosResponse) => {
+                // Validate response signature if present (skip for localhost/development)
+                const responseSignature = response.headers['x-response-signature'];
+                if (responseSignature) {
+                    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+                    const isDevelopment = process.env.NODE_ENV === 'development' ||
+                        hostname === 'localhost' ||
+                        hostname === '127.0.0.1' ||
+                        hostname === '0.0.0.0';
+
+                    if (!isDevelopment && !this.validateResponseSignature(response.data, responseSignature)) {
+                        this.handleSecurityViolation('Response signature validation failed');
+                        return Promise.reject(new Error('Response validation failed'));
+                    }
+                }
+
+                return response;
+            },
             async (error: AxiosError) => {
                 const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
@@ -85,6 +323,11 @@ class ApiService {
                     }
                 }
 
+                // Handle other security-related errors
+                if (error.response?.status === 403) {
+                    this.handleSecurityViolation('Access denied - insufficient permissions');
+                }
+
                 return Promise.reject(error);
             }
         );
@@ -105,17 +348,47 @@ class ApiService {
 
     // Handle refresh token failure
     private handleRefreshFailure(): void {
-        console.log('handleRefreshFailure');
+        // Prevent multiple session expiry handlers from running simultaneously
+        if (this.isHandlingSessionExpiry) {
+            return;
+        }
+
+        this.isHandlingSessionExpiry = true;
+        console.log('handleRefreshFailure - Clearing all authentication data');
+
+        // Clear all authentication data first
         this.clearAuth();
-        toast.error("Session expired");
+
+        // Skip session expiry handling for localhost and development
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const isDevelopment = process.env.NODE_ENV === 'development' ||
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0';
+
+        if (isDevelopment) {
+            console.warn('Session expiry handling disabled for development environment');
+            this.isHandlingSessionExpiry = false;
+            return;
+        }
+
+        // Only show toast if we're not already on the signin page
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/signin')) {
+            toast.error("Session expired. Please login again.");
+        }
 
         // Use Next.js router for client-side navigation if available
         if (routerInstance) {
-            routerInstance.push('/' + BASE_PATH_FRONT_END);
+            routerInstance.replace('/signin');
         } else if (typeof window !== 'undefined') {
             // Fallback to window.location.href if router is not set
-            window.location.href = '/' + BASE_PATH_FRONT_END;
+            window.location.href = '/signin';
         }
+
+        // Reset the flag after a delay to allow for navigation
+        setTimeout(() => {
+            this.isHandlingSessionExpiry = false;
+        }, 1000);
     }
 
     // Get authorization token from localStorage
@@ -295,17 +568,25 @@ class ApiService {
 
     // Clear authentication
     clearAuth(): void {
-        if (typeof document !== 'undefined') {
-            document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('refreshToken');
+        clearAllAuthData();
+    }
 
+    // Clear IndexedDB
+    private clearIndexedDB(): void {
+        if (typeof window !== 'undefined' && 'indexedDB' in window) {
+            const request = indexedDB.deleteDatabase("ekycDB");
 
-        }
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('userId');
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('refreshToken');
+            request.onsuccess = () => {
+                console.log("IndexedDB deleted successfully");
+            };
+
+            request.onerror = (event) => {
+                console.error("Error deleting IndexedDB:", request.error);
+            };
+
+            request.onblocked = () => {
+                console.warn("Database deletion blocked (probably open in another tab)");
+            };
         }
     }
 }

@@ -36,11 +36,13 @@ const defaultInitialState: AuthState = {
 const loadInitialState = (): AuthState => {
     if (typeof window === 'undefined') return defaultInitialState;
 
+    const authToken = localStorage.getItem('auth_token');
+
     return {
-        isAuthenticated: !!document.cookie.includes('auth_token='),
+        isAuthenticated: !!authToken,
         userId: localStorage.getItem('userId'),
         tempToken: localStorage.getItem('temp_token'),
-        authToken: document.cookie.match(/auth_token=([^;]+)/)?.[1] || null,
+        authToken: authToken,
         refreshToken: localStorage.getItem('refreshToken'),
         tokenExpireTime: localStorage.getItem('tokenExpireTime'),
         clientCode: localStorage.getItem('clientCode'),
@@ -103,8 +105,7 @@ const authSlice = createSlice({
             state.userType = action.payload.userType;
         },
         logout: (state) => {
-            // Clear cookies
-            document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            // Clear localStorage only
             clearLocalStorage();
             clearIndexedDB();
             return defaultInitialState;

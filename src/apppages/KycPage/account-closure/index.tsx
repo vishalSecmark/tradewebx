@@ -2,7 +2,7 @@
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
-import { displayAndDownloadPDF, findPageData, displayAndDownloadFile} from "@/utils/helper";
+import { displayAndDownloadPDF, findPageData, displayAndDownloadFile } from "@/utils/helper";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTheme } from "@/context/ThemeContext";
@@ -114,7 +114,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
   const hasHoldingValue = parseBalance(data?.DPHoldingValue || "0") > 0;
   const hasDematAccount = data?.DPAcno && data.DPAcno.trim() !== ""; // Check if Demat account number exists
 
- // Validate form
+  // Validate form
   const validateForm = () => {
     const newErrors = {
       closureType: "",
@@ -228,31 +228,31 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
   const handleGetData = async () => {
     console.log(pageData, 'pageData[0].levels[0]');
-  
+
     const currentPage = accountClouserOpen ? accountClouserDataPass : pageData?.[0]?.levels?.[0];
     if (!currentPage) return;
 
-    console.log(pageData?.[0]?.levels?.[0],'pageData?.[0]?.levels?.[0]');
-    
-  
+    console.log(pageData?.[0]?.levels?.[0], 'pageData?.[0]?.levels?.[0]');
+
+
     setLoading(true);
     setError(null);
-  
+
     try {
       const J_Ui = currentPage.J_Ui
         ? Object.entries(currentPage.J_Ui)
           .map(([key, value]) => `"${key}":"${value}"`)
           .join(",")
         : "";
-  
+
       const clientCode = accountClouserOpen ? accountClouserDataPass?.clientCode : '';
-  
+
       const userId = localStorage.getItem("userId");
       if (!userId) throw new Error("User ID not found in local storage");
-  
-      const authToken = document.cookie.split("auth_token=")[1];
+
+      const authToken = localStorage.getItem("auth_token");
       if (!authToken) throw new Error("Authentication token not found");
-  
+
       const xmlData = `<dsXml>
         <J_Ui>${J_Ui}</J_Ui>
         <Sql></Sql>
@@ -260,29 +260,29 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
         <X_Filter_Multiple><ClientCode>${clientCode}</ClientCode></X_Filter_Multiple>
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
-  
+
       const response = await apiService.postWithAuth(`${BASE_URL}${PATH_URL}`, xmlData);
-  
+
       if (!response.data.success) {
         throw new Error(response.data.message || "API request failed");
       }
-  
+
       const responseData = response.data.data?.rs0?.[0]?.Data;
       if (!responseData) {
         throw new Error("No data received from API");
       }
-  
+
       setData(responseData || null);
       setClosureType(responseData?.ClosureType || null);
       setReason(responseData?.ClosureReason || null);
       setBase64CRM(responseData?.CMRAttachment?.[0]?.Attachment || null);
       setNewBoid(responseData?.BOID || null);
-  
+
       if (responseData?.ViewFlag === "true") {
         setGenPDF(true);
         setViewMode(true);
       }
-  
+
       if (responseData?.FINALPDFFlag === "true") {
         setViewFinalEsignPDF(true);
       }
@@ -294,21 +294,21 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
       setLoading(false);
     }
   };
-  
+
 
 
 
   useEffect(() => {
-     handleGetData();
-  }, [pageData,accountClouserOpen]);
+    handleGetData();
+  }, [pageData, accountClouserOpen]);
 
   const handleCMRUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files?.[0];
       if (file) {
-         setCmrFile(e.target.files[0]);
-         setErrors(prev => ({ ...prev, cmrFile: "" }));
-         const reader = new FileReader();
+        setCmrFile(e.target.files[0]);
+        setErrors(prev => ({ ...prev, cmrFile: "" }));
+        const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = reader.result as string;
           setBase64CRMI(base64)
@@ -316,7 +316,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
         reader.readAsDataURL(file);
       }
 
-     }
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -351,7 +351,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
         HoldingBalance: data?.DPHoldingValue || "0",
         FileName: cmrFile?.name || ""
       };
-      
+
       const xmlData = `<dsXml>
         <J_Ui>"ActionName":"TradeWeb","Option":"MakerClientClosure","RequestFrom":"W"</J_Ui>
         <Sql/>
@@ -675,7 +675,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
               <span
                 className="flex items-center gap-1 cursor-pointer hover:text-blue-600"
                 onClick={() => setShowTradingLedger(true)}
-                
+
               >
                 Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>

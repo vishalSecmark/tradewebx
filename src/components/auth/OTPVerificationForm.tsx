@@ -51,21 +51,35 @@ export default function OTPVerificationForm() {
       const data = response.data;
 
       if (data.status && data.status_code === 200) {
-        // Store in Redux and set cookie
+        // Handle different field names based on UserType
+        const clientCode = data.data[0].ClientCode || data.data[0].UserCode || '';
+        const clientName = data.data[0].ClientName || data.data[0].UserName || '';
+
+        // Debug logging to help identify field mapping issues
+        console.log('OTP verification response data:', data.data[0]);
+        console.log('Mapped clientCode:', clientCode);
+        console.log('Mapped clientName:', clientName);
+
+        // Validate that we have the required data
+        if (!clientCode || !clientName) {
+          console.error('Missing required user data in OTP verification:', { clientCode, clientName });
+          setError('Invalid user data received from server');
+          dispatch(setAuthError('Invalid user data received from server'));
+          return;
+        }
+
+        // Store in Redux and localStorage
         dispatch(setFinalAuthData({
           token: data.token,
           tokenExpireTime: data.tokenExpireTime,
-          clientCode: data.data[0].ClientCode,
-          clientName: data.data[0].ClientName,
+          clientCode: clientCode,
+          clientName: clientName,
           userType: data.data[0].UserType,
         }));
 
-        // Set both cookie and localStorage
-        document.cookie = `auth_token=${data.token}; path=/`;
-
         // Update localStorage
-        localStorage.setItem('clientCode', data.data[0].ClientCode);
-        localStorage.setItem('clientName', data.data[0].ClientName);
+        localStorage.setItem('clientCode', clientCode);
+        localStorage.setItem('clientName', clientName);
         localStorage.setItem('userType', data.data[0].UserType);
         localStorage.setItem('auth_token', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
