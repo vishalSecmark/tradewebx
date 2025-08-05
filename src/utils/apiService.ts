@@ -3,6 +3,7 @@ import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants
 import { toast } from 'react-toastify';
 import CryptoJS from 'crypto-js';
 import { SECURITY_CONFIG, isAllowedHttpHost } from './securityConfig';
+import { clearAllAuthData } from './auth';
 
 // Router instance for navigation
 let routerInstance: any = null;
@@ -353,7 +354,10 @@ class ApiService {
         }
 
         this.isHandlingSessionExpiry = true;
-        console.log('handleRefreshFailure');
+        console.log('handleRefreshFailure - Clearing all authentication data');
+
+        // Clear all authentication data first
+        this.clearAuth();
 
         // Skip session expiry handling for localhost and development
         const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -368,11 +372,9 @@ class ApiService {
             return;
         }
 
-        this.clearAuth();
-
         // Only show toast if we're not already on the signin page
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/signin')) {
-            toast.error("Session expired");
+            toast.error("Session expired. Please login again.");
         }
 
         // Use Next.js router for client-side navigation if available
@@ -566,10 +568,25 @@ class ApiService {
 
     // Clear authentication
     clearAuth(): void {
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('userId');
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('refreshToken');
+        clearAllAuthData();
+    }
+
+    // Clear IndexedDB
+    private clearIndexedDB(): void {
+        if (typeof window !== 'undefined' && 'indexedDB' in window) {
+            const request = indexedDB.deleteDatabase("ekycDB");
+
+            request.onsuccess = () => {
+                console.log("IndexedDB deleted successfully");
+            };
+
+            request.onerror = (event) => {
+                console.error("Error deleting IndexedDB:", request.error);
+            };
+
+            request.onblocked = () => {
+                console.warn("Database deletion blocked (probably open in another tab)");
+            };
         }
     }
 }

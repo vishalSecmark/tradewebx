@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { BASE_PATH_FRONT_END } from '@/utils/constants';
-import { getAuthToken } from '@/utils/auth';
+import { getAuthToken, clearAllAuthData } from '@/utils/auth';
 import apiService from '@/utils/apiService';
 import { toast } from 'react-toastify';
 import { isAllowedHttpHost } from '@/utils/securityConfig';
@@ -63,8 +63,13 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             const now = new Date();
 
             if (expireDate < now) {
-              // Token has expired, clear storage and redirect to login
-              localStorage.clear();
+              // Token has expired, clear all authentication data and redirect to login
+              console.log('Token expired - clearing all authentication data');
+
+              // Clear all authentication data
+              clearAllAuthData();
+
+              toast.error('Session expired. Please login again.');
               const signInUrl = `${BASE_PATH_FRONT_END}/signin`;
               router.replace(signInUrl);
               setIsChecking(false);
@@ -91,7 +96,10 @@ export default function AuthGuard({ children }: AuthGuardProps) {
                 const isValid = await apiService.isTokenValidWithServer(authToken);
                 if (!isValid) {
                   console.error('Server-side token validation failed');
-                  localStorage.clear();
+
+                  // Clear all authentication data
+                  clearAllAuthData();
+
                   toast.error('Session expired. Please login again.');
                   router.replace(`${BASE_PATH_FRONT_END}/signin`);
                   setIsChecking(false);
@@ -117,8 +125,12 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         setIsAuthenticated(!!authToken);
       } catch (error) {
         console.error('Authentication validation error:', error);
-        // On error, redirect to login for safety
-        localStorage.clear();
+        // On error, clear all authentication data and redirect to login for safety
+
+        // Clear all authentication data
+        clearAllAuthData();
+
+        toast.error('Authentication error. Please login again.');
         router.replace(`${BASE_PATH_FRONT_END}/signin`);
         setIsChecking(false);
         setIsAuthenticated(false);
@@ -126,7 +138,66 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     };
 
     validateAuthentication();
-  }, [pathname, router]);
+
+    // Set up periodic token validation for authenticated users
+    let intervalId: NodeJS.Timeout | null = null;
+
+    if (isAuthenticated && !pathname?.startsWith('/signin')) {
+      // Check token every 5 minutes
+      intervalId = setInterval(() => {
+        const authToken = getAuthToken();
+        const tokenExpireTime = localStorage.getItem('tokenExpireTime');
+
+        if (authToken && tokenExpireTime) {
+          const expireDate = new Date(tokenExpireTime);
+          const now = new Date();
+
+          if (expireDate < now) {
+            console.log('Periodic check: Token expired - clearing all authentication data');
+            clearAllAuthData();
+            toast.error('Session expired. Please login again.');
+            router.replace(`${BASE_PATH_FRONT_END}/signin`);
+          }
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+
+    // Cleanup interval on unmount or when authentication state changes
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [pathname, router, isAuthenticated]);
+
+  // Handle visibility change (user returning to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isAuthenticated) {
+        // User has returned to the tab, check if token is still valid
+        const authToken = getAuthToken();
+        const tokenExpireTime = localStorage.getItem('tokenExpireTime');
+
+        if (authToken && tokenExpireTime) {
+          const expireDate = new Date(tokenExpireTime);
+          const now = new Date();
+
+          if (expireDate < now) {
+            console.log('Visibility change: Token expired - clearing all authentication data');
+            clearAllAuthData();
+            toast.error('Session expired. Please login again.');
+            router.replace(`${BASE_PATH_FRONT_END}/signin`);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isAuthenticated, router]);
 
   // Perform additional security checks
   const performSecurityChecks = async () => {
