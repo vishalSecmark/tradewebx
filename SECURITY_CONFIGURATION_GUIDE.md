@@ -2,55 +2,38 @@
 
 ## Quick Setup for Development and Testing
 
-### 1. Allowed HTTP Hosts Configuration
+### 1. Development Mode Configuration
 
-To allow your development and testing URLs to run without HTTPS, edit the `ALLOWED_HTTP_HOSTS` array in `src/utils/securityConfig.ts`:
+To enable development mode and allow your application to run without HTTPS on localhost, set the `NEXT_DEVELOPMENT_MODE` environment variable in your `.env` file:
 
-```typescript
-ALLOWED_HTTP_HOSTS: [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    // Add your testing URLs here
-    'test.yourdomain.com',
-    'staging.yourdomain.com',
-    'dev.yourdomain.com',
-    // Allow any subdomain of yourdomain.com for testing
-    '.yourdomain.com',
-    // Add more testing domains as needed
-    'test.local',
-    'dev.local',
-    'staging.local'
-],
+```bash
+# Enable development mode (allows localhost without HTTPS)
+NEXT_DEVELOPMENT_MODE=true
 ```
 
-### 2. Adding Your Testing URLs
+**Default Behavior:**
+- If `NEXT_DEVELOPMENT_MODE` is not defined or set to `false`: HTTPS is required
+- If `NEXT_DEVELOPMENT_MODE=true`: Allows localhost, 127.0.0.1, and 0.0.0.0 without HTTPS
 
-Replace the example URLs with your actual testing domains:
+### 2. Environment Variables
 
-```typescript
-// Example for your specific domains
-ALLOWED_HTTP_HOSTS: [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    // Your actual testing URLs
-    'test.mydomain.com',
-    'staging.mydomain.com',
-    'dev.mydomain.com',
-    '.mydomain.com',  // Allows all subdomains
-    'local.mydomain.com',
-    'qa.mydomain.com'
-],
+Add the following to your `.env` file:
+
+```bash
+# Development Mode Configuration
+# Set to 'true' to enable development mode (allows localhost without HTTPS)
+# Default is 'false' or undefined
+NEXT_DEVELOPMENT_MODE=false
 ```
 
 ### 3. Environment-Specific Configuration
 
 The security configuration automatically adapts based on your environment:
 
-- **Development** (`NODE_ENV=development`): HTTPS not required, allows localhost
+- **Development Mode Enabled** (`NEXT_DEVELOPMENT_MODE=true`): HTTPS not required, allows localhost
+- **Development Mode Disabled** (`NEXT_DEVELOPMENT_MODE=false` or undefined): HTTPS required
 - **Production** (`NODE_ENV=production`): HTTPS required except for allowed hosts
-- **Test** (`NODE_ENV=test`): HTTPS not required, allows localhost and test domains
+- **Test** (`NODE_ENV=test`): HTTPS not required if development mode is enabled
 
 ### 4. Rate Limiting Configuration
 
@@ -82,71 +65,56 @@ SECURITY_HEADERS: {
 ## Common Configuration Scenarios
 
 ### Scenario 1: Local Development
-```typescript
-ALLOWED_HTTP_HOSTS: [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    'local.mydomain.com'
-],
+```bash
+# .env file
+NEXT_DEVELOPMENT_MODE=true
 ```
 
-### Scenario 2: Multiple Testing Environments
-```typescript
-ALLOWED_HTTP_HOSTS: [
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    'dev.mydomain.com',
-    'staging.mydomain.com',
-    'qa.mydomain.com',
-    'test.mydomain.com',
-    '.mydomain.com'  // Allows all subdomains
-],
+### Scenario 2: Production Deployment
+```bash
+# .env file
+NEXT_DEVELOPMENT_MODE=false
+# or simply don't define it (defaults to false)
 ```
 
-### Scenario 3: Strict Production Only
-```typescript
-ALLOWED_HTTP_HOSTS: [
-    // Only allow specific production subdomains
-    'admin.mydomain.com',
-    'api.mydomain.com'
-],
+### Scenario 3: Testing Environment
+```bash
+# .env file
+NEXT_DEVELOPMENT_MODE=true
+NODE_ENV=test
 ```
 
 ## Troubleshooting
 
 ### Issue: "Security Error: HTTPS required"
-**Solution**: Add your domain to `ALLOWED_HTTP_HOSTS` in `src/utils/securityConfig.ts`
+**Solution**: Set `NEXT_DEVELOPMENT_MODE=true` in your `.env` file for local development
 
 ### Issue: "Too many login attempts"
 **Solution**: Adjust `MAX_LOGIN_ATTEMPTS` and `LOCKOUT_DURATION` in the rate limiting configuration
 
 ### Issue: API requests blocked
-**Solution**: Check if your domain is in the allowed hosts list and adjust rate limiting settings
+**Solution**: Check if development mode is enabled and adjust rate limiting settings
 
 ### Issue: Security headers too strict
 **Solution**: Modify the CSP policy in `SECURITY_HEADERS.CSP_POLICY`
 
 ## Security Best Practices
 
-1. **Never add production domains** to `ALLOWED_HTTP_HOSTS` unless absolutely necessary
-2. **Use specific domains** instead of wildcards when possible
-3. **Regularly review** and update the allowed hosts list
+1. **Never enable development mode in production** - Always set `NEXT_DEVELOPMENT_MODE=false` or undefined
+2. **Use environment-specific configurations** - Different settings for dev, test, and production
+3. **Regularly review security settings** - Ensure proper configuration for each environment
 4. **Test security measures** in staging before production
 5. **Monitor security logs** for any violations
 
 ## Quick Commands
 
-### Add a new testing domain:
-1. Open `src/utils/securityConfig.ts`
-2. Add your domain to `ALLOWED_HTTP_HOSTS`
-3. Restart your development server
+### Enable development mode:
+1. Add `NEXT_DEVELOPMENT_MODE=true` to your `.env` file
+2. Restart your development server
 
-### Disable HTTPS requirement temporarily:
-```typescript
-FORCE_HTTPS: false, // Only for development
-```
+### Disable development mode:
+1. Set `NEXT_DEVELOPMENT_MODE=false` or remove it from `.env` file
+2. Restart your development server
 
 ### Adjust rate limiting:
 ```typescript
@@ -161,11 +129,11 @@ RATE_LIMITING: {
 Set these environment variables for additional control:
 
 ```bash
-# Development
-NODE_ENV=development
+# Development Mode
+NEXT_DEVELOPMENT_MODE=true
 
-# Production
-NODE_ENV=production
+# Environment
+NODE_ENV=development
 
 # Custom security key (optional)
 SECURITY_KEY=your-custom-security-key
@@ -175,6 +143,6 @@ SECURITY_KEY=your-custom-security-key
 
 For security configuration issues:
 1. Check the browser console for error messages
-2. Verify your domain is in the allowed hosts list
+2. Verify your development mode setting in `.env` file
 3. Ensure environment variables are set correctly
 4. Review the security logs for violations 
