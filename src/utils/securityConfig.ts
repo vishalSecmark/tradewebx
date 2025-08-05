@@ -10,9 +10,6 @@ export const SECURITY_CONFIG = {
     // Request signature key for API security
     REQUEST_SIGNATURE_KEY: 'TradeWebX_Security_Key_2024',
 
-    // Token validation endpoint
-    TOKEN_VALIDATION_ENDPOINT: '/api/auth/validate-token',
-
     // Request timeout in milliseconds
     REQUEST_TIMEOUT: 30000,
 
