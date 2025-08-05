@@ -396,9 +396,9 @@ export default function SignInForm() {
         <UserId>${userId}</UserId>
         
         <EPassword>${Encryption(password)}</EPassword>
-        <Key></Key>
-        
-        <Product>${PRODUCT}</Product>
+        <Key>03575N-QYPWV0-7JA3L7-4BN</Key>
+        <LoginAs>B</LoginAs>
+        <Product>C</Product>
         <ICPV></ICPV>
         <Feature></Feature>
     </X_Data>

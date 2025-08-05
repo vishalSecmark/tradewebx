@@ -189,7 +189,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabDropdownOptions, setTabDropdownOptions] = useState<Record<string, Record<string, any[]>>>({});
     const [tabLoadingDropdowns, setTabLoadingDropdowns] = useState<Record<string, Record<string, boolean>>>({});
     const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
+    const [tabsModal, setTabsModal] = useState<boolean>(false);
 
+
+    console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable)
 
     console.log(pageData[0]?.Entry?.ChildEntry, 'entry page data');
 
@@ -1392,7 +1395,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                         {tabsData.length > 0 && tabsData[activeTabIndex] && (
                                             <>
-                                                <div className="flex justify-end mb-4">
+                                                <div className="flex justify-end mb-4 gap-2">
+                                                    {tabsData[activeTabIndex].Settings.isTable === "true" && (
+                                                        <button
+                                                            className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
+                                                            onClick={() => setTabsModal(true)}
+                                                        >
+                                                            Add Entry
+                                                        </button>
+                                                    )}
                                                     <button
                                                         className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode
                                                             ? 'bg-gray-400 cursor-not-allowed'
@@ -1409,34 +1420,90 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         )}
                                                     </button>
                                                 </div>
-                                                <EntryForm
-                                                    formData={tabsData[activeTabIndex].Data}
-                                                    formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                    setFormValues={(values) => {
-                                                        setTabFormValues(prev => ({
-                                                            ...prev,
-                                                            [`tab_${activeTabIndex}`]: typeof values === 'function'
-                                                                ? values(prev[`tab_${activeTabIndex}`] || {})
-                                                                : values
-                                                        }));
-                                                    }}
-                                                    dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
-                                                    setDropDownOptions={(options) => {
-                                                        setTabDropdownOptions(prev => ({
-                                                            ...prev,
-                                                            [`tab_${activeTabIndex}`]: typeof options === 'function'
-                                                                ? options(prev[`tab_${activeTabIndex}`] || {})
-                                                                : options
-                                                        }));
-                                                    }}
-                                                    loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
-                                                    onDropdownChange={(field) => handleTabDropdownChange(field, `tab_${activeTabIndex}`)}
-                                                    fieldErrors={fieldErrors}
-                                                    setFieldErrors={setFieldErrors}
-                                                    masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                    setFormData={() => { }} // Not needed for tabs
-                                                    setValidationModal={setValidationModal}
-                                                />
+                                                {tabsModal && (
+                                                    <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                                                        <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
+                                                            <div className="flex justify-between items-center mb-4">
+                                                                <h2 className="text-xl font-semibold">
+                                                                    Add Data
+                                                                </h2>
+                                                                <button
+                                                                    onClick={() => setTabsModal(false)}
+                                                                    className="text-gray-500 hover:text-gray-700"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+
+                                                            <EntryForm
+                                                                formData={tabsData[activeTabIndex].Data}
+                                                                formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                setFormValues={(values) => {
+                                                                    setTabFormValues(prev => ({
+                                                                        ...prev,
+                                                                        [`tab_${activeTabIndex}`]: typeof values === 'function'
+                                                                            ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                            : values
+                                                                    }));
+                                                                }}
+                                                                dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                                setDropDownOptions={(options) => {
+                                                                    setTabDropdownOptions(prev => ({
+                                                                        ...prev,
+                                                                        [`tab_${activeTabIndex}`]: typeof options === 'function'
+                                                                            ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                            : options
+                                                                    }));
+                                                                }}
+                                                                loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                                onDropdownChange={(field) => handleTabDropdownChange(field, `tab_${activeTabIndex}`)}
+                                                                fieldErrors={fieldErrors}
+                                                                setFieldErrors={setFieldErrors}
+                                                                masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                setFormData={() => { }} // Not needed for tabs
+                                                                setValidationModal={setValidationModal}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                )}
+                                                {tabsData[activeTabIndex].Settings.isTable !== "true" && (
+                                                    <EntryForm
+                                                        formData={tabsData[activeTabIndex].Data}
+                                                        formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                        setFormValues={(values) => {
+                                                            setTabFormValues(prev => ({
+                                                                ...prev,
+                                                                [`tab_${activeTabIndex}`]: typeof values === 'function'
+                                                                    ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                    : values
+                                                            }));
+                                                        }}
+                                                        dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                        setDropDownOptions={(options) => {
+                                                            setTabDropdownOptions(prev => ({
+                                                                ...prev,
+                                                                [`tab_${activeTabIndex}`]: typeof options === 'function'
+                                                                    ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                    : options
+                                                            }));
+                                                        }}
+                                                        loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                        onDropdownChange={(field) => handleTabDropdownChange(field, `tab_${activeTabIndex}`)}
+                                                        fieldErrors={fieldErrors}
+                                                        setFieldErrors={setFieldErrors}
+                                                        masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                        setFormData={() => { }} // Not needed for tabs
+                                                        setValidationModal={setValidationModal}
+                                                    />
+                                                )}
+                                                {
+                                                    tabsData[activeTabIndex].Settings.isTable === "true" && (
+                                                        <>
+                                                            <h1>Table</h1>
+                                                        </>
+                                                    )
+                                                }
                                             </>
                                         )}
                                     </div>
