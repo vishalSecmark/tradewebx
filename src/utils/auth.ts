@@ -35,9 +35,8 @@ api.interceptors.request.use(
 // );
 
 export const logout = () => {
-  // Clear all localStorage data
-  clearLocalStorage();
-  clearIndexedDB();
+  // Clear all authentication data
+  clearAllAuthData();
   // Redirect to login page
   window.location.href = `${BASE_PATH_FRONT_END}/signin`;
 };
@@ -87,4 +86,39 @@ export const clearAuthStorage = () => {
   localStorage.removeItem("ekyc_viewMode_for_checker");
   localStorage.removeItem('ekyc_checker');
   clearIndexedDB();
+};
+
+// Comprehensive function to clear all authentication data
+export const clearAllAuthData = () => {
+  if (typeof window !== 'undefined') {
+    // Clear all authentication-related localStorage items
+    localStorage.removeItem('userId');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('tokenExpireTime');
+    localStorage.removeItem('clientCode');
+    localStorage.removeItem('clientName');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('loginType');
+    localStorage.removeItem('temp_token');
+
+    // Clear ekyc related states
+    localStorage.removeItem('ekyc_dynamicData');
+    localStorage.removeItem('ekyc_activeTab');
+    localStorage.removeItem('redirectedField');
+    localStorage.removeItem('ekyc_submit');
+    localStorage.removeItem('ekyc_viewMode');
+    localStorage.removeItem('ekyc_viewMode_for_checker');
+    localStorage.removeItem('ekyc_checker');
+
+    // Clear any other auth-related items
+    localStorage.removeItem('auth_token_integrity');
+    localStorage.removeItem('login_attempts');
+    localStorage.removeItem('KRAredirectedField');
+
+    // Clear IndexedDB
+    clearIndexedDB();
+
+    console.log('All authentication data cleared successfully');
+  }
 };
