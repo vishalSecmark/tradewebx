@@ -56,16 +56,7 @@ This document outlines the comprehensive security measures implemented to preven
 - Rate limiting for API endpoints
 ```
 
-#### **Server-side Token Validation (`src/app/api/auth/validate-token/route.ts`)**
 
-```typescript
-// Backend Validation:
-- Request signature validation
-- Replay attack prevention
-- Token validation with backend service
-- Response signing
-- Comprehensive error handling
-```
 
 #### **SignInForm Security (`src/components/auth/SignInForm.tsx`)**
 
@@ -90,7 +81,6 @@ NODE_ENV=production  # Enables HTTPS enforcement
 ```typescript
 const SECURITY_CONFIG = {
     REQUEST_SIGNATURE_KEY: 'TradeWebX_Security_Key_2024',
-    TOKEN_VALIDATION_ENDPOINT: '/api/auth/validate-token',
     MAX_RETRY_ATTEMPTS: 3,
     REQUEST_TIMEOUT: 30000,
 };
@@ -128,13 +118,12 @@ frame-ancestors 'none';
 
 ### 2. Token Validation
 1. **Client-side Check**: Validates token existence and expiration
-2. **Server-side Validation**: Validates token with backend for critical routes
-3. **Integrity Verification**: Checks token integrity to prevent tampering
-4. **Automatic Refresh**: Handles token refresh with security validation
+2. **Integrity Verification**: Checks token integrity to prevent tampering
+3. **Automatic Refresh**: Handles token refresh with security validation
 
 ### 3. API Request Security
 1. **Request Signing**: All requests are signed with timestamps
-2. **Token Validation**: Validates tokens before making requests
+2. **Client-side Token Validation**: Validates tokens before making requests
 3. **Response Validation**: Validates response signatures
 4. **Error Handling**: Handles security violations automatically
 

@@ -8,7 +8,7 @@ import React, { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import CaseConfirmationModal from "@/components/Modals/CaseConfirmationModal";
 import apiService from "@/utils/apiService";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { BASE_URL, PATH_URL,ACTION_NAME } from "@/utils/constants";
 import { toast } from "react-toastify";
 import { ThemeColors } from "@/types/ThemeColors";
 
@@ -101,7 +101,7 @@ const ThemePage = () => {
       //  Construct the XML payload
       const payload = `
         <dsXml>
-          <J_Ui>"ActionName":"TradeWeb","Option":"UPDATETHEME","RequestFrom":"w"</J_Ui>
+          <J_Ui>"ActionName":"${ACTION_NAME}","Option":"UPDATETHEME","RequestFrom":"w"</J_Ui>
           <Sql/>
           <X_Filter/>
           <X_Filter_Multiple/>

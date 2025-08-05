@@ -29,16 +29,7 @@ interface RefreshTokenResponse {
 }
 
 // Types for token validation response
-interface TokenValidationResponse {
-    success: boolean;
-    isValid: boolean;
-    userData?: {
-        userId: string;
-        userType: string;
-        permissions: string[];
-    };
-    message?: string;
-}
+
 
 // API Service Class
 class ApiService {
@@ -50,8 +41,7 @@ class ApiService {
         reject: (error?: any) => void;
     }> = [];
     private requestCount: number = 0;
-    private lastTokenValidation: number = 0;
-    private tokenValidationCache: { [key: string]: { isValid: boolean; timestamp: number } } = {};
+
 
     constructor() {
         this.setupInterceptors();
@@ -174,53 +164,7 @@ class ApiService {
         return signature === expectedSignature;
     }
 
-    // Validate token with server
-    private async validateTokenWithServer(token: string): Promise<TokenValidationResponse> {
-        try {
-            const timestamp = Date.now();
-            const signature = this.generateRequestSignature({ token }, timestamp);
 
-            const response = await axios.post(`${BASE_URL}${SECURITY_CONFIG.TOKEN_VALIDATION_ENDPOINT}`, {
-                token,
-                timestamp,
-                signature
-            }, {
-                timeout: 10000,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Request-Signature': signature
-                }
-            });
-
-            return response.data;
-        } catch (error) {
-            console.error('Token validation failed:', error);
-            return { success: false, isValid: false, message: 'Token validation failed' };
-        }
-    }
-
-    // Check if token is valid (with caching)
-    public async isTokenValidWithServer(token: string): Promise<boolean> {
-        const now = Date.now();
-        const cacheKey = CryptoJS.SHA256(token).toString();
-
-        // Check cache first (5 minute cache)
-        if (this.tokenValidationCache[cacheKey] &&
-            (now - this.tokenValidationCache[cacheKey].timestamp) < 300000) {
-            return this.tokenValidationCache[cacheKey].isValid;
-        }
-
-        // Validate with server
-        const validation = await this.validateTokenWithServer(token);
-
-        // Cache result
-        this.tokenValidationCache[cacheKey] = {
-            isValid: validation.success && validation.isValid,
-            timestamp: now
-        };
-
-        return validation.success && validation.isValid;
-    }
 
     // Setup axios interceptors for automatic token refresh and security
     private setupInterceptors(): void {
@@ -239,24 +183,7 @@ class ApiService {
                     config.headers['X-Request-Signature'] = signature;
                 }
 
-                // Validate token before making authenticated requests (skip for localhost/development)
-                const token = this.getAuthToken();
-                if (token && config.url && !config.url.includes('/auth/')) {
-                    // Skip server-side token validation for localhost and development
-                    const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-                    const isDevelopment = process.env.NODE_ENV === 'development' ||
-                        hostname === 'localhost' ||
-                        hostname === '127.0.0.1' ||
-                        hostname === '0.0.0.0';
 
-                    if (!isDevelopment) {
-                        const isValid = await this.isTokenValidWithServer(token);
-                        if (!isValid) {
-                            this.handleSecurityViolation('Invalid token detected');
-                            return Promise.reject(new Error('Invalid token'));
-                        }
-                    }
-                }
 
                 return config;
             },

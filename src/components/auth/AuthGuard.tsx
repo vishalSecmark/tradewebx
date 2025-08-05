@@ -90,30 +90,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
               hostname === '127.0.0.1' ||
               hostname === '0.0.0.0';
 
-            if (!isDevelopment) {
-              try {
-                // Validate token with server
-                const isValid = await apiService.isTokenValidWithServer(authToken);
-                if (!isValid) {
-                  console.error('Server-side token validation failed');
 
-                  // Clear all authentication data
-                  clearAllAuthData();
-
-                  toast.error('Session expired. Please login again.');
-                  router.replace(`${BASE_PATH_FRONT_END}/signin`);
-                  setIsChecking(false);
-                  setIsAuthenticated(false);
-                  return;
-                }
-              } catch (error) {
-                console.error('Token validation error:', error);
-                // On validation error, still allow access but log the issue
-                // This prevents complete lockout due to network issues
-              }
-            } else {
-              console.log('Server-side token validation skipped for development environment');
-            }
           }
 
           // Additional security checks
