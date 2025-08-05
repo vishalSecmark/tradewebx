@@ -1,6 +1,11 @@
 // Security Configuration
 // This file centralizes all security settings for easy management
 
+// Helper function to check if development mode is enabled
+function isDevelopmentMode(): boolean {
+    return process.env.NEXT_DEVELOPMENT_MODE === 'true';
+}
+
 export const SECURITY_CONFIG = {
     // Request signature key for API security
     REQUEST_SIGNATURE_KEY: 'TradeWebX_Security_Key_2024',
@@ -18,20 +23,15 @@ export const SECURITY_CONFIG = {
     FORCE_HTTPS: process.env.NODE_ENV === 'production',
 
     // Allowed hosts that can run without HTTPS (for development and testing)
-    ALLOWED_HTTP_HOSTS: [
+    // In development mode, all localhost variants are allowed
+    // In production, only specific domains should be added here
+    ALLOWED_HTTP_HOSTS: isDevelopmentMode() ? [
         'localhost',
         '127.0.0.1',
-        '0.0.0.0',
-        // Add your testing URLs here
-        'test.yourdomain.com',
-        'staging.yourdomain.com',
-        'dev.yourdomain.com',
-        // Allow any subdomain of yourdomain.com for testing
-        '.yourdomain.com',
-        // Add more testing domains as needed
-        'test.local',
-        'dev.local',
-        'staging.local'
+        '0.0.0.0'
+    ] : [
+        // Add production-specific domains here if needed
+        // Example: 'api.yourdomain.com'
     ],
 
     // Rate limiting configuration
@@ -133,10 +133,11 @@ export function isAllowedHttpHost(hostname: string): boolean {
 
 // Helper function to check if we're in development mode
 export function isDevelopmentEnvironment(): boolean {
-    if (typeof window === 'undefined') return process.env.NODE_ENV === 'development';
+    if (typeof window === 'undefined') return isDevelopmentMode() || process.env.NODE_ENV === 'development';
 
     const hostname = window.location.hostname;
-    return process.env.NODE_ENV === 'development' ||
+    return isDevelopmentMode() ||
+        process.env.NODE_ENV === 'development' ||
         hostname === 'localhost' ||
         hostname === '127.0.0.1' ||
         hostname === '0.0.0.0';
@@ -207,7 +208,7 @@ export const ENV_CONFIG = {
     // Development environment settings
     development: {
         FORCE_HTTPS: false,
-        ALLOWED_HTTP_HOSTS: ['localhost', '127.0.0.1', '0.0.0.0'],
+        ALLOWED_HTTP_HOSTS: isDevelopmentMode() ? ['localhost', '127.0.0.1', '0.0.0.0'] : [],
         DEBUG_MODE: true,
     },
 
@@ -221,7 +222,7 @@ export const ENV_CONFIG = {
     // Test environment settings
     test: {
         FORCE_HTTPS: false,
-        ALLOWED_HTTP_HOSTS: ['localhost', '127.0.0.1', 'test.yourdomain.com'],
+        ALLOWED_HTTP_HOSTS: isDevelopmentMode() ? ['localhost', '127.0.0.1'] : [],
         DEBUG_MODE: true,
     },
 };
