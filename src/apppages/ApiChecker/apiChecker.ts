@@ -17,12 +17,8 @@ export const getApiConfigData = async(setApiConfigData) => {
     try {
 
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
-
-        console.log(response,'response config data');
         if(response.success === true){
-            console.log('inside get config');
             const data = response?.data?.data?.rs0
-            console.log(data,'data is here');
             setApiConfigData(data)
         }
         
@@ -69,8 +65,6 @@ const cleanJSONStringLiteral = (str: string) => {
   
     try {
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, viewLogXML);
-      console.log(response, 'response config data');
-
       setModalOpen(true)
   
       if (response.success === true && response?.data?.data?.rs0 !== null) {
@@ -97,6 +91,7 @@ const cleanJSONStringLiteral = (str: string) => {
   };
 
 
+  //can be required in future
   // export const viewLogApiCall = async (viewLogServiceName, setViewLogServiceNameApiData, setIsViewLogModalOpen) => {
   //   const viewLogXML = `
   // <dsXml>
