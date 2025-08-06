@@ -8,6 +8,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
 import { isEqual } from "lodash"
 import apiService from '@/utils/apiService';
+import { ThemeColors } from '@/types/ThemeColors';
 // Define theme types
 export type ThemeType = 'dark' | 'light' | 'lightDark' | 'blue';
 
@@ -17,31 +18,6 @@ interface FontSettings {
   content: string;
 }
 
-// Define theme colors interface
-interface ThemeColors {
-  background: string;
-  background2: string;
-  text: string;
-  primary: string;
-  secondary: string;
-  color1: string;
-  color2: string;
-  color3: string;
-  textInputBackground: string;
-  textInputBorder: string;
-  textInputText: string;
-  buttonBackground: string;
-  buttonText: string;
-  errorText: string;
-  cardBackground: string;
-  oddCardBackground: string;
-  evenCardBackground: string;
-  filtersBackground: string;
-  tabBackground: string;
-  tabText: string;
-  biometricBox: string;
-  biometricText: string;
-}
 
 // Define themes
 const initialThemes: Record<ThemeType, ThemeColors> = {
