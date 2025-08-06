@@ -234,7 +234,7 @@ const ThemePage = () => {
 
       {/* MODAL FOR COLOR EDITING */}
       {isModalOpen && (
-        <Modal isOpen={isModalOpen}  isFullscreen={false} onClose={() => setIsModalOpen(false)} className="max-w-[800px] p-6">
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} className="max-w-[800px] p-6">
           <div
             className="p-2 max-h-[75vh] overflow-y-auto rounded-lg bg-white mx-auto"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#ccc transparent" }}
