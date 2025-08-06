@@ -154,14 +154,21 @@ const ThemePage = () => {
         padding: "20px",
       }}
     >
-      <h1 style={{ marginBottom: "20px" }}>Theme Settings</h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <h1 style={{ margin: 0 }}>Theme Settings</h1>
 
-      {/*  EDIT BUTTON */}
-      <div style={{ marginTop: "20px", textAlign: "right" }}>
         <button
           onClick={handleOpenModal}
           style={{
-            padding: "10px 20px",
+            padding: "6px 12px",
+            fontSize: "13px",
             background: colors.primary,
             color: colors.buttonText,
             borderRadius: "8px",
@@ -227,16 +234,58 @@ const ThemePage = () => {
 
       {/* MODAL FOR COLOR EDITING */}
       {isModalOpen && (
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <Modal isOpen={isModalOpen}  isFullscreen={false} onClose={() => setIsModalOpen(false)} className="max-w-[800px] p-6">
           <div
-            className="p-4 max-h-[75vh] overflow-y-auto rounded-lg bg-white mx-auto"
+            className="p-2 max-h-[75vh] overflow-y-auto rounded-lg bg-white mx-auto"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#ccc transparent" }}
           >
-            {/*  Heading */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-center flex-1">
+            <div
+              className="flex items-center justify-center gap-6 bg-white p-4 border-b border-gray-200"
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 50,
+              }}
+            >
+              {/* Heading */}
+              <h2 className="text-xl font-semibold text-center whitespace-nowrap">
                 Edit Theme: <span className="capitalize">{theme}</span>
               </h2>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleApply}
+                  style={{
+                    padding: "8px 16px",
+                    background: colors.primary,
+                    color: colors.buttonText,
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    border: "none",
+                    fontSize: "12px",
+                  }}
+                >
+                  Apply
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  style={{
+                    padding: "8px 16px",
+                    background: colors.primary,
+                    color: colors.buttonText,
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    border: "none",
+                    fontSize: "12px",
+                  }}
+                >
+                  Submit
+                </button>
+                {applyMessage && (
+                  <p className="text-green-600 text-sm mt-2 text-right">{applyMessage}</p>
+                )}
+              </div>
             </div>
 
             {/*  Column Headings */}
@@ -294,51 +343,6 @@ const ThemePage = () => {
 
                 ))}
               </div>
-            </div>
-
-
-            {/*  Buttons */}
-            <div className="flex justify-center mt-2 gap-3">
-              <button
-                style={{
-                  padding: "8px 16px",
-                  background: "#ccc",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  border: "none",
-                }}
-                onClick={() => setIsModalOpen(false)}
-              >
-                Cancel
-              </button>
-              <button onClick={handleApply}
-                style={{
-                  padding: "8px 16px",
-                  background: colors.primary,
-                  color: colors.buttonText,
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  border: "none",
-                }}
-              >
-                Apply
-              </button>
-              <button
-                style={{
-                  padding: "8px 16px",
-                  background: colors.primary,
-                  color: colors.buttonText,
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  border: "none",
-                }}
-                onClick={handleSubmit}
-              >
-                Submit
-              </button>
-              {applyMessage && (
-                <p className="text-green-600 text-sm mt-2 text-right">{applyMessage}</p>
-              )}
             </div>
           </div>
           {/* Confirmation Modal */}
