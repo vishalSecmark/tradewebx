@@ -2,7 +2,7 @@
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,10 +22,40 @@ export default function OTPVerificationForm() {
   const { companyInfo, status } = useSelector((state: RootState) => state.common);
   const { colors } = useTheme();
 
+  // Check if temp_token exists on component mount
+  useEffect(() => {
+    const tempToken = localStorage.getItem('temp_token');
+    const userId = localStorage.getItem('userId');
+
+    if (!tempToken || !userId) {
+      console.log('Missing authentication data, redirecting to signin');
+      router.replace('/signin');
+      return;
+    }
+  }, [router]);
+
   const handleOTPVerification = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    // Debug: Check if temp_token is available
+    const tempToken = localStorage.getItem('temp_token');
+    const userId = localStorage.getItem('userId');
+    const userType = localStorage.getItem('userType');
+
+    console.log('OTP Verification Debug:', {
+      tempToken: tempToken ? 'Available' : 'Missing',
+      userId,
+      userType
+    });
+
+    if (!tempToken) {
+      setError('Authentication token not found. Please try logging in again.');
+      dispatch(setAuthError('Authentication token not found. Please try logging in again.'));
+      setIsLoading(false);
+      return;
+    }
 
     const xmlData = `<dsXml>
       <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Verify2FA","Level":1, "RequestFrom":"M"</J_Ui>
@@ -34,7 +64,7 @@ export default function OTPVerificationForm() {
           <OTP>${otp}</OTP>
       </X_Data>
       <X_GFilter/>
-      <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+      <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
     </dsXml>`;
 
     try {
@@ -43,7 +73,7 @@ export default function OTPVerificationForm() {
         url: BASE_URL + OTP_VERIFICATION_URL,
         headers: {
           'Content-Type': 'application/xml',
-          'Authorization': `Bearer ${localStorage.getItem('temp_token')}`
+          'Authorization': `Bearer ${tempToken}`
         },
         data: xmlData
       });
@@ -95,9 +125,21 @@ export default function OTPVerificationForm() {
         setError(errorMessage);
       }
     } catch (err) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.data?.message || 'An error occurred during OTP verification'
-        : 'An error occurred during OTP verification';
+      console.error('OTP verification error:', err);
+
+      let errorMessage = 'An error occurred during OTP verification';
+
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 401) {
+          errorMessage = 'Authentication failed. Please try logging in again.';
+          // Clear auth data and redirect to signin
+          localStorage.clear();
+          router.replace('/signin');
+          return;
+        } else {
+          errorMessage = err.response?.data?.message || errorMessage;
+        }
+      }
 
       dispatch(setAuthError(errorMessage));
       setError(errorMessage);
