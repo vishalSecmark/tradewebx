@@ -119,6 +119,11 @@ export const SECURITY_CONFIG = {
 
 // Helper function to check if a hostname is allowed to run without HTTPS
 export function isAllowedHttpHost(hostname: string): boolean {
+    // If development mode is enabled, allow all URLs
+    if (isDevelopmentMode()) {
+        return true;
+    }
+
     return SECURITY_CONFIG.ALLOWED_HTTP_HOSTS.some(host => {
         if (host.startsWith('.')) {
             // Handle wildcard subdomains
@@ -142,6 +147,11 @@ export function isDevelopmentEnvironment(): boolean {
 
 // Helper function to check if HTTPS is required for current environment
 export function isHttpsRequired(hostname: string): boolean {
+    // If development mode is enabled, HTTPS is not required
+    if (isDevelopmentMode()) {
+        return false;
+    }
+
     if (!SECURITY_CONFIG.FORCE_HTTPS) {
         return false; // HTTPS not required in development
     }
@@ -183,6 +193,11 @@ export function getSecurityHeaders(): Record<string, string> {
 
 // Helper function to get HSTS header (only for HTTPS)
 export function getHstsHeader(): string | null {
+    // If development mode is enabled, don't set HSTS header
+    if (isDevelopmentMode()) {
+        return null;
+    }
+
     if (!SECURITY_CONFIG.FORCE_HTTPS) {
         return null;
     }

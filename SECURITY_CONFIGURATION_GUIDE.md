@@ -4,16 +4,16 @@
 
 ### 1. Development Mode Configuration
 
-To enable development mode and allow your application to run without HTTPS on localhost, set the `NEXT_DEVELOPMENT_MODE` environment variable in your `.env` file:
+To enable development mode and allow your application to run without HTTPS restrictions, set the `NEXT_DEVELOPMENT_MODE` environment variable in your `.env` file:
 
 ```bash
-# Enable development mode (allows localhost without HTTPS)
+# Enable development mode (allows all URLs without HTTPS restrictions)
 NEXT_DEVELOPMENT_MODE=true
 ```
 
 **Default Behavior:**
-- If `NEXT_DEVELOPMENT_MODE` is not defined or set to `false`: HTTPS is required
-- If `NEXT_DEVELOPMENT_MODE=true`: Allows localhost, 127.0.0.1, and 0.0.0.0 without HTTPS
+- If `NEXT_DEVELOPMENT_MODE` is not defined or set to `false`: HTTPS is required in production
+- If `NEXT_DEVELOPMENT_MODE=true`: Allows all URLs (HTTP and HTTPS) without restrictions
 
 ### 2. Environment Variables
 
@@ -21,7 +21,7 @@ Add the following to your `.env` file:
 
 ```bash
 # Development Mode Configuration
-# Set to 'true' to enable development mode (allows localhost without HTTPS)
+# Set to 'true' to enable development mode (allows all URLs without HTTPS restrictions)
 # Default is 'false' or undefined
 NEXT_DEVELOPMENT_MODE=false
 ```
@@ -30,8 +30,15 @@ NEXT_DEVELOPMENT_MODE=false
 
 The security configuration automatically adapts based on your environment:
 
-- **Development Mode Enabled** (`NEXT_DEVELOPMENT_MODE=true`): HTTPS not required, allows localhost
-- **Development Mode Disabled** (`NEXT_DEVELOPMENT_MODE=false` or undefined): HTTPS required
+- **Development Mode Enabled** (`NEXT_DEVELOPMENT_MODE=true`): 
+  - HTTPS not required for any URL
+  - All hostnames allowed without HTTPS
+  - HSTS headers disabled
+  - LocalStorage protection disabled
+  - Security violations logged but not blocked
+- **Development Mode Disabled** (`NEXT_DEVELOPMENT_MODE=false` or undefined): 
+  - HTTPS required in production
+  - Only specific localhost variants allowed without HTTPS
 - **Production** (`NODE_ENV=production`): HTTPS required except for allowed hosts
 - **Test** (`NODE_ENV=test`): HTTPS not required if development mode is enabled
 
@@ -64,7 +71,7 @@ SECURITY_HEADERS: {
 
 ## Common Configuration Scenarios
 
-### Scenario 1: Local Development
+### Scenario 1: Local Development (with HTTP API calls)
 ```bash
 # .env file
 NEXT_DEVELOPMENT_MODE=true
@@ -98,51 +105,28 @@ NODE_ENV=test
 ### Issue: Security headers too strict
 **Solution**: Modify the CSP policy in `SECURITY_HEADERS.CSP_POLICY`
 
-## Security Best Practices
+### Issue: HTTP API calls failing in development
+**Solution**: Enable development mode with `NEXT_DEVELOPMENT_MODE=true` in your `.env` file
 
-1. **Never enable development mode in production** - Always set `NEXT_DEVELOPMENT_MODE=false` or undefined
-2. **Use environment-specific configurations** - Different settings for dev, test, and production
-3. **Regularly review security settings** - Ensure proper configuration for each environment
-4. **Test security measures** in staging before production
-5. **Monitor security logs** for any violations
+## Security Considerations
 
-## Quick Commands
+⚠️ **IMPORTANT**: Never enable development mode in production environments!
 
-### Enable development mode:
-1. Add `NEXT_DEVELOPMENT_MODE=true` to your `.env` file
-2. Restart your development server
+### When to Use Development Mode:
+- Local development and testing
+- Debugging API calls to HTTP endpoints
+- Testing with external HTTP services
+- Development environments that don't support HTTPS
 
-### Disable development mode:
-1. Set `NEXT_DEVELOPMENT_MODE=false` or remove it from `.env` file
-2. Restart your development server
+### When NOT to Use Development Mode:
+- Production deployments
+- Staging environments
+- Any environment accessible from the internet
+- When working with sensitive data
 
-### Adjust rate limiting:
-```typescript
-RATE_LIMITING: {
-    MAX_LOGIN_ATTEMPTS: 10,  // Increase attempts
-    LOCKOUT_DURATION: 5 * 60 * 1000, // Reduce lockout to 5 minutes
-},
-```
+## Additional Documentation
 
-## Environment Variables
-
-Set these environment variables for additional control:
-
-```bash
-# Development Mode
-NEXT_DEVELOPMENT_MODE=true
-
-# Environment
-NODE_ENV=development
-
-# Custom security key (optional)
-SECURITY_KEY=your-custom-security-key
-```
-
-## Support
-
-For security configuration issues:
-1. Check the browser console for error messages
-2. Verify your development mode setting in `.env` file
-3. Ensure environment variables are set correctly
-4. Review the security logs for violations 
+For detailed information about development mode, see:
+- [Development Mode Guide](./DEVELOPMENT_MODE_GUIDE.md) - Comprehensive guide to using development mode
+- [Security Headers Implementation](./SECURITY_HEADERS_IMPLEMENTATION.md) - Details about security headers
+- [Security Implementation](./SECURITY_IMPLEMENTATION.md) - Overall security implementation details 

@@ -3,9 +3,15 @@ import type { NextRequest } from 'next/server'
 import { BASE_PATH_FRONT_END } from './utils/constants';
 import { SECURITY_CONFIG, isAllowedHttpHost, getSecurityHeaders, getHstsHeader } from './utils/securityConfig';
 
+// Helper function to check if development mode is enabled
+function isDevelopmentMode(): boolean {
+    return process.env.NEXT_DEVELOPMENT_MODE === 'true';
+}
+
 export function middleware(request: NextRequest) {
     // Security: Force HTTPS in production (allow localhost and testing URLs)
-    if (SECURITY_CONFIG.FORCE_HTTPS && request.headers.get('x-forwarded-proto') !== 'https') {
+    // Skip HTTPS enforcement if development mode is enabled
+    if (!isDevelopmentMode() && SECURITY_CONFIG.FORCE_HTTPS && request.headers.get('x-forwarded-proto') !== 'https') {
         const hostname = request.nextUrl.hostname;
 
         if (!isAllowedHttpHost(hostname)) {
