@@ -6,7 +6,7 @@ import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import apiService from "@/utils/apiService";
-import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL, BASE_PATH_FRONT_END } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
 
 // Password encryption key
@@ -98,7 +98,7 @@ export default function ChangePassword() {
 
                     // Redirect to sign-in page after a short delay
                     setTimeout(() => {
-                        window.location.href = '/signin';
+                        window.location.href = `${BASE_PATH_FRONT_END}/signin`;
                     }, 2000);
                 } else {
                     setError(result.Message);
