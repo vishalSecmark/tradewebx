@@ -55,8 +55,12 @@ class ApiService {
 
     // Setup security checks
     private setupSecurityChecks(): void {
+        // Check if development mode is enabled
+        const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
+
         // Check if running on HTTPS in production (allow localhost and testing URLs)
-        if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+        // Skip HTTPS check if development mode is enabled
+        if (!isDevMode && typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
             const hostname = window.location.hostname;
 
             if (!isAllowedHttpHost(hostname)) {
@@ -73,9 +77,13 @@ class ApiService {
     private setupLocalStorageProtection(): void {
         if (typeof window === 'undefined') return;
 
-        // Skip localStorage protection for localhost and development
+        // Check if development mode is enabled
+        const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
+
+        // Skip localStorage protection for localhost, development, and when development mode is enabled
         const hostname = window.location.hostname;
-        const isDevelopment = process.env.NODE_ENV === 'development' ||
+        const isDevelopment = isDevMode ||
+            process.env.NODE_ENV === 'development' ||
             hostname === 'localhost' ||
             hostname === '127.0.0.1' ||
             hostname === '0.0.0.0';
@@ -129,9 +137,13 @@ class ApiService {
     private handleSecurityViolation(violation: string): void {
         console.error('Security Violation:', violation);
 
-        // Skip security violations for localhost and development
+        // Check if development mode is enabled
+        const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
+
+        // Skip security violations for localhost, development, and when development mode is enabled
         const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const isDevelopment = process.env.NODE_ENV === 'development' ||
+        const isDevelopment = isDevMode ||
+            process.env.NODE_ENV === 'development' ||
             hostname === 'localhost' ||
             hostname === '127.0.0.1' ||
             hostname === '0.0.0.0';
@@ -195,11 +207,15 @@ class ApiService {
         // Response interceptor to handle 401 errors and security
         axios.interceptors.response.use(
             (response: AxiosResponse) => {
+                // Check if development mode is enabled
+                const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
+
                 // Validate response signature if present (skip for localhost/development)
                 const responseSignature = response.headers['x-response-signature'];
                 if (responseSignature) {
                     const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-                    const isDevelopment = process.env.NODE_ENV === 'development' ||
+                    const isDevelopment = isDevMode ||
+                        process.env.NODE_ENV === 'development' ||
                         hostname === 'localhost' ||
                         hostname === '127.0.0.1' ||
                         hostname === '0.0.0.0';

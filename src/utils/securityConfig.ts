@@ -119,6 +119,11 @@ export const SECURITY_CONFIG = {
 
 // Helper function to check if a hostname is allowed to run without HTTPS
 export function isAllowedHttpHost(hostname: string): boolean {
+    // If development mode is enabled, allow all URLs
+    if (isDevelopmentMode()) {
+        return true;
+    }
+
     return SECURITY_CONFIG.ALLOWED_HTTP_HOSTS.some(host => {
         if (host.startsWith('.')) {
             // Handle wildcard subdomains
@@ -142,6 +147,11 @@ export function isDevelopmentEnvironment(): boolean {
 
 // Helper function to check if HTTPS is required for current environment
 export function isHttpsRequired(hostname: string): boolean {
+    // If development mode is enabled, HTTPS is not required
+    if (isDevelopmentMode()) {
+        return false;
+    }
+
     if (!SECURITY_CONFIG.FORCE_HTTPS) {
         return false; // HTTPS not required in development
     }
@@ -151,9 +161,29 @@ export function isHttpsRequired(hostname: string): boolean {
 
 // Helper function to get security headers
 export function getSecurityHeaders(): Record<string, string> {
+    // Generate CSP policy based on development mode
+    const isDevMode = isDevelopmentMode();
+
+    const cspPolicy = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+        "img-src 'self' data: https: blob:",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        // Allow HTTP connections in development mode
+        isDevMode ? "connect-src 'self' http: https: wss:" : "connect-src 'self' https: wss:",
+        "media-src 'self' https:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        // Only add upgrade-insecure-requests if not in development mode
+        ...(isDevMode ? [] : ["upgrade-insecure-requests"])
+    ].join('; ');
+
     return {
         // Content Security Policy
-        'Content-Security-Policy': SECURITY_CONFIG.SECURITY_HEADERS.CSP_POLICY,
+        'Content-Security-Policy': cspPolicy,
 
         // X-Frame-Options - Prevents clickjacking
         'X-Frame-Options': SECURITY_CONFIG.SECURITY_HEADERS.X_FRAME_OPTIONS,
@@ -183,6 +213,11 @@ export function getSecurityHeaders(): Record<string, string> {
 
 // Helper function to get HSTS header (only for HTTPS)
 export function getHstsHeader(): string | null {
+    // If development mode is enabled, don't set HSTS header
+    if (isDevelopmentMode()) {
+        return null;
+    }
+
     if (!SECURITY_CONFIG.FORCE_HTTPS) {
         return null;
     }

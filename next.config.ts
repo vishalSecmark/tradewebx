@@ -1,5 +1,10 @@
 import type { NextConfig } from "next";
 
+// Helper function to check if development mode is enabled
+function isDevelopmentMode(): boolean {
+  return process.env.NEXT_DEVELOPMENT_MODE === 'true';
+}
+
 const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   output: 'standalone',
@@ -7,6 +12,26 @@ const nextConfig: NextConfig = {
 
   // Security headers configuration
   async headers() {
+    // Generate CSP policy based on development mode
+    const isDevMode = isDevelopmentMode();
+
+    const cspPolicy = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+      "img-src 'self' data: https: blob:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      // Allow HTTP connections in development mode
+      isDevMode ? "connect-src 'self' http: https: wss:" : "connect-src 'self' https: wss:",
+      "media-src 'self' https:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      // Only add upgrade-insecure-requests if not in development mode
+      ...(isDevMode ? [] : ["upgrade-insecure-requests"])
+    ].join('; ');
+
     return [
       {
         // Apply security headers to all routes
@@ -15,20 +40,7 @@ const nextConfig: NextConfig = {
           // Content Security Policy
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-              "img-src 'self' data: https: blob:",
-              "font-src 'self' data: https://fonts.gstatic.com",
-              "connect-src 'self' https: wss:",
-              "media-src 'self' https:",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              "upgrade-insecure-requests"
-            ].join('; ')
+            value: cspPolicy
           },
           // X-Frame-Options - Prevents clickjacking
           {
@@ -96,8 +108,8 @@ const nextConfig: NextConfig = {
             key: 'X-Permitted-Cross-Domain-Policies',
             value: 'none'
           },
-          // HTTP Strict Transport Security (only in production)
-          ...(process.env.NODE_ENV === 'production' ? [{
+          // HTTP Strict Transport Security (only in production and not in development mode)
+          ...(process.env.NODE_ENV === 'production' && !isDevMode ? [{
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains; preload'
           }] : [])

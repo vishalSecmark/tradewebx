@@ -51,29 +51,22 @@ export default function UserMetaCard() {
     }
   };
 
-  // Helper function to get personal details
-  const getPersonalDetail = (field) => {
-    return profileData?.["Personal Detail"]?.[0]?.[field] || "";
-  };
-
-  // Helper function to get address details
-  const getAddressDetail = (field) => {
-    return profileData?.["Address Details"]?.[0]?.[field] || "";
-  };
-
-  // Helper function to get bank details
-  const getBankDetail = (field) => {
-    return profileData?.["Bank Details"]?.[0]?.[field] || "";
-  };
-
-  // Helper function to get demat details
-  const getDematDetail = (field) => {
-    return profileData?.["Demat Details"]?.[0]?.[field] || "";
-  };
-
   // Helper function to get user initials
   const getUserInitials = () => {
-    const name = getPersonalDetail("Name");
+    if (!profileData) return "";
+
+    // Try to get name from any available section
+    let name = "";
+    for (const sectionName in profileData) {
+      if (profileData[sectionName] && Array.isArray(profileData[sectionName]) && profileData[sectionName].length > 0) {
+        const sectionData = profileData[sectionName][0];
+        if (sectionData.Name) {
+          name = sectionData.Name;
+          break;
+        }
+      }
+    }
+
     if (!name) return "";
 
     const nameParts = name.split(" ");
@@ -85,79 +78,26 @@ export default function UserMetaCard() {
     return "";
   };
 
-  // Helper function to get data from any section
-  const getSectionData = (sectionName, field) => {
-    return profileData?.[sectionName]?.[0]?.[field] || "";
-  };
-
-  // Configuration for different sections and their fields
-  const sectionConfigs = {
-    "Personal Detail": {
-      title: "Personal Details",
-      fields: [
-        { key: "Code", label: "Code" },
-        { key: "Name", label: "Name" },
-        { key: "Mobile", label: "Mobile" },
-        { key: "Email", label: "Email" },
-        { key: "Gender", label: "Gender" },
-        { key: "PAN", label: "PAN" },
-        { key: "LastLogin", label: "Last Login" }
-      ]
-    },
-    "Address Details": {
-      title: "Address Details",
-      fields: [
-        { key: "Address", label: "Address", isAddress: true },
-        { key: "City", label: "City" },
-        { key: "State", label: "State" },
-        { key: "Country", label: "Country" },
-        { key: "PIN", label: "PIN" },
-        { key: "Designation", label: "Designation" }
-      ]
-    },
-    "Bank Details": {
-      title: "Bank Details",
-      fields: [
-        { key: "Name", label: "Bank Name" },
-        { key: "Account No", label: "Account No" },
-        { key: "IFSC", label: "IFSC" },
-        { key: "MICR", label: "MICR" },
-        { key: "AccountType", label: "Account Type" }
-      ]
-    },
-    "Demat Details": {
-      title: "Demat Details",
-      fields: [
-        { key: "DP ID", label: "DP ID" },
-        { key: "DP Account No", label: "DP Account No" }
-      ]
-    }
-  };
-
-  // Function to render a single section box
+  // Function to render a single section box dynamically
   const renderSectionBox = (sectionName, sectionData) => {
-    const config = sectionConfigs[sectionName];
-    if (!config) return null;
+    if (!sectionData || !Array.isArray(sectionData) || sectionData.length === 0) {
+      return null;
+    }
+
+    const data = sectionData[0]; // Get the first item from the array
+    const fields = Object.keys(data);
 
     return (
       <div key={sectionName} className="p-5 border rounded-2xl lg:p-6" style={cardStyle}>
-        <h4 className="mb-4 text-lg font-semibold" style={textStyle}>{config.title}</h4>
+        <h4 className="mb-4 text-lg font-semibold" style={textStyle}>{sectionName}</h4>
         <div className="space-y-3">
-          {config.fields.map((field) => {
-            let value = getSectionData(sectionName, field.key);
-
-            // Special handling for address field
-            if (field.isAddress) {
-              const address1 = getSectionData(sectionName, "Address1");
-              const address2 = getSectionData(sectionName, "Address2");
-              const address3 = getSectionData(sectionName, "Address3");
-              value = [address1, address2, address3].filter(Boolean).join(", ");
-            }
+          {fields.map((field) => {
+            const value = data[field];
 
             return (
-              <div key={field.key} className="flex justify-between">
-                <span className="text-sm" style={secondaryTextStyle}>{field.label}</span>
-                <span className={`text-sm font-medium ${field.isAddress ? 'text-right' : ''}`} style={textStyle}>
+              <div key={field} className="flex justify-between">
+                <span className="text-sm" style={secondaryTextStyle}>{field}</span>
+                <span className="text-sm font-medium text-right" style={textStyle}>
                   {value || '-'}
                 </span>
               </div>
@@ -173,7 +113,6 @@ export default function UserMetaCard() {
     if (!profileData) return [];
 
     return Object.keys(profileData).filter(sectionName =>
-      sectionConfigs[sectionName] &&
       profileData[sectionName] &&
       Array.isArray(profileData[sectionName]) &&
       profileData[sectionName].length > 0
@@ -208,6 +147,53 @@ export default function UserMetaCard() {
     color: colors.buttonText,
   };
 
+  // Helper function to get display name from any section
+  const getDisplayName = () => {
+    if (!profileData) return "";
+
+    for (const sectionName in profileData) {
+      if (profileData[sectionName] && Array.isArray(profileData[sectionName]) && profileData[sectionName].length > 0) {
+        const sectionData = profileData[sectionName][0];
+        if (sectionData.Name) {
+          return sectionData.Name;
+        }
+      }
+    }
+    return "";
+  };
+
+  // Helper function to get display code from any section
+  const getDisplayCode = () => {
+    if (!profileData) return "";
+
+    for (const sectionName in profileData) {
+      if (profileData[sectionName] && Array.isArray(profileData[sectionName]) && profileData[sectionName].length > 0) {
+        const sectionData = profileData[sectionName][0];
+        if (sectionData.Code) {
+          return sectionData.Code;
+        }
+      }
+    }
+    return "";
+  };
+
+  // Helper function to get location info
+  const getLocationInfo = () => {
+    if (!profileData) return "";
+
+    for (const sectionName in profileData) {
+      if (profileData[sectionName] && Array.isArray(profileData[sectionName]) && profileData[sectionName].length > 0) {
+        const sectionData = profileData[sectionName][0];
+        if (sectionData.City || sectionData.Country) {
+          const city = sectionData.City || "";
+          const country = sectionData.Country || "";
+          return [city, country].filter(Boolean).join(", ");
+        }
+      }
+    }
+    return "";
+  };
+
   return (
     <>
       <div className="p-5 border rounded-2xl lg:p-6" style={cardStyle}>
@@ -234,15 +220,15 @@ export default function UserMetaCard() {
               </div>
               <div className="order-3 xl:order-2">
                 <h4 className="mb-2 text-lg font-semibold text-center xl:text-left" style={textStyle}>
-                  {getPersonalDetail("Name")}
+                  {getDisplayName()}
                 </h4>
                 <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
                   <p className="text-sm" style={secondaryTextStyle}>
-                    {getPersonalDetail("Code")}
+                    {getDisplayCode()}
                   </p>
                   <div className="hidden h-3.5 w-px xl:block" style={{ backgroundColor: colors.color3 }}></div>
                   <p className="text-sm" style={secondaryTextStyle}>
-                    {getAddressDetail("City")}, {getAddressDetail("Country")}
+                    {getLocationInfo()}
                   </p>
                 </div>
               </div>
@@ -255,7 +241,7 @@ export default function UserMetaCard() {
       {/* Add profile details sections */}
       {!isLoading && profileData && (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {getAvailableSections().map(sectionName => renderSectionBox(sectionName, profileData))}
+          {getAvailableSections().map(sectionName => renderSectionBox(sectionName, profileData[sectionName]))}
         </div>
       )}
     </>
