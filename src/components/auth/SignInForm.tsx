@@ -419,8 +419,12 @@ export default function SignInForm() {
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
 
+    // Check if development mode is enabled
+    const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
+
     // Security: Check for HTTPS in production (allow localhost and testing URLs)
-    if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+    // Skip HTTPS check if development mode is enabled
+    if (!isDevMode && typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
       const hostname = window.location.hostname;
 
       if (!isAllowedHttpHost(hostname)) {

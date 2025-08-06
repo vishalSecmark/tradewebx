@@ -207,11 +207,15 @@ class ApiService {
         // Response interceptor to handle 401 errors and security
         axios.interceptors.response.use(
             (response: AxiosResponse) => {
+                // Check if development mode is enabled
+                const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
+
                 // Validate response signature if present (skip for localhost/development)
                 const responseSignature = response.headers['x-response-signature'];
                 if (responseSignature) {
                     const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-                    const isDevelopment = process.env.NODE_ENV === 'development' ||
+                    const isDevelopment = isDevMode ||
+                        process.env.NODE_ENV === 'development' ||
                         hostname === 'localhost' ||
                         hostname === '127.0.0.1' ||
                         hostname === '0.0.0.0';

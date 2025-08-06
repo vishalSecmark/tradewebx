@@ -161,9 +161,29 @@ export function isHttpsRequired(hostname: string): boolean {
 
 // Helper function to get security headers
 export function getSecurityHeaders(): Record<string, string> {
+    // Generate CSP policy based on development mode
+    const isDevMode = isDevelopmentMode();
+
+    const cspPolicy = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
+        "img-src 'self' data: https: blob:",
+        "font-src 'self' data: https://fonts.gstatic.com",
+        // Allow HTTP connections in development mode
+        isDevMode ? "connect-src 'self' http: https: wss:" : "connect-src 'self' https: wss:",
+        "media-src 'self' https:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        // Only add upgrade-insecure-requests if not in development mode
+        ...(isDevMode ? [] : ["upgrade-insecure-requests"])
+    ].join('; ');
+
     return {
         // Content Security Policy
-        'Content-Security-Policy': SECURITY_CONFIG.SECURITY_HEADERS.CSP_POLICY,
+        'Content-Security-Policy': cspPolicy,
 
         // X-Frame-Options - Prevents clickjacking
         'X-Frame-Options': SECURITY_CONFIG.SECURITY_HEADERS.X_FRAME_OPTIONS,
