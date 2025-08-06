@@ -243,7 +243,7 @@ const validatePageData = (pageData: any): PageDataValidationResult => {
 };
 
 const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ componentName, componentType }) => {
-    console.log("check comp names",componentName,componentType)
+    console.log("check comp names", componentName, componentType)
     const menuItems = useAppSelector(selectAllMenuItems);
     const searchParams = useSearchParams();
     const clientCode = searchParams.get('clientCode');
@@ -1033,30 +1033,28 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             {/* Tabs and Action Buttons */}
             {safePageData.isValid && (
                 <div className="flex border-b border-gray-200">
-                    {/* Tabs - Only show if there are multiple levels */}
-                    {safePageData.getLevels().length > 1 && (
-                        <div className="flex flex-1 gap-2">
-                            {levelStack.map((level, index) => (
-                                <button
-                                    key={index}
-                                    style={{ backgroundColor: colors.cardBackground }}
-                                    className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
-                                        ? `bg-${colors.primary} text-${colors.buttonText}`
-                                        : `bg-${colors.tabBackground} text-${colors.tabText}`
-                                        }`}
-                                    onClick={() => handleTabClick(level, index)}
-                                >
-                                    {level === 0
-                                        ? safePageData.getSetting('level') || 'Main'
-                                        : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
-                                    }
-                                </button>
-                            ))}
-                        </div>
-                    )}
+                    {/* Tabs - Always show tab name, even for single level */}
+                    <div className="flex flex-1 gap-2">
+                        {levelStack.map((level, index) => (
+                            <button
+                                key={index}
+                                style={{ backgroundColor: colors.cardBackground }}
+                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
+                                    ? `bg-${colors.primary} text-${colors.buttonText}`
+                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                    }`}
+                                onClick={() => handleTabClick(level, index)}
+                            >
+                                {level === 0
+                                    ? safePageData.getSetting('level') || safePageData.getCurrentLevel(level)?.name || 'Main'
+                                    : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
+                                }
+                            </button>
+                        ))}
+                    </div>
 
                     {/* Action Icons - Always show */}
-                    <div className={`flex gap-2 ${safePageData.getLevels().length <= 1 ? 'ml-auto' : ''}`}>
+                    <div className="flex gap-2">
                         {/* Mobile View - Show essential buttons and More menu */}
                         <div className="flex gap-2 md:hidden">
                             {/* Essential buttons for mobile */}
