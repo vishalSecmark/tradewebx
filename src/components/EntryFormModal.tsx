@@ -1134,6 +1134,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 toast.success('Form submitted successfully!');
                 setIsFormSubmit(false);
                 resetParentForm();
+                if(response?.data?.message){
+                    const messageTxtPresent = response?.data?.message
+                    toast.success(messageTxtPresent)
+                }
             } else {
                 const message = response?.data?.message.replace(/<\/?Message>/g, '');
                 toast.warning(message);
