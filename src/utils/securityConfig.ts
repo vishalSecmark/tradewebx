@@ -11,7 +11,7 @@ export const SECURITY_CONFIG = {
     REQUEST_SIGNATURE_KEY: 'TradeWebX_Security_Key_2024',
 
     // Request timeout in milliseconds
-    REQUEST_TIMEOUT: 300000,
+    REQUEST_TIMEOUT: 3000000,
 
     // Maximum retry attempts for failed requests
     MAX_RETRY_ATTEMPTS: 3,
