@@ -190,9 +190,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabLoadingDropdowns, setTabLoadingDropdowns] = useState<Record<string, Record<string, boolean>>>({});
     const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
     const [tabsModal, setTabsModal] = useState<boolean>(false);
+    const [ editTabModalData, setEditTabModalData ] = useState<boolean>(false);
 
 
-    console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable)
+    console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData)
 
     console.log(pageData[0]?.Entry?.ChildEntry, 'entry page data');
 
@@ -1306,6 +1307,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
+    // Helper to generate unique id for table rows
+    const generateUniqueId = () => {
+        return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    };
+
+    // Get columns for current tab table (only those with isVisibleinTable === "true")
+    const getTabTableColumns = (tab) => {
+        if (!tab || !tab.Data) return [];
+        return tab.Data.filter(field => field.isVisibleinTable === "true").map(field => field.wKey);
+    };
+
     const resetTabsForm = () => {
         setTabsData([]);
         setActiveTabIndex(0);
@@ -1323,6 +1335,75 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     // In your component
     const dynamicColumns = getAllColumns(childEntriesTable);
+
+    const handleAddTabsFormTableRow = () => {
+        const currentTab = tabsData[activeTabIndex];
+        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabFormValues = tabFormValues[currentTabKey] || {};
+        // Validate current tab
+        const tabErrors = validateTabForm(currentTab, currentTabFormValues);
+        // Combine all errors
+        const allErrors = { ...tabErrors };
+        if (Object.keys(allErrors).length > 0) {
+            setFieldErrors(allErrors);
+            toast.error("Please fill all mandatory fields in the current tab before submitting.");
+            return;
+        }
+        // Add new row to tableData for current tab
+        const newRow = {
+            ...currentTabFormValues,
+            _id: generateUniqueId(),
+        };
+        setTabTableData(prev => ({
+            ...prev,
+            [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
+        }));
+
+        setTabsData(prevState => {
+            const newState = JSON.parse(JSON.stringify(prevState));
+
+            // Insert newData at insertIndex in the specified tab's tableData
+            newState[activeTabIndex].tableData.splice(activeTabIndex, 0, newRow);
+
+            return newState;
+        });
+        // Optionally clear form values for next entry
+        setTabFormValues(pre => ({
+            ...pre,
+            [currentTabKey]: {}
+        }));
+        setTabsModal(false); // Close modal after adding
+    };
+
+    const handleClearTabTableRowEntry = () => {
+        const currentTab = tabsData[activeTabIndex];
+        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabFormValues = tabFormValues[currentTabKey] || {};
+
+        // setTabsModal(false);
+        // setTabTableData(prev => ({
+        //     ...prev,
+        //     [activeTabIndex]: []
+        // }));
+
+        setTabFormValues(pre => ({
+            ...pre,
+            [currentTabKey]: {}
+        }))
+    }
+
+    const handleTabTableDataEdit = (row :any, idx :any) =>{
+        console.log("check row", row, idx);
+        setTabFormValues(pre => ({
+            ...pre, 
+            [`tab_${idx}`] : row  
+        }))
+        setTabsModal(true);
+        setEditTabModalData(true)
+    }
+    const handleTabTableDataDelete = () => {
+
+    }
 
     if (!isOpen) return null;
     return (
@@ -1425,7 +1506,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                                                             <div className="flex justify-between items-center mb-4">
                                                                 <h2 className="text-xl font-semibold">
-                                                                    Add Data
+                                                                    {editTabModalData ? 'Edit Data' : "Add Data"}
                                                                 </h2>
                                                                 <button
                                                                     onClick={() => setTabsModal(false)}
@@ -1434,7 +1515,20 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                     ✕
                                                                 </button>
                                                             </div>
-
+                                                            <div className='flex justify-end mb-2 gap-2'>
+                                                                <button
+                                                                    className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
+                                                                    onClick={handleClearTabTableRowEntry}
+                                                                >
+                                                                    cancel
+                                                                </button>
+                                                                <button
+                                                                    className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
+                                                                    onClick={handleAddTabsFormTableRow}
+                                                                >
+                                                                    Add
+                                                                </button>
+                                                            </div>
                                                             <EntryForm
                                                                 formData={tabsData[activeTabIndex].Data}
                                                                 formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
@@ -1497,13 +1591,50 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         setValidationModal={setValidationModal}
                                                     />
                                                 )}
-                                                {
-                                                    tabsData[activeTabIndex].Settings.isTable === "true" && (
-                                                        <>
-                                                            <h1>Table</h1>
-                                                        </>
-                                                    )
-                                                }
+                                                {tabsData[activeTabIndex]?.Settings?.isTable === "true" && (
+                                                    <div className="overflow-x-auto mt-4">
+                                                        <table className="min-w-full bg-white border border-gray-200">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th className="px-4 py-2 border-b">Actions</th>
+                                                                    {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
+                                                                        <th key={col} className="px-4 py-2 border-b capitalize">{col}</th>
+                                                                    ))}
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {(tabTableData[`tab_${activeTabIndex}`] || []).map((row, idx) => (
+                                                                    <tr key={row._id}>
+                                                                        <td className="px-4 py-2 border-b">
+                                                                            {/* Add Edit/Delete buttons here if needed */}
+                                                                            <div className="flex gap-2">
+                                                                                 <button
+                                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                onClick={() => {
+                                                                                    handleTabTableDataEdit(row,idx);
+                                                                                }}>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button
+                                                                                className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
+                                                                                onClick={() => {
+
+                                                                                }}
+                                                                            >
+                                                                                Delete
+                                                                            </button>
+                                                                            </div>
+                                                                           
+                                                                        </td>
+                                                                        {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
+                                                                            <td key={col} className="px-4 py-2 border-b">{row[col] ?? "-"}</td>
+                                                                        ))}
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
                                             </>
                                         )}
                                     </div>
