@@ -1100,6 +1100,8 @@ export const exportTableToPdf = async (
     currentLevel: any,
     mode: 'download' | 'email',
 ) => {
+    
+
     if (!allData || allData.length === 0) return;
 
     // if (mode === 'email') {
@@ -1124,6 +1126,8 @@ export const exportTableToPdf = async (
     const rightAlignedKeys: string[] = jsonData?.RightList?.[0] || [];
     const normalizedRightAlignedKeys = rightAlignedKeys.map(k => k.replace(/\s+/g, ''));
     const reportHeader = (jsonData?.ReportHeader?.[0] || '').replace(/\\n/g, '\n');
+    console.log(reportHeader,'reportHeaderreportHeader');
+    
     let fileTitle = 'Report';
     let dateRange = '';
     let clientName = '';
@@ -1132,19 +1136,31 @@ export const exportTableToPdf = async (
     if (reportHeader.includes('From Date')) {
         const [left, right] = reportHeader.split('From Date');
         fileTitle = left.trim();
-        const [range, clientLine] = right.split('\n');
-        dateRange = `From Date${range?.trim() ? ' ' + range.trim() : ''}`;
-
-        if (clientLine) {
-            const match = clientLine.trim().match(/^(.*)\((.*)\)$/);
-            if (match) {
-                clientName = match[1].trim();
-                clientCode = match[2].trim();
+    
+        if (right) {
+            // Handle \n or \\n in different inputs
+            const lineBreak = right.includes('\n') ? '\n' : right.includes('\\n') ? '\\n' : '';
+    
+            if (lineBreak) {
+                const [range, clientLine] = right.split(lineBreak);
+                dateRange = `From Date${range?.trim() ? ' ' + range.trim() : ''}`;
+    
+                if (clientLine) {
+                    const match = clientLine.trim().match(/^(.*)\((.*)\)$/);
+                    if (match) {
+                        clientName = match[1].trim();
+                        clientCode = match[2].trim();
+                    } else {
+                        clientName = clientLine.trim();
+                    }
+                }
             } else {
-                clientName = clientLine.trim();
+                // No \n, just date range in Ledger Report
+                dateRange = `From Date${right?.trim() ? ' ' + right.trim() : ''}`;
             }
         }
     }
+    
 
     const totals: Record<string, number> = {};
     totalColumns.forEach(col => (totals[col.key] = 0));
@@ -1234,7 +1250,14 @@ export const exportTableToPdf = async (
                         stack: [
                             { text: jsonData?.CompanyName?.[0] || '', style: 'header' },
                             { text: `${fileTitle} ${dateRange}`, style: 'subheader' },
-                            { text: `${clientName} (${clientCode})`, style: 'small' },
+                            {
+                                text: clientName
+                                    ? clientCode
+                                        ? `${clientName} (${clientCode})`
+                                        : clientName
+                                    : '',
+                                style: 'small'
+                            },
                         ],
                         alignment: 'center',
                         width: '*',
@@ -1242,6 +1265,10 @@ export const exportTableToPdf = async (
                     { text: '', width: 60 },
                 ]
             },
+            // Add dynamic space between logo and table
+            { text: '', margin: [0, logoImage ? 30 : 15, 0, 0] },
+    
+            // Table block
             {
                 style: 'tableStyle',
                 table: {
@@ -1277,8 +1304,8 @@ export const exportTableToPdf = async (
         },
         pageOrientation: 'landscape',
         pageSize: headers.length > 15 ? 'A3' : 'A4',
-
     };
+    
 
     if (mode === 'download') {
         pdfMake.createPdf(docDefinition).download(`${fileTitle}.pdf`);
@@ -1374,7 +1401,7 @@ export const downloadOption = async (
 
     const filterXml = buildFilterXml(filters, userId);
 
-    const xmlData1 = `
+    const xmlData1 = ` 
     <dsXml>
     <J_Ui>${JSON.stringify(pageData[0].levels[currentLevel].J_Ui).slice(1, -1)},"ReportDisplay":"D"</J_Ui>
     <Sql></Sql>
