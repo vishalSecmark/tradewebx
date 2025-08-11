@@ -280,14 +280,47 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         [HTMLDivElement | null, any, any, any[], any, any, any, 'download' | 'email']
     >();
     const [hasFetchAttempted, setHasFetchAttempted] = useState(false);
+    const [pageLoaded, setPageLoaded] = useState(false);
+    const [isPageLoaded, setIsPageLoaded] = useState(false);
 
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
     const [showValidationDetails, setShowValidationDetails] = useState(false);
 
+    // Add comprehensive cache for different filter combinations and levels
+    const [dataCache, setDataCache] = useState<Record<string, {
+        data: any[] | null;
+        additionalTables: Record<string, any[]>;
+        rs1Settings: any;
+        jsonData: any;
+        jsonDataUpdated: any;
+        responseTime: number | undefined;
+        timestamp: number;
+    }>>({});
+
+    // Function to generate cache key based on current state
+    const generateCacheKey = (level: number, filters: Record<string, any>, primaryFilters: Record<string, any>) => {
+        const filterString = JSON.stringify(filters);
+        const primaryFilterString = JSON.stringify(primaryFilters);
+        return `level_${level}_filters_${btoa(filterString)}_primary_${btoa(primaryFilterString)}`;
+    };
+
+    // Function to clean up old cache entries (keep last 10 entries)
+    const cleanupCache = (newCache: typeof dataCache) => {
+        const cacheEntries = Object.entries(newCache);
+        if (cacheEntries.length > 10) {
+            // Sort by timestamp and keep only the 10 most recent
+            const sortedEntries = cacheEntries.sort((a, b) => b[1].timestamp - a[1].timestamp);
+            return Object.fromEntries(sortedEntries.slice(0, 10));
+        }
+        return newCache;
+    };
+
     const tableRef = useRef<HTMLDivElement>(null);
     const { colors, fonts } = useTheme();
     const hasFetchedRef = useRef(false);
+    const ongoingRequestRef = useRef<string | null>(null); // Track ongoing API requests
+    const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // For debouncing
 
 
 
@@ -522,19 +555,32 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     // Add new useEffect to handle level changes and manual fetching
     useEffect(() => {
-        // If we're in a level > 0, we should always fetch data regardless of autoFetch
+        // Only run after page is loaded and when level or primary filters change
         if (pageLoaded) {
             if (currentLevel > 0) {
                 console.log('Fetching data for level:', currentLevel);
                 fetchData();
             }
-            // If we're in level 0 and autoFetch is true, fetch data
+            // For level 0, fetchData will handle cache checking internally
             else if (autoFetch) {
                 console.log('Auto-fetching data for level 0');
                 fetchData();
             }
         }
-    }, [currentLevel, autoFetch]);
+    }, [currentLevel, primaryKeyFilters, pageLoaded]); // Removed excessive dependencies
+
+    // Debounced fetch function to prevent rapid successive calls
+    const debouncedFetchData = (currentFilters = filters, delay = 100) => {
+        // Clear any existing timeout
+        if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+        }
+
+        // Set new timeout
+        fetchTimeoutRef.current = setTimeout(() => {
+            fetchData(currentFilters);
+        }, delay);
+    };
 
     const fetchData = async (currentFilters = filters) => {
         // Validate pageData before proceeding
@@ -550,6 +596,31 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             return;
         }
 
+        // Generate cache key for current request
+        const cacheKey = generateCacheKey(currentLevel, currentFilters, primaryKeyFilters);
+
+        // Check if we have cached data for this exact combination
+        if (dataCache[cacheKey]) {
+            console.log('Using cached data for:', cacheKey);
+            const cachedData = dataCache[cacheKey];
+            setApiData(cachedData.data);
+            setAdditionalTables(cachedData.additionalTables);
+            setRs1Settings(cachedData.rs1Settings);
+            setJsonData(cachedData.jsonData);
+            setJsonDataUpdated(cachedData.jsonDataUpdated);
+            setApiResponseTime(cachedData.responseTime);
+            setHasFetchAttempted(true);
+            return; // Exit early with cached data
+        }
+
+        // Check if there's already an ongoing request for this cache key
+        if (ongoingRequestRef.current === cacheKey) {
+            console.log('Request already in progress for:', cacheKey);
+            return; // Exit early to prevent duplicate requests
+        }
+
+        console.log('Making API call for:', cacheKey);
+        ongoingRequestRef.current = cacheKey; // Mark request as ongoing
         setIsLoading(true);
         setHasFetchAttempted(true);
         const startTime = performance.now();
@@ -625,17 +696,39 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setAdditionalTables(additionalTablesData);
 
             // Parse RS1 Settings if available
+            let parsedJsonData = null;
+            let parsedJsonUpdated = null;
+            let parsedRs1Settings = null;
+
             if (response.data.data.rs1?.[0]?.Settings) {
                 const xmlString = response.data.data.rs1[0].Settings;
-                const settingsJson = parseSettingsFromXml(xmlString)
+                parsedRs1Settings = parseSettingsFromXml(xmlString);
 
-                const json = convertXmlToJson(xmlString);
-                const jsonUpdated = await convertXmlToJsonUpdated(xmlString);
+                parsedJsonData = convertXmlToJson(xmlString);
+                parsedJsonUpdated = await convertXmlToJsonUpdated(xmlString);
 
-                setJsonData(json);
-                setJsonDataUpdated(jsonUpdated);
-                setRs1Settings(settingsJson);
+                setJsonData(parsedJsonData);
+                setJsonDataUpdated(parsedJsonUpdated);
+                setRs1Settings(parsedRs1Settings);
             }
+
+            // Cache data for future use with current filter combination
+            const cacheKey = generateCacheKey(currentLevel, currentFilters, primaryKeyFilters);
+            setDataCache(prevCache => {
+                const newCache = {
+                    ...prevCache,
+                    [cacheKey]: {
+                        data: dataWithId,
+                        additionalTables: additionalTablesData,
+                        rs1Settings: parsedRs1Settings,
+                        jsonData: parsedJsonData,
+                        jsonDataUpdated: parsedJsonUpdated,
+                        responseTime: Math.round(endTime - startTime),
+                        timestamp: Date.now()
+                    }
+                };
+                return cleanupCache(newCache);
+            });
 
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -645,6 +738,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             setApiResponseTime(undefined);
         } finally {
             setIsLoading(false);
+            ongoingRequestRef.current = null; // Clear ongoing request reference
         }
     };
 
@@ -680,23 +774,28 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
 
-    const [pageLoaded, setPageLoaded] = useState(false);
-    // Add useEffect to handle data fetching when level changes
+    // Simple useEffect to set pageLoaded after component mounts
     useEffect(() => {
-        // If we have page data, fetch for the current level
-        if (pageData && pageLoaded) {
-            // Add a small delay to ensure state updates are complete
-            const timer = setTimeout(() => {
-                fetchData();
-            }, 0);
-
-            return () => clearTimeout(timer);
-        }
-
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             setPageLoaded(true);
         }, 1000);
-    }, [currentLevel, primaryKeyFilters]);
+        const timer2 = setTimeout(() => {
+            setIsPageLoaded(true);
+        }, 5000);
+        return () => {
+            clearTimeout(timer);
+            clearTimeout(timer2);
+        };
+    }, []);
+
+    // Cleanup effect to clear any pending timeouts on unmount
+    useEffect(() => {
+        return () => {
+            if (fetchTimeoutRef.current) {
+                clearTimeout(fetchTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Auto-open filter modal when autoFetch is false and filterType is not "onPage"
     useEffect(() => {
@@ -706,7 +805,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             const hasFilters = pageData[0]?.filters?.length > 0;
 
             // Check if autoFetch is false and filterType is not "onPage" and has filters
-            if (autoFetchSetting === "false" && filterType !== "onPage" && hasFilters && !clientCode) {
+            if (autoFetchSetting === "false" && filterType !== "onPage" && hasFilters && !clientCode && !isPageLoaded) {
                 // Only auto-open if we haven't manually opened it yet
                 if (!isFilterModalOpen) {
                     setIsFilterModalOpen(true);
@@ -721,12 +820,32 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         const newStack = levelStack.slice(0, index + 1);
         setLevelStack(newStack);
 
-        // If going back to first level (index 0), clear primary key filters first
+        // If going back to first level (index 0), clear primary filters and check cache
         if (index === 0) {
-            setPrimaryKeyFilters({});
+            const newPrimaryFilters = {};
+            setPrimaryKeyFilters(newPrimaryFilters);
+
+            // Generate cache key for level 0 with current filters and empty primary filters
+            const cacheKey = generateCacheKey(level, filters, newPrimaryFilters);
+
+            // Restore cached data if available for this exact combination
+            if (dataCache[cacheKey]) {
+                console.log('Restoring cached data for first tab:', cacheKey);
+                const cachedData = dataCache[cacheKey];
+                setApiData(cachedData.data);
+                setAdditionalTables(cachedData.additionalTables);
+                setRs1Settings(cachedData.rs1Settings);
+                setJsonData(cachedData.jsonData);
+                setJsonDataUpdated(cachedData.jsonDataUpdated);
+                setApiResponseTime(cachedData.responseTime);
+
+                // Set the current level after restoring data
+                setCurrentLevel(level);
+                return; // Exit early to prevent data fetching
+            }
         }
 
-        // Set the current level after clearing filters
+        // Set the current level (this will trigger useEffect to fetch data if not cached)
         setCurrentLevel(level);
     };
 
@@ -734,7 +853,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const handleFilterChange = (newFilters: Record<string, any>) => {
         setFilters(newFilters);
         if (pageLoaded) {
-            fetchData(newFilters); // Call API with new filters
+            // Use debounced fetch to prevent rapid successive calls
+            debouncedFetchData(newFilters);
         }
     };
 
@@ -1061,7 +1181,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             <div className="relative group">
                                 <button
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                    onClick={() => fetchData()}
+                                    onClick={() => {
+                                        // Clear cache for current filter combination when manually refreshing
+                                        const cacheKey = generateCacheKey(currentLevel, filters, primaryKeyFilters);
+                                        setDataCache(prevCache => {
+                                            const newCache = { ...prevCache };
+                                            delete newCache[cacheKey];
+                                            return newCache;
+                                        });
+                                        fetchData();
+                                    }}
                                     style={{ color: colors.text }}
                                 >
                                     <FaSync size={20} />
@@ -1433,7 +1562,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             <div className="relative group">
                                 <button
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                    onClick={() => fetchData()}
+                                    onClick={() => {
+                                        // Clear cache for current filter combination when manually refreshing
+                                        const cacheKey = generateCacheKey(currentLevel, filters, primaryKeyFilters);
+                                        setDataCache(prevCache => {
+                                            const newCache = { ...prevCache };
+                                            delete newCache[cacheKey];
+                                            return newCache;
+                                        });
+                                        fetchData();
+                                    }}
                                     style={{ color: colors.text }}
                                 >
                                     <FaSync size={20} />
