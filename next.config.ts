@@ -12,24 +12,20 @@ const nextConfig: NextConfig = {
 
   // Security headers configuration
   async headers() {
-    // Generate CSP policy based on development mode
-    const isDevMode = isDevelopmentMode();
-
+    // Generate CSP policy that allows both HTTP and HTTPS
     const cspPolicy = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-      "img-src 'self' data: https: blob:",
+      "img-src 'self' data: http: https: blob:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      // Allow HTTP connections in development mode
-      isDevMode ? "connect-src 'self' http: https: wss:" : "connect-src 'self' https: wss:",
-      "media-src 'self' https:",
+      "connect-src 'self' http: https: wss:",
+      "media-src 'self' http: https:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'none'",
-      // Only add upgrade-insecure-requests if not in development mode
-      ...(isDevMode ? [] : ["upgrade-insecure-requests"])
+      "frame-ancestors 'none'"
+      // No upgrade-insecure-requests to allow HTTP
     ].join('; ');
 
     return [
@@ -107,12 +103,8 @@ const nextConfig: NextConfig = {
           {
             key: 'X-Permitted-Cross-Domain-Policies',
             value: 'none'
-          },
-          // HTTP Strict Transport Security (only in production and not in development mode)
-          ...(process.env.NODE_ENV === 'production' && !isDevMode ? [{
-            key: 'Strict-Transport-Security',
-            value: 'max-age=31536000; includeSubDomains; preload'
-          }] : [])
+          }
+          // Removed HSTS header to allow HTTP
         ]
       }
     ];

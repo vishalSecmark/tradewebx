@@ -451,22 +451,7 @@ export default function SignInForm() {
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
 
-    // Check if development mode is enabled
-    const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
-
-    // Security: Check for HTTPS in production (allow localhost and testing URLs)
-    // Skip HTTPS check if development mode is enabled
-    if (!isDevMode && typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
-      const hostname = window.location.hostname;
-
-      if (!isAllowedHttpHost(hostname)) {
-        setError('Security Error: HTTPS required for login');
-        dispatch(setAuthError('Security Error: HTTPS required for login'));
-        setIsLoading(false);
-        dispatch(setLoading(false));
-        return;
-      }
-    }
+    // HTTPS enforcement removed - HTTP is now allowed for all hosts
 
     // Security: Rate limiting check
     const loginAttempts = localStorage.getItem('login_attempts') || '0';

@@ -179,20 +179,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   // Perform additional security checks
   const performSecurityChecks = async () => {
     try {
-      // Check if development mode is enabled
-      const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
-
-      // Check for HTTPS in production (allow localhost and testing URLs)
-      // Skip HTTPS check if development mode is enabled
-      if (!isDevMode && typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
-        const hostname = window.location.hostname;
-
-        if (!isAllowedHttpHost(hostname)) {
-          console.error('Security Warning: Application must run on HTTPS in production');
-          toast.error('Security Error: HTTPS required');
-          return false;
-        }
-      }
+      // HTTPS enforcement removed - HTTP is now allowed for all hosts
 
       // Check for localStorage tampering
       const authToken = localStorage.getItem('auth_token');
