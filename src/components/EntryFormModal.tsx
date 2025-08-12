@@ -678,7 +678,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         if (fieldIndex >= 0) {
                             newFormData[fieldIndex] = {
                                 ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
                             };
                         }
                     });
@@ -828,7 +828,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         if (fieldIndex >= 0) {
                             newFormData[fieldIndex] = {
                                 ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
                             };
                         }
                     });
