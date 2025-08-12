@@ -688,7 +688,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     const newValues = { ...prevValues };
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
-                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                             if(update.tagValue === "true" || update.tagValue === "false"){
+                                newValues[update.fieldKey] =  newValues[update.fieldKey];
+                            }else{
+                                newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            }
                         }
                     });
                     return newValues;
@@ -836,9 +840,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 });
                 setChildFormValues(prevValues => {
                     const newValues = { ...prevValues };
+                    console.log("check new values", allUpdates)
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
-                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            if(update.tagValue === "true" || update.tagValue === "false"){
+                                newValues[update.fieldKey] =  newValues[update.fieldKey];
+                            }else{
+                                newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            }
                         }
                     });
                     return newValues;
