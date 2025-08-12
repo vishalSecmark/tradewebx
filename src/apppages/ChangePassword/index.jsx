@@ -97,8 +97,9 @@ export default function ChangePassword() {
                     localStorage.clear();
 
                     // Redirect to sign-in page after a short delay
+                    // Next.js basePath config handles the base path automatically
                     setTimeout(() => {
-                        window.location.href = `${BASE_PATH_FRONT_END}/signin`;
+                        window.location.href = '/signin';
                     }, 2000);
                 } else {
                     setError(result.Message);

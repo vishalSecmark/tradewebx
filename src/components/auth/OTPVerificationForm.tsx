@@ -229,7 +229,7 @@ export default function OTPVerificationForm() {
         <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 px-3 py-1.5 rounded-full shadow-sm">
           <span className="text-gray-500 dark:text-gray-400" style={{ fontSize: '11px' }}>Powered By:</span>
           <a href="https://www.secmark.in" target="_blank" rel="noopener noreferrer" className="transition hover:opacity-80">
-            <Image src={BASE_PATH_FRONT_END + "/images/secmarklogo.png"} alt="Tradesoft" width={90} height={90} />
+            <Image src="/images/secmarklogo.png" alt="Tradesoft" width={90} height={90} />
           </a>
         </div>
       </div>

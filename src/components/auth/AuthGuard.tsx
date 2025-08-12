@@ -32,7 +32,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
         // If user is not authenticated and trying to access protected route
         if (!authToken && !isAuthPage) {
-          const signInUrl = `${BASE_PATH_FRONT_END}/signin`;
+          // Next.js basePath config handles the base path automatically
+          const signInUrl = '/signin';
           // Only redirect if we're not already on the signin page
           if (pathname !== '/signin') {
             router.replace(signInUrl);
@@ -44,7 +45,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
         // If user is authenticated and trying to access auth pages
         if (authToken && isAuthPage) {
-          const dashboardUrl = `${BASE_PATH_FRONT_END}/dashboard`;
+          // Next.js basePath config handles the base path automatically
+          const dashboardUrl = '/dashboard';
           // Only redirect if we're not already on the dashboard
           if (pathname !== '/dashboard') {
             router.replace(dashboardUrl);
@@ -70,7 +72,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
               clearAllAuthData();
 
               toast.error('Session expired. Please login again.');
-              const signInUrl = `${BASE_PATH_FRONT_END}/signin`;
+              // Next.js basePath config handles the base path automatically
+              const signInUrl = '/signin';
               router.replace(signInUrl);
               setIsChecking(false);
               setIsAuthenticated(false);
@@ -108,7 +111,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         clearAllAuthData();
 
         toast.error('Authentication error. Please login again.');
-        router.replace(`${BASE_PATH_FRONT_END}/signin`);
+        // Next.js basePath config handles the base path automatically
+        router.replace('/signin');
         setIsChecking(false);
         setIsAuthenticated(false);
       }
@@ -133,7 +137,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             console.log('Periodic check: Token expired - clearing all authentication data');
             clearAllAuthData();
             toast.error('Session expired. Please login again.');
-            router.replace(`${BASE_PATH_FRONT_END}/signin`);
+            // Next.js basePath config handles the base path automatically
+            router.replace('/signin');
           }
         }
       }, 5 * 60 * 1000); // 5 minutes
@@ -163,7 +168,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             console.log('Visibility change: Token expired - clearing all authentication data');
             clearAllAuthData();
             toast.error('Session expired. Please login again.');
-            router.replace(`${BASE_PATH_FRONT_END}/signin`);
+            // Next.js basePath config handles the base path automatically
+            router.replace('/signin');
           }
         }
       }
