@@ -651,6 +651,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fieldKey: string;
                 isDisabled: boolean;
                 tagValue: string;
+                flag?: string;
             }> = [];
 
             // Process each field's validation
@@ -673,13 +674,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (isEditData && !isViewMode) {
                 setMasterFormData(() => {
                     const newFormData = [...formData];
+                    console.log("check updates", allUpdates);
                     allUpdates.forEach(update => {
                         const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                         if (fieldIndex >= 0) {
-                            newFormData[fieldIndex] = {
-                                ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
-                            };
+                            if (update.flag !== "D") {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
+                                };
+                            } else {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                };
+                            }
+
                         }
                     });
                     return newFormData;
@@ -688,9 +698,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     const newValues = { ...prevValues };
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
-                             if(update.tagValue === "true" || update.tagValue === "false"){
-                                newValues[update.fieldKey] =  newValues[update.fieldKey];
-                            }else{
+                            if (update.tagValue === "true" || update.tagValue === "false") {
+                                newValues[update.fieldKey] = newValues[update.fieldKey];
+                            } else {
                                 newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
                             }
                         }
@@ -804,6 +814,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fieldKey: string;
                 isDisabled: boolean;
                 tagValue: string;
+                flag?: string;
             }> = [];
 
             console.log("check all updates", allUpdates);
@@ -827,13 +838,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 // Apply all updates at once
                 setChildFormData(() => {
                     const newFormData = [...formData];
+                    console.log("check updates", allUpdates);
                     allUpdates.forEach(update => {
                         const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                         if (fieldIndex >= 0) {
-                            newFormData[fieldIndex] = {
-                                ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
-                            };
+                            if (update.flag !== "D") {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
+                                };
+                            } else {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                };
+                            }
                         }
                     });
                     return newFormData;
@@ -843,9 +862,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     console.log("check new values", allUpdates)
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
-                            if(update.tagValue === "true" || update.tagValue === "false"){
-                                newValues[update.fieldKey] =  newValues[update.fieldKey];
-                            }else{
+                            if (update.tagValue === "true" || update.tagValue === "false") {
+                                newValues[update.fieldKey] = newValues[update.fieldKey];
+                            } else {
                                 newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
                             }
                         }

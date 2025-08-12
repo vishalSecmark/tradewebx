@@ -11,6 +11,7 @@ export const handleValidationForDisabledField = async (
         fieldKey: string;
         isDisabled: boolean;
         tagValue: string;
+        flag?: string;
     }>) => void,
 ) => {
     if (!field.ValidationAPI || !field.ValidationAPI.dsXml) return;
@@ -99,7 +100,8 @@ export const handleValidationForDisabledField = async (
             return {
                 fieldKey: tagName,
                 isDisabled,
-                tagValue
+                tagValue,
+                flag
             };
         });
 
