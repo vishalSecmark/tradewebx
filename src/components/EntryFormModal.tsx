@@ -684,6 +684,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     });
                     return newFormData;
                 });
+                setMasterFormValues(prevValues => {
+                    const newValues = { ...prevValues };
+                    allUpdates.forEach(update => {
+                        if (update.fieldKey in newValues) {
+                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                        }
+                    });
+                    return newValues;
+                });
             } else {
                 setMasterFormData(formData)
             }
@@ -824,6 +833,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         }
                     });
                     return newFormData;
+                });
+                setChildFormValues(prevValues => {
+                    const newValues = { ...prevValues };
+                    allUpdates.forEach(update => {
+                        if (update.fieldKey in newValues) {
+                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                        }
+                    });
+                    return newValues;
                 });
             } else {
                 setChildFormData(formData)
@@ -1130,7 +1148,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 toast.success('Form submitted successfully!');
                 setIsFormSubmit(false);
                 resetParentForm();
-                if(response?.data?.message){
+                if (response?.data?.message) {
                     const messageTxtPresent = response?.data?.message
                     toast.success(messageTxtPresent)
                 }
