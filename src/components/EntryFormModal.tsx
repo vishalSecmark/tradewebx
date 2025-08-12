@@ -190,10 +190,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabLoadingDropdowns, setTabLoadingDropdowns] = useState<Record<string, Record<string, boolean>>>({});
     const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
     const [tabsModal, setTabsModal] = useState<boolean>(false);
-    const [ editTabModalData, setEditTabModalData ] = useState<boolean>(false);
+    const [editTabModalData, setEditTabModalData] = useState<boolean>(false);
+    const [editTabRowIndex, setEditTabRowIndex] = useState(null);
 
 
-    console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData)
+    console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
 
     console.log(pageData[0]?.Entry?.ChildEntry, 'entry page data');
 
@@ -675,18 +676,29 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 })
             );
             if (isEditData && !isViewMode) {
+                console.log("check all updates===>", allUpdates);
                 setMasterFormData(() => {
                     const newFormData = [...formData];
                     allUpdates.forEach(update => {
                         const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                         if (fieldIndex >= 0) {
+                            console.log("check all updates===>", update, newFormData[fieldIndex]);
                             newFormData[fieldIndex] = {
                                 ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag,
                             };
                         }
                     });
                     return newFormData;
+                });
+                setMasterFormValues(prevValues => {
+                    const newValues = { ...prevValues };
+                    allUpdates.forEach(update => {
+                        if (update.fieldKey in newValues) {
+                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                        }
+                    });
+                    return newValues;
                 });
             } else {
                 setMasterFormData(formData)
@@ -828,6 +840,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         }
                     });
                     return newFormData;
+                });
+                setChildFormValues(prevValues => {
+                    const newValues = { ...prevValues };
+                    allUpdates.forEach(update => {
+                        if (update.fieldKey in newValues) {
+                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                        }
+                    });
+                    return newValues;
                 });
             } else {
                 setChildFormData(formData)
@@ -1134,7 +1155,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 toast.success('Form submitted successfully!');
                 setIsFormSubmit(false);
                 resetParentForm();
-                if(response?.data?.message){
+                if (response?.data?.message) {
                     const messageTxtPresent = response?.data?.message
                     toast.success(messageTxtPresent)
                 }
@@ -1340,6 +1361,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     // In your component
     const dynamicColumns = getAllColumns(childEntriesTable);
 
+    const handleTabTableDataEdit = (row: any, idx: any) => {
+        setTabFormValues(pre => ({
+            ...pre,
+            [`tab_${activeTabIndex}`]: row
+        }))
+        setTabsModal(true);
+        setEditTabModalData(true);
+        setEditTabRowIndex(idx);
+    }
     const handleAddTabsFormTableRow = () => {
         const currentTab = tabsData[activeTabIndex];
         const currentTabKey = `tab_${activeTabIndex}`;
@@ -1353,31 +1383,44 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             toast.error("Please fill all mandatory fields in the current tab before submitting.");
             return;
         }
-        // Add new row to tableData for current tab
-        const newRow = {
-            ...currentTabFormValues,
-            _id: generateUniqueId(),
-        };
-        setTabTableData(prev => ({
-            ...prev,
-            [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
-        }));
-
-        setTabsData(prevState => {
-            const newState = JSON.parse(JSON.stringify(prevState));
-
-            // Insert newData at insertIndex in the specified tab's tableData
-            newState[activeTabIndex].tableData.splice(activeTabIndex, 0, newRow);
-
-            return newState;
-        });
+        if (editTabModalData && editTabRowIndex !== null) {
+            // Update existing row in tabTableData
+            setTabTableData(prev => ({
+                ...prev,
+                [currentTabKey]: prev[currentTabKey].map((row, idx) => idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row)
+            }));
+            // Update existing row in tabsData
+            setTabsData(prevTabs => {
+                const newTabs = [...prevTabs];
+                newTabs[activeTabIndex].tableData = newTabs[activeTabIndex].tableData.map((row, idx) => idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row);
+                return newTabs;
+            });
+        } else {
+            // Add new row
+            const newRow = {
+                ...currentTabFormValues,
+                _id: generateUniqueId(),
+            };
+            setTabTableData(prev => ({
+                ...prev,
+                [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
+            }));
+            setTabsData(prevTabs => {
+                const newTabs = [...prevTabs];
+                newTabs[activeTabIndex].tableData = [...(newTabs[activeTabIndex].tableData || []), newRow];
+                return newTabs;
+            });
+        }
+        // Reset edit state
+        setEditTabModalData(false);
+        setEditTabRowIndex(null);
         // Optionally clear form values for next entry
         setTabFormValues(pre => ({
             ...pre,
             [currentTabKey]: {}
         }));
-        setTabsModal(false); // Close modal after adding
-    };
+        setTabsModal(false); // Close modal after adding/editing
+    }
 
     const handleClearTabTableRowEntry = () => {
         const currentTab = tabsData[activeTabIndex];
@@ -1396,17 +1439,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }))
     }
 
-    const handleTabTableDataEdit = (row :any, idx :any) =>{
-        console.log("check row", row, idx);
-        setTabFormValues(pre => ({
-            ...pre, 
-            [`tab_${idx}`] : row  
-        }))
-        setTabsModal(true);
-        setEditTabModalData(true)
-    }
-    const handleTabTableDataDelete = () => {
-
+    const handleTabTableDataDelete = (idx) => {
+        const currentTabKey = `tab_${activeTabIndex}`;
+        setTabTableData(prev => ({
+            ...prev,
+            [currentTabKey]: prev[currentTabKey].filter((_, i) => i !== idx)
+        }));
+        setTabsData(prevTabs => {
+            const newTabs = [...prevTabs];
+            newTabs[activeTabIndex].tableData = newTabs[activeTabIndex].tableData.filter((_, i) => i !== idx);
+            return newTabs;
+        });
     }
 
     if (!isOpen) return null;
@@ -1612,23 +1655,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         <td className="px-4 py-2 border-b">
                                                                             {/* Add Edit/Delete buttons here if needed */}
                                                                             <div className="flex gap-2">
-                                                                                 <button
-                                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                onClick={() => {
-                                                                                    handleTabTableDataEdit(row,idx);
-                                                                                }}>
-                                                                                Edit
-                                                                            </button>
-                                                                            <button
-                                                                                className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
-                                                                                onClick={() => {
-
-                                                                                }}
-                                                                            >
-                                                                                Delete
-                                                                            </button>
+                                                                                <button
+                                                                                    className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                    onClick={() => {
+                                                                                        handleTabTableDataEdit(row, idx);
+                                                                                    }}>
+                                                                                    Edit
+                                                                                </button>
+                                                                                <button
+                                                                                    className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
+                                                                                    onClick={() => handleTabTableDataDelete(idx)}
+                                                                                >
+                                                                                    Delete
+                                                                                </button>
                                                                             </div>
-                                                                           
+
                                                                         </td>
                                                                         {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
                                                                             <td key={col} className="px-4 py-2 border-b">{row[col] ?? "-"}</td>
