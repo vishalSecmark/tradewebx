@@ -37,8 +37,8 @@ api.interceptors.request.use(
 export const logout = () => {
   // Clear all authentication data
   clearAllAuthData();
-  // Redirect to login page
-  window.location.href = `${BASE_PATH_FRONT_END}/signin`;
+  // Redirect to login page - Next.js basePath config handles the base path automatically
+  window.location.href = '/signin';
 };
 
 export const isAuthenticated = () => {

@@ -55,20 +55,8 @@ class ApiService {
 
     // Setup security checks
     private setupSecurityChecks(): void {
-        // Check if development mode is enabled
-        const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
-
-        // Check if running on HTTPS in production (allow localhost and testing URLs)
-        // Skip HTTPS check if development mode is enabled
-        if (!isDevMode && typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
-            const hostname = window.location.hostname;
-
-            if (!isAllowedHttpHost(hostname)) {
-                console.error('Security Warning: Application must run on HTTPS in production');
-                toast.error('Security Error: HTTPS required');
-            }
-        }
-
+        // HTTPS enforcement removed - HTTP is now allowed for all hosts
+        
         // Prevent localStorage tampering detection
         this.setupLocalStorageProtection();
     }

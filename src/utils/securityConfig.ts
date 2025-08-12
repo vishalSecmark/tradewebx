@@ -16,19 +16,15 @@ export const SECURITY_CONFIG = {
     // Maximum retry attempts for failed requests
     MAX_RETRY_ATTEMPTS: 3,
 
-    // Force HTTPS in production
-    FORCE_HTTPS: process.env.NODE_ENV === 'production',
+    // Allow both HTTP and HTTPS - no forced HTTPS
+    FORCE_HTTPS: false,
 
-    // Allowed hosts that can run without HTTPS (for development and testing)
-    // In development mode, all localhost variants are allowed
-    // In production, only specific domains should be added here
-    ALLOWED_HTTP_HOSTS: isDevelopmentMode() ? [
+    // Allowed hosts that can run without HTTPS (all hosts are now allowed)
+    ALLOWED_HTTP_HOSTS: [
         'localhost',
         '127.0.0.1',
-        '0.0.0.0'
-    ] : [
-        // Add production-specific domains here if needed
-        // Example: 'api.yourdomain.com'
+        '0.0.0.0',
+        // Add any other domains you want to support
     ],
 
     // Rate limiting configuration
@@ -45,18 +41,18 @@ export const SECURITY_CONFIG = {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-            "img-src 'self' data: https: blob:",
+            "img-src 'self' data: http: https: blob:",
             "font-src 'self' data: https://fonts.gstatic.com",
-            "connect-src 'self' https: wss:",
-            "media-src 'self' https:",
+            "connect-src 'self' http: https: wss:",
+            "media-src 'self' http: https:",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",
-            "frame-ancestors 'none'",
-            "upgrade-insecure-requests"
+            "frame-ancestors 'none'"
+            // Removed upgrade-insecure-requests to allow HTTP
         ].join('; '),
 
-        // HTTP Strict Transport Security - Forces HTTPS connections
+        // HTTP Strict Transport Security - Not enforced (allows HTTP)
         HSTS_MAX_AGE: '31536000', // 1 year
         HSTS_INCLUDE_SUBDOMAINS: true,
         HSTS_PRELOAD: true,
@@ -119,18 +115,8 @@ export const SECURITY_CONFIG = {
 
 // Helper function to check if a hostname is allowed to run without HTTPS
 export function isAllowedHttpHost(hostname: string): boolean {
-    // If development mode is enabled, allow all URLs
-    if (isDevelopmentMode()) {
-        return true;
-    }
-
-    return SECURITY_CONFIG.ALLOWED_HTTP_HOSTS.some(host => {
-        if (host.startsWith('.')) {
-            // Handle wildcard subdomains
-            return hostname === host.slice(1) || hostname.endsWith(host);
-        }
-        return hostname === host;
-    });
+    // All hosts are now allowed to use HTTP
+    return true;
 }
 
 // Helper function to check if we're in development mode
@@ -147,38 +133,26 @@ export function isDevelopmentEnvironment(): boolean {
 
 // Helper function to check if HTTPS is required for current environment
 export function isHttpsRequired(hostname: string): boolean {
-    // If development mode is enabled, HTTPS is not required
-    if (isDevelopmentMode()) {
-        return false;
-    }
-
-    if (!SECURITY_CONFIG.FORCE_HTTPS) {
-        return false; // HTTPS not required in development
-    }
-
-    return !isAllowedHttpHost(hostname);
+    // HTTPS is never required - HTTP is always allowed
+    return false;
 }
 
 // Helper function to get security headers
 export function getSecurityHeaders(): Record<string, string> {
-    // Generate CSP policy based on development mode
-    const isDevMode = isDevelopmentMode();
-
+    // Generate CSP policy that allows both HTTP and HTTPS
     const cspPolicy = [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
-        "img-src 'self' data: https: blob:",
+        "img-src 'self' data: http: https: blob:",
         "font-src 'self' data: https://fonts.gstatic.com",
-        // Allow HTTP connections in development mode
-        isDevMode ? "connect-src 'self' http: https: wss:" : "connect-src 'self' https: wss:",
-        "media-src 'self' https:",
+        "connect-src 'self' http: https: wss:",
+        "media-src 'self' http: https:",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
-        "frame-ancestors 'none'",
-        // Only add upgrade-insecure-requests if not in development mode
-        ...(isDevMode ? [] : ["upgrade-insecure-requests"])
+        "frame-ancestors 'none'"
+        // No upgrade-insecure-requests to allow HTTP
     ].join('; ');
 
     return {
@@ -213,26 +187,8 @@ export function getSecurityHeaders(): Record<string, string> {
 
 // Helper function to get HSTS header (only for HTTPS)
 export function getHstsHeader(): string | null {
-    // If development mode is enabled, don't set HSTS header
-    if (isDevelopmentMode()) {
-        return null;
-    }
-
-    if (!SECURITY_CONFIG.FORCE_HTTPS) {
-        return null;
-    }
-
-    const hstsParts = [`max-age=${SECURITY_CONFIG.SECURITY_HEADERS.HSTS_MAX_AGE}`];
-
-    if (SECURITY_CONFIG.SECURITY_HEADERS.HSTS_INCLUDE_SUBDOMAINS) {
-        hstsParts.push('includeSubDomains');
-    }
-
-    if (SECURITY_CONFIG.SECURITY_HEADERS.HSTS_PRELOAD) {
-        hstsParts.push('preload');
-    }
-
-    return hstsParts.join('; ');
+    // HSTS is not enforced - HTTP is allowed
+    return null;
 }
 
 // Environment-specific configuration
@@ -240,13 +196,13 @@ export const ENV_CONFIG = {
     // Development environment settings
     development: {
         FORCE_HTTPS: false,
-        ALLOWED_HTTP_HOSTS: isDevelopmentMode() ? ['localhost', '127.0.0.1', '0.0.0.0'] : [],
+        ALLOWED_HTTP_HOSTS: ['localhost', '127.0.0.1', '0.0.0.0'],
         DEBUG_MODE: true,
     },
 
     // Production environment settings
     production: {
-        FORCE_HTTPS: true,
+        FORCE_HTTPS: false, // Changed from true to false
         ALLOWED_HTTP_HOSTS: SECURITY_CONFIG.ALLOWED_HTTP_HOSTS,
         DEBUG_MODE: false,
     },
@@ -254,7 +210,7 @@ export const ENV_CONFIG = {
     // Test environment settings
     test: {
         FORCE_HTTPS: false,
-        ALLOWED_HTTP_HOSTS: isDevelopmentMode() ? ['localhost', '127.0.0.1'] : [],
+        ALLOWED_HTTP_HOSTS: ['localhost', '127.0.0.1'],
         DEBUG_MODE: true,
     },
 };

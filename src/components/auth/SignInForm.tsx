@@ -451,22 +451,7 @@ export default function SignInForm() {
     dispatch(setLoading(true));
     dispatch(setAuthError(null));
 
-    // Check if development mode is enabled
-    const isDevMode = process.env.NEXT_DEVELOPMENT_MODE === 'true';
-
-    // Security: Check for HTTPS in production (allow localhost and testing URLs)
-    // Skip HTTPS check if development mode is enabled
-    if (!isDevMode && typeof window !== 'undefined' && window.location.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
-      const hostname = window.location.hostname;
-
-      if (!isAllowedHttpHost(hostname)) {
-        setError('Security Error: HTTPS required for login');
-        dispatch(setAuthError('Security Error: HTTPS required for login'));
-        setIsLoading(false);
-        dispatch(setLoading(false));
-        return;
-      }
-    }
+    // HTTPS enforcement removed - HTTP is now allowed for all hosts
 
     // Security: Rate limiting check
     const loginAttempts = localStorage.getItem('login_attempts') || '0';
@@ -651,7 +636,8 @@ export default function SignInForm() {
   useEffect(() => {
     if (searchParams.get('clearLocalStorage') === 'true') {
       localStorage.clear();
-      router.replace(`${BASE_PATH_FRONT_END}/signin`);
+      // Next.js basePath config handles the base path automatically
+      router.replace('/signin');
     }
   }, [searchParams]);
 
@@ -767,7 +753,7 @@ export default function SignInForm() {
         <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 px-3 py-1.5 rounded-full shadow-sm">
           <span className="text-gray-500 dark:text-gray-400" style={{ fontSize: '11px' }}>Powered By:</span>
           <a href="https://www.secmark.in" target="_blank" rel="noopener noreferrer" className="transition hover:opacity-80">
-            <Image src={BASE_PATH_FRONT_END + "/images/secmarklogo.png"} alt="Tradesoft" width={90} height={90} />
+            <Image src="/images/secmarklogo.png" alt="Tradesoft" width={90} height={90} />
           </a>
         </div>
       </div>
