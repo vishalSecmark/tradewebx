@@ -34,7 +34,7 @@ const EyeCloseIcon = () => (
     />
   </svg>
 );
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
@@ -46,7 +46,7 @@ import { clearAuthStorage } from '@/utils/auth';
 import Link from "next/link";
 import CryptoJS from 'crypto-js';
 import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
-import CaptchaComponent from './CaptchaComponent';
+import CaptchaComponent, { CaptchaComponentRef } from './CaptchaComponent';
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -238,6 +238,7 @@ export default function SignInForm() {
   const [isUpdating, setIsUpdating] = useState(false); // Loading state for update button
   const [currentUserType, setCurrentUserType] = useState<string>(""); // Store user type from login response
   const [isCaptchaValid, setIsCaptchaValid] = useState(false); // CAPTCHA validation state
+  const captchaRef = useRef<CaptchaComponentRef>(null); // Reference to CAPTCHA component
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
@@ -611,6 +612,16 @@ export default function SignInForm() {
       } else {
         dispatch(setAuthError(data.message || 'Login failed'));
         setError(data.message || 'Login failed');
+
+        // Refresh CAPTCHA on login failure
+        console.log('Login failed, checking CAPTCHA refresh conditions:', {
+          ENABLE_CAPTCHA,
+          hasCaptchaRef: !!captchaRef.current
+        });
+        if (ENABLE_CAPTCHA && captchaRef.current) {
+          console.log('Refreshing CAPTCHA after login failure');
+          captchaRef.current.refreshCaptcha();
+        }
       }
     } catch (err) {
       console.log(err);
@@ -620,6 +631,16 @@ export default function SignInForm() {
 
       dispatch(setAuthError(errorMessage));
       setError(errorMessage);
+
+      // Refresh CAPTCHA on login error
+      console.log('Login error, checking CAPTCHA refresh conditions:', {
+        ENABLE_CAPTCHA,
+        hasCaptchaRef: !!captchaRef.current
+      });
+      if (ENABLE_CAPTCHA && captchaRef.current) {
+        console.log('Refreshing CAPTCHA after login error');
+        captchaRef.current.refreshCaptcha();
+      }
     } finally {
       dispatch(setLoading(false));
       setIsLoading(false);
@@ -711,6 +732,7 @@ export default function SignInForm() {
 
             {ENABLE_CAPTCHA && (
               <CaptchaComponent
+                ref={captchaRef}
                 onCaptchaChange={setIsCaptchaValid}
                 className="mt-4"
               />

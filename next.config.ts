@@ -125,15 +125,7 @@ const nextConfig: NextConfig = {
     });
     return config;
   },
-  redirects: process.env.NEXT_PUBLIC_BASE_PATH ? async () => {
-    return [
-      {
-        source: "/",
-        destination: process.env.NEXT_PUBLIC_BASE_PATH || "",
-        permanent: true, // Set to true for a 308 redirect, false for a 307 redirect
-      },
-    ];
-  } : undefined,
+  // Note: basePath automatically handles routing, no need for manual redirects
 };
 
 export default nextConfig;

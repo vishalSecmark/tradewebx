@@ -49,6 +49,56 @@ interface FormCreatorProps {
     isHorizontal?: boolean;
 }
 
+// Global cache for dropdown options to prevent redundant API calls
+const dropdownCache = new Map<string, {
+    options: any[];
+    timestamp: number;
+    expiry: number; // 5 minutes
+}>();
+
+// Helper functions for cache management
+const generateCacheKey = (item: FormElement, parentValue?: string | Record<string, any>) => {
+    if (parentValue) {
+        // For dependent dropdowns
+        const parentStr = typeof parentValue === 'object'
+            ? JSON.stringify(parentValue)
+            : parentValue;
+        return `${item.wKey}_${btoa(parentStr)}_${JSON.stringify(item.dependsOn)}`;
+    }
+    // For regular dropdowns
+    return `${item.wKey}_${JSON.stringify(item.wQuery)}`;
+};
+
+const getCachedOptions = (cacheKey: string) => {
+    const cached = dropdownCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < cached.expiry) {
+        return cached.options;
+    }
+    // Remove expired cache
+    if (cached) {
+        dropdownCache.delete(cacheKey);
+    }
+    return null;
+};
+
+const setCachedOptions = (cacheKey: string, options: any[]) => {
+    dropdownCache.set(cacheKey, {
+        options,
+        timestamp: Date.now(),
+        expiry: 5 * 60 * 1000 // 5 minutes
+    });
+
+    // Cleanup old cache entries if map gets too large
+    if (dropdownCache.size > 50) {
+        const now = Date.now();
+        for (const [key, value] of dropdownCache.entries()) {
+            if (now - value.timestamp > value.expiry) {
+                dropdownCache.delete(key);
+            }
+        }
+    }
+};
+
 const FormCreator: React.FC<FormCreatorProps> = ({
     formData,
     onFilterChange,
@@ -172,19 +222,30 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         // Reset everything when initialValues changes
         setFormValues(initialValues);
 
-        // Reset all dropdown options
-        setDropdownOptions({});
-
         // Reset loading states
         setLoadingDropdowns({});
 
-        // Re-fetch dropdown options if needed
+        // Load dropdown options (check cache first)
         if (sortedFormData) {
+            const currentDropdownOptions: Record<string, any[]> = {};
+
             sortedFormData.flat().forEach(item => {
                 if (item.type === 'WDropDownBox' && !item.options && item.wQuery) {
-                    fetchDropdownOptions(item);
+                    const cacheKey = generateCacheKey(item);
+                    const cachedOptions = getCachedOptions(cacheKey);
+
+                    if (cachedOptions) {
+                        // Use cached options
+                        currentDropdownOptions[item.wKey as string] = cachedOptions;
+                    } else {
+                        // Fetch fresh options
+                        fetchDropdownOptions(item);
+                    }
                 }
             });
+
+            // Set cached options immediately
+            setDropdownOptions(currentDropdownOptions);
         }
     }, [initialValues, sortedFormData]);
 
@@ -327,11 +388,26 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const fetchDropdownOptions = async (item: FormElement) => {
         try {
+            // Generate cache key
+            const cacheKey = generateCacheKey(item);
+
+            // Check cache first
+            const cachedOptions = getCachedOptions(cacheKey);
+            if (cachedOptions) {
+                console.log('Using cached dropdown options for:', item.wKey);
+                setDropdownOptions(prev => ({
+                    ...prev,
+                    [item.wKey as string]: cachedOptions
+                }));
+                return cachedOptions;
+            }
+
             setLoadingDropdowns(prev => ({
                 ...prev,
                 [item.wKey as string]: true
             }));
 
+            console.log('Fetching fresh dropdown options for:', item.wKey);
             let jUi, jApi;
 
             if (typeof item.wQuery?.J_Ui === 'object') {
@@ -386,6 +462,9 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
             console.log(`Fetched ${options.length} options for ${item.wKey}:`, options);
 
+            // Cache the options
+            setCachedOptions(cacheKey, options);
+
             setDropdownOptions(prev => ({
                 ...prev,
                 [item.wKey as string]: options
@@ -431,10 +510,26 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return [];
             }
 
+            // Generate cache key for dependent dropdown
+            const cacheKey = generateCacheKey(item, parentValue);
+
+            // Check cache first
+            const cachedOptions = getCachedOptions(cacheKey);
+            if (cachedOptions) {
+                console.log('Using cached dependent options for:', item.wKey);
+                setDropdownOptions(prev => ({
+                    ...prev,
+                    [item.wKey as string]: cachedOptions
+                }));
+                return cachedOptions;
+            }
+
             setLoadingDropdowns(prev => ({
                 ...prev,
                 [item.wKey as string]: true
             }));
+
+            console.log('Fetching fresh dependent options for:', item.wKey);
 
             // console.log(`Fetching dependent options for ${item.wKey} based on:`, parentValue);
 
@@ -579,7 +674,10 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 value: dataItem[valueField]
             }));
 
-            // console.log(`Got ${options.length} options for ${item.wKey}:`, options);
+            console.log(`Got ${options.length} dependent options for ${item.wKey}:`, options);
+
+            // Cache the dependent options
+            setCachedOptions(cacheKey, options);
 
             setDropdownOptions(prev => ({
                 ...prev,
