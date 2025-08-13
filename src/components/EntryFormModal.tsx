@@ -615,10 +615,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <Sql>${sql}</Sql>
-            <X_Filter>${xFilter}</X_Filter>
-            <J_Api>${jApi}</J_Api>
+        <J_Ui>${jUi}</J_Ui>
+        <Sql>${sql}</Sql>
+        <X_Filter>${xFilter}</X_Filter>
+        <J_Api>${jApi}</J_Api>
         </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
@@ -654,23 +654,27 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 flag?: string;
             }> = [];
 
-            // Process each field's validation
+            // FIRST: Process all dropdown options in parallel
             await Promise.all(
                 formData.map(async (field: FormField) => {
                     if (field.type === 'WDropDownBox' && field.wQuery) {
                         await fetchDropdownOptions(field);
                     }
-
-                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
-                        await handleValidationForDisabledField(
-                            field,
-                            editData,
-                            masterFormValues,
-                            (updates) => allUpdates.push(...updates)
-                        );
-                    }
                 })
             );
+
+            // THEN: Process validations sequentially
+            for (const field of formData) {
+                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                    await handleValidationForDisabledField(
+                        field,
+                        editData,
+                        masterFormValues,
+                        (updates) => allUpdates.push(...updates)
+                    );
+                }
+            }
+
             if (isEditData && !isViewMode) {
                 setMasterFormData(() => {
                     const newFormData = [...formData];
@@ -689,7 +693,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
                                 };
                             }
-
                         }
                     });
                     return newFormData;
@@ -710,7 +713,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             } else {
                 setMasterFormData(formData)
             }
-            // Apply all updates at once
 
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
@@ -723,6 +725,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
         }
     };
+
     const fetchChildEntryData = async (editData?: any) => {
         if (!pageData?.[0]?.Entry) return;
         setIsLoading(true);
@@ -777,10 +780,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <Sql>${sql}</Sql>
-            <X_Filter>${xFilter}</X_Filter>
-            <J_Api>${jApi}</J_Api>
+        <J_Ui>${jUi}</J_Ui>
+        <Sql>${sql}</Sql>
+        <X_Filter>${xFilter}</X_Filter>
+        <J_Api>${jApi}</J_Api>
         </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
@@ -818,22 +821,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }> = [];
 
             console.log("check all updates", allUpdates);
-            // Process each field's validation
+
+            // FIRST: Process all dropdown options in parallel
             await Promise.all(
                 response.data?.data?.rs0?.map(async (field: FormField) => {
                     if (field.type === 'WDropDownBox' && field.wQuery) {
                         await fetchDropdownOptions(field, true);
                     }
-                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
-                        await handleValidationForDisabledField(
-                            field,
-                            editData,
-                            masterFormValues,
-                            (updates) => allUpdates.push(...updates),
-                        );
-                    }
                 })
             );
+
+            // THEN: Process validations sequentially
+            for (const field of response.data?.data?.rs0 || []) {
+                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                    await handleValidationForDisabledField(
+                        field,
+                        editData,
+                        masterFormValues,
+                        (updates) => allUpdates.push(...updates),
+                    );
+                }
+            }
+
             if (isEditData && !isViewMode) {
                 // Apply all updates at once
                 setChildFormData(() => {
