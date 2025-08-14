@@ -620,10 +620,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <Sql>${sql}</Sql>
-            <X_Filter>${xFilter}</X_Filter>
-            <J_Api>${jApi}</J_Api>
+        <J_Ui>${jUi}</J_Ui>
+        <Sql>${sql}</Sql>
+        <X_Filter>${xFilter}</X_Filter>
+        <J_Api>${jApi}</J_Api>
         </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
@@ -656,37 +656,49 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fieldKey: string;
                 isDisabled: boolean;
                 tagValue: string;
+                flag?: string;
             }> = [];
 
-            // Process each field's validation
+            // FIRST: Process all dropdown options in parallel
             await Promise.all(
                 formData.map(async (field: FormField) => {
                     if (field.type === 'WDropDownBox' && field.wQuery) {
                         await fetchDropdownOptions(field);
                     }
-
-                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
-                        await handleValidationForDisabledField(
-                            field,
-                            editData,
-                            masterFormValues,
-                            (updates) => allUpdates.push(...updates)
-                        );
-                    }
                 })
             );
+
+            // THEN: Process validations sequentially
+            for (const field of formData) {
+                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                    await handleValidationForDisabledField(
+                        field,
+                        editData,
+                        masterFormValues,
+                        (updates) => allUpdates.push(...updates)
+                    );
+                }
+            }
+
             if (isEditData && !isViewMode) {
                 console.log("check all updates===>", allUpdates);
                 setMasterFormData(() => {
                     const newFormData = [...formData];
+                    console.log("check updates", allUpdates);
                     allUpdates.forEach(update => {
                         const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                         if (fieldIndex >= 0) {
-                            console.log("check all updates===>", update, newFormData[fieldIndex]);
-                            newFormData[fieldIndex] = {
-                                ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag,
-                            };
+                            if (update.flag !== "D") {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
+                                };
+                            } else {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                };
+                            }
                         }
                     });
                     return newFormData;
@@ -695,7 +707,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     const newValues = { ...prevValues };
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
-                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            if (update.tagValue === "true" || update.tagValue === "false") {
+                                newValues[update.fieldKey] = newValues[update.fieldKey];
+                            } else {
+                                newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            }
                         }
                     });
                     return newValues;
@@ -703,7 +719,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             } else {
                 setMasterFormData(formData)
             }
-            // Apply all updates at once
 
         } catch (error) {
             console.error('Error fetching MasterEntry data:', error);
@@ -716,6 +731,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
         }
     };
+
     const fetchChildEntryData = async (editData?: any) => {
         if (!pageData?.[0]?.Entry) return;
         setIsLoading(true);
@@ -770,10 +786,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             const xmlData = `<dsXml>
-            <J_Ui>${jUi}</J_Ui>
-            <Sql>${sql}</Sql>
-            <X_Filter>${xFilter}</X_Filter>
-            <J_Api>${jApi}</J_Api>
+        <J_Ui>${jUi}</J_Ui>
+        <Sql>${sql}</Sql>
+        <X_Filter>${xFilter}</X_Filter>
+        <J_Api>${jApi}</J_Api>
         </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
@@ -807,45 +823,65 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fieldKey: string;
                 isDisabled: boolean;
                 tagValue: string;
+                flag?: string;
             }> = [];
 
             console.log("check all updates", allUpdates);
-            // Process each field's validation
+
+            // FIRST: Process all dropdown options in parallel
             await Promise.all(
                 response.data?.data?.rs0?.map(async (field: FormField) => {
                     if (field.type === 'WDropDownBox' && field.wQuery) {
                         await fetchDropdownOptions(field, true);
                     }
-                    if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
-                        await handleValidationForDisabledField(
-                            field,
-                            editData,
-                            masterFormValues,
-                            (updates) => allUpdates.push(...updates),
-                        );
-                    }
                 })
             );
+
+            // THEN: Process validations sequentially
+            for (const field of response.data?.data?.rs0 || []) {
+                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                    await handleValidationForDisabledField(
+                        field,
+                        editData,
+                        masterFormValues,
+                        (updates) => allUpdates.push(...updates),
+                    );
+                }
+            }
+
             if (isEditData && !isViewMode) {
                 // Apply all updates at once
                 setChildFormData(() => {
                     const newFormData = [...formData];
+                    console.log("check updates", allUpdates);
                     allUpdates.forEach(update => {
                         const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                         if (fieldIndex >= 0) {
-                            newFormData[fieldIndex] = {
-                                ...newFormData[fieldIndex],
-                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
-                            };
+                            if (update.flag !== "D") {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
+                                };
+                            } else {
+                                newFormData[fieldIndex] = {
+                                    ...newFormData[fieldIndex],
+                                    FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                                };
+                            }
                         }
                     });
                     return newFormData;
                 });
                 setChildFormValues(prevValues => {
                     const newValues = { ...prevValues };
+                    console.log("check new values", allUpdates)
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
-                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            if (update.tagValue === "true" || update.tagValue === "false") {
+                                newValues[update.fieldKey] = newValues[update.fieldKey];
+                            } else {
+                                newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                            }
                         }
                     });
                     return newValues;

@@ -9,17 +9,7 @@ function isDevelopmentMode(): boolean {
 }
 
 export function middleware(request: NextRequest) {
-    // Security: Force HTTPS in production (allow localhost and testing URLs)
-    // Skip HTTPS enforcement if development mode is enabled
-    if (!isDevelopmentMode() && SECURITY_CONFIG.FORCE_HTTPS && request.headers.get('x-forwarded-proto') !== 'https') {
-        const hostname = request.nextUrl.hostname;
-
-        if (!isAllowedHttpHost(hostname)) {
-            const url = request.nextUrl.clone();
-            url.protocol = 'https:';
-            return NextResponse.redirect(url, 301);
-        }
-    }
+    // HTTPS enforcement removed - HTTP is now allowed for all hosts
 
     // Security: Block suspicious requests
     const userAgent = request.headers.get('user-agent') || '';
@@ -88,11 +78,11 @@ function addSecurityHeaders(response: NextResponse): void {
         response.headers.set(key, value);
     });
 
-    // Set HSTS header if required
-    const hstsHeader = getHstsHeader();
-    if (hstsHeader) {
-        response.headers.set('Strict-Transport-Security', hstsHeader);
-    }
+    // HSTS header is not set - HTTP is allowed
+    // const hstsHeader = getHstsHeader();
+    // if (hstsHeader) {
+    //     response.headers.set('Strict-Transport-Security', hstsHeader);
+    // }
 
     // Remove server information
     response.headers.delete('X-Powered-By');
