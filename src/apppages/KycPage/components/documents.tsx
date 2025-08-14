@@ -7,7 +7,7 @@ import { IoArrowBack } from 'react-icons/io5';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { displayAndDownloadPDF } from '@/utils/helper';
@@ -22,13 +22,14 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const viewMode2 = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const checker_mode = useLocalStorageListener("ekyc_viewMode_for_checker", false);
     const enableSubmitBtn = useLocalStorageListener("ekyc_submit", false);
-    const hideVerifyAadhar = useLocalStorageListener("hideVerifyAadhar",false);
+    const hideVerifyAadhar = useLocalStorageListener("hideVerifyAadhar", false);
     const ekycChecker1 = checkRAMode
     const ekycChecker2 = useLocalStorageListener("ekyc_checker", false);
     const ekycChecker = ekycChecker1 || ekycChecker2;
     const viewMode = viewMode1 || viewMode2 || checkRAMode;
     const searchParams = useSearchParams();
     const router = useRouter();
+    const pathname = usePathname();
     const success = searchParams.get('success');
     const id = searchParams.get('id');
     const scope = searchParams.get('scope');
@@ -116,7 +117,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                     handleKRACallBack("FINALPDF")
                 }
                 localStorage.removeItem('ekyc_esign_state');
-                router.replace(window.location.pathname);
+                router.replace(pathname);
             }
         }
     }, [success, id, signerIdentifier, esp, router]);
@@ -575,7 +576,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
             handleDigiLockerCallBackAPI(Settings, setCheckKRAMode, fetchFormData, setSaving);
             localStorage.removeItem("redirectedField");
-            router.replace(window.location.pathname);
+            router.replace(pathname);
         }
     }, [scope, success, Settings, router]);
 
@@ -594,164 +595,164 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 </button>
                 {
 
-                (viewMode && Settings?.existsDigiLockerAPI === "false" && !checker_mode && !hideVerifyAadhar) ? (
-                    <button
-                     style={{
-                            backgroundColor: colors.buttonBackground,
-                            color: colors.buttonText,
-                           }}
-                    className="px-4 py-1 rounded-lg ml-4"
-                    onClick={()=>{
-                         handleThirdPartyApi(Settings)
-                         localStorage.setItem('redirectedField', "FinalFormSubmission");
-                    }}
-                    >verify aadhar</button>
-                ) : (
-                    <>
-                      {(!viewMode && !ekycChecker) && (
-                    <div className="text-end">
+                    (viewMode && Settings?.existsDigiLockerAPI === "false" && !checker_mode && !hideVerifyAadhar) ? (
                         <button
+                            style={{
+                                backgroundColor: colors.buttonBackground,
+                                color: colors.buttonText,
+                            }}
                             className="px-4 py-1 rounded-lg ml-4"
-                            style={{
-                                backgroundColor: colors.background,
-                                border: `1px solid ${colors.buttonBackground}`
+                            onClick={() => {
+                                handleThirdPartyApi(Settings)
+                                localStorage.setItem('redirectedField', "FinalFormSubmission");
                             }}
-                            onClick={handleSave}
-                        >
-                            Save
-                        </button>
-                        <button
-                            style={{
-                                backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
-                                color: enableSubmitBtn ? colors.buttonText : '#666666',
-                                cursor: enableSubmitBtn ? 'pointer' : 'not-allowed',
-                                border: `1px solid ${enableSubmitBtn ? colors.buttonBackground : '#cccccc'}`
-                            }}
-                            className="px-4 py-1 rounded-lg ml-4 transition-colors duration-200"
-                            disabled={!enableSubmitBtn}
-                            onClick={handleSubmit}
-                        >
-                            Submit
-                        </button>
-                    </div>
-                )}
-                {ekycChecker && !checker_mode && (
-                    <div className="text-end">
-                        {viewKRAPdf ? (
-                            <button
-                                style={{
-                                    backgroundColor: colors.buttonBackground,
-                                    color: colors.buttonText,
-                                }}
-                                className="px-4 py-1 rounded-lg ml-4"
-                                onClick={handleGenerateKraPdf}
-                            >
-                                View KRA E-Signed PDF
-                            </button>
-                        ) : (
-                            <>
-                                {kraPdfData ? (
+                        >verify aadhar</button>
+                    ) : (
+                        <>
+                            {(!viewMode && !ekycChecker) && (
+                                <div className="text-end">
                                     <button
-                                        style={{
-                                            backgroundColor: colors.buttonBackground,
-                                            color: colors.buttonText,
-                                        }}
                                         className="px-4 py-1 rounded-lg ml-4"
-                                        onClick={() => displayAndDownloadPDF(kraPdfData.Base64PDF, kraPdfData.PDFName || 'KRA.pdf')}
+                                        style={{
+                                            backgroundColor: colors.background,
+                                            border: `1px solid ${colors.buttonBackground}`
+                                        }}
+                                        onClick={handleSave}
                                     >
-                                        View Final PDF
-                                    </button>) : (
+                                        Save
+                                    </button>
                                     <button
                                         style={{
                                             backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
                                             color: enableSubmitBtn ? colors.buttonText : '#666666',
-                                            cursor: enableSubmitBtn ? 'pointer' : 'not-allowed'
+                                            cursor: enableSubmitBtn ? 'pointer' : 'not-allowed',
+                                            border: `1px solid ${enableSubmitBtn ? colors.buttonBackground : '#cccccc'}`
                                         }}
-                                        className="px-4 py-1 rounded-lg ml-4"
-                                        disabled={!enableSubmitBtn || isGeneratingKraPdf}
-                                        onClick={handleGenerateKraPdf}
+                                        className="px-4 py-1 rounded-lg ml-4 transition-colors duration-200"
+                                        disabled={!enableSubmitBtn}
+                                        onClick={handleSubmit}
                                     >
-                                        {isGeneratingKraPdf ? 'Generating...' : 'KRA PDF-Gen'}
+                                        Submit
                                     </button>
-                                )}
+                                </div>
+                            )}
+                            {ekycChecker && !checker_mode && (
+                                <div className="text-end">
+                                    {viewKRAPdf ? (
+                                        <button
+                                            style={{
+                                                backgroundColor: colors.buttonBackground,
+                                                color: colors.buttonText,
+                                            }}
+                                            className="px-4 py-1 rounded-lg ml-4"
+                                            onClick={handleGenerateKraPdf}
+                                        >
+                                            View KRA E-Signed PDF
+                                        </button>
+                                    ) : (
+                                        <>
+                                            {kraPdfData ? (
+                                                <button
+                                                    style={{
+                                                        backgroundColor: colors.buttonBackground,
+                                                        color: colors.buttonText,
+                                                    }}
+                                                    className="px-4 py-1 rounded-lg ml-4"
+                                                    onClick={() => displayAndDownloadPDF(kraPdfData.Base64PDF, kraPdfData.PDFName || 'KRA.pdf')}
+                                                >
+                                                    View Final PDF
+                                                </button>) : (
+                                                <button
+                                                    style={{
+                                                        backgroundColor: enableSubmitBtn ? colors.buttonBackground : '#cccccc',
+                                                        color: enableSubmitBtn ? colors.buttonText : '#666666',
+                                                        cursor: enableSubmitBtn ? 'pointer' : 'not-allowed'
+                                                    }}
+                                                    className="px-4 py-1 rounded-lg ml-4"
+                                                    disabled={!enableSubmitBtn || isGeneratingKraPdf}
+                                                    onClick={handleGenerateKraPdf}
+                                                >
+                                                    {isGeneratingKraPdf ? 'Generating...' : 'KRA PDF-Gen'}
+                                                </button>
+                                            )}
 
-                                <button
-                                    style={{
-                                        backgroundColor: kraESignEnabled ? colors.buttonBackground : '#cccccc',
-                                        color: kraESignEnabled ? colors.buttonText : '#666666',
-                                        cursor: kraESignEnabled ? 'pointer' : 'not-allowed'
-                                    }}
-                                    className="px-4 py-1 rounded-lg ml-4"
-                                    disabled={!kraESignEnabled || isSigningKra}
-                                    onClick={handleKraESign}
-                                >
-                                    {isSigningKra ? 'Signing...' : 'KRA E-Sign'}
-                                </button>
-                            </>
-                        )}
+                                            <button
+                                                style={{
+                                                    backgroundColor: kraESignEnabled ? colors.buttonBackground : '#cccccc',
+                                                    color: kraESignEnabled ? colors.buttonText : '#666666',
+                                                    cursor: kraESignEnabled ? 'pointer' : 'not-allowed'
+                                                }}
+                                                className="px-4 py-1 rounded-lg ml-4"
+                                                disabled={!kraESignEnabled || isSigningKra}
+                                                onClick={handleKraESign}
+                                            >
+                                                {isSigningKra ? 'Signing...' : 'KRA E-Sign'}
+                                            </button>
+                                        </>
+                                    )}
 
-                        {viewFinalPdf ? (
-                            <button
-                                style={{
-                                    backgroundColor: colors.buttonBackground,
-                                    color: colors.buttonText
-                                }}
-                                className="px-4 py-1 rounded-lg ml-4"
-                                onClick={handleGenerateFinalPdf}
-                            >
-                                View Final E-Signed PDF
-                            </button>
-                        ) : (
-                            <>
-                                {finalPdfData ? (
-                                    <button
-                                        style={{
-                                            backgroundColor: colors.buttonBackground,
-                                            color: colors.buttonText,
-                                        }}
-                                        className="px-4 py-1 rounded-lg ml-4"
-                                        onClick={() => displayAndDownloadPDF(finalPdfData.Base64PDF, finalPdfData.PDFName || 'KRA.pdf')}
-                                    >
-                                        View PDF
-                                    </button>
-                                ) : (
+                                    {viewFinalPdf ? (
+                                        <button
+                                            style={{
+                                                backgroundColor: colors.buttonBackground,
+                                                color: colors.buttonText
+                                            }}
+                                            className="px-4 py-1 rounded-lg ml-4"
+                                            onClick={handleGenerateFinalPdf}
+                                        >
+                                            View Final E-Signed PDF
+                                        </button>
+                                    ) : (
+                                        <>
+                                            {finalPdfData ? (
+                                                <button
+                                                    style={{
+                                                        backgroundColor: colors.buttonBackground,
+                                                        color: colors.buttonText,
+                                                    }}
+                                                    className="px-4 py-1 rounded-lg ml-4"
+                                                    onClick={() => displayAndDownloadPDF(finalPdfData.Base64PDF, finalPdfData.PDFName || 'KRA.pdf')}
+                                                >
+                                                    View PDF
+                                                </button>
+                                            ) : (
 
-                                    <button
-                                        style={{
-                                            backgroundColor: finalPdfGenerated ? colors.buttonBackground : '#cccccc',
-                                            color: finalPdfGenerated ? colors.buttonText : '#666666',
-                                            cursor: finalPdfGenerated ? 'pointer' : 'not-allowed'
-                                        }}
-                                        className="px-4 py-1 rounded-lg ml-4"
-                                        disabled={!finalPdfGenerated || isGeneratingFinalPdf}
-                                        onClick={handleGenerateFinalPdf}
-                                    >
-                                        {isGeneratingFinalPdf ? 'Generating...' : 'Final PDF-Gen'}
-                                    </button>
-                                )
-                                }
+                                                <button
+                                                    style={{
+                                                        backgroundColor: finalPdfGenerated ? colors.buttonBackground : '#cccccc',
+                                                        color: finalPdfGenerated ? colors.buttonText : '#666666',
+                                                        cursor: finalPdfGenerated ? 'pointer' : 'not-allowed'
+                                                    }}
+                                                    className="px-4 py-1 rounded-lg ml-4"
+                                                    disabled={!finalPdfGenerated || isGeneratingFinalPdf}
+                                                    onClick={handleGenerateFinalPdf}
+                                                >
+                                                    {isGeneratingFinalPdf ? 'Generating...' : 'Final PDF-Gen'}
+                                                </button>
+                                            )
+                                            }
 
-                                <button
-                                    style={{
-                                        backgroundColor: finalESignEnabled ? colors.buttonBackground : '#cccccc',
-                                        color: finalESignEnabled ? colors.buttonText : '#666666',
-                                        cursor: finalESignEnabled ? 'pointer' : 'not-allowed'
-                                    }}
-                                    className="px-4 py-1 rounded-lg ml-4"
-                                    disabled={!finalESignEnabled || isSigningFinal}
-                                    onClick={handleFinalESign}
-                                >
-                                    {isSigningFinal ? 'Signing...' : 'Final-ESign'}
-                                </button>
-                            </>
-                        )}
+                                            <button
+                                                style={{
+                                                    backgroundColor: finalESignEnabled ? colors.buttonBackground : '#cccccc',
+                                                    color: finalESignEnabled ? colors.buttonText : '#666666',
+                                                    cursor: finalESignEnabled ? 'pointer' : 'not-allowed'
+                                                }}
+                                                className="px-4 py-1 rounded-lg ml-4"
+                                                disabled={!finalESignEnabled || isSigningFinal}
+                                                onClick={handleFinalESign}
+                                            >
+                                                {isSigningFinal ? 'Signing...' : 'Final-ESign'}
+                                            </button>
+                                        </>
+                                    )}
 
-                    </div>
-                )}
-                </>
-                )
-              
-            }
+                                </div>
+                            )}
+                        </>
+                    )
+
+                }
             </div>
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}

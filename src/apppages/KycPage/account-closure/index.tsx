@@ -14,7 +14,7 @@ import Loader from "@/components/Loader";
 import { MdOutlineDriveFolderUpload } from "react-icons/md";
 import { CiSaveUp2 } from "react-icons/ci";
 import apiService from "@/utils/apiService";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 interface DPHolding {
   ISINCode: string;
@@ -92,6 +92,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const success = searchParams.get('success');
   const id = searchParams.get('id');
   const signerIdentifier = searchParams.get('signerIdentifier');
@@ -521,7 +522,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
   useEffect(() => {
     if (success === 'true' && id && signerIdentifier && esp) {
       handleKRACallBack("FINALPDF")
-      router.replace(window.location.pathname);
+      router.replace(pathname);
     }
   }, [success, id, signerIdentifier, esp]);
 
