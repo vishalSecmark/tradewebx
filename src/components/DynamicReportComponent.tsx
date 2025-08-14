@@ -1198,7 +1198,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     </button>
                                                 </>
                                             )}
-                                            {apiData && apiData.length > 0 && (
+                                            {apiData && apiData?.length > 0 && (
                                                 <button
                                                     onClick={() => {
                                                         handleSearchToggle();
@@ -1217,7 +1217,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             </div>
 
                             {/* Search box for mobile */}
-                            {apiData && apiData.length > 0 && isSearchActive && (
+                            {apiData && apiData?.length > 0 && isSearchActive && (
                                 <div
                                     className="absolute top-full right-0 mt-1 w-80 p-2 rounded border shadow-lg z-50"
                                     style={{
@@ -1298,13 +1298,35 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </div>
                             )}
                             <div className="relative group">
-                                <button
+                                {/* <button
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
                                     onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
                                     style={{ color: colors.text }}
                                 >
                                     <FaFileExcel size={20} />
+                                </button> */}
+                                <button
+                                    onClick={() => {
+                                        if (apiData?.length <= 25000) {
+                                            exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                        }
+                                    }}
+                                    disabled={apiData?.length > 25000}
+                                    className={`p-2 rounded transition-colors 
+                                    ${apiData?.length > 25000 ? "cursor-not-allowed opacity-50" : "hover:bg-gray-100"}`}
+                                    style={{
+                                        color: apiData?.length > 25000 ? "#bbb" : colors.text, // grey when disabled
+                                    }}
+                                    title={
+                                        apiData?.length > 25000
+                                            ? "Excel export allowed up to 25,000 records"
+                                            : "Export to Excel"
+                                    }
+                                >
+                                    <FaFileExcel size={20} />
                                 </button>
+
+
                                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                                     Export to Excel
                                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
@@ -1358,10 +1380,28 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     </div>
 
                                     <div className="relative group">
-                                        <button
+                                        {/* <button
                                             className="p-2 rounded hover:bg-gray-100 transition-colors"
                                             onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
                                             style={{ color: colors.text }}
+                                        >
+                                            <FaFilePdf size={20} />
+                                        </button> */}
+                                        <button
+                                            onClick={() => {
+                                                if (apiData?.length <= 8000) {
+                                                    exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download');
+                                                }
+                                            }}
+                                            disabled={apiData?.length > 8000}
+                                            className={`p-2 rounded transition-colors flex items-center 
+                                            ${apiData?.length > 8000
+                                                    ? "cursor-not-allowed opacity-50"
+                                                    : "hover:bg-gray-100"
+                                                }`}
+                                            style={{
+                                                color: apiData?.length > 80000 ? "#bbb" : colors.text, // grey text if disabled
+                                            }}
                                         >
                                             <FaFilePdf size={20} />
                                         </button>
@@ -1372,7 +1412,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     </div>
                                 </>
                             )}
-                            {apiData && apiData.length > 0 && (
+                            {apiData && apiData?.length > 0 && (
                                 <div className="relative search-container group">
                                     <button
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
@@ -1586,7 +1626,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Data Display */}
             {!isLoading && (
-                (!apiData || apiData.length === 0) && hasFetchAttempted ? (
+                (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
                     <div className="flex items-center justify-center py-8 border rounded-lg" style={{
                         backgroundColor: colors.cardBackground,
                         borderColor: '#e5e7eb'
@@ -1642,8 +1682,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </div>
                                 <div className="text-xs">
                                     {searchTerm ?
-                                        `Showing ${filteredApiData.length} of ${apiData.length} records` :
-                                        `Total Records: ${apiData.length}`
+                                        `Showing ${filteredApiData.length} of ${apiData?.length} records` :
+                                        `Total Records: ${apiData?.length}`
                                     } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
                                 </div>
                             </div>

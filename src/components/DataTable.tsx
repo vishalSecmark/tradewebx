@@ -818,6 +818,7 @@ export const exportTableToExcel = async (
     const columnsToShowTotal = levelData.summary?.columnsToShowTotal || [];
     const dateFormatMap: Record<string, string> = {};
 
+    // Date format mapping
     const dateFormatSetting = settings.dateFormat;
     if (Array.isArray(dateFormatSetting)) {
         dateFormatSetting.forEach((df: { key: string; format: string }) => {
@@ -828,7 +829,6 @@ export const exportTableToExcel = async (
         const normKey = dateFormatSetting.key.replace(/\s+/g, '');
         dateFormatMap[normKey] = dateFormatSetting.format;
     }
-
 
     const companyName = headerData.CompanyName?.[0] || "Company Name";
     const reportHeader = headerData.ReportHeader?.[0] || "Report Header";
@@ -877,19 +877,19 @@ export const exportTableToExcel = async (
 
     rowCursor++;
 
-    // Header Row
+    // ===== HEADER ROW =====
     const headerRow = worksheet.getRow(rowCursor);
+    headerRow.height = 25; // Increased height
     filteredHeaders.forEach((header, colIdx) => {
         const normKey = header.replace(/\s+/g, '');
         const cell = headerRow.getCell(colIdx + 1);
         cell.value = header;
         cell.alignment = { horizontal: normalizedRightList.includes(normKey) ? 'right' : 'left' };
-        cell.font = { bold: true };
     });
     headerRow.commit();
     rowCursor++;
 
-    // Data Rows
+    // ===== DATA ROWS =====
     apiData.forEach(row => {
         const currentRow = worksheet.getRow(rowCursor);
 
@@ -898,53 +898,79 @@ export const exportTableToExcel = async (
             const originalKey = Object.keys(row).find(k => k.replace(/\s+/g, '') === normKey);
             let value = originalKey ? row[originalKey] : "";
 
-            // Format decimals
-            if (decimalColumnsMap[normKey] !== undefined && !isNaN(parseFloat(value))) {
-                const fixed = parseFloat(value).toFixed(decimalColumnsMap[normKey]);
-                if (totals.hasOwnProperty(normKey)) {
-                    totals[normKey] += parseFloat(fixed);
-                }
-                value = fixed;
-            }
-
-            // Format date
-            if (dateFormatMap[normKey] && value) {
-                value = dayjs(value).format(dateFormatMap[normKey]);
-            }
-
             const cell = currentRow.getCell(colIdx + 1);
-            cell.value = isNaN(value) || typeof value === 'string' ? value : Number(value);
-            cell.alignment = {
-                horizontal: normalizedRightList.includes(normKey) ? 'right' : 'left'
-            };
+
+            // Decimal handling (keep number, apply numFmt)
+            if (decimalColumnsMap[normKey] !== undefined && !isNaN(parseFloat(value))) {
+                const decimalPlaces = decimalColumnsMap[normKey];
+                const fixedNum = Number(parseFloat(value).toFixed(decimalPlaces));
+                if (totals.hasOwnProperty(normKey)) {
+                    totals[normKey] += fixedNum;
+                }
+                value = fixedNum;
+                cell.numFmt = `0.${'0'.repeat(decimalPlaces)}`;
+            }
+
+            // Date handling (store as Date)
+            if (dateFormatMap[normKey] && value) {
+                const parsedDate = dayjs(value);
+                if (parsedDate.isValid()) {
+                    value = parsedDate.toDate();
+                    cell.numFmt = dateFormatMap[normKey]
+                        .replace(/d/g, 'dd')
+                        .replace(/y/g, 'yyyy');
+                }
+            }
+
+            // Assign value & alignment
+            if (!isNaN(value) && value !== '' && typeof value !== 'object') {
+                cell.value = Number(value);
+                cell.alignment = { horizontal: 'right' }; // default numeric right align
+            } else {
+                cell.value = value;
+                cell.alignment = {
+                    horizontal: normalizedRightList.includes(normKey) ? 'right' : 'left'
+                };
+            }
         });
 
         currentRow.commit();
         rowCursor++;
     });
 
-    // Total Row
+    // ===== TOTAL ROW =====
     const totalRow = worksheet.getRow(rowCursor);
+    totalRow.height = 20; // Slightly taller for emphasis
     filteredHeaders.forEach((header, colIdx) => {
         const normKey = header.replace(/\s+/g, '');
         const cell = totalRow.getCell(colIdx + 1);
 
         if (colIdx === 0) {
             cell.value = 'Total';
+            cell.alignment = { horizontal: 'left' };
         } else if (totals.hasOwnProperty(normKey)) {
-            cell.value = totals[normKey].toFixed(decimalColumnsMap[normKey] ?? 0);
+            const decimalPlaces = decimalColumnsMap[normKey] ?? 0;
+            const totalValue = Number(totals[normKey].toFixed(decimalPlaces));
+            cell.value = totalValue;
+            cell.numFmt = `0.${'0'.repeat(decimalPlaces)}`;
+            cell.alignment = { horizontal: 'right' };
         } else {
             cell.value = '';
+            cell.alignment = {
+                horizontal: normalizedRightList.includes(normKey) ? 'right' : 'left'
+            };
         }
 
-        cell.alignment = {
-            horizontal: normalizedRightList.includes(normKey) ? 'right' : 'left'
-        };
         cell.font = { bold: true };
+        cell.fill = { // Light green background
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFD9D9D9' }
+        };
     });
     totalRow.commit();
 
-    // Export file
+    // ===== EXPORT FILE =====
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
