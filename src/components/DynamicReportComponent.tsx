@@ -21,6 +21,7 @@ import FormCreator from './FormCreator';
 import Loader from './Loader';
 import apiService from '@/utils/apiService';
 import { parseSettingsFromXml } from '@/utils/helper';
+import { toast } from "react-toastify";
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -1307,21 +1308,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </button> */}
                                 <button
                                     onClick={() => {
-                                        if (apiData?.length <= 25000) {
-                                            exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                        if (apiData?.length > 25000) {
+                                            toast.warning(`Excel export allowed up to 25,000 records. You have ${apiData?.length} records.`);
+                                            return; // stop here, don't export
                                         }
+                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
                                     }}
-                                    disabled={apiData?.length > 25000}
-                                    className={`p-2 rounded transition-colors 
-                                    ${apiData?.length > 25000 ? "cursor-not-allowed opacity-50" : "hover:bg-gray-100"}`}
-                                    style={{
-                                        color: apiData?.length > 25000 ? "#bbb" : colors.text, // grey when disabled
-                                    }}
-                                    title={
-                                        apiData?.length > 25000
-                                            ? "Excel export allowed up to 25,000 records"
-                                            : "Export to Excel"
-                                    }
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    style={{ color: colors.text }}
                                 >
                                     <FaFileExcel size={20} />
                                 </button>
@@ -1389,19 +1383,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         </button> */}
                                         <button
                                             onClick={() => {
-                                                if (apiData?.length <= 8000) {
-                                                    exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download');
+                                                if (apiData?.length > 8000) {
+                                                    toast.warning(`PDF export allowed up to 8,000 records. You have ${apiData?.length} records.`);
+                                                    return; // stop here
                                                 }
-                                            }}
-                                            disabled={apiData?.length > 8000}
-                                            className={`p-2 rounded transition-colors flex items-center 
-                                            ${apiData?.length > 8000
-                                                    ? "cursor-not-allowed opacity-50"
-                                                    : "hover:bg-gray-100"
-                                                }`}
-                                            style={{
-                                                color: apiData?.length > 8000 ? "#bbb" : colors.text, // grey text if disabled
-                                            }}
+                                                exportTableToPdf( tableRef.current,jsonData,appMetadata, apiData, pageData,filters,currentLevel,'download'
+                                                );}}
+                                            className="p-2 rounded transition-colors flex items-center hover:bg-gray-100"
+                                            style={{ color: colors.text }}
                                         >
                                             <FaFilePdf size={20} />
                                         </button>
