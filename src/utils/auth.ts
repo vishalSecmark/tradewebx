@@ -38,7 +38,7 @@ export const logout = () => {
   // Clear all authentication data
   clearAllAuthData();
   // Redirect to login page - Next.js basePath config handles the base path automatically
-  window.location.href = '/signin';
+  window.location.href = `${BASE_PATH_FRONT_END}/signin`;
 };
 
 export const isAuthenticated = () => {
