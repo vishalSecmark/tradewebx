@@ -1400,7 +1400,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     : "hover:bg-gray-100"
                                                 }`}
                                             style={{
-                                                color: apiData?.length > 80000 ? "#bbb" : colors.text, // grey text if disabled
+                                                color: apiData?.length > 8000 ? "#bbb" : colors.text, // grey text if disabled
                                             }}
                                         >
                                             <FaFilePdf size={20} />
