@@ -16,6 +16,7 @@ import EntryFormModal from './EntryFormModal';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import { parseStringPromise } from 'xml2js';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
+import ErrorModal from './Modals/ErrorModal';
 import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
 import Loader from './Loader';
@@ -283,6 +284,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [hasFetchAttempted, setHasFetchAttempted] = useState(false);
     const [pageLoaded, setPageLoaded] = useState(false);
     const [isPageLoaded, setIsPageLoaded] = useState(false);
+
+    // Error handling state
+    const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
@@ -681,6 +686,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             const endTime = performance.now();
             setApiResponseTime(Math.round(endTime - startTime));
             const rawData = response.data.data.rs0 || [];
+
+            // Check for error flag in the response
+            if (rawData.length > 0 && rawData[0].ErrorFlag === 'E' && rawData[0].ErrorMessage) {
+                setErrorMessage(rawData[0].ErrorMessage);
+                setIsErrorModalOpen(true);
+                setApiData([]); // Don't show any data in table
+                return; // Exit early to prevent further processing
+            }
+
             const dataWithId = rawData.map((row: any, index: number) => ({
                 ...row,
                 _id: index
@@ -1516,8 +1530,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     toast.warning(`PDF export allowed up to 8,000 records. You have ${apiData?.length} records.`);
                                                     return; // stop here
                                                 }
-                                                exportTableToPdf( tableRef.current,jsonData,appMetadata, apiData, pageData,filters,currentLevel,'download'
-                                                );}}
+                                                exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download'
+                                                );
+                                            }}
                                             className="p-2 rounded transition-colors flex items-center hover:bg-gray-100"
                                             style={{ color: colors.text }}
                                         >
@@ -1664,6 +1679,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     setIsConfirmModalOpen(false);
                 }}
                 onCancel={() => setIsConfirmModalOpen(false)}
+            />
+
+            <ErrorModal
+                isOpen={isErrorModalOpen}
+                onClose={() => setIsErrorModalOpen(false)}
+                message={errorMessage}
             />
 
             {/* Download Modal */}
