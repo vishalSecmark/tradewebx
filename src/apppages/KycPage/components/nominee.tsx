@@ -39,6 +39,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   const [isMinor, setIsMinor] = useState(false);
   const [showGuardianForm, setShowGuardianForm] = useState(false);
   const [guardianFormData, setGuardianFormData] = useState<any>({});
+  const [guardianFormDataBackUp, setGuardianFormDataBackUp] = useState<any>({});
+
   const [guardianFields, setGuardianFields] = useState<any>([]);
   const [guardianDropdownOptions, setGuardianDropdownOptions] = useState<Record<string, any[]>>({});
   const [guardianLoadingDropdowns, setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -279,7 +281,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   const clearFormAndCloseModal = () => {
     setCurrentFormData({});
-    setGuardianFormData({});
+    setGuardianFormData(guardianFormDataBackUp);
     setFieldErrors({});
     setGuardianFieldErrors({});
     setShowGuardianForm(false);
@@ -298,10 +300,12 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       const childEntry = entry.ChildEntry;
 
       const userData = localStorage.getItem("rekycRowData_viewMode");
+      const clientCode1 = localStorage.getItem("clientCode");
+      const clientCode2 = localStorage.getItem("userId");
       const parsedUserData = userData ? JSON.parse(userData) : null;
       const payload = !viewMode ? childEntry.X_Filter : {
-        EntryName: parsedUserData?.EntryName,
-        ClientCode: parsedUserData?.ClientCode,
+        EntryName: parsedUserData?.EntryName || "Rekyc",
+        ClientCode: parsedUserData?.ClientCode || clientCode1 || clientCode2,
         NomSerial: ''
       }
 
@@ -334,6 +338,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         }
       });
       setGuardianFormData(initialValues);
+      setGuardianFormDataBackUp(initialValues)
     } catch (error) {
       console.error('Error fetching childEntry data:', error);
     }
@@ -521,7 +526,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                     {showGuardianForm && (
                       <button
                         className={`px-4 py-2 rounded-md ${showGuardianForm ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
-                        onClick={() => setGuardianFormData({})}
+                        onClick={() => setGuardianFormData(guardianFormDataBackUp)}
+                        disabled={viewMode}
                       >
                         Reset Form
                       </button>
