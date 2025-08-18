@@ -236,6 +236,18 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       }
     }
 
+    // NOTE :- use this when you want to include the empty keys from original form
+    // const nomineeData = {
+    //   ...currentFormData,
+    //   GuardianDetails: showGuardianForm ? {
+    //     ...guardianFormData, // start with form data
+    //     ...Object.fromEntries(
+    //       Object.entries(guardianFormDataBackUp)
+    //         .filter(([key]) => !(key in guardianFormData) || guardianFormData[key] === "")
+    //     )
+    //   } : null
+    // };
+
     const nomineeData = {
       ...currentFormData,
       GuardianDetails: showGuardianForm ? guardianFormData : null
