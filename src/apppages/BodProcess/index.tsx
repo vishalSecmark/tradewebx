@@ -66,10 +66,6 @@ const handleValidationClose = () => {
 };
 
   const showValidationMessage = (message: string, type: 'M' | 'S' | 'E' | 'D' = 'E') => {
-    console.log(message,'message');
-    console.log(type,'type');
-    
-    
     setValidationModal({
         isOpen: true,
         message,
@@ -77,9 +73,7 @@ const handleValidationClose = () => {
     });
   }
 
-  const runClickHandler = (row:any) => {
-    console.log(row,'row');
-    
+  const runClickHandler = (row:any) => {  
     bodProcessIndividualApiCall(row.ProcessName,showValidationMessage,setLoading)
   } 
 
