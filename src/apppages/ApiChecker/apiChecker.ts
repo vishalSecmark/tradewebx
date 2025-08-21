@@ -2,6 +2,9 @@ import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
+
+const userId = localStorage.getItem('userId');
+
   const xml = `
   <dsXml>
   <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
@@ -10,7 +13,7 @@ import { toast } from "react-toastify";
   <X_Filter_Multiple/>
   <X_Data>
   </X_Data>
-  <J_Api>"UserId":"ADMIN"</J_Api>
+  <J_Api>"UserId":"${userId}"</J_Api>
 </dsXml>`
 
 export const getApiConfigData = async(setApiConfigData) => {
@@ -59,7 +62,7 @@ const cleanJSONStringLiteral = (str: string) => {
         <X_Filter/>
         <X_Filter_Multiple><APIName>${viewLogServiceName}</APIName></X_Filter_Multiple>
         <X_Data></X_Data>
-        <J_Api>"UserId":"ADMIN"</J_Api>
+        <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>
     `;
   

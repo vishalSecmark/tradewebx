@@ -159,48 +159,48 @@ const ApiConfiguration = () => {
                                         }}
                                     >
                                         {editIndex === rowIndex && key !== "VendorName" && key !== "ServiceName" ? (
-    key === "APIType" ? (
-        <select
-            value={editableRow[key] ?? ""}
-            onChange={(e) => handleInputChange(key, e.target.value)}
-            className="w-full border px-1 py-0.5 text-sm"
-        >
-            <option value="">Select</option>
-            <option value="REST">REST</option>
-        </select>
-    ) : key === "APICallingType" ? (
-        <select
-            value={editableRow[key] ?? ""}
-            onChange={(e) => handleInputChange(key, e.target.value)}
-            className="w-full border px-1 py-0.5 text-sm"
-        >
-            <option value="">Select</option>
-            {apiCallingTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-            ))}
-        </select>
-    ) : key === "APIContantType" ? (
-        <select
-            value={editableRow[key] ?? ""}
-            onChange={(e) => handleInputChange(key, e.target.value)}
-            className="w-full border px-1 py-0.5 text-sm"
-        >
-            <option value="">Select</option>
-            {apiContentTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
-            ))}
-        </select>
-    ) : (
-        <input
-            type="text"
-            value={editableRow[key] ?? ""}
-            onChange={(e) => handleInputChange(key, e.target.value)}
-            className="w-full border px-1 py-0.5 text-sm"
-        />
-    )
-) : (
-    row[key] ?? "-"
-)}
+                                    key === "APIType" ? (
+                                        <select
+                                            value={editableRow[key] ?? ""}
+                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                            className="w-full border px-1 py-0.5 text-sm"
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="REST">REST</option>
+                                        </select>
+                                    ) : key === "APICallingType" ? (
+                                        <select
+                                            value={editableRow[key] ?? ""}
+                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                            className="w-full border px-1 py-0.5 text-sm"
+                                        >
+                                            <option value="">Select</option>
+                                            {apiCallingTypes.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    ) : key === "APIContantType" ? (
+                                        <select
+                                            value={editableRow[key] ?? ""}
+                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                            className="w-full border px-1 py-0.5 text-sm"
+                                        >
+                                            <option value="">Select</option>
+                                            {apiContentTypes.map(type => (
+                                                <option key={type} value={type}>{type}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            value={editableRow[key] ?? ""}
+                                            onChange={(e) => handleInputChange(key, e.target.value)}
+                                            className="w-full border px-1 py-0.5 text-sm"
+                                        />
+                                    )
+                                ) : (
+                                    row[key] ?? "-"
+                                )}
 
                                     </td>
                                 ))}
