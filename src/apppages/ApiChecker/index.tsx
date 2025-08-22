@@ -168,11 +168,20 @@ const ApiConfiguration = () => {
                       SAVE
                     </button>
                   ) : (
+                    //needed in future
+                    // <button
+                    // disabled
+                    //   onClick={() => handleEdit(rowIndex)}
+                    //   className="w-[80px] h-auto border-2 border-orange-500 rounded-[12px] bg-transparent text-orange-500 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-orange-500 hover:text-white mr-2"
+                    // >
+                    //****end */
+                    //   EDIT
+                    // </button>
                     <button
-                      onClick={() => handleEdit(rowIndex)}
-                      className="w-[80px] h-auto border-2 border-orange-500 rounded-[12px] bg-transparent text-orange-500 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-orange-500 hover:text-white mr-2"
+                    disabled
+                    className="w-[80px] h-auto border-2 border-gray-400 rounded-[12px] bg-gray-200 text-gray-500 mt-2.5 cursor-not-allowed py-2 font-medium font-poppins mr-2 opacity-70"
                     >
-                      EDIT
+                    EDIT
                     </button>
                   )}
                   <button
