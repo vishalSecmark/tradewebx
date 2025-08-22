@@ -1,13 +1,9 @@
+'use client'
 import apiService from "@/utils/apiService"
 import { BASE_URL, PATH_URL } from "@/utils/constants"
 
 
-const userId = localStorage.getItem('userId');
-
-const userType = localStorage.getItem('userType') || '';
-
-
-export const  bodProcessGetApiCall = async(setBodProcessApiData) => {
+export const  bodProcessGetApiCall = async(setBodProcessApiData,userId,userType) => {
 
 
     const xml = 
@@ -30,7 +26,7 @@ export const  bodProcessGetApiCall = async(setBodProcessApiData) => {
 }
 
 
-export const  bodProcessIndividualApiCall = async(rowValue,showValidationMessage,setLoading) => {
+export const  bodProcessIndividualApiCall = async(rowValue,showValidationMessage,setLoading,userId,userType) => {
     setLoading(true)
 
     const xmlData = 

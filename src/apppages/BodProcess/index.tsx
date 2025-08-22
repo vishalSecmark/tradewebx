@@ -2,6 +2,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useEffect, useState } from "react";
 import { bodProcessGetApiCall, bodProcessIndividualApiCall } from "./bodProcessConst";
 import Loader from "@/components/Loader";
+import { useLocalStorage } from "@/hooks/useLocalListner";
 
 const BodProcess = () => {
   const { colors } = useTheme();
@@ -10,6 +11,9 @@ const BodProcess = () => {
   const [flattenArray, setFalttenArray] = useState<string[]>([]);
   const [checkedRows, setCheckedRows] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userId] = useLocalStorage('userId', null);
+  const [userType] =useLocalStorage('userType', null);
+
 
   const [validationModal, setValidationModal] = useState<{
     isOpen: boolean;
@@ -25,7 +29,7 @@ const BodProcess = () => {
     bodProcessGetApiCall((data) => {
       setBodProcessApiData(data);
       setCheckedRows(Array(data.length).fill(false));
-    });
+    },userId,userType);
   }, []);
 
   useEffect(() => {
@@ -74,7 +78,7 @@ const handleValidationClose = () => {
   }
 
   const runClickHandler = (row:any) => {  
-    bodProcessIndividualApiCall(row.ProcessName,showValidationMessage,setLoading)
+    bodProcessIndividualApiCall(row.ProcessName,showValidationMessage,setLoading,userId,userType)
   } 
 
 
