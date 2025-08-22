@@ -5,6 +5,7 @@ import FormCreator from './FormCreator';
 import Select from 'react-select';
 import { FaSort, FaSortAmountDown, FaSortAmountUp } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
+import { useSidebar } from '@/context/SidebarContext';
 
 interface FilterModalProps {
     isOpen: boolean;
@@ -39,6 +40,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
     // Add local state to store filter values
     const [localFilterValues, setLocalFilterValues] = useState(initialValues);
     const [resetKey, setResetKey] = useState<number>(Date.now());
+    const { toggleMobileSidebar } = useSidebar();
+
 
     // Reset local values when modal opens with new initial values
     useEffect(() => {
@@ -56,6 +59,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
         onFilterChange(localFilterValues); // Send final values to parent
         onClose(); // Close the modal
         onApply(localFilterValues);
+        const width = window.innerWidth;
+        if(width < 768)  toggleMobileSidebar()
     };
 
     // Handle clear button click
