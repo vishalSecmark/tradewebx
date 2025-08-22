@@ -379,6 +379,23 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }, [pageData]);
 
+    // Helper functions for button configuration
+    const isMasterButtonEnabled = (buttonType: string): boolean => {
+        if (!pageData?.[0]?.MasterbuttonConfig) return true; // Default to enabled if no config
+        const buttonConfig = pageData[0].MasterbuttonConfig.find(
+            (config: any) => config.ButtonType === buttonType
+        );
+        return buttonConfig?.EnabledTag === "true";
+    };
+
+    const isRowButtonEnabled = (buttonType: string): boolean => {
+        if (!pageData?.[0]?.buttonConfig) return true; // Default to enabled if no config
+        const buttonConfig = pageData[0].buttonConfig.find(
+            (config: any) => config.ButtonType === buttonType
+        );
+        return buttonConfig?.EnabledTag === "true";
+    };
+
 
     function convertXmlToJson(xmlString) {
         const parser = new DOMParser();
@@ -1216,7 +1233,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </div>
                             </div>
 
-                            {(componentType === 'entry' || componentType === "multientry") && (
+                            {(componentType === 'entry' || componentType === "multientry") && isRowButtonEnabled('Add') && (
                                 <div className="relative group">
                                     <button
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
@@ -1267,7 +1284,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         }}
                                     >
                                         <div className="py-1">
-                                            {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
+                                            {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && isRowButtonEnabled('Edit') && (
                                                 <button
                                                     onClick={() => {
                                                         setIsEditTableRowModalOpen(true);
@@ -1280,30 +1297,34 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     Edit Selected Rows
                                                 </button>
                                             )}
-                                            <button
-                                                onClick={() => {
-                                                    exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
-                                                    setIsMobileMenuOpen(false);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                                                style={{ color: colors.text }}
-                                            >
-                                                <FaFileExcel size={16} />
-                                                Export to Excel
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
-                                                    setIsConfirmModalOpen(true);
-                                                    setIsMobileMenuOpen(false);
-                                                }}
-                                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                                                style={{ color: colors.text }}
-                                            >
-                                                <FaEnvelope size={16} />
-                                                Email Report
-                                            </button>
-                                            {showTypeList && (
+                                            {isMasterButtonEnabled('Excel') && (
+                                                <button
+                                                    onClick={() => {
+                                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                                        setIsMobileMenuOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                    style={{ color: colors.text }}
+                                                >
+                                                    <FaFileExcel size={16} />
+                                                    Export to Excel
+                                                </button>
+                                            )}
+                                            {isMasterButtonEnabled('Email') && (
+                                                <button
+                                                    onClick={() => {
+                                                        setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
+                                                        setIsConfirmModalOpen(true);
+                                                        setIsMobileMenuOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                    style={{ color: colors.text }}
+                                                >
+                                                    <FaEnvelope size={16} />
+                                                    Email Report
+                                                </button>
+                                            )}
+                                            {showTypeList && isMasterButtonEnabled('Download') && (
                                                 <button
                                                     onClick={() => {
                                                         downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel);
@@ -1318,28 +1339,32 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             )}
                                             {Object.keys(additionalTables).length == 0 && (
                                                 <>
-                                                    <button
-                                                        onClick={() => {
-                                                            exportTableToCsv(tableRef.current, jsonData, apiData, pageData);
-                                                            setIsMobileMenuOpen(false);
-                                                        }}
-                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                                                        style={{ color: colors.text }}
-                                                    >
-                                                        <FaFileCsv size={16} />
-                                                        Export to CSV
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download');
-                                                            setIsMobileMenuOpen(false);
-                                                        }}
-                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
-                                                        style={{ color: colors.text }}
-                                                    >
-                                                        <FaFilePdf size={16} />
-                                                        Export to PDF
-                                                    </button>
+                                                    {isMasterButtonEnabled('CSV') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                exportTableToCsv(tableRef.current, jsonData, apiData, pageData);
+                                                                setIsMobileMenuOpen(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                            style={{ color: colors.text }}
+                                                        >
+                                                            <FaFileCsv size={16} />
+                                                            Export to CSV
+                                                        </button>
+                                                    )}
+                                                    {isMasterButtonEnabled('PDF') && (
+                                                        <button
+                                                            onClick={() => {
+                                                                exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download');
+                                                                setIsMobileMenuOpen(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                            style={{ color: colors.text }}
+                                                        >
+                                                            <FaFilePdf size={16} />
+                                                            Export to PDF
+                                                        </button>
+                                                    )}
                                                 </>
                                             )}
                                             {apiData && apiData?.length > 0 && (
@@ -1406,7 +1431,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                         {/* Desktop View - Show all buttons */}
                         <div className="hidden md:flex gap-2">
-                            {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && (
+                            {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && isRowButtonEnabled('Edit') && (
                                 <div className="relative group">
                                     <button
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
@@ -1421,7 +1446,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     </div>
                                 </div>
                             )}
-                            {(componentType === 'entry' || componentType === "multientry") && (
+                            {(componentType === 'entry' || componentType === "multientry") && isRowButtonEnabled('Add') && (
                                 <div className="relative group">
                                     <button
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
@@ -1441,51 +1466,55 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     </div>
                                 </div>
                             )}
-                            <div className="relative group">
-                                {/* <button
-                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                    onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaFileExcel size={20} />
-                                </button> */}
-                                <button
-                                    onClick={() => {
-                                        if (apiData?.length > 25000) {
-                                            toast.warning(`Excel export allowed up to 25,000 records. You have ${apiData?.length} records.`);
-                                            return; // stop here, don't export
-                                        }
-                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
-                                    }}
-                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaFileExcel size={20} />
-                                </button>
+                            {isMasterButtonEnabled('Excel') && (
+                                <div className="relative group">
+                                    {/* <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaFileExcel size={20} />
+                                    </button> */}
+                                    <button
+                                        onClick={() => {
+                                            if (apiData?.length > 25000) {
+                                                toast.warning(`Excel export allowed up to 25,000 records. You have ${apiData?.length} records.`);
+                                                return; // stop here, don't export
+                                            }
+                                            exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                        }}
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaFileExcel size={20} />
+                                    </button>
 
 
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                                    Export to Excel
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Export to Excel
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="relative group">
-                                <button
-                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                    onClick={() => {
-                                        setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
-                                        setIsConfirmModalOpen(true);
-                                    }}
-                                    style={{ color: colors.text }}
-                                >
-                                    <FaEnvelope size={20} />
-                                </button>
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                                    Email Report
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                            )}
+                            {isMasterButtonEnabled('Email') && (
+                                <div className="relative group">
+                                    <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => {
+                                            setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
+                                            setIsConfirmModalOpen(true);
+                                        }}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaEnvelope size={20} />
+                                    </button>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Email Report
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
                                 </div>
-                            </div>
-                            {showTypeList && (
+                            )}
+                            {showTypeList && isMasterButtonEnabled('Download') && (
                                 <div className="relative group">
                                     <button
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
@@ -1502,47 +1531,51 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             )}
                             {Object.keys(additionalTables).length == 0 && (
                                 <>
-                                    <div className="relative group">
-                                        <button
-                                            className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                            onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
-                                            style={{ color: colors.text }}
-                                        >
-                                            <FaFileCsv size={20} />
-                                        </button>
-                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                                            Export to CSV
-                                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    {isMasterButtonEnabled('CSV') && (
+                                        <div className="relative group">
+                                            <button
+                                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                                onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                                style={{ color: colors.text }}
+                                            >
+                                                <FaFileCsv size={20} />
+                                            </button>
+                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                                Export to CSV
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div className="relative group">
-                                        {/* <button
-                                            className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                            onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
-                                            style={{ color: colors.text }}
-                                        >
-                                            <FaFilePdf size={20} />
-                                        </button> */}
-                                        <button
-                                            onClick={() => {
-                                                if (apiData?.length > 8000) {
-                                                    toast.warning(`PDF export allowed up to 8,000 records. You have ${apiData?.length} records.`);
-                                                    return; // stop here
-                                                }
-                                                exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download'
-                                                );
-                                            }}
-                                            className="p-2 rounded transition-colors flex items-center hover:bg-gray-100"
-                                            style={{ color: colors.text }}
-                                        >
-                                            <FaFilePdf size={20} />
-                                        </button>
-                                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                                            Export to PDF
-                                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    {isMasterButtonEnabled('PDF') && (
+                                        <div className="relative group">
+                                            {/* <button
+                                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                                onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
+                                                style={{ color: colors.text }}
+                                            >
+                                                <FaFilePdf size={20} />
+                                            </button> */}
+                                            <button
+                                                onClick={() => {
+                                                    if (apiData?.length > 8000) {
+                                                        toast.warning(`PDF export allowed up to 8,000 records. You have ${apiData?.length} records.`);
+                                                        return; // stop here
+                                                    }
+                                                    exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download'
+                                                    );
+                                                }}
+                                                className="p-2 rounded transition-colors flex items-center hover:bg-gray-100"
+                                                style={{ color: colors.text }}
+                                            >
+                                                <FaFilePdf size={20} />
+                                            </button>
+                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                                Export to PDF
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </>
                             )}
                             {apiData && apiData?.length > 0 && (
@@ -1859,6 +1892,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             handleAction={handleTableAction}
                             fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                             showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
+                            buttonConfig={pageData?.[0]?.buttonConfig}
                         />
                         {Object.keys(additionalTables).length > 0 && (
                             <div>
@@ -1888,6 +1922,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 summary={safePageData.getCurrentLevel(currentLevel)?.summary}
                                                 tableRef={tableRef}
                                                 fullHeight={false}
+                                                buttonConfig={pageData?.[0]?.buttonConfig}
                                             />
                                         </div>
                                     );

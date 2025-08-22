@@ -42,6 +42,10 @@ interface DataTableProps {
     handleAction?: (action: string, record: any) => void;
     fullHeight?: boolean;
     showViewDocument?: boolean;
+    buttonConfig?: Array<{
+        ButtonType: string;
+        EnabledTag: string;
+    }>;
 }
 
 interface DecimalColumn {
@@ -162,7 +166,14 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig }) => {
+    
+    // Helper function to check if a button is enabled
+    const isButtonEnabled = (buttonType: string): boolean => {
+        if (!buttonConfig) return true; // Default to enabled if no config
+        const config = buttonConfig.find((config: any) => config.ButtonType === buttonType);
+        return config?.EnabledTag === "true";
+    };
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
@@ -648,29 +659,35 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     renderCell: ({ row }: any) => (
                         isEntryForm && (
                             <div className="action-buttons">
-                                <button
-                                    className="view-button"
-                                    style={{}}
-                                    onClick={() => handleAction('view', row)}
-                                >
-                                    view
-                                </button>
-                                <button
-                                    className="edit-button"
-                                    style={{}}
-                                    onClick={() => handleAction('edit', row)}
-                                    disabled={row?.isUpdated === "true" ? true : false}
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    className="delete-button"
-                                    style={{}}
-                                    onClick={() => handleAction('delete', row)}
-                                    disabled={row?.isDeleted === "true" ? true : false}
-                                >
-                                    Delete
-                                </button>
+                                {isButtonEnabled('View') && (
+                                    <button
+                                        className="view-button"
+                                        style={{}}
+                                        onClick={() => handleAction('view', row)}
+                                    >
+                                        view
+                                    </button>
+                                )}
+                                {isButtonEnabled('Edit') && (
+                                    <button
+                                        className="edit-button"
+                                        style={{}}
+                                        onClick={() => handleAction('edit', row)}
+                                        disabled={row?.isUpdated === "true" ? true : false}
+                                    >
+                                        Edit
+                                    </button>
+                                )}
+                                {isButtonEnabled('Delete') && (
+                                    <button
+                                        className="delete-button"
+                                        style={{}}
+                                        onClick={() => handleAction('delete', row)}
+                                        disabled={row?.isDeleted === "true" ? true : false}
+                                    >
+                                        Delete
+                                    </button>
+                                )}
                             </div>
                         )
                     ),
