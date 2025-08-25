@@ -25,12 +25,19 @@ const BodProcess = () => {
     type: 'E'
 });
 
-  useEffect(() => {
+useEffect(() => {
+  if (userId && userType) {
     bodProcessGetApiCall((data) => {
       setBodProcessApiData(data);
       setCheckedRows(Array(data.length).fill(false));
-    },userId,userType);
-  }, []);
+    }, userId, userType);
+
+    console.log(userId, 'userId');
+  } else {
+    console.log("userId or userType is null, skipping API call");
+  }
+}, [userId, userType]);
+
 
   useEffect(() => {
     const keys = [...new Set(bodPrcessApiData?.flatMap(Object.keys) ?? [])];

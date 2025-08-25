@@ -74,9 +74,14 @@ const Ipo = () => {
   };
 
   useEffect(() => {
-    fetchIpo();
-    fetchUPIType(setUpiSelect, authToken);
-  }, []);
+    if(clientCode){
+      fetchIpo();
+      fetchUPIType(setUpiSelect, authToken);
+    }else{
+      console.log("clientCode is null, skipping API call");
+    }
+   
+  }, [clientCode]);
 
 
 

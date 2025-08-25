@@ -34,8 +34,12 @@ const ApiConfiguration = () => {
   const [userId] = useLocalStorage('userId', null);
 
   useEffect(() => {
+    if (userId) {
     getApiConfigData(setApiConfigData,userId);
-  }, []);
+    }else{
+      console.log("userId or userType is null, skipping API call");
+    }
+  }, [userId]);
 
   useEffect(() => {
     const keys = Array.from(
