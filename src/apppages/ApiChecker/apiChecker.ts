@@ -1,11 +1,14 @@
+'use client';
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
 
-const userId = localStorage.getItem('userId');
 
-  const xml = `
+ 
+export const getApiConfigData = async(setApiConfigData,userId) => {
+    try {
+       const xml = `
   <dsXml>
   <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
   <Sql/>
@@ -16,8 +19,6 @@ const userId = localStorage.getItem('userId');
   <J_Api>"UserId":"${userId}"</J_Api>
 </dsXml>`
 
-export const getApiConfigData = async(setApiConfigData) => {
-    try {
 
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
         if(response.success === true){
@@ -53,7 +54,8 @@ const cleanJSONStringLiteral = (str: string) => {
   export const viewLogApiCall = async (
     setModalOpen,
     viewLogServiceName: string,
-    setViewLogServiceNameApiData: any
+    setViewLogServiceNameApiData: any,
+    userId: string | null
   ) => {
     const viewLogXML = `
       <dsXml>

@@ -1,3 +1,4 @@
+'use client'
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react';
@@ -9,7 +10,6 @@ import moment from 'moment';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import { findPageData } from '@/utils/helper';
-import axios from 'axios';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
@@ -19,8 +19,9 @@ import apiService from '@/utils/apiService';
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
-
+  const viewMode1 = localStorage.getItem("ekyc_viewMode") === "true" ;
+  const viewMode2 =  localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+  const viewMode = viewMode1 || viewMode2;
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
 
   const [openAddNominee, setOpenAddNominee] = useState(false);

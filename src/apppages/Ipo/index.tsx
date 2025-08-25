@@ -5,6 +5,7 @@ import { RootState } from '@/redux/store';
 import { useTheme } from '@/context/ThemeContext';
 import { DYNAMIC_DETAILS, IPO_SELECTED, IPO_url, checkStatusFs, configDetails, fetchUPIType, handleBidChange, handleCheckboxChange, handleCutOffBlur, handleDecrement, handleDelete, handleFocus, handleIncrement, handleTermsChange, handleTextBoxChange, onSubmitBtn } from './IpoHelper';
 import axios from 'axios';
+import { useLocalStorage } from '@/hooks/useLocalListner'; 
 
 const Ipo = () => {
   const { colors } = useTheme();
@@ -31,11 +32,7 @@ const Ipo = () => {
   const [selectedUpiSelect, setSelectedUpiSelect] =  useState< "" | any>("");
   const [status, setStatus] = useState<boolean>(false);
 
-
-
-
-
-  const clientCode = localStorage.getItem('clientCode');
+  const [clientCode] = useLocalStorage('clientCode', null);
 
  const config = {
     headers: {
@@ -77,9 +74,14 @@ const Ipo = () => {
   };
 
   useEffect(() => {
-    fetchIpo();
-    fetchUPIType(setUpiSelect, authToken);
-  }, []);
+    if(clientCode){
+      fetchIpo();
+      fetchUPIType(setUpiSelect, authToken);
+    }else{
+      console.log("clientCode is null, skipping API call");
+    }
+   
+  }, [clientCode]);
 
 
 

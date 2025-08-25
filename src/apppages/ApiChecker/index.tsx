@@ -2,6 +2,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { getApiConfigData, viewLogApiCall } from "./apiChecker";
 import { useEffect, useState } from "react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
+import { useLocalStorage } from "@/hooks/useLocalListner";
 
 // ✅ Add these two arrays globally within the component
 const apiCallingTypes = ["POST", "GET"];
@@ -30,9 +31,15 @@ const ApiConfiguration = () => {
     null
   );
 
+  const [userId] = useLocalStorage('userId', null);
+
   useEffect(() => {
-    getApiConfigData(setApiConfigData);
-  }, []);
+    if (userId) {
+    getApiConfigData(setApiConfigData,userId);
+    }else{
+      console.log("userId or userType is null, skipping API call");
+    }
+  }, [userId]);
 
   useEffect(() => {
     const keys = Array.from(
@@ -46,7 +53,8 @@ const ApiConfiguration = () => {
       viewLogApiCall(
         setModalOpen,
         viewLogServiceName,
-        setViewLogServiceNameApiData
+        setViewLogServiceNameApiData,
+        userId
       );
     }
   }, [viewLogServiceName]);
