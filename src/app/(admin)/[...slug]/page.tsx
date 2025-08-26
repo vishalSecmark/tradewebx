@@ -30,7 +30,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   familymapping:<Family />,
   apiconfiguration:<ApiConfiguration/>,
   bodProcess:<BodProcess/>,
-  userAccess:<UserAccessMenu/>
+  useraccess:<UserAccessMenu/>
 };
 
 // Define the type for params explicitly
