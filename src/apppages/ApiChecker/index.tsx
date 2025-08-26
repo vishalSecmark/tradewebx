@@ -5,6 +5,7 @@ import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import { toast } from "react-toastify";
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { useLocalStorage } from "@/hooks/useLocalListner";
 
 // ✅ Add these two arrays globally within the component
 const apiCallingTypes = ["POST", "GET"];
@@ -34,9 +35,15 @@ const ApiConfiguration = () => {
     null
   );
 
+  const [userId] = useLocalStorage('userId', null);
+
   useEffect(() => {
-    getApiConfigData(setApiConfigData);
-  }, []);
+    if (userId) {
+    getApiConfigData(setApiConfigData,userId);
+    }else{
+      console.log("userId or userType is null, skipping API call");
+    }
+  }, [userId]);
 
   useEffect(() => {
     const keys = Array.from(
@@ -50,7 +57,8 @@ const ApiConfiguration = () => {
       viewLogApiCall(
         setModalOpen,
         viewLogServiceName,
-        setViewLogServiceNameApiData
+        setViewLogServiceNameApiData,
+        userId
       );
     }
   }, [viewLogServiceName]);
@@ -143,7 +151,7 @@ const ApiConfiguration = () => {
       console.log(response.data?.data?.rs0[0].RowsAffected,'response1');
       if(response.data?.data?.rs0[0].RowsAffected) {
         toast.success("Update Sucessfully")
-        getApiConfigData(setApiConfigData);
+        getApiConfigData(setApiConfigData,userId);
       }
     } catch (error) {
       toast.error(error)

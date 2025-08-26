@@ -15,8 +15,7 @@ export const editableColumns = [
   "AutoAPIEndTime",
 ]
 
-const userId = localStorage.getItem('userId');
-
+export const getApiConfigData = async(setApiConfigData,userId) => {
   const xml = `
   <dsXml>
   <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
@@ -27,8 +26,6 @@ const userId = localStorage.getItem('userId');
   </X_Data>
   <J_Api>"UserId":"${userId}"</J_Api>
 </dsXml>`
-
-export const getApiConfigData = async(setApiConfigData) => {
     try {
 
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
@@ -65,7 +62,8 @@ const cleanJSONStringLiteral = (str: string) => {
   export const viewLogApiCall = async (
     setModalOpen,
     viewLogServiceName: string,
-    setViewLogServiceNameApiData: any
+    setViewLogServiceNameApiData: any,
+    userId
   ) => {
     const viewLogXML = `
       <dsXml>
