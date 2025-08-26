@@ -27,8 +27,8 @@ const staticRoutes: Record<string, React.ReactNode> = {
   marginPledge: <MarginPledgeOnline />,
   ipo: <Ipo />,
   familymapping:<Family />,
-  apiconfiguration:<ApiConfiguration/>,
-  bodProcess:<BodProcess/>
+  apisetting:<ApiConfiguration/>,
+  bodprocess:<BodProcess/>
 };
 
 // Define the type for params explicitly

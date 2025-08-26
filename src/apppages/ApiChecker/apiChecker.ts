@@ -3,6 +3,18 @@ import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
 
+export const editableColumns = [
+  "APIUrl",
+  "HeaderParameter",
+  "ParameterSetting",
+  "CallBackUrl",
+  "ActiveFlag",
+  "LoginUserid",
+  "LoginPassword",
+  "AutoAPIStartTime",
+  "AutoAPIEndTime",
+]
+
 const userId = localStorage.getItem('userId');
 
   const xml = `
