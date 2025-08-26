@@ -27,16 +27,23 @@ const BodProcess = () => {
 
 useEffect(() => {
   if (userId && userType) {
-    bodProcessGetApiCall((data) => {
-      setBodProcessApiData(data);
-      setCheckedRows(Array(data.length).fill(false));
-    }, userId, userType);
+    setLoading(true); // 🔹 Start loader before API call
+    bodProcessGetApiCall(
+      (data) => {
+        setBodProcessApiData(data);
+        setCheckedRows(Array(data.length).fill(false));
+        setLoading(false); // 🔹 Stop loader after data received
+      },
+      userId,
+      userType
+    );
 
-    console.log(userId, 'userId');
+    console.log(userId, "userId");
   } else {
     console.log("userId or userType is null, skipping API call");
   }
 }, [userId, userType]);
+
 
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { useLocalStorage } from "@/hooks/useLocalListner";
+import Loader from "@/components/Loader";
 
 // ✅ Add these two arrays globally within the component
 const apiCallingTypes = ["POST", "GET"];
@@ -35,12 +36,17 @@ const ApiConfiguration = () => {
     null
   );
 
+  const [loading, setLoading] = useState(false);      // ✅ for first load + save
+  const [logLoading, setLogLoading] = useState(false); // ✅ for view log
+
   const [userId] = useLocalStorage('userId', null);
 
   useEffect(() => {
     if (userId) {
-    getApiConfigData(setApiConfigData,userId);
-    }else{
+      setLoading(true);
+      getApiConfigData(setApiConfigData, userId)
+        .finally(() => setLoading(false)); // ✅ hide loader when done
+    } else {
       console.log("userId or userType is null, skipping API call");
     }
   }, [userId]);
@@ -54,12 +60,13 @@ const ApiConfiguration = () => {
 
   useEffect(() => {
     if (viewLogServiceName) {
+      setLogLoading(true);
       viewLogApiCall(
         setModalOpen,
         viewLogServiceName,
         setViewLogServiceNameApiData,
         userId
-      );
+      ).finally(() => setLogLoading(false)); // ✅ hide loader when done
     }
   }, [viewLogServiceName]);
 
@@ -76,6 +83,7 @@ const ApiConfiguration = () => {
   };
 
   const handleSave = async() => {
+    setLoading(true);
     const updated = [...apiConfigData];
     if (editIndex !== null) {
       updated[editIndex] = editableRow;
@@ -152,6 +160,7 @@ const ApiConfiguration = () => {
       if(response.data?.data?.rs0[0].RowsAffected) {
         toast.success("Update Sucessfully")
         getApiConfigData(setApiConfigData,userId);
+        setLoading(false);
       }
     } catch (error) {
       toast.error(error)
@@ -164,6 +173,11 @@ const ApiConfiguration = () => {
     setViewLogServiceName(serviceName);
   };
 
+  const handleCloseViewLog = () => {
+    setViewLogServiceName("")
+    setModalOpen(false)
+  }
+
   return (
     <div
       style={{
@@ -174,6 +188,14 @@ const ApiConfiguration = () => {
       }}
       className="w-full"
     >
+
+{(loading || logLoading) && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+          <Loader />
+        </div>
+      )}
+
+
       <div className="border-b border-grey-500 flex items-center gap-5">
         <button
           className="px-4 py-2 text-sm rounded-t-lg font-bold bg-[#3EB489] mt-2"
@@ -399,7 +421,7 @@ const ApiConfiguration = () => {
       {modalOpen && (
         <Dialog
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => handleCloseViewLog()}
           className="relative z-[200]"
         >
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
@@ -409,7 +431,7 @@ const ApiConfiguration = () => {
                 View Log
               </DialogTitle>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={() => handleCloseViewLog()}
                 className="absolute top-2 right-4 text-2xl font-bold text-gray-500 hover:text-black"
                 aria-label="Close"
               >
