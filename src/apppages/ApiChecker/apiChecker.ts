@@ -1,14 +1,22 @@
-'use client';
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
 
+export const editableColumns = [
+  "APIUrl",
+  "HeaderParameter",
+  "ParameterSetting",
+  "CallBackUrl",
+  "ActiveFlag",
+  "LoginUserid",
+  "LoginPassword",
+  "AutoAPIStartTime",
+  "AutoAPIEndTime",
+]
 
- 
 export const getApiConfigData = async(setApiConfigData,userId) => {
-    try {
-       const xml = `
+  const xml = `
   <dsXml>
   <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
   <Sql/>
@@ -18,7 +26,7 @@ export const getApiConfigData = async(setApiConfigData,userId) => {
   </X_Data>
   <J_Api>"UserId":"${userId}"</J_Api>
 </dsXml>`
-
+    try {
 
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
         if(response.success === true){
@@ -55,7 +63,7 @@ const cleanJSONStringLiteral = (str: string) => {
     setModalOpen,
     viewLogServiceName: string,
     setViewLogServiceNameApiData: any,
-    userId: string | null
+    userId
   ) => {
     const viewLogXML = `
       <dsXml>
