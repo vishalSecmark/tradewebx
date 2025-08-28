@@ -18,6 +18,13 @@ const apiContentTypes = [
 ];
 const activeFlag = ["Y","N"]
 
+interface LogHeader {
+  VendorName: string;
+  ServiceName: string;
+  // add more fields if API returns them
+}
+
+
 const ApiConfiguration = () => {
   const { colors } = useTheme();
   const [apiConfigData, setApiConfigData] = useState<any[]>([]);
@@ -38,6 +45,7 @@ const ApiConfiguration = () => {
 
   const [loading, setLoading] = useState(false);      // ✅ for first load + save
   const [logLoading, setLogLoading] = useState(false); // ✅ for view log
+  const [viewLogHeader, setViewLogHeader] = useState<LogHeader | null>(null);
 
   const [userId] = useLocalStorage('userId', null);
 
@@ -65,7 +73,8 @@ const ApiConfiguration = () => {
         setModalOpen,
         viewLogServiceName,
         setViewLogServiceNameApiData,
-        userId
+        userId,
+        setViewLogServiceName
       ).finally(() => setLogLoading(false)); // ✅ hide loader when done
     }
   }, [viewLogServiceName]);
@@ -169,9 +178,18 @@ const ApiConfiguration = () => {
   };
   
   const handleViewLog = (row: any) => {
-    const serviceName = row.ServiceName;
+    const serviceName = row?.ServiceName;
     setViewLogServiceName(serviceName);
+    setViewLogHeader({
+      VendorName: row.VendorName || "",
+      ServiceName: row.ServiceName || "",
+    });
   };
+
+  // useEffect(() => {
+  //   console.log(viewLogHeader,'viewLogHeader');
+    
+  // },[viewLogHeader])
 
   const handleCloseViewLog = () => {
     setViewLogServiceName("")
@@ -266,7 +284,7 @@ const ApiConfiguration = () => {
                     onClick={() => handleViewLog(row)}
                     className="w-[100px] h-auto border-2 border-purple-600 rounded-[12px] bg-transparent text-purple-600 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-purple-600 hover:text-white"
                   >
-                    View Log
+                    View Logs
                   </button>
                 </td>
                 {uniqueKeys.map((key, colIndex) => (
@@ -430,6 +448,14 @@ const ApiConfiguration = () => {
               <DialogTitle className="text-xl font-bold mb-4">
                 View Log
               </DialogTitle>
+              <div className="flex justify-center item-center">
+              <DialogTitle className="text-xl font-sans mb-4">
+              <span className="font-bold">VendorName:</span> {viewLogHeader?.VendorName}
+              </DialogTitle>
+              <DialogTitle className="text-xl font-sans mb-4 ml-4">
+              <span className="font-bold">ServiceName:</span> {viewLogHeader?.ServiceName}
+              </DialogTitle>
+              </div>
               <button
                 onClick={() => handleCloseViewLog()}
                 className="absolute top-2 right-4 text-2xl font-bold text-gray-500 hover:text-black"

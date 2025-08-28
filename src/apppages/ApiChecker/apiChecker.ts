@@ -63,7 +63,8 @@ const cleanJSONStringLiteral = (str: string) => {
     setModalOpen,
     viewLogServiceName: string,
     setViewLogServiceNameApiData: any,
-    userId
+    userId,
+    setViewLogServiceName,
   ) => {
     const viewLogXML = `
       <dsXml>
@@ -95,7 +96,7 @@ const cleanJSONStringLiteral = (str: string) => {
       if(response?.data?.data?.rs0 === null ){
         toast.error('no log found')
         setModalOpen(false)
-  
+        setViewLogServiceName("")
       }
 
     } catch (error) {
