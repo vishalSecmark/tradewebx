@@ -1,5 +1,6 @@
 "use client";
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { DataGrid } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { useTheme } from '@/context/ThemeContext';
@@ -18,6 +19,277 @@ import { buildFilterXml } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
+
+// Column Filter Component
+const ColumnFilterDropdown: React.FC<{
+    column: string;
+    filter: ColumnFilter | null;
+    onFilterChange: (column: string, filter: ColumnFilter | null) => void;
+    data: any[];
+}> = ({ column, filter, onFilterChange, data }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [localFilter, setLocalFilter] = useState<ColumnFilter>(
+        filter || { type: 'text', operator: 'equals', value: null }
+    );
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+
+    // Determine if column contains numeric data
+    const isNumericColumn = useMemo(() => {
+        return data.some(row => {
+            const value = row[column];
+            const numValue = parseFloat(value);
+            return !isNaN(numValue) && isFinite(numValue);
+        });
+    }, [data, column]);
+
+    // Determine if column contains date data
+    const isDateColumn = useMemo(() => {
+        return column.toLowerCase().includes('date') || 
+               data.some(row => {
+                   const value = row[column];
+                   return value && moment(value, ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY'], true).isValid();
+               });
+    }, [data, column]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        const updatePosition = () => {
+            if (buttonRef.current && isOpen) {
+                const rect = buttonRef.current.getBoundingClientRect();
+                const dropdownWidth = 256; // w-64 = 16rem = 256px
+                const viewportWidth = window.innerWidth;
+                const spaceOnRight = viewportWidth - rect.right;
+                const spaceOnLeft = rect.left;
+
+                let left = rect.left + window.scrollX;
+                
+                // If dropdown would go off-screen on the right, position it to the left
+                if (spaceOnRight < dropdownWidth && spaceOnLeft >= dropdownWidth) {
+                    // Position dropdown to the right edge of the button, extending leftward
+                    left = rect.right + window.scrollX - dropdownWidth;
+                }
+                
+                // Ensure dropdown doesn't go off-screen on the left
+                if (left < window.scrollX) {
+                    left = window.scrollX + 8; // 8px margin from edge
+                }
+
+                setDropdownPosition({
+                    top: rect.bottom + window.scrollY + 4,
+                    left: left
+                });
+            }
+        };
+
+        if (isOpen) {
+            updatePosition();
+            window.addEventListener('scroll', updatePosition);
+            window.addEventListener('resize', updatePosition);
+        }
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', updatePosition);
+            window.removeEventListener('resize', updatePosition);
+        };
+    }, [isOpen]);
+
+    // Debug: Track isOpen state changes
+    useEffect(() => {
+        // console.log('📊 isOpen state changed for column', column, ':', isOpen);
+    }, [isOpen, column]);
+
+    const handleApplyFilter = () => {
+        if (localFilter.value === null || localFilter.value === '') {
+            onFilterChange(column, null);
+        } else {
+            onFilterChange(column, localFilter);
+        }
+        setIsOpen(false);
+    };
+
+    const handleClearFilter = () => {
+        setLocalFilter({ type: 'text', operator: 'equals', value: null });
+        onFilterChange(column, null);
+        setIsOpen(false);
+    };
+
+    const getFilterType = () => {
+        if (isDateColumn) return 'date';
+        if (isNumericColumn) return 'number';
+        return 'text';
+    };
+
+    const filterType = getFilterType();
+
+    // console.log('🔧 ColumnFilterDropdown render for column:', column, 'isOpen:', isOpen, 'filter:', filter);
+
+    return (
+        <div className="relative inline-block">
+            <button
+                ref={buttonRef}
+                className={`ml-1 p-1 rounded hover:bg-gray-200 ${filter ? 'text-blue-600' : 'text-gray-400'}`}
+                onClick={(e) => {
+                    e.stopPropagation(); 
+                    e.preventDefault();
+                    setIsOpen(prev => !prev);
+                }}
+                title="Filter column"
+            >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14,12V19.88C14.04,20.18 13.94,20.5 13.71,20.71C13.32,21.1 12.69,21.1 12.3,20.71L10.29,18.7C10.06,18.47 9.96,18.16 10,17.87V12H9.97L4.21,4.62C3.87,4.19 3.95,3.56 4.38,3.22C4.57,3.08 4.78,3 5,3V3H19V3C19.22,3 19.43,3.08 19.62,3.22C20.05,3.56 20.13,4.19 19.79,4.62L14.03,12H14Z" />
+                </svg>
+            </button>
+
+            {isOpen && createPortal(
+                <div 
+                    ref={dropdownRef}
+                    className="w-64 bg-white border border-gray-300 rounded shadow-lg p-3"
+                    style={{ 
+                        position: 'fixed',
+                        top: dropdownPosition.top,
+                        left: dropdownPosition.left,
+                        zIndex: 999999, 
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                    }}
+                >
+                    <div className="space-y-3">
+                        {filterType === 'date' ? (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Filter Type
+                                    </label>
+                                    <select
+                                        value={localFilter.operator}
+                                        onChange={(e) => setLocalFilter({
+                                            ...localFilter,
+                                            operator: e.target.value as ColumnFilter['operator']
+                                        })}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                    >
+                                        <option value="equals">Equals</option>
+                                        <option value="dateRange">Date Range</option>
+                                    </select>
+                                </div>
+
+                                {localFilter.operator === 'dateRange' ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                From Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={localFilter.fromDate || ''}
+                                                onChange={(e) => setLocalFilter({
+                                                    ...localFilter,
+                                                    fromDate: e.target.value
+                                                })}
+                                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                To Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={localFilter.toDate || ''}
+                                                onChange={(e) => setLocalFilter({
+                                                    ...localFilter,
+                                                    toDate: e.target.value
+                                                })}
+                                                className="w-full p-2 border border-gray-300 rounded text-sm"
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Date Value
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={localFilter.value as string || ''}
+                                            onChange={(e) => setLocalFilter({
+                                                ...localFilter,
+                                                value: e.target.value
+                                            })}
+                                            className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Filter Type
+                                    </label>
+                                    <select
+                                        value={localFilter.operator}
+                                        onChange={(e) => setLocalFilter({
+                                            ...localFilter,
+                                            operator: e.target.value as ColumnFilter['operator']
+                                        })}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                    >
+                                        <option value="equals">Equals</option>
+                                        <option value="gte">Greater than or equal to</option>
+                                        <option value="lte">Less than or equal to</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Value
+                                    </label>
+                                    <input
+                                        type={filterType === 'number' ? 'number' : 'text'}
+                                        value={localFilter.value as string || ''}
+                                        onChange={(e) => setLocalFilter({
+                                            ...localFilter,
+                                            value: filterType === 'number' ? 
+                                                (e.target.value ? parseFloat(e.target.value) : '') : 
+                                                e.target.value
+                                        })}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        placeholder={`Enter ${filterType === 'number' ? 'number' : 'text'} value`}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="flex space-x-2">
+                            <button
+                                onClick={handleApplyFilter}
+                                className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                            >
+                                Apply
+                            </button>
+                            <button
+                                onClick={handleClearFilter}
+                                className="flex-1 px-3 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+};
 
 interface DataTableProps {
     data: any[];
@@ -55,6 +327,18 @@ interface ValueBasedColor {
     lessThanColor: string;
     greaterThanColor: string;
     equalToColor: string;
+}
+
+interface ColumnFilter {
+    type: 'number' | 'text' | 'date';
+    operator: 'gte' | 'lte' | 'equals' | 'dateRange';
+    value: string | number | null;
+    fromDate?: string;
+    toDate?: string;
+}
+
+interface FilterState {
+    [columnKey: string]: ColumnFilter;
 }
 
 interface StyledValue {
@@ -166,12 +450,98 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
+    const [filters, setFilters] = useState<FilterState>({});
 
     const { tableStyle } = useAppSelector((state: RootState) => state.common);
 
     const rowHeight = tableStyle === 'small' ? 30 : tableStyle === 'medium' ? 40 : 50;
     const screenSize = useScreenSize();
     const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
+
+    // Filter functions
+    const handleFilterChange = useCallback((columnKey: string, filter: ColumnFilter | null) => {
+        setFilters(prev => {
+            const newFilters = { ...prev };
+            if (filter === null) {
+                delete newFilters[columnKey];
+            } else {
+                newFilters[columnKey] = filter;
+            }
+            return newFilters;
+        });
+    }, []);
+
+    const applyFilters = useCallback((data: any[]) => {
+        if (Object.keys(filters).length === 0) return data;
+
+        return data.filter(row => {
+            return Object.entries(filters).every(([columnKey, filter]) => {
+                const cellValue = row[columnKey];
+                
+                // Handle React elements (from value-based text color formatting)
+                const actualValue = React.isValidElement(cellValue) 
+                    ? (cellValue as StyledValue).props.children 
+                    : cellValue;
+
+                if (actualValue === null || actualValue === undefined || actualValue === '') {
+                    return false;
+                }
+
+                switch (filter.operator) {
+                    case 'equals':
+                        if (filter.type === 'date') {
+                            const cellDate = moment(actualValue.toString(), ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY']);
+                            const filterDate = moment(filter.value as string);
+                            return cellDate.isValid() && filterDate.isValid() && 
+                                   cellDate.format('YYYY-MM-DD') === filterDate.format('YYYY-MM-DD');
+                        } else if (filter.type === 'number') {
+                            const numValue = parseFloat(actualValue.toString().replace(/,/g, ''));
+                            const filterValue = parseFloat(filter.value as string);
+                            return !isNaN(numValue) && !isNaN(filterValue) && numValue === filterValue;
+                        } else {
+                            return actualValue.toString().toLowerCase().includes(filter.value.toString().toLowerCase());
+                        }
+
+                    case 'gte':
+                        if (filter.type === 'number') {
+                            const numValue = parseFloat(actualValue.toString().replace(/,/g, ''));
+                            const filterValue = parseFloat(filter.value as string);
+                            return !isNaN(numValue) && !isNaN(filterValue) && numValue >= filterValue;
+                        } else {
+                            return actualValue.toString().toLowerCase() >= filter.value.toString().toLowerCase();
+                        }
+
+                    case 'lte':
+                        if (filter.type === 'number') {
+                            const numValue = parseFloat(actualValue.toString().replace(/,/g, ''));
+                            const filterValue = parseFloat(filter.value as string);
+                            return !isNaN(numValue) && !isNaN(filterValue) && numValue <= filterValue;
+                        } else {
+                            return actualValue.toString().toLowerCase() <= filter.value.toString().toLowerCase();
+                        }
+
+                    case 'dateRange':
+                        const cellDate = moment(actualValue.toString(), ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY']);
+                        if (!cellDate.isValid()) return false;
+                        
+                        const fromDate = filter.fromDate ? moment(filter.fromDate) : null;
+                        const toDate = filter.toDate ? moment(filter.toDate) : null;
+                        
+                        if (fromDate && toDate) {
+                            return cellDate.isBetween(fromDate, toDate, 'day', '[]');
+                        } else if (fromDate) {
+                            return cellDate.isSameOrAfter(fromDate, 'day');
+                        } else if (toDate) {
+                            return cellDate.isSameOrBefore(toDate, 'day');
+                        }
+                        return true;
+
+                    default:
+                        return true;
+                }
+            });
+        });
+    }, [filters]);
 
     // Format date function
     const formatDateValue = (value: string | number | Date, format: string = 'DD-MM-YYYY'): string => {
@@ -299,6 +669,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             };
         });
     }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows]);
+
+    // Apply filters to the formatted data
+    const filteredData = useMemo(() => {
+        return applyFilters(formattedData);
+    }, [formattedData, filters]);
 
     // Dynamically create columns from the first data item
     const columns = useMemo(() => {
@@ -596,6 +971,22 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     ...columnConfig,
                     headerCellClass: isNumericColumn ? 'numeric-column-header' : '',
                     cellClass: isNumericColumn ? 'numeric-column-cell' : '',
+                    renderHeaderCell: () => {
+                        // console.log('🏗️ Creating header cell for column:', key, 'with filter:', filters[key] || null);
+                        return (
+                            <div className="flex items-center justify-between w-full">
+                                <span className="truncate flex-1">{key}</span>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <ColumnFilterDropdown
+                                        column={key}
+                                        filter={filters[key] || null}
+                                        onFilterChange={handleFilterChange}
+                                        data={formattedData}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    },
                     renderSummaryCell: (props: any) => {
                         if (key === 'totalCount' || shouldShowTotal) {
                             return <div className={isNumericColumn ? "numeric-value font-bold" : "font-bold"} style={{ color: colors.text }}>{props.row[key]}</div>;
@@ -678,7 +1069,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             )
         }
         return baseColumns;
-    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows]);
+    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
@@ -718,8 +1109,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     };
 
     const rows = useMemo(() => {
-        return sortRows(formattedData, sortColumns);
-    }, [formattedData, sortColumns]);
+        return sortRows(filteredData, sortColumns);
+    }, [filteredData, sortColumns]);
 
     const summmaryRows = useMemo(() => {
         const totals: Record<string, any> = {
