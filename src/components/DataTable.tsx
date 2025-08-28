@@ -39,6 +39,12 @@ const ColumnFilterDropdown: React.FC<{
     const columnDataType = useMemo(() => {
         console.log(`🔍 COLUMN DATA TYPE DETECTION for column: "${column}"`);
         
+        // Force date type for columns with "date" in the name
+        if (column.toLowerCase().includes('date')) {
+            console.log(`✅ Column "${column}" FORCED as DATE (contains "date" in name)`);
+            return 'date';
+        }
+        
         if (!data || data.length === 0) return 'text';
         
         // Sample first 10 rows to determine data type
@@ -69,14 +75,13 @@ const ColumnFilterDropdown: React.FC<{
             const strValue = String(actualValue).trim();
             console.log(`📊 Sample value: "${strValue}"`);
             
-            // Check if it's a date
-            const hasDateInName = column.toLowerCase().includes('date');
+            // Check if it's a date (but this is now secondary to name-based detection)
             const momentDate = moment(strValue, ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'], true);
             const isValidDate = momentDate.isValid();
             
-            console.log(`📊 Date check: hasDateInName=${hasDateInName}, isValidDate=${isValidDate}, momentDate=${momentDate.isValid() ? momentDate.format('YYYY-MM-DD') : 'Invalid'}`);
+            console.log(`📊 Date check: isValidDate=${isValidDate}, momentDate=${momentDate.isValid() ? momentDate.format('YYYY-MM-DD') : 'Invalid'}`);
             
-            if (hasDateInName || isValidDate) {
+            if (isValidDate) {
                 dateCount++;
                 console.log(`✅ Counted as date (dateCount now: ${dateCount})`);
                 continue;
@@ -145,11 +150,6 @@ const ColumnFilterDropdown: React.FC<{
         return 'text';
     }, [data, column]);
 
-    // Don't render filter dropdown if data type is 'none'
-    if (columnDataType === 'none') {
-        return null;
-    }
-
     const isNumericColumn = columnDataType === 'number';
     const isDateColumn = columnDataType === 'date';
 
@@ -206,6 +206,11 @@ const ColumnFilterDropdown: React.FC<{
     useEffect(() => {
         // console.log('📊 isOpen state changed for column', column, ':', isOpen);
     }, [isOpen, column]);
+
+    // Don't render filter dropdown if data type is 'none'
+    if (columnDataType === 'none') {
+        return null;
+    }
 
     const handleApplyFilter = () => {
         if (localFilter.value === null || localFilter.value === '') {
