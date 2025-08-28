@@ -232,24 +232,42 @@ const ColumnFilterDropdown: React.FC<{
             filterType,
             columnDataType,
             isNumericColumn,
-            localFilterValue: localFilter.value
+            localFilterValue: localFilter.value,
+            localFilterOperator: localFilter.operator,
+            localFilterFromDate: localFilter.fromDate,
+            localFilterToDate: localFilter.toDate
         });
         
-        if (localFilter.value === null || localFilter.value === '' || localFilter.value === undefined) {
+        // Check if filter has valid values
+        const hasValue = localFilter.operator === 'dateRange' 
+            ? (localFilter.fromDate && localFilter.toDate) // Date range needs both dates
+            : (localFilter.value !== null && localFilter.value !== '' && localFilter.value !== undefined); // Other filters need value
+        
+        if (!hasValue) {
+            console.log('No valid filter values, clearing filter');
             onFilterChange(column, null);
         } else {
             // For number filters, ensure the value is stored as a number for comparison
             const filterToApply = { ...localFilter };
             
-            // Set the correct filter type based on detected column type
-            filterToApply.type = filterType as 'number' | 'text' | 'date';
+            // Override type based on detected column type, but preserve dateRange logic
+            if (localFilter.operator === 'dateRange') {
+                // Date range always needs type: 'date' regardless of column detection
+                filterToApply.type = 'date';
+            } else {
+                // For other operators, use the detected column type
+                filterToApply.type = filterType as 'number' | 'text' | 'date';
+            }
             
-            if (filterType === 'number' && localFilter.value !== '') {
+            console.log('Final filter being applied:', filterToApply);
+            
+            if (filterType === 'number' && localFilter.value !== '' && localFilter.operator !== 'dateRange') {
                 const numValue = parseFloat(localFilter.value as string);
                 if (!isNaN(numValue)) {
                     filterToApply.value = numValue;
                 }
             }
+            console.log('About to call onFilterChange with:', column, filterToApply);
             onFilterChange(column, filterToApply);
         }
         setIsOpen(false);
