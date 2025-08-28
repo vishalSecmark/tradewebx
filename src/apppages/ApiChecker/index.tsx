@@ -178,11 +178,11 @@ const ApiConfiguration = () => {
   };
   
   const handleViewLog = (row: any) => {
-    const serviceName = row.ServiceName;
+    const serviceName = row?.ServiceName;
     setViewLogServiceName(serviceName);
     setViewLogHeader({
-      VendorName: row.VendorName,
-      ServiceName: row.ServiceName,
+      VendorName: row.VendorName || "",
+      ServiceName: row.ServiceName || "",
     });
   };
 
@@ -450,10 +450,10 @@ const ApiConfiguration = () => {
               </DialogTitle>
               <div className="flex justify-center item-center">
               <DialogTitle className="text-xl font-sans mb-4">
-              <span className="font-bold">VendorName:</span> {viewLogHeader.VendorName}
+              <span className="font-bold">VendorName:</span> {viewLogHeader?.VendorName}
               </DialogTitle>
               <DialogTitle className="text-xl font-sans mb-4 ml-4">
-              <span className="font-bold">ServiceName:</span> {viewLogHeader.ServiceName}
+              <span className="font-bold">ServiceName:</span> {viewLogHeader?.ServiceName}
               </DialogTitle>
               </div>
               <button
