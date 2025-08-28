@@ -37,12 +37,18 @@ const ColumnFilterDropdown: React.FC<{
 
     // Enhanced data type detection
     const columnDataType = useMemo(() => {
+        console.log('Column Type Detection for:', column);
+        
         // Force date type for columns with "date" in the name
         if (column.toLowerCase().includes('date')) {
+            console.log('Detected as date column (name contains date)');
             return 'date';
         }
         
-        if (!data || data.length === 0) return 'text';
+        if (!data || data.length === 0) {
+            console.log('No data, defaulting to text');
+            return 'text';
+        }
         
         // Sample first 10 rows to determine data type
         const sampleSize = Math.min(10, data.length);
@@ -52,6 +58,8 @@ const ColumnFilterDropdown: React.FC<{
         let dateCount = 0;
         let pureTextCount = 0;
         let validValuesCount = 0;
+        
+        console.log('Analyzing sample data for column:', column, 'Sample size:', sampleSize);
         
         for (const row of sample) {
             const value = row[column];
@@ -68,6 +76,8 @@ const ColumnFilterDropdown: React.FC<{
             
             validValuesCount++;
             const strValue = String(actualValue).trim();
+            
+            console.log('Sample value:', strValue, 'from row:', row[column]);
             
             // Check if it's a date (but this is now secondary to name-based detection)
             const momentDate = moment(strValue, ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'], true);
@@ -86,6 +96,7 @@ const ColumnFilterDropdown: React.FC<{
             const numericPattern = /^[₹$€£¥]?-?[\d,]+\.?\d*[₹$€£¥]?$/;
             
             if (!isNaN(numValue) && isFinite(numValue) && numericPattern.test(strValue.replace(/\s/g, ''))) {
+                console.log('Detected as numeric:', strValue, '-> parsed:', numValue);
                 numericCount++;
                 continue;
             }
@@ -110,28 +121,46 @@ const ColumnFilterDropdown: React.FC<{
         }
         
         // Determine data type based on majority
-        if (validValuesCount === 0) return 'none'; // No valid data - no filter
+        if (validValuesCount === 0) {
+            console.log('No valid values, returning none');
+            return 'none'; // No valid data - no filter
+        }
         
         const numericPercentage = numericCount / validValuesCount;
         const datePercentage = dateCount / validValuesCount;
         const pureTextPercentage = pureTextCount / validValuesCount;
         
+        console.log('Column analysis results:', {
+            column,
+            validValuesCount,
+            numericCount,
+            dateCount,
+            pureTextCount,
+            numericPercentage,
+            datePercentage,
+            pureTextPercentage
+        });
+        
         // If 70% or more is dates, treat as date column
         if (datePercentage >= 0.7) {
+            console.log('Detected as date column');
             return 'date';
         }
         
         // If 70% or more is numeric, treat as numeric column
         if (numericPercentage >= 0.7) {
+            console.log('Detected as number column');
             return 'number';
         }
         
         // If 80% or more is pure text/very short/alphanumeric codes, don't show filter
         if (pureTextPercentage >= 0.6) {
+            console.log('Detected as none (too much text/codes)');
             return 'none'; // Reduced from 0.8 to 0.6 to be more strict
         }
         
         // Mixed data - allow text filtering
+        console.log('Detected as text (mixed data)');
         return 'text';
     }, [data, column]);
 
@@ -198,10 +227,30 @@ const ColumnFilterDropdown: React.FC<{
     }
 
     const handleApplyFilter = () => {
-        if (localFilter.value === null || localFilter.value === '') {
+        console.log('Apply Filter Debug:', {
+            column,
+            filterType,
+            columnDataType,
+            isNumericColumn,
+            localFilterValue: localFilter.value
+        });
+        
+        if (localFilter.value === null || localFilter.value === '' || localFilter.value === undefined) {
             onFilterChange(column, null);
         } else {
-            onFilterChange(column, localFilter);
+            // For number filters, ensure the value is stored as a number for comparison
+            const filterToApply = { ...localFilter };
+            
+            // Set the correct filter type based on detected column type
+            filterToApply.type = filterType as 'number' | 'text' | 'date';
+            
+            if (filterType === 'number' && localFilter.value !== '') {
+                const numValue = parseFloat(localFilter.value as string);
+                if (!isNaN(numValue)) {
+                    filterToApply.value = numValue;
+                }
+            }
+            onFilterChange(column, filterToApply);
         }
         setIsOpen(false);
     };
@@ -344,16 +393,30 @@ const ColumnFilterDropdown: React.FC<{
                                         Value
                                     </label>
                                     <input
-                                        type={filterType === 'number' ? 'number' : 'text'}
+                                        type="text"
                                         value={localFilter.value as string || ''}
-                                        onChange={(e) => setLocalFilter({
-                                            ...localFilter,
-                                            value: filterType === 'number' ? 
-                                                (e.target.value ? parseFloat(e.target.value) : '') : 
-                                                e.target.value
-                                        })}
+                                        onChange={(e) => {
+                                            const inputValue = e.target.value;
+                                            
+                                            if (filterType === 'number') {
+                                                // Allow empty string, numbers, negative numbers, and decimals
+                                                if (inputValue === '' || /^-?\d*\.?\d*$/.test(inputValue)) {
+                                                    setLocalFilter({
+                                                        ...localFilter,
+                                                        value: inputValue === '' ? '' : inputValue
+                                                    });
+                                                }
+                                                // If invalid number pattern, don't update the state
+                                            } else {
+                                                // For text filters, allow any input
+                                                setLocalFilter({
+                                                    ...localFilter,
+                                                    value: inputValue
+                                                });
+                                            }
+                                        }}
                                         className="w-full p-2 border border-gray-300 rounded text-sm"
-                                        placeholder={`Enter ${filterType === 'number' ? 'number' : 'text'} value`}
+                                        placeholder={`Enter ${filterType === 'number' ? 'number (e.g., 500, -500, 0)' : 'text'} value`}
                                     />
                                 </div>
                             </>
@@ -581,6 +644,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
                 switch (filter.operator) {
                     case 'equals':
+                        console.log('EQUALS Filter Debug:', {
+                            columnKey,
+                            filterType: filter.type,
+                            filterValue: filter.value,
+                            stringValue
+                        });
+                        
                         // Runtime date detection: if column name contains 'date' or value looks like a date, treat as date
                         const isDateColumn = columnKey.toLowerCase().includes('date');
                         const cellLooksLikeDate = moment(stringValue, ['DD-MM-YYYY', 'YYYYMMDD', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true).isValid();
@@ -609,15 +679,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                 return false;
                             }
                             
-                            // For integers, use exact equality
-                            if (Number.isInteger(numValue) && Number.isInteger(filterValue)) {
-                                const result = numValue === filterValue;
-                                return result;
-                            }
-                            
-                            // For decimals, use precision-based comparison
-                            const result = Math.abs(numValue - filterValue) < 0.001;
-                            console.log('Decimal comparison:', numValue, 'vs', filterValue, '=', result);
+                            // For equals, always use exact number comparison
+                            const result = numValue === filterValue;
                             return result;
                         } else {
                             // Text search - case insensitive contains
@@ -630,6 +693,19 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             const cleanFilterValue = String(filter.value).replace(/[,\s₹$€£¥]/g, '');
                             const numValue = parseFloat(cleanCellValue);
                             const filterValue = parseFloat(cleanFilterValue);
+                            
+                            // Temporary debug for number filtering issue
+                            console.log('GTE Number filter:', {
+                                original: stringValue,
+                                cleaned: cleanCellValue,
+                                numValue,
+                                filterInput: filter.value,
+                                filterCleaned: cleanFilterValue,
+                                filterValue,
+                                comparison: `${numValue} >= ${filterValue}`,
+                                result: numValue >= filterValue
+                            });
+                            
                             return !isNaN(numValue) && !isNaN(filterValue) && numValue >= filterValue;
                         } else {
                             return stringValue.toLowerCase() >= String(filter.value).toLowerCase();
