@@ -37,11 +37,8 @@ const ColumnFilterDropdown: React.FC<{
 
     // Enhanced data type detection
     const columnDataType = useMemo(() => {
-        console.log(`🔍 COLUMN DATA TYPE DETECTION for column: "${column}"`);
-        
         // Force date type for columns with "date" in the name
         if (column.toLowerCase().includes('date')) {
-            console.log(`✅ Column "${column}" FORCED as DATE (contains "date" in name)`);
             return 'date';
         }
         
@@ -50,8 +47,6 @@ const ColumnFilterDropdown: React.FC<{
         // Sample first 10 rows to determine data type
         const sampleSize = Math.min(10, data.length);
         const sample = data.slice(0, sampleSize);
-        
-        console.log(`📊 Analyzing ${sampleSize} rows for column "${column}"`);
         
         let numericCount = 0;
         let dateCount = 0;
@@ -73,17 +68,13 @@ const ColumnFilterDropdown: React.FC<{
             
             validValuesCount++;
             const strValue = String(actualValue).trim();
-            console.log(`📊 Sample value: "${strValue}"`);
             
             // Check if it's a date (but this is now secondary to name-based detection)
             const momentDate = moment(strValue, ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'], true);
             const isValidDate = momentDate.isValid();
             
-            console.log(`📊 Date check: isValidDate=${isValidDate}, momentDate=${momentDate.isValid() ? momentDate.format('YYYY-MM-DD') : 'Invalid'}`);
-            
             if (isValidDate) {
                 dateCount++;
-                console.log(`✅ Counted as date (dateCount now: ${dateCount})`);
                 continue;
             }
             
@@ -99,12 +90,20 @@ const ColumnFilterDropdown: React.FC<{
                 continue;
             }
             
-            // Check for pure text/alphanumeric content that shouldn't have filters
+            // Check for alphanumeric content - distinguish between codes vs regular data
+            // Complex codes that shouldn't have filters (longer, complex patterns)
+            const isComplexCode = /^[a-zA-Z]{2,}[\d]{3,}$/.test(strValue) || // NS250123 type (2+ letters, 3+ digits)
+                                 /^[\d]{3,}[a-zA-Z]{2,}$/.test(strValue) || // 12345AB type (3+ digits, 2+ letters)  
+                                 /^[a-zA-Z]+\d+[a-zA-Z]+/.test(strValue) || // ABC123DEF type (mixed)
+                                 strValue.length >= 8; // Very long strings are likely codes
+            
+            // Simple alphanumeric that should have text filters (shorter, simpler patterns)
+            const isSimpleAlphanumeric = /^[a-zA-Z]{1,3}[\d]{1,3}$/.test(strValue) || // ABP289, A12 type
+                                        /^[\d]{1,3}[a-zA-Z]{1,3}$/.test(strValue);   // 12A, 123AB type
+            
+            // Check for pure text or complex codes that shouldn't have filters
             if (/^[a-zA-Z\s]+$/.test(strValue) || // Pure alphabetic text
-                /^[a-zA-Z]+\d+$/.test(strValue) || // Letters followed by numbers (like NS250123)
-                /^\d+[a-zA-Z]+/.test(strValue) || // Numbers followed by letters (like 123ABC)
-                /^[a-zA-Z]+\d+[a-zA-Z]+/.test(strValue) || // Mixed alphanumeric codes
-                /^[a-zA-Z0-9]{2,}[a-zA-Z]+/.test(strValue) || // Mixed alphanumeric with letters
+                isComplexCode || // Complex alphanumeric codes
                 strValue.length < 3) { // Very short strings
                 pureTextCount++;
             }
@@ -117,36 +116,22 @@ const ColumnFilterDropdown: React.FC<{
         const datePercentage = dateCount / validValuesCount;
         const pureTextPercentage = pureTextCount / validValuesCount;
         
-        console.log(`📊 Column "${column}" analysis results:`, {
-            validValuesCount,
-            numericCount,
-            dateCount, 
-            pureTextCount,
-            numericPercentage,
-            datePercentage,
-            pureTextPercentage
-        });
-        
         // If 70% or more is dates, treat as date column
         if (datePercentage >= 0.7) {
-            console.log(`✅ Column "${column}" detected as DATE (${datePercentage * 100}% date values)`);
             return 'date';
         }
         
         // If 70% or more is numeric, treat as numeric column
         if (numericPercentage >= 0.7) {
-            console.log(`✅ Column "${column}" detected as NUMBER (${numericPercentage * 100}% numeric values)`);
             return 'number';
         }
         
         // If 80% or more is pure text/very short/alphanumeric codes, don't show filter
         if (pureTextPercentage >= 0.6) {
-            console.log(`✅ Column "${column}" detected as NONE (${pureTextPercentage * 100}% pure text, no filter)`);
             return 'none'; // Reduced from 0.8 to 0.6 to be more strict
         }
         
         // Mixed data - allow text filtering
-        console.log(`✅ Column "${column}" detected as TEXT (mixed data)`);
         return 'text';
     }, [data, column]);
 
@@ -577,57 +562,39 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     }, []);
 
     const applyFilters = useCallback((data: any[]) => {
-        console.log('🔍 APPLY FILTERS CALLED with filters:', filters);
-        console.log('🔍 Raw data sample (first 3 rows):', data.slice(0, 3));
-        
         if (Object.keys(filters).length === 0) return data;
 
         return data.filter(row => {
             return Object.entries(filters).every(([columnKey, filter]) => {
-                console.log(`\n🔎 Filtering column: ${columnKey}, filter:`, filter);
-                
                 const cellValue = row[columnKey];
-                console.log('📊 Raw cell value:', cellValue, 'Type:', typeof cellValue);
                 
                 // Handle React elements (from value-based text color formatting)
                 const actualValue = React.isValidElement(cellValue) 
                     ? (cellValue as StyledValue).props.children 
                     : cellValue;
 
-                console.log('📊 Actual value after React element check:', actualValue, 'Type:', typeof actualValue);
-
                 if (actualValue === null || actualValue === undefined || actualValue === '') {
-                    console.log('❌ Cell value is null/undefined/empty, filtering out');
                     return false;
                 }
 
                 const stringValue = String(actualValue).trim();
-                console.log('📊 String value for filtering:', stringValue);
 
                 switch (filter.operator) {
                     case 'equals':
-                        if (filter.type === 'date') {
-                            console.log('📅 DATE EQUALS FILTER STARTING');
-                            // Try to parse cell date in multiple formats including both original and formatted
+                        // Runtime date detection: if column name contains 'date' or value looks like a date, treat as date
+                        const isDateColumn = columnKey.toLowerCase().includes('date');
+                        const cellLooksLikeDate = moment(stringValue, ['DD-MM-YYYY', 'YYYYMMDD', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true).isValid();
+                        const filterLooksLikeDate = moment(filter.value as string, ['DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true).isValid();
+                        
+                        const treatAsDate = filter.type === 'date' || isDateColumn || (cellLooksLikeDate && filterLooksLikeDate);
+                        
+                        if (treatAsDate) {
+                            // Parse cell date in multiple formats
                             const cellDate = moment(stringValue, ['DD-MM-YYYY', 'YYYYMMDD', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
                             const filterDate = moment(filter.value as string, ['DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
                             
-                            // Debug logging for date filtering
-                            console.log('📅 Date equals filter debug:', {
-                                cellValue: stringValue,
-                                filterValue: filter.value,
-                                cellDate: cellDate.isValid() ? cellDate.format('YYYY-MM-DD') : 'Invalid',
-                                filterDate: filterDate.isValid() ? filterDate.format('YYYY-MM-DD') : 'Invalid',
-                                cellDateValid: cellDate.isValid(),
-                                filterDateValid: filterDate.isValid(),
-                                cellDateParsedAs: cellDate.isValid() ? cellDate.format('DD-MM-YYYY') : 'N/A',
-                                filterDateParsedAs: filterDate.isValid() ? filterDate.format('DD-MM-YYYY') : 'N/A',
-                                isSame: cellDate.isValid() && filterDate.isValid() ? cellDate.isSame(filterDate, 'day') : false
-                            });
-                            
                             const result = cellDate.isValid() && filterDate.isValid() && 
                                    cellDate.isSame(filterDate, 'day');
-                            console.log('📅 Date equals result:', result);
                             return result;
                         } else if (filter.type === 'number') {
                             // Handle formatted numbers (with commas, spaces, currency symbols)
@@ -637,15 +604,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             const numValue = parseFloat(cleanCellValue);
                             const filterValue = parseFloat(cleanFilterValue);
                             
-                            // Debug logging for number filtering
-                            console.log('Number filter debug:', {
-                                original: stringValue,
-                                cleaned: cleanCellValue,
-                                numValue,
-                                filterValue,
-                                filterInput: filter.value
-                            });
-                            
                             // Check if both are valid numbers
                             if (isNaN(numValue) || isNaN(filterValue)) {
                                 return false;
@@ -654,7 +612,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             // For integers, use exact equality
                             if (Number.isInteger(numValue) && Number.isInteger(filterValue)) {
                                 const result = numValue === filterValue;
-                                console.log('Integer comparison:', numValue, '===', filterValue, '=', result);
                                 return result;
                             }
                             
