@@ -108,7 +108,41 @@ const AppSidebar: React.FC = () => {
 
   useEffect(() => {
     if (menuStatus === 'idle') {
-      dispatch(fetchMenuItems());
+      // Check if auth_token is available before calling menu API
+      let retryCount = 0;
+      const maxRetries = 10; // Maximum 5 seconds of retrying
+      let timeoutId: NodeJS.Timeout;
+
+      const checkTokenAndFetchMenu = () => {
+        const authToken = localStorage.getItem('auth_token');
+        const userId = localStorage.getItem('userId');
+        const userType = localStorage.getItem('userType');
+
+        if (authToken && userId && userType) {
+          console.log('✅ Auth token found, fetching menu items');
+          dispatch(fetchMenuItems());
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`⏳ Auth token not ready, retrying in 500ms... (attempt ${retryCount}/${maxRetries})`, {
+            authToken: !!authToken,
+            userId: !!userId,
+            userType: !!userType
+          });
+          // Retry after a short delay to allow token setup to complete
+          timeoutId = setTimeout(checkTokenAndFetchMenu, 500);
+        } else {
+          console.warn('❌ Failed to fetch menu items after maximum retries - token not available');
+        }
+      };
+
+      checkTokenAndFetchMenu();
+
+      // Cleanup function to clear timeout if component unmounts
+      return () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      };
     }
   }, [menuStatus, dispatch]);
 

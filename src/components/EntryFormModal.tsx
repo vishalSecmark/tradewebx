@@ -12,6 +12,7 @@ import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabD
 import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
+import SaveConfirmationModal from './Modals/SaveConfirmationModal';
 
 
 
@@ -166,6 +167,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 
 const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
 
+    const [formSubmitConfirmation,setFormSubmitConfirmation] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -1008,6 +1010,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     }, [action, editData, isTabs]);
 
+
+         const handleConfirmSaveEdit = () => {
+               submitFormData();
+           };
+
+           const handleCancelSaveEdit = () => {
+               setFormSubmitConfirmation(false);
+           };
+
     const handleConfirmDelete = () => {
         if (childFormValues && childFormValues?.Id) {
             const filteredData = childEntriesTable.filter((item: any) => item.Id !== childFormValues?.Id);
@@ -1093,6 +1104,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }
 
     const submitFormData = async () => {
+        setFormSubmitConfirmation(false);
         const masterValues = structuredClone(masterFormValues);
         const childEntry = structuredClone(childFormValues);
         const childEntryTable = [...childEntriesTable].map(item => structuredClone(item));
@@ -1255,7 +1267,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             toast.error("Please fill all mandatory fields before submitting.");
             return;
         } else {
-            submitFormData()
+            setFormSubmitConfirmation(true);
         }
     }
 
@@ -1778,7 +1790,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     <button
                                                         className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
                                                         onClick={() => {
-                                                            submitFormData();
+                                                            handleFormSubmitWhenMasterOnly()
                                                         }}
                                                         disabled={isFormInvalid || viewMode || isFormSubmit}
                                                     >
@@ -1936,6 +1948,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 isOpen={isConfirmationModalOpen}
                 onConfirm={handleConfirmDelete}
                 onCancel={handleCancelDelete}
+            />
+            <SaveConfirmationModal
+                isOpen={formSubmitConfirmation}
+                onConfirm={handleConfirmSaveEdit}
+                onCancel={handleCancelSaveEdit}
+                confirmationHeading="Please Confirm "
+                confirmationMessage={`Are you sure you want to ${isEdit ? 'edit' : 'Add'} this record?`}
+                cancelText="Cancel"
+                confirmText="Confirm"
             />
             <CaseConfirmationModal
                 isOpen={validationModal.isOpen}

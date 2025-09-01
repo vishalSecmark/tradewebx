@@ -2,6 +2,20 @@ import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
+
+export const editableColumns = [
+  "APIUrl",
+  "HeaderParameter",
+  "ParameterSetting",
+  "CallBackUrl",
+  "ActiveFlag",
+  "LoginUserid",
+  "LoginPassword",
+  "AutoAPIStartTime",
+  "AutoAPIEndTime",
+]
+
+export const getApiConfigData = async(setApiConfigData,userId) => {
   const xml = `
   <dsXml>
   <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
@@ -10,10 +24,8 @@ import { toast } from "react-toastify";
   <X_Filter_Multiple/>
   <X_Data>
   </X_Data>
-  <J_Api>"UserId":"ADMIN"</J_Api>
+  <J_Api>"UserId":"${userId}"</J_Api>
 </dsXml>`
-
-export const getApiConfigData = async(setApiConfigData) => {
     try {
 
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
@@ -50,7 +62,9 @@ const cleanJSONStringLiteral = (str: string) => {
   export const viewLogApiCall = async (
     setModalOpen,
     viewLogServiceName: string,
-    setViewLogServiceNameApiData: any
+    setViewLogServiceNameApiData: any,
+    userId,
+    setViewLogServiceName,
   ) => {
     const viewLogXML = `
       <dsXml>
@@ -59,7 +73,7 @@ const cleanJSONStringLiteral = (str: string) => {
         <X_Filter/>
         <X_Filter_Multiple><APIName>${viewLogServiceName}</APIName></X_Filter_Multiple>
         <X_Data></X_Data>
-        <J_Api>"UserId":"ADMIN"</J_Api>
+        <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>
     `;
   
@@ -82,7 +96,7 @@ const cleanJSONStringLiteral = (str: string) => {
       if(response?.data?.data?.rs0 === null ){
         toast.error('no log found')
         setModalOpen(false)
-  
+        setViewLogServiceName("")
       }
 
     } catch (error) {

@@ -8,7 +8,7 @@ import CreatableSelect from 'react-select/creatable';
 import axios from 'axios';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
 import { handleViewFile } from "@/utils/helper";
@@ -173,6 +173,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     const { colors } = useTheme();
     const searchParams = useSearchParams();
     const router = useRouter();
+    const pathname = usePathname();
     const success = searchParams.get('success');
     const id = searchParams.get('id');
     const scope = searchParams.get('scope');
@@ -489,7 +490,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         if (field.redirectUrl === "true") {
             handleThirdPartyApi(field);
             localStorage.setItem('redirectedField', field.wKey);
-            router.replace(window.location.pathname);
+            router.replace(pathname);
         } else if (field.OTPRequire) {
             setCurrentOtpField(field);
             if (field.wKey.toLowerCase().includes('email')) {
@@ -814,7 +815,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                 handleThirdPartyApi(adharField, "thirdparty");
                 // Clean up localStorage after processing
                 localStorage.removeItem('redirectedField');
-                router.replace(window.location.pathname);
+                router.replace(pathname);
             }
             // Clear query params from URL
         }

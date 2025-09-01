@@ -1,3 +1,4 @@
+'use client'
 import EkycEntryForm from '@/components/component-forms/EkycEntryForm';
 import { EkycComponentProps } from '@/types/EkycFormTypes';
 import React, { useEffect, useState } from 'react';
@@ -9,7 +10,6 @@ import moment from 'moment';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import { findPageData } from '@/utils/helper';
-import axios from 'axios';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
@@ -19,8 +19,9 @@ import apiService from '@/utils/apiService';
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
-
+  const viewMode1 = localStorage.getItem("ekyc_viewMode") === "true" ;
+  const viewMode2 =  localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+  const viewMode = viewMode1 || viewMode2;
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
 
   const [openAddNominee, setOpenAddNominee] = useState(false);
@@ -39,6 +40,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   const [isMinor, setIsMinor] = useState(false);
   const [showGuardianForm, setShowGuardianForm] = useState(false);
   const [guardianFormData, setGuardianFormData] = useState<any>({});
+  const [guardianFormDataBackUp, setGuardianFormDataBackUp] = useState<any>({});
+
   const [guardianFields, setGuardianFields] = useState<any>([]);
   const [guardianDropdownOptions, setGuardianDropdownOptions] = useState<Record<string, any[]>>({});
   const [guardianLoadingDropdowns, setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
@@ -234,10 +237,22 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       }
     }
 
+    // NOTE :- use this when you want to include the empty keys from original form
     const nomineeData = {
       ...currentFormData,
-      GuardianDetails: showGuardianForm ? guardianFormData : null
+      GuardianDetails: showGuardianForm ? {
+        ...guardianFormData, // start with form data
+        ...Object.fromEntries(
+          Object.entries(guardianFormDataBackUp)
+            .filter(([key]) => !(key in guardianFormData) || guardianFormData[key] === "")
+        )
+      } : null
     };
+
+    // const nomineeData = {
+    //   ...currentFormData,
+    //   GuardianDetails: showGuardianForm ? guardianFormData : null
+    // };
 
     if (isEditing && editIndex !== null) {
       setFieldData((prevState: any) => {
@@ -279,7 +294,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   const clearFormAndCloseModal = () => {
     setCurrentFormData({});
-    setGuardianFormData({});
+    setGuardianFormData(guardianFormDataBackUp);
     setFieldErrors({});
     setGuardianFieldErrors({});
     setShowGuardianForm(false);
@@ -298,10 +313,12 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       const childEntry = entry.ChildEntry;
 
       const userData = localStorage.getItem("rekycRowData_viewMode");
+      const clientCode1 = localStorage.getItem("clientCode");
+      const clientCode2 = localStorage.getItem("userId");
       const parsedUserData = userData ? JSON.parse(userData) : null;
       const payload = !viewMode ? childEntry.X_Filter : {
-        EntryName: parsedUserData?.EntryName,
-        ClientCode: parsedUserData?.ClientCode,
+        EntryName: parsedUserData?.EntryName || "Rekyc",
+        ClientCode: parsedUserData?.ClientCode || clientCode1 || clientCode2,
         NomSerial: ''
       }
 
@@ -334,6 +351,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         }
       });
       setGuardianFormData(initialValues);
+      setGuardianFormDataBackUp(initialValues)
     } catch (error) {
       console.error('Error fetching childEntry data:', error);
     }
@@ -521,7 +539,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                     {showGuardianForm && (
                       <button
                         className={`px-4 py-2 rounded-md ${showGuardianForm ? 'bg-gray-500 hover:bg-gray-600 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}`}
-                        onClick={() => setGuardianFormData({})}
+                        onClick={() => setGuardianFormData(guardianFormDataBackUp)}
+                        disabled={viewMode}
                       >
                         Reset Form
                       </button>
