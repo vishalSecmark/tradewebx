@@ -1280,10 +1280,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     Edit Selected Rows
                                                 </button>
                                             )}
-                                            <button
+                                            {/* <button
                                                 onClick={() => {
                                                     exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
                                                     setIsMobileMenuOpen(false);
+                                                }}
+                                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                style={{ color: colors.text }}
+                                            >
+                                                <FaFileExcel size={16} />
+                                                Export to Excel
+                                            </button> */}
+                                            <button
+                                                onClick={() => {
+                                                    if (apiData?.length > 25000) {
+                                                        toast.warning(`Excel export allowed up to 25,000 records. You have ${apiData?.length} records.`);
+                                                        return; // stop here, don't export
+                                                    }
+                                                    exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                                    setIsMobileMenuOpen(false); // close mobile menu after export
                                                 }}
                                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                 style={{ color: colors.text }}
@@ -1329,10 +1344,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                         <FaFileCsv size={16} />
                                                         Export to CSV
                                                     </button>
-                                                    <button
+                                                    {/* <button
                                                         onClick={() => {
                                                             exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download');
                                                             setIsMobileMenuOpen(false);
+                                                        }}
+                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                        style={{ color: colors.text }}
+                                                    >
+                                                        <FaFilePdf size={16} />
+                                                        Export to PDF
+                                                    </button> */}
+                                                    <button
+                                                        onClick={() => {
+                                                            if (apiData?.length > 8000) {
+                                                                toast.warning(`PDF export allowed up to 8,000 records. You have ${apiData?.length} records.`);
+                                                                return; // stop here, don't export
+                                                            }
+                                                            exportTableToPdf(tableRef.current,jsonData,appMetadata,apiData,pageData,filters,currentLevel,'download');
+                                                            setIsMobileMenuOpen(false); // close mobile menu after export
                                                         }}
                                                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                         style={{ color: colors.text }}
