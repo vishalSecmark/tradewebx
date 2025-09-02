@@ -466,7 +466,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WCheckBox':
                 return (
-                    <div key={`checkbox-${field.Srno}-${field.wKey}`} className={marginBottom} style={{ marginTop: "30px" }}>
+                    <div key={`checkbox-${field.Srno}-${field.wKey}`} className={marginBottom} style={{ marginTop: "30px",width: fieldWidth}}>
                         <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text }}>
                             <input
                                 type="checkbox"

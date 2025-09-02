@@ -197,9 +197,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
 
     console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
-
-    console.log(pageData[0]?.Entry?.ChildEntry, 'entry page data');
-
+    
     const childEntryPresent = pageData[0]?.Entry?.ChildEntry;
     const isThereChildEntry = !isTabs && (!childEntryPresent || Object.keys(childEntryPresent).length === 0);
     const isViewMode = action === "view" ? true : false
@@ -483,6 +481,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
+    // to fetch dependent option for forms without tabs 
     const fetchDependentOptions = async (field: FormField, parentValue: string, isChild: boolean = false) => {
         if (!field.dependsOn) return;
 
@@ -541,6 +540,68 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
         }
     };
+
+     const fetchTabsDependentOptions = async (field: FormField, tabKey: string) => {
+        if (!field.dependsOn) return;
+        try {
+             setTabLoadingDropdowns(prev => ({
+                ...prev,
+                [tabKey]: { ...prev[tabKey], [field.wKey]: true }
+            }));
+
+            const jUi = Object.entries(field.dependsOn.wQuery.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(field.dependsOn.wQuery.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            let xFilter = '';
+            if (field.dependsOn.wQuery.X_Filter_Multiple) {
+                if (Array.isArray(field.dependsOn.field)) {
+                    field.dependsOn.field.forEach(fieldName => {
+                        if (!tabFormValues?.[tabKey][fieldName]) {
+                            toast.error(`Please select the field: ${fieldName}`);
+                            return;
+                        }
+                        xFilter += `<${fieldName}>${tabFormValues?.[tabKey][fieldName] || ''}</${fieldName}>`;
+                    });
+                } else {
+                    xFilter = `<${field.dependsOn.field}>${""}</${field.dependsOn.field}>`;
+                }
+            }
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+            const options = response.data?.data?.rs0?.map((item: any) => ({
+                label: item[field.wDropDownKey?.key || 'DisplayName'],
+                value: item[field.wDropDownKey?.value || 'Value']
+            }));
+
+            setTabDropdownOptions(prev => ({
+                ...prev,
+                [tabKey]: { ...prev[tabKey], [field.wKey]: options }
+            }));
+           
+        } catch (error) {
+            console.error(`Error fetching dependent options for ${field.wKey}:`, error);
+        } finally {
+             setTabLoadingDropdowns(prev => ({
+                ...prev,
+                [tabKey]: { ...prev[tabKey], [field.wKey]: false }
+            }));
+        }
+    };
+
 
     const handleMasterDropdownChange = (field: any) => {
         // Find dependent fields and update them
@@ -1276,7 +1337,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         if (field.dependsOn) {
             if (Array.isArray(field.dependsOn.field)) {
                 // Handle dependent dropdowns for tabs if needed
-                console.log('Handle dependent dropdown for tab:', tabKey);
+                fetchTabsDependentOptions(field, tabKey);
+                console.log('Handle dependent dropdown for tab:----------->', tabKey ,tabFormValues?.[tabKey]['PinCode']);
             }
         }
     };
