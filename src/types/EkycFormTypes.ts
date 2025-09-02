@@ -20,6 +20,7 @@ export interface FormField {
     isResizable: string;
     fieldJustUpdated: string;
     GetResponseFlag: string;
+    FieldWidth?: string;
     OTPRequire: string;
     Srno: number;
     type: string;

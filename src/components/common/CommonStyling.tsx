@@ -3,6 +3,7 @@ import { FormField } from "@/types";
 export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors: Record<string, string>, field: FormField, isJustUpdated: boolean = false) => ({
   control: (base: any, state: any) => ({
     ...base,
+    width: `${field.FieldWidth}px`,
     borderColor: state.isFocused
       ? '#3b82f6'
       : !isDisabled
