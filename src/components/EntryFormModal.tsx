@@ -167,7 +167,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 
 const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
 
-    const [formSubmitConfirmation,setFormSubmitConfirmation] = useState<boolean>(false);
+    const [formSubmitConfirmation, setFormSubmitConfirmation] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
     const [masterFormValues, setMasterFormValues] = useState<Record<string, any>>({});
@@ -197,7 +197,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
 
     console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
-    
+
     const childEntryPresent = pageData[0]?.Entry?.ChildEntry;
     const isThereChildEntry = !isTabs && (!childEntryPresent || Object.keys(childEntryPresent).length === 0);
     const isViewMode = action === "view" ? true : false
@@ -503,17 +503,32 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (field.dependsOn.wQuery.X_Filter_Multiple) {
                 if (Array.isArray(field.dependsOn.field)) {
                     field.dependsOn.field.forEach(fieldName => {
-                        if (!childFormValues[fieldName] && !masterFormValues[fieldName]) {
-                            toast.error(`Please select the field: ${fieldName}`);
-                            return;
+                        // Check if fieldName is actually a comma-separated string
+                        if (typeof fieldName === 'string' && fieldName.includes(',')) {
+                            // Split the string into individual field names
+                            const fieldNames = fieldName.split(',').map(name => name.trim());
+
+                            // Process each individual field name
+                            fieldNames.forEach(individualField => {
+                                if (!childFormValues[individualField] && !masterFormValues[individualField]) {
+                                    toast.error(`Please select the field: ${individualField}`);
+                                    return;
+                                }
+                                xFilter += `<${individualField}>${childFormValues[individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
+                            });
+                        } else {
+                            // Normal case - fieldName is already a single field name
+                            if (!childFormValues[fieldName] && !masterFormValues[fieldName]) {
+                                toast.error(`Please select the field: ${fieldName}`);
+                                return;
+                            }
+                            xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
                         }
-                        xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
                     });
                 } else {
                     xFilter = `<${field.dependsOn.field}>${parentValue}</${field.dependsOn.field}>`;
                 }
             }
-
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
@@ -541,10 +556,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-     const fetchTabsDependentOptions = async (field: FormField, tabKey: string) => {
+    const fetchTabsDependentOptions = async (field: FormField, tabKey: string) => {
         if (!field.dependsOn) return;
         try {
-             setTabLoadingDropdowns(prev => ({
+            setTabLoadingDropdowns(prev => ({
                 ...prev,
                 [tabKey]: { ...prev[tabKey], [field.wKey]: true }
             }));
@@ -561,17 +576,34 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (field.dependsOn.wQuery.X_Filter_Multiple) {
                 if (Array.isArray(field.dependsOn.field)) {
                     field.dependsOn.field.forEach(fieldName => {
-                        if (!tabFormValues?.[tabKey][fieldName]) {
-                            toast.error(`Please select the field: ${fieldName}`);
-                            return;
+                        // Check if fieldName is actually a comma-separated string
+                        if (typeof fieldName === 'string' && fieldName.includes(',')) {
+                            // Split the string into individual field names
+                            const fieldNames = fieldName.split(',').map(name => name.trim());
+
+                            // Process each individual field name
+                            fieldNames.forEach(individualField => {
+                                console.log("check list array", individualField, tabFormValues?.[tabKey][individualField]);
+                                if (!tabFormValues?.[tabKey][individualField]) {
+                                    toast.error(`Please select the field: ${individualField}`);
+                                    return;
+                                }
+                                xFilter += `<${individualField}>${tabFormValues?.[tabKey][individualField] || ''}</${individualField}>`;
+                            });
+                        } else {
+                            // Normal case - fieldName is already a single field name
+                            console.log("check list array", fieldName, tabFormValues?.[tabKey][fieldName]);
+                            if (!tabFormValues?.[tabKey][fieldName]) {
+                                toast.error(`Please select the field: ${fieldName}`);
+                                return;
+                            }
+                            xFilter += `<${fieldName}>${tabFormValues?.[tabKey][fieldName] || ''}</${fieldName}>`;
                         }
-                        xFilter += `<${fieldName}>${tabFormValues?.[tabKey][fieldName] || ''}</${fieldName}>`;
                     });
                 } else {
                     xFilter = `<${field.dependsOn.field}>${""}</${field.dependsOn.field}>`;
                 }
             }
-
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
@@ -591,11 +623,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 ...prev,
                 [tabKey]: { ...prev[tabKey], [field.wKey]: options }
             }));
-           
+
         } catch (error) {
             console.error(`Error fetching dependent options for ${field.wKey}:`, error);
         } finally {
-             setTabLoadingDropdowns(prev => ({
+            setTabLoadingDropdowns(prev => ({
                 ...prev,
                 [tabKey]: { ...prev[tabKey], [field.wKey]: false }
             }));
@@ -1072,13 +1104,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }, [action, editData, isTabs]);
 
 
-         const handleConfirmSaveEdit = () => {
-               submitFormData();
-           };
+    const handleConfirmSaveEdit = () => {
+        submitFormData();
+    };
 
-           const handleCancelSaveEdit = () => {
-               setFormSubmitConfirmation(false);
-           };
+    const handleCancelSaveEdit = () => {
+        setFormSubmitConfirmation(false);
+    };
 
     const handleConfirmDelete = () => {
         if (childFormValues && childFormValues?.Id) {
@@ -1338,7 +1370,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (Array.isArray(field.dependsOn.field)) {
                 // Handle dependent dropdowns for tabs if needed
                 fetchTabsDependentOptions(field, tabKey);
-                console.log('Handle dependent dropdown for tab:----------->', tabKey ,tabFormValues?.[tabKey]['PinCode']);
+                console.log('Handle dependent dropdown for tab:----------->', tabKey, tabFormValues?.[tabKey]['PinCode']);
             }
         }
     };
@@ -2066,5 +2098,3 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 };
 
 export default EntryFormModal;
-
-
