@@ -10,6 +10,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { handleViewFile } from "@/utils/helper";
 import apiService from "@/utils/apiService";
+import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -508,82 +509,20 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WFile':
                 return (
-                    <div style={containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
-                            {field.label}
-                            {isRequired && <span className="text-red-500 ml-1">*</span>}
-                        </label>
-
-                        {/* === PREVIEW EXISTING FILE IN EDIT MODE === */}
-                        {formValues[field.wKey] && (
-                            <div className="mb-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handleViewFile(
-                                            formValues[field.wKey],
-                                            field.FieldType?.split(',')[0] || 'file'
-                                        )
-                                    }
-                                    className="text-blue-600 underline"
-                                >
-                                    View uploaded file
-                                </button>
-
-                                {['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(field.FieldType?.toLowerCase()) && (
-                                    <img
-                                        src={formValues[field.wKey]}
-                                        alt="Uploaded preview"
-                                        className="h-24 w-auto rounded border mt-2"
-                                    />
-                                )}
-                            </div>
-                        )}
-                        <input
-                            type="file"
-                            accept={field.FieldType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',')}
-                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled
-                                ? 'border-gray-300'
-                                : fieldErrors[field.wKey]
-                                    ? 'border-red-500'
-                                    : 'border-gray-700'
-                                }`}
-                            style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : '#344054',
-                                backgroundColor: !isEnabled ? '#f2f2f0' : colors.textInputBackground,
-                                color: colors.textInputText,
-                                paddingTop: '0.5rem',
-                                width: fieldWidth // Apply width to file input
-                            }}
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    const allowedTypes = field.FieldType.split(',').map(ext => ext.trim().toLowerCase());
-                                    const fileType = file.name.split('.').pop()?.toLowerCase();
-
-                                    if (!allowedTypes.includes(fileType)) {
-                                        handleFieldError(field.wKey, `Allowed file types: ${field.FieldType}`);
-                                        return;
-                                    }
-
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        const base64 = reader.result as string;
-                                        handleInputChange(field.wKey, base64);
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-                            }}
-                            onBlur={() => handleBlur(field)}
-                            disabled={!isEnabled}
+                        <FileUploadWithCropForNormalForm
+                            key={`fileUpload-${field.Srno}-${field.wKey}`}
+                            field={field}
+                            formValues={formValues}
+                            setFormValues={setFormValues}
+                            fieldErrors={fieldErrors}
+                            setFieldErrors={setFieldErrors}
+                            colors={colors}
+                            handleBlur={handleBlur}
+                            isDisabled={!isEnabled}
+                            fieldWidth={fieldWidth}
                         />
-
-                        {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-                        )}
-                    </div>
-                );
-
+                    );
+              
             default:
                 return null;
         }
