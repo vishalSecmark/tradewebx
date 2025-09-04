@@ -8,7 +8,7 @@ import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
-import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData } from '@/types';
+import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData } from '@/types';
 import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
@@ -1594,6 +1594,32 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         });
     }
 
+    function groupFormData(
+        fields: FormField[],
+        isGroup: boolean
+    ): GroupedFormData[] {
+        if (!isGroup) {
+            return [{ groupName: "", fields }];
+        }
+
+        const groups = fields.reduce<Record<string, FormField[]>>((acc, field) => {
+            const groupName = field.CombinedName?.trim() || "";
+            if (groupName) {
+                if (!acc[groupName]) acc[groupName] = [];
+                acc[groupName].push(field);
+            } else {
+                if (!acc.__ungrouped) acc.__ungrouped = [];
+                acc.__ungrouped.push(field);
+            }
+            return acc;
+        }, {});
+
+        return Object.entries(groups).map(([groupName, fields]) => ({
+            groupName: groupName !== "__ungrouped" ? groupName : "",
+            fields,
+        }));
+    }
+
     if (!isOpen) return null;
     return (
         <>
@@ -1717,69 +1743,149 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 >
                                                                     Add
                                                                 </button>
-                                                            </div>
-                                                            <EntryForm
-                                                                formData={tabsData[activeTabIndex].Data}
-                                                                formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                                setFormValues={(values) => {
-                                                                    setTabFormValues(prev => ({
-                                                                        ...prev,
-                                                                        [`tab_${activeTabIndex}`]: typeof values === 'function'
-                                                                            ? values(prev[`tab_${activeTabIndex}`] || {})
-                                                                            : values
-                                                                    }));
-                                                                }}
-                                                                dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
-                                                                setDropDownOptions={(options) => {
-                                                                    setTabDropdownOptions(prev => ({
-                                                                        ...prev,
-                                                                        [`tab_${activeTabIndex}`]: typeof options === 'function'
-                                                                            ? options(prev[`tab_${activeTabIndex}`] || {})
-                                                                            : options
-                                                                    }));
-                                                                }}
-                                                                loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
-                                                                onDropdownChange={(field) => handleTabDropdownChange(field, `tab_${activeTabIndex}`)}
-                                                                fieldErrors={fieldErrors}
-                                                                setFieldErrors={setFieldErrors}
-                                                                masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                                setFormData={() => { }} // Not needed for tabs
-                                                                setValidationModal={setValidationModal}
-                                                            />
+                                                            </div>{(() => {
+                                                                const currentTab = tabsData[activeTabIndex];
+                                                                const groupedFormData: GroupedFormData[] = groupFormData(
+                                                                    currentTab.Data,
+                                                                    currentTab.Settings.isGroup === "true"
+                                                                );
+                                                                return (
+                                                                    <div>
+                                                                        {groupedFormData.map((group, idx) => (
+                                                                            <div
+                                                                                key={idx}
+                                                                                style={{
+                                                                                    border: group.groupName ? "1px solid #ccc" : "none",
+                                                                                    borderRadius: "6px",
+                                                                                    padding: group.groupName ? "12px" : "0",
+                                                                                    marginBottom: "16px",
+                                                                                }}
+                                                                            >
+                                                                                {group.groupName && (
+                                                                                    <h6
+                                                                                        style={{
+                                                                                            marginBottom: "10px",
+                                                                                            fontWeight: "bold",
+                                                                                            background: "#f7f7f7",
+                                                                                            padding: "6px 10px",
+                                                                                            borderRadius: "4px",
+                                                                                        }}
+                                                                                    >
+                                                                                        {group.groupName}
+                                                                                    </h6>
+                                                                                )}
+
+                                                                                <EntryForm
+                                                                                    formData={group.fields}
+                                                                                    formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                                    setFormValues={(values) => {
+                                                                                        setTabFormValues((prev) => ({
+                                                                                            ...prev,
+                                                                                            [`tab_${activeTabIndex}`]:
+                                                                                                typeof values === "function"
+                                                                                                    ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                                                    : values,
+                                                                                        }));
+                                                                                    }}
+                                                                                    dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                                                    setDropDownOptions={(options) => {
+                                                                                        setTabDropdownOptions((prev) => ({
+                                                                                            ...prev,
+                                                                                            [`tab_${activeTabIndex}`]:
+                                                                                                typeof options === "function"
+                                                                                                    ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                                                    : options,
+                                                                                        }));
+                                                                                    }}
+                                                                                    loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                                                    onDropdownChange={(field) =>
+                                                                                        handleTabDropdownChange(field, `tab_${activeTabIndex}`)
+                                                                                    }
+                                                                                    fieldErrors={fieldErrors}
+                                                                                    setFieldErrors={setFieldErrors}
+                                                                                    masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                                    setFormData={() => { }}
+                                                                                    setValidationModal={setValidationModal}
+                                                                                />
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                );
+                                                            })()
+                                                            }
                                                         </div>
                                                     </div>
+                                                )}
+                                                {tabsData[activeTabIndex].Settings.isTable !== "true" && (() => {
+                                                    const currentTab = tabsData[activeTabIndex];
+                                                    const groupedFormData: GroupedFormData[] = groupFormData(
+                                                        currentTab.Data,
+                                                        currentTab.Settings.isGroup === "true"
+                                                    );
+                                                    return (
+                                                        <div>
+                                                            {groupedFormData.map((group, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    style={{
+                                                                        border: group.groupName ? "1px solid #ccc" : "none",
+                                                                        borderRadius: "6px",
+                                                                        padding: group.groupName ? "12px" : "0",
+                                                                        marginBottom: "16px",
+                                                                    }}
+                                                                >
+                                                                    {group.groupName && (
+                                                                        <h6
+                                                                            style={{
+                                                                                marginBottom: "10px",
+                                                                                fontWeight: "bold",
+                                                                                background: "#f7f7f7",
+                                                                                padding: "6px 10px",
+                                                                                borderRadius: "4px",
+                                                                            }}
+                                                                        >
+                                                                            {group.groupName}
+                                                                        </h6>
+                                                                    )}
 
-                                                )}
-                                                {tabsData[activeTabIndex].Settings.isTable !== "true" && (
-                                                    <EntryForm
-                                                        formData={tabsData[activeTabIndex].Data}
-                                                        formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                        setFormValues={(values) => {
-                                                            setTabFormValues(prev => ({
-                                                                ...prev,
-                                                                [`tab_${activeTabIndex}`]: typeof values === 'function'
-                                                                    ? values(prev[`tab_${activeTabIndex}`] || {})
-                                                                    : values
-                                                            }));
-                                                        }}
-                                                        dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
-                                                        setDropDownOptions={(options) => {
-                                                            setTabDropdownOptions(prev => ({
-                                                                ...prev,
-                                                                [`tab_${activeTabIndex}`]: typeof options === 'function'
-                                                                    ? options(prev[`tab_${activeTabIndex}`] || {})
-                                                                    : options
-                                                            }));
-                                                        }}
-                                                        loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
-                                                        onDropdownChange={(field) => handleTabDropdownChange(field, `tab_${activeTabIndex}`)}
-                                                        fieldErrors={fieldErrors}
-                                                        setFieldErrors={setFieldErrors}
-                                                        masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                        setFormData={() => { }} // Not needed for tabs
-                                                        setValidationModal={setValidationModal}
-                                                    />
-                                                )}
+                                                                    <EntryForm
+                                                                        formData={group.fields}
+                                                                        formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                        setFormValues={(values) => {
+                                                                            setTabFormValues((prev) => ({
+                                                                                ...prev,
+                                                                                [`tab_${activeTabIndex}`]:
+                                                                                    typeof values === "function"
+                                                                                        ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                                        : values,
+                                                                            }));
+                                                                        }}
+                                                                        dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                                        setDropDownOptions={(options) => {
+                                                                            setTabDropdownOptions((prev) => ({
+                                                                                ...prev,
+                                                                                [`tab_${activeTabIndex}`]:
+                                                                                    typeof options === "function"
+                                                                                        ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                                        : options,
+                                                                            }));
+                                                                        }}
+                                                                        loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                                        onDropdownChange={(field) =>
+                                                                            handleTabDropdownChange(field, `tab_${activeTabIndex}`)
+                                                                        }
+                                                                        fieldErrors={fieldErrors}
+                                                                        setFieldErrors={setFieldErrors}
+                                                                        masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                        setFormData={() => { }}
+                                                                        setValidationModal={setValidationModal}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                })()}
+
                                                 {tabsData[activeTabIndex]?.Settings?.isTable === "true" && (
                                                     <div className="overflow-x-auto mt-4">
                                                         <table className="min-w-full bg-white border border-gray-200">

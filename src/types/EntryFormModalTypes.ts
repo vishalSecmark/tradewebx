@@ -45,6 +45,7 @@ export interface FormField {
     Srno: number;
     type: string;
     label: string;
+    CombinedName?: string;
     childDependents?: string[];
     wKey: string;
     FieldSize: string;
@@ -126,4 +127,21 @@ export interface ChildEntryModalProps {
     setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
     childModalZindex?: string;
+}
+
+
+export interface TabSettings {
+  isGroup?: string;
+  isTable?: string;
+  [key: string]: any;
+}
+
+export interface TabData {
+  Settings: TabSettings;
+  Data: FormField[];
+}
+
+export interface GroupedFormData {
+  groupName: string;
+  fields: FormField[];
 }
