@@ -19,6 +19,7 @@ export interface ApiResponse {
 
 export interface TabSettings {
     isTable: string;
+    isGroup?: string;
     maxAllowedRecords: string;
     SaveNextAPI: {
         J_Ui: {
@@ -127,13 +128,6 @@ export interface ChildEntryModalProps {
     setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
     childModalZindex?: string;
-}
-
-
-export interface TabSettings {
-  isGroup?: string;
-  isTable?: string;
-  [key: string]: any;
 }
 
 export interface TabData {
