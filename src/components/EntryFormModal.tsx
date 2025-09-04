@@ -584,20 +584,20 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             // Process each individual field name
                             fieldNames.forEach(individualField => {
                                 console.log("check list array", individualField, tabFormValues?.[tabKey][individualField]);
-                                if (!tabFormValues?.[tabKey][individualField]) {
+                                if (!tabFormValues?.[tabKey][individualField] && !masterFormValues[individualField]) {
                                     toast.error(`Please select the field: ${individualField}`);
                                     return;
                                 }
-                                xFilter += `<${individualField}>${tabFormValues?.[tabKey][individualField] || ''}</${individualField}>`;
+                                xFilter += `<${individualField}>${tabFormValues?.[tabKey][individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
                             });
                         } else {
                             // Normal case - fieldName is already a single field name
                             console.log("check list array", fieldName, tabFormValues?.[tabKey][fieldName]);
-                            if (!tabFormValues?.[tabKey][fieldName]) {
+                            if (!tabFormValues?.[tabKey][fieldName] && !masterFormValues[fieldName]) {
                                 toast.error(`Please select the field: ${fieldName}`);
                                 return;
                             }
-                            xFilter += `<${fieldName}>${tabFormValues?.[tabKey][fieldName] || ''}</${fieldName}>`;
+                            xFilter += `<${fieldName}>${tabFormValues?.[tabKey][fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
                         }
                     });
                 } else {
