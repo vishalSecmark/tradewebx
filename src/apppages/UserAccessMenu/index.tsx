@@ -297,7 +297,7 @@ const UserAccessMenu = () => {
             {/* Table */}
             {rs1?.length > 0 && (
                 <div className="mt-4 border rounded-lg shadow">
-                    <div className="max-h-[400px] overflow-y-auto">
+                    <div className="max-h-[680px] overflow-y-auto">
                         <table
                             className="min-w-full border-collapse border border-gray-300 text-sm"
                             style={{
