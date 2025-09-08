@@ -1198,7 +1198,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     if (!pageData) {
-        return <div>Loading report data...</div>;
+        return (
+            <div className="flex items-center justify-center py-8 border rounded-lg" style={{
+                backgroundColor: colors.cardBackground,
+                borderColor: '#e5e7eb',
+                minHeight: '200px'
+            }}>
+                <div className="text-center">
+                    <div className="text-lg font-medium mb-2" style={{ color: colors.text }}>
+                        Component Not Found
+                    </div>
+                    <div className="text-sm text-gray-500">
+                        No configuration found for component: <strong>{componentName}</strong>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-2">
+                        This might be a static component that should be handled differently.
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // Safe access to pageData properties with validation

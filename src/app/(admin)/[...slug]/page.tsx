@@ -28,8 +28,9 @@ const staticRoutes: Record<string, React.ReactNode> = {
   marginPledge: <MarginPledgeOnline />,
   ipo: <Ipo />,
   familymapping: <Family />,
-  apiconfiguration: <ApiConfiguration />,
-  bodProcess: <BodProcess />
+  apisetting: <ApiConfiguration />,
+  bodProcess: <BodProcess />,
+  useraccess: <UserAccessMenu />
 };
 
 // Define the type for params explicitly
@@ -46,18 +47,65 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
 
   const componentName = subSubRoute || subRoute || route;
 
+  console.log('Route debugging:', { route, subRoute, subSubRoute, componentName });
+  console.log('Available static routes:', Object.keys(staticRoutes));
+  console.log('Static routes object:', staticRoutes);
 
-  // Handle static routes
-  if (route in staticRoutes) {
-    return staticRoutes[route];
-  }
-  if (subRoute in staticRoutes) {
-    return staticRoutes[subRoute];
-  }
-  if (subSubRoute in staticRoutes) {
-    return staticRoutes[subSubRoute];
+  // Handle static routes with comprehensive matching
+  const checkStaticRoute = (routeToCheck: string) => {
+    if (!routeToCheck) return null;
+
+    // Direct match
+    if (routeToCheck in staticRoutes) {
+      console.log('Direct match found for:', routeToCheck);
+      return staticRoutes[routeToCheck];
+    }
+
+    // Case-insensitive match
+    const lowerRoute = routeToCheck.toLowerCase();
+    for (const [key, component] of Object.entries(staticRoutes)) {
+      if (key.toLowerCase() === lowerRoute) {
+        console.log('Case-insensitive match found:', key, 'for route:', routeToCheck);
+        return component;
+      }
+    }
+
+    // Kebab-case to camelCase conversion match
+    const camelCaseRoute = routeToCheck
+      .split('-')
+      .map((part, index) => index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1))
+      .join('');
+
+    if (camelCaseRoute in staticRoutes) {
+      console.log('Kebab-to-camel match found:', camelCaseRoute, 'for route:', routeToCheck);
+      return staticRoutes[camelCaseRoute];
+    }
+
+    // CamelCase to kebab-case conversion match
+    const kebabCaseRoute = routeToCheck
+      .replace(/([A-Z])/g, '-$1')
+      .toLowerCase()
+      .replace(/^-/, '');
+
+    if (kebabCaseRoute in staticRoutes) {
+      console.log('Camel-to-kebab match found:', kebabCaseRoute, 'for route:', routeToCheck);
+      return staticRoutes[kebabCaseRoute];
+    }
+
+    return null;
+  };
+
+  // Check static routes in order of priority
+  const staticComponent = checkStaticRoute(route) ||
+    checkStaticRoute(subRoute) ||
+    checkStaticRoute(subSubRoute);
+
+  if (staticComponent) {
+    console.log('Returning static component for:', componentName);
+    return staticComponent;
   }
 
+  console.log('No static route found, using dynamic component for:', componentName);
   // For dynamic routes, determine the actual componentName
   // Convert kebab-case to PascalCase if needed
   const formattedComponentName = componentName
@@ -71,6 +119,30 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
 // Client component that determines whether to show report or entry view
 function DynamicComponentRenderer({ componentName }: { componentName: string }) {
   const menuItems = useAppSelector(selectAllMenuItems);
+
+  console.log('DynamicComponentRenderer called with:', componentName);
+  console.log('Menu items:', menuItems);
+
+  // Check if this is actually a static component that should be handled differently
+  const staticComponentKeys = Object.keys(staticRoutes);
+  const isStaticComponent = staticComponentKeys.some(key =>
+    key.toLowerCase() === componentName.toLowerCase() ||
+    key.toLowerCase() === componentName.toLowerCase().replace(/-/g, '') ||
+    key.toLowerCase().replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '') === componentName.toLowerCase()
+  );
+
+  if (isStaticComponent) {
+    console.log('Static component detected in dynamic renderer:', componentName);
+    // Try to find the matching static component
+    for (const [key, component] of Object.entries(staticRoutes)) {
+      if (key.toLowerCase() === componentName.toLowerCase() ||
+        key.toLowerCase() === componentName.toLowerCase().replace(/-/g, '') ||
+        key.toLowerCase().replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '') === componentName.toLowerCase()) {
+        console.log('Returning static component from dynamic renderer:', key);
+        return component;
+      }
+    }
+  }
 
   // Find the component in menu items and check its type
   const findComponentType = (items: any[]): string | undefined => {
@@ -98,6 +170,7 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
       componentName.toLowerCase().includes('report') ? 'report' :
         componentType);
 
+  console.log('Using DynamicReportComponent for:', componentName, 'with type:', finalComponentType);
   return (
     <DynamicReportComponent componentName={componentName} componentType={finalComponentType} />
   );
