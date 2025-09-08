@@ -15,6 +15,7 @@ import AccountClosure from "@/apppages/KycPage/account-closure";
 import Family from "@/apppages/FamilyMapping";
 import ApiConfiguration from "@/apppages/ApiChecker";
 import BodProcess from "@/apppages/BodProcess";
+import UserAccessMenu from "@/apppages/UserAccessMenu";
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,

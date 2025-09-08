@@ -753,6 +753,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             className={`w-full px-3 py-2 border rounded-md bg-white`}
                             wrapperClassName={`w-full`}
                             placeholderText="From Date"
+                            showYearDropdown
+                            showMonthDropdown
+                            yearDropdownItemNumber={50}
+                            scrollableYearDropdown
+                            dropdownMode="select"
                         />
                     </div>
                     <div className="flex-1">
@@ -763,6 +768,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             className="w-full px-3 py-2 border rounded-md bg-white"
                             wrapperClassName={`w-full`}
                             placeholderText="To Date"
+                            showYearDropdown
+                            showMonthDropdown
+                            yearDropdownItemNumber={50}
+                            scrollableYearDropdown
+                            dropdownMode="select"
                         />
                     </div>
                     <div className="relative">
@@ -839,6 +849,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     className={`w-full px-3 py-2 border rounded-md bg-white`}
                     wrapperClassName={`w-full`}
                     placeholderText="Select Date"
+                    showYearDropdown
+                    showMonthDropdown
+                    yearDropdownItemNumber={50}
+                    scrollableYearDropdown
+                    dropdownMode="select"
                 />
             </div>
         );

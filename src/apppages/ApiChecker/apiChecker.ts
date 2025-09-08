@@ -3,8 +3,19 @@ import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
 
-const userId = localStorage.getItem('userId');
+export const editableColumns = [
+  "APIUrl",
+  "HeaderParameter",
+  "ParameterSetting",
+  "CallBackUrl",
+  "ActiveFlag",
+  "LoginUserid",
+  "LoginPassword",
+  "AutoAPIStartTime",
+  "AutoAPIEndTime",
+]
 
+export const getApiConfigData = async(setApiConfigData,userId) => {
   const xml = `
   <dsXml>
   <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
@@ -15,8 +26,6 @@ const userId = localStorage.getItem('userId');
   </X_Data>
   <J_Api>"UserId":"${userId}"</J_Api>
 </dsXml>`
-
-export const getApiConfigData = async(setApiConfigData) => {
     try {
 
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
@@ -53,7 +62,9 @@ const cleanJSONStringLiteral = (str: string) => {
   export const viewLogApiCall = async (
     setModalOpen,
     viewLogServiceName: string,
-    setViewLogServiceNameApiData: any
+    setViewLogServiceNameApiData: any,
+    userId,
+    setViewLogServiceName,
   ) => {
     const viewLogXML = `
       <dsXml>
@@ -85,7 +96,7 @@ const cleanJSONStringLiteral = (str: string) => {
       if(response?.data?.data?.rs0 === null ){
         toast.error('no log found')
         setModalOpen(false)
-  
+        setViewLogServiceName("")
       }
 
     } catch (error) {

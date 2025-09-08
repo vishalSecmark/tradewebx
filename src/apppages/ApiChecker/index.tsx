@@ -1,7 +1,12 @@
 import { useTheme } from "@/context/ThemeContext";
-import { getApiConfigData, viewLogApiCall } from "./apiChecker";
+import { editableColumns, getApiConfigData, viewLogApiCall } from "./apiChecker";
 import { useEffect, useState } from "react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
+import { toast } from "react-toastify";
+import apiService from "@/utils/apiService";
+import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { useLocalStorage } from "@/hooks/useLocalListner";
+import Loader from "@/components/Loader";
 
 // ✅ Add these two arrays globally within the component
 const apiCallingTypes = ["POST", "GET"];
@@ -11,6 +16,14 @@ const apiContentTypes = [
   "multipart/form-data",
   "text/plain"
 ];
+const activeFlag = ["Y","N"]
+
+interface LogHeader {
+  VendorName: string;
+  ServiceName: string;
+  // add more fields if API returns them
+}
+
 
 const ApiConfiguration = () => {
   const { colors } = useTheme();
@@ -30,9 +43,21 @@ const ApiConfiguration = () => {
     null
   );
 
+  const [loading, setLoading] = useState(false);      // ✅ for first load + save
+  const [logLoading, setLogLoading] = useState(false); // ✅ for view log
+  const [viewLogHeader, setViewLogHeader] = useState<LogHeader | null>(null);
+
+  const [userId] = useLocalStorage('userId', null);
+
   useEffect(() => {
-    getApiConfigData(setApiConfigData);
-  }, []);
+    if (userId) {
+      setLoading(true);
+      getApiConfigData(setApiConfigData, userId)
+        .finally(() => setLoading(false)); // ✅ hide loader when done
+    } else {
+      console.log("userId or userType is null, skipping API call");
+    }
+  }, [userId]);
 
   useEffect(() => {
     const keys = Array.from(
@@ -43,11 +68,14 @@ const ApiConfiguration = () => {
 
   useEffect(() => {
     if (viewLogServiceName) {
+      setLogLoading(true);
       viewLogApiCall(
         setModalOpen,
         viewLogServiceName,
-        setViewLogServiceNameApiData
-      );
+        setViewLogServiceNameApiData,
+        userId,
+        setViewLogServiceName
+      ).finally(() => setLogLoading(false)); // ✅ hide loader when done
     }
   }, [viewLogServiceName]);
 
@@ -63,7 +91,8 @@ const ApiConfiguration = () => {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async() => {
+    setLoading(true);
     const updated = [...apiConfigData];
     if (editIndex !== null) {
       updated[editIndex] = editableRow;
@@ -73,31 +102,99 @@ const ApiConfiguration = () => {
   
     // ✅ Log values
     console.log(Object.entries(editableRow).map((ele) => ele[1]), "editTableRow");
+
+    const formatTime = (time: string) => {
+      if (!time) return "";
+      const parts = time.replace(/[-:]/g, "").padEnd(6, "0"); // remove separators & pad with zeros
+      if (parts.length >= 6) {
+        return parts.slice(0, 6); // ensure exactly 6 digits
+      }
+      return parts.padEnd(6, "0");
+    };
+
+    const RemoveDouble = (data: string) => {
+      if (!data) return "";
+      return data.replace("<<Requestid>>", "~~Requestid!!");
+    };
+
+    const ReplaceFields = (data: string) => {
+      if (!data) return "";
+      // Match <<Field1>>, <<Field2>> etc. and replace dynamically
+      return data.replace(/<<Field(\d+)>>/g, (_, num) => `~~Field${num}!!`);
+    };
+    
+  
+    const normalizedRow = { ...editableRow };
+
+    // ✅ ensure default fallbacks when empty
+    if (normalizedRow.AutoAPIStartTime) {
+      normalizedRow.AutoAPIStartTime = formatTime(normalizedRow.AutoAPIStartTime);
+    } else {
+      normalizedRow.AutoAPIStartTime = "090000";
+    }
+    if (normalizedRow.AutoAPIEndTime) {
+      normalizedRow.AutoAPIEndTime = formatTime(normalizedRow.AutoAPIEndTime);
+    } else {
+      normalizedRow.AutoAPIEndTime = "210000";
+    }
+
+    if (normalizedRow.CallBackUrl || normalizedRow.APIUrl || normalizedRow.ParameterSetting) {
+      normalizedRow.APIUrl = RemoveDouble(normalizedRow.APIUrl)
+      normalizedRow.CallBackUrl = RemoveDouble(normalizedRow.CallBackUrl); // ✅ FIXED here
+      normalizedRow.ParameterSetting = ReplaceFields(normalizedRow.ParameterSetting)
+    }
   
     // ✅ Build XML string properly
     const data = `
       <dsXml>
-        <J_Ui>"ActionName":"TradeWeb", "Option":"ApiConfigurationSave","RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"APISETTING", "Option":"EDIT","RequestFrom":"W"</J_Ui>
         <Sql></Sql>
+        <X_Data>
+        ${Object.entries(normalizedRow)
+          .map(([key, value]) => `<${key}>${value} </${key}>`)
+          .join("\n")}
+        </X_Data>
         <X_Filter>
           <X_Filter_Multiple>
-            ${Object.entries(editableRow)
-              .map(([key, value]) => `<${key}> ${value} </${key}>`)
-              .join("\n")}
           </X_Filter_Multiple>
         </X_Filter>
-        <X_Data></X_Data>
         <J_Api>"UserId":"Admin"</J_Api>
       </dsXml>
     `;
-  
     console.log(data, "data in save");
+
+    try {
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL,data)
+      console.log(response.data?.data?.rs0[0].RowsAffected,'response1');
+      if(response.data?.data?.rs0[0].RowsAffected) {
+        toast.success("Update Sucessfully")
+        getApiConfigData(setApiConfigData,userId);
+        setLoading(false);
+      }
+    } catch (error) {
+      toast.error(error)
+    }
+
   };
   
   const handleViewLog = (row: any) => {
-    const serviceName = row.ServiceName;
+    const serviceName = row?.ServiceName;
     setViewLogServiceName(serviceName);
+    setViewLogHeader({
+      VendorName: row.VendorName || "",
+      ServiceName: row.ServiceName || "",
+    });
   };
+
+  // useEffect(() => {
+  //   console.log(viewLogHeader,'viewLogHeader');
+    
+  // },[viewLogHeader])
+
+  const handleCloseViewLog = () => {
+    setViewLogServiceName("")
+    setModalOpen(false)
+  }
 
   return (
     <div
@@ -109,6 +206,14 @@ const ApiConfiguration = () => {
       }}
       className="w-full"
     >
+
+{(loading || logLoading) && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+          <Loader />
+        </div>
+      )}
+
+
       <div className="border-b border-grey-500 flex items-center gap-5">
         <button
           className="px-4 py-2 text-sm rounded-t-lg font-bold bg-[#3EB489] mt-2"
@@ -168,27 +273,18 @@ const ApiConfiguration = () => {
                       SAVE
                     </button>
                   ) : (
-                    //needed in future
-                    // <button
-                    // disabled
-                    //   onClick={() => handleEdit(rowIndex)}
-                    //   className="w-[80px] h-auto border-2 border-orange-500 rounded-[12px] bg-transparent text-orange-500 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-orange-500 hover:text-white mr-2"
-                    // >
-                    //****end */
-                    //   EDIT
-                    // </button>
                     <button
-                    disabled
-                    className="w-[80px] h-auto border-2 border-gray-400 rounded-[12px] bg-gray-200 text-gray-500 mt-2.5 cursor-not-allowed py-2 font-medium font-poppins mr-2 opacity-70"
+                      onClick={() => handleEdit(rowIndex)}
+                      className="w-[80px] h-auto border-2 border-orange-500 rounded-[12px] bg-transparent text-orange-500 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-orange-500 hover:text-white mr-2"
                     >
-                    EDIT
+                      EDIT
                     </button>
                   )}
                   <button
                     onClick={() => handleViewLog(row)}
                     className="w-[100px] h-auto border-2 border-purple-600 rounded-[12px] bg-transparent text-purple-600 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-purple-600 hover:text-white"
                   >
-                    View Log
+                    View Logs
                   </button>
                 </td>
                 {uniqueKeys.map((key, colIndex) => (
@@ -200,8 +296,7 @@ const ApiConfiguration = () => {
                     }}
                   >
                     {editIndex === rowIndex &&
-                    key !== "VendorName" &&
-                    key !== "ServiceName" ? (
+                  editableColumns.includes(key) ? (
                       key === "APIType" ? (
                         <select
                           value={editableRow[key] ?? ""}
@@ -243,6 +338,39 @@ const ApiConfiguration = () => {
                             </option>
                           ))}
                         </select>
+                      ) : key === "ActiveFlag" ? (
+                        <select
+                          value={editableRow[key] ?? ""}
+                          onChange={(e) =>
+                            handleInputChange(key, e.target.value)
+                          }
+                          className="w-full border px-1 py-0.5 text-sm"
+                        >
+                          <option value="">Select</option>
+                          {activeFlag.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      ) : key === "AutoAPIStartTime" || key === "AutoAPIEndTime" ? (
+                        // ✅ Special handling for HHMMSS → time input
+                        <input
+                          type="time"
+                          value={
+                            editableRow[key]
+                              ? editableRow[key].slice(0, 2) +
+                                ":" +
+                                editableRow[key].slice(2, 4)
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const val =
+                              e.target.value.replace(":", "") + "00"; // HH:MM → HHMMSS
+                            handleInputChange(key, val);
+                          }}
+                          className="w-full border px-1 py-0.5 text-sm"
+                        />
                       ) : (
                         <>
                           {editableRow[key] &&
@@ -306,11 +434,12 @@ const ApiConfiguration = () => {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Modals remain same ... */}
+      {/* View Log Modal */}
       {modalOpen && (
         <Dialog
           open={modalOpen}
-          onClose={() => setModalOpen(false)}
+          onClose={() => handleCloseViewLog()}
           className="relative z-[200]"
         >
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
@@ -319,8 +448,16 @@ const ApiConfiguration = () => {
               <DialogTitle className="text-xl font-bold mb-4">
                 View Log
               </DialogTitle>
+              <div className="flex justify-center item-center">
+              <DialogTitle className="text-xl font-sans mb-4">
+              <span className="font-bold">VendorName:</span> {viewLogHeader?.VendorName}
+              </DialogTitle>
+              <DialogTitle className="text-xl font-sans mb-4 ml-4">
+              <span className="font-bold">ServiceName:</span> {viewLogHeader?.ServiceName}
+              </DialogTitle>
+              </div>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={() => handleCloseViewLog()}
                 className="absolute top-2 right-4 text-2xl font-bold text-gray-500 hover:text-black"
                 aria-label="Close"
               >
