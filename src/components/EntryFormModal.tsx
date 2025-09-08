@@ -1074,6 +1074,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (response?.data?.success) {
                 fetchMasterEntryData(masterFormValues)
                 setIsConfirmationModalOpen(false);
+                toast.success('Child Record Deleted')
             }
 
         } catch (error) {
