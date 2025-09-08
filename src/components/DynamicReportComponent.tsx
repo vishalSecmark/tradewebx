@@ -84,6 +84,7 @@ const safePageDataAccess = (pageData: any, validationResult: PageDataValidationR
     };
 };
 
+
 // Page data validator function
 const validatePageData = (pageData: any): PageDataValidationResult => {
     const errors: ValidationError[] = [];
@@ -173,7 +174,10 @@ const validatePageData = (pageData: any): PageDataValidationResult => {
 
         // Validate filters if they exist
         if (pageConfig.filters !== undefined) {
-            if (!Array.isArray(pageConfig.filters)) {
+            // Handle string "[]" case - this is valid and will be normalized
+            if (typeof pageConfig.filters === 'string' && pageConfig.filters.trim() === '[]') {
+                // This is valid, no error needed
+            } else if (!Array.isArray(pageConfig.filters)) {
                 errors.push({
                     field: 'filters',
                     message: 'Filters configuration should be an array.',
@@ -360,6 +364,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const pageData: any = findPageData();
     console.log(pageData, 'pageData');
+
     // Validate pageData whenever it changes
     useEffect(() => {
         if (pageData) {
@@ -474,11 +479,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
 
         try {
-            if (pageData?.[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0) {
+            // Handle filters field - normalize string "[]" to actual array
+            let filters = pageData?.[0]?.filters;
+            if (typeof filters === 'string' && filters.trim() === '[]') {
+                filters = [];
+            }
+
+            if (filters && Array.isArray(filters) && filters.length > 0) {
                 const defaultFilters: Record<string, any> = {};
 
                 // Handle the nested array structure with safe validation
-                pageData[0].filters.forEach((filterGroup, groupIndex) => {
+                filters.forEach((filterGroup, groupIndex) => {
                     if (!Array.isArray(filterGroup)) {
                         console.warn(`Filter group at index ${groupIndex} is not an array, skipping...`);
                         return;
@@ -560,10 +571,18 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 const newAutoFetch = pageData[0].autoFetch === "true" || clientCode !== null;
                 setAutoFetch(newAutoFetch);
 
+                // Check if there are filters that need to be configured
+                let filters = pageData[0]?.filters;
+                if (typeof filters === 'string' && filters.trim() === '[]') {
+                    filters = [];
+                }
+                const hasFilters = filters && Array.isArray(filters) && filters.length > 0;
+
                 // If we have a client code, we want to fetch data regardless of autoFetch setting
                 if (clientCode) {
                     fetchData();
-                } else if (!newAutoFetch) {
+                } else if (!newAutoFetch && hasFilters) {
+                    // Only skip fetch if autoFetch is false AND there are filters to configure
                     return;
                 }
                 if (!hasFetchedRef.current) {
@@ -657,7 +676,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }
 
             // Check if page has filters and if filters are initialized
-            const hasFilters = pageData[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0;
+            let filters = pageData[0]?.filters;
+            if (typeof filters === 'string' && filters.trim() === '[]') {
+                filters = [];
+            }
+            const hasFilters = filters && Array.isArray(filters) && filters.length > 0;
 
             // Only process filters if the page has filter configuration and filters are initialized
             if (hasFilters && areFiltersInitialized) {
@@ -834,7 +857,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (pageData && pageLoaded && areFiltersInitialized && currentLevel === 0) {
             const autoFetchSetting = pageData[0]?.autoFetch;
             const filterType = pageData[0]?.filterType;
-            const hasFilters = pageData[0]?.filters?.length > 0;
+            let filters = pageData[0]?.filters;
+            if (typeof filters === 'string' && filters.trim() === '[]') {
+                filters = [];
+            }
+            const hasFilters = filters && Array.isArray(filters) && filters.length > 0;
 
             // Check if autoFetch is false and filterType is not "onPage" and has filters
             if (autoFetchSetting === "false" && filterType !== "onPage" && hasFilters && !clientCode && !isPageLoaded) {
