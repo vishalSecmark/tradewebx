@@ -186,6 +186,19 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
   };
 
   const currentFile = getFileData();
+  const containerStyle = {
+            width: fieldWidth,
+    
+        };
+  const containerStylesForBr = {
+            width : "100%",
+            display: "grid",
+            gridTemplateColumns: "120px 1fr",
+            gap: "16px 24px",
+            alignItems: "start"
+        }
+
+        
 
   // Function to reconstruct full base64 URL for display
   const getDisplayUrl = (base64Data: string, type: string) => {
@@ -194,8 +207,8 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
   };
 
   return (
-    <div className="mb-1" style={{ width: fieldWidth || '100%' }}>
-      <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+    <div className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+      <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak : "break-all"}}>
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
       </label>

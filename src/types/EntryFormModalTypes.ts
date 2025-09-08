@@ -46,6 +46,7 @@ export interface FormField {
     Srno: number;
     type: string;
     label: string;
+    isBR: string;
     CombinedName?: string;
     childDependents?: string[];
     wKey: string;

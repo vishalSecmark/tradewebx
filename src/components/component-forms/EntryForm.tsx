@@ -8,7 +8,6 @@ import CreatableSelect from 'react-select/creatable';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
-import { handleViewFile } from "@/utils/helper";
 import apiService from "@/utils/apiService";
 import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 
@@ -44,6 +43,21 @@ const DropdownField: React.FC<{
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
         const isRequired = field.isMandatory === "true";
+        
+        const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
+
+        const containerStyle = {
+            width: fieldWidth,
+        };
+
+        const containerStylesForBr = {
+            width : "100%",
+            display: "grid",
+            gridTemplateColumns: "120px 1fr",
+            gap: "16px 24px",
+            alignItems: "start"
+        }
+
 
         useEffect(() => {
             if (options.length > 0) {
@@ -92,8 +106,8 @@ const DropdownField: React.FC<{
 
 
         return (
-            <div key={field.Srno} className="mb-1">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+            <div key={field.Srno} className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.text ,wordBreak:"break-all" }}>
                     {field.label}
                     {isRequired && <span className="text-red-500 ml-1">*</span>}
 
@@ -370,8 +384,21 @@ const EntryForm: React.FC<EntryFormProps> = ({
         // Common container style with dynamic width
         const containerStyle = {
             width: fieldWidth,
-            marginBottom: marginBottom // assuming marginBottom is defined elsewhere
+            marginBottom: marginBottom 
         };
+        const checkBoxStyle = {
+            width: fieldWidth,
+            marginBottom: marginBottom,
+            marginTop: "30px"
+        };
+
+        const containerStylesForBr = {
+            width : "100%",
+            display: "grid",
+            gridTemplateColumns: "120px 1fr",
+            gap: "16px 24px",
+            alignItems: "start"
+        }
 
         switch (field.type) {
             case 'WDropDownBox':
@@ -398,8 +425,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDateBox':
                 return (
-                    <div style={containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text,  wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
@@ -431,8 +458,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WTextBox':
                 return (
-                    <div style={containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
@@ -467,8 +494,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WCheckBox':
                 return (
-                    <div key={`checkbox-${field.Srno}-${field.wKey}`} className={marginBottom} style={{ marginTop: "30px",width: fieldWidth}}>
-                        <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text }}>
+                    <div key={`checkbox-${field.Srno}-${field.wKey}`}  style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}>
+                        <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text, wordBreak:"break-all" }}>
                             <input
                                 type="checkbox"
                                 className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
@@ -490,8 +517,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WDisplayBox':
                 return (
-                    <div style={containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                         </label>
                         <div
