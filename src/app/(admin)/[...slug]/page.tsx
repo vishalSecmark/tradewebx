@@ -24,13 +24,12 @@ const staticRoutes: Record<string, React.ReactNode> = {
   theme: <ThemePage />,
   downloads: <Downloads />,
   rekyc: <KycPage />,
-  clientclosure:<AccountClosure/>,
+  clientclosure: <AccountClosure />,
   marginPledge: <MarginPledgeOnline />,
   ipo: <Ipo />,
-  familymapping:<Family />,
-  apisetting:<ApiConfiguration/>,
-  bodprocess:<BodProcess/>,
-  useraccess:<UserAccessMenu/>
+  familymapping: <Family />,
+  apiconfiguration: <ApiConfiguration />,
+  bodProcess: <BodProcess />
 };
 
 // Define the type for params explicitly
@@ -60,9 +59,6 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
   }
 
   // For dynamic routes, determine the actual componentName
-  console.log('componentName_', componentName);
-  console.log('route_', route);
-  console.log('subRoute_', subRoute);
   // Convert kebab-case to PascalCase if needed
   const formattedComponentName = componentName
     .split("-")
@@ -80,8 +76,6 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   const findComponentType = (items: any[]): string | undefined => {
     for (const item of items) {
       if (item.componentName?.toLowerCase() === componentName.toLowerCase()) {
-        console.log(item.componentType, 'componontType1');
-
         return item.componentType;
       }
 
@@ -97,10 +91,14 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   };
 
   const componentType = findComponentType(menuItems);
-  console.log('componentType', componentType);
-  // console.log('componentName', componentName);
-  // Show entry component if componentType is 'entry', otherwise show report component
+
+  // Fallback: if componentType is undefined, infer from componentName patterns
+  const finalComponentType = componentType ||
+    (componentName.toLowerCase().includes('entry') ? 'entry' :
+      componentName.toLowerCase().includes('report') ? 'report' :
+        componentType);
+
   return (
-    <DynamicReportComponent componentName={componentName} componentType={componentType} />
+    <DynamicReportComponent componentName={componentName} componentType={finalComponentType} />
   );
 }
