@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { getDropdownStyles } from "../common/CommonStyling";
 import CreatableSelect from 'react-select/creatable';
-import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
-import { handleViewFile } from "@/utils/helper";
 import apiService from "@/utils/apiService";
+import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -25,6 +24,7 @@ const DropdownField: React.FC<{
     isDisabled: boolean;
     handleDropDownChange: any;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    fieldWidth?: string;
 }> = ({
     field,
     formValues,
@@ -43,6 +43,21 @@ const DropdownField: React.FC<{
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
         const isRequired = field.isMandatory === "true";
+        
+        const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
+
+        const containerStyle = {
+            width: fieldWidth,
+        };
+
+        const containerStylesForBr = {
+            width : "100%",
+            display: "grid",
+            gridTemplateColumns: "120px 1fr",
+            gap: "16px 24px",
+            alignItems: "start"
+        }
+
 
         useEffect(() => {
             if (options.length > 0) {
@@ -91,8 +106,8 @@ const DropdownField: React.FC<{
 
 
         return (
-            <div key={field.Srno} className="mb-1">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+            <div key={field.Srno} className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.text ,wordBreak:"break-all" }}>
                     {field.label}
                     {isRequired && <span className="text-red-500 ml-1">*</span>}
 
@@ -363,32 +378,55 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const isEnabled = field.FieldEnabledTag === 'Y';
         const isRequired = field.isMandatory === "true";
 
+        // Get field width or default to full width
+        const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
+
+        // Common container style with dynamic width
+        const containerStyle = {
+            width: fieldWidth,
+            marginBottom: marginBottom 
+        };
+        const checkBoxStyle = {
+            width: fieldWidth,
+            marginBottom: marginBottom,
+            marginTop: "30px"
+        };
+
+        const containerStylesForBr = {
+            width : "100%",
+            display: "grid",
+            gridTemplateColumns: "120px 1fr",
+            gap: "16px 24px",
+            alignItems: "start"
+        }
+
         switch (field.type) {
             case 'WDropDownBox':
                 return (
-                    <DropdownField
-                        key={`dropdown-${field.Srno}-${field.wKey}`}
-                        field={field}
-                        formValues={formValues}
-                        setFormValues={setFormValues}
-                        dropdownOptions={dropdownOptions}
-                        loadingDropdowns={loadingDropdowns}
-                        fieldErrors={fieldErrors}
-                        setFieldErrors={setFieldErrors}
-                        colors={colors}
-                        handleBlur={() => handleBlur(field)}
-                        isDisabled={!isEnabled}
-                        handleDropDownChange={onDropdownChange}
-                        setDropDownOptions={setDropDownOptions}
-                    />
+                    <div style={containerStyle}>
+                        <DropdownField
+                            key={`dropdown-${field.Srno}-${field.wKey}`}
+                            field={field}
+                            formValues={formValues}
+                            setFormValues={setFormValues}
+                            dropdownOptions={dropdownOptions}
+                            loadingDropdowns={loadingDropdowns}
+                            fieldErrors={fieldErrors}
+                            setFieldErrors={setFieldErrors}
+                            colors={colors}
+                            handleBlur={() => handleBlur(field)}
+                            isDisabled={!isEnabled}
+                            handleDropDownChange={onDropdownChange}
+                            setDropDownOptions={setDropDownOptions}
+                            fieldWidth={fieldWidth} // Pass width to DropdownField if needed
+                        />
+                    </div>
                 );
 
             case 'WDateBox':
                 return (
-                    <div
-                        key={`dateBox-${field.Srno}-${field.wKey}`}
-                        className={marginBottom}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text,  wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
@@ -397,16 +435,16 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
                             className={`
-                                w-full px-3 py-1 border rounded-md
-                                focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-                                ${!isEnabled
+                            w-full px-3 py-1 border rounded-md
+                            focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                            ${!isEnabled
                                     ? 'border-gray-300 bg-[#f2f2f0]'
                                     : fieldErrors[field.wKey]
                                         ? 'border-red-500'
                                         : 'border-gray-700'
                                 }
-                                ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
-                            `}
+                            ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
+                        `}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
                             onBlur={() => handleBlur(field)}
@@ -420,10 +458,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WTextBox':
                 return (
-                    <div
-                        key={`textBox-${field.Srno}-${field.wKey}`}
-                        className={marginBottom}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
@@ -434,7 +470,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             style={{
                                 borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText
+                                color: colors.textInputText,
+                                width: fieldWidth // Apply width to input directly
                             }}
                             value={formValues[field.wKey] || ''}
                             onChange={(e) => {
@@ -455,13 +492,33 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         )}
                     </div>
                 );
-
+            case 'WCheckBox':
+                return (
+                    <div key={`checkbox-${field.Srno}-${field.wKey}`}  style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}>
+                        <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text, wordBreak:"break-all" }}>
+                            <input
+                                type="checkbox"
+                                className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
+                                checked={formValues[field.wKey] === "true" || formValues[field.wKey] === true}
+                                onChange={e => handleInputChange(field.wKey, String(e.target.checked))}
+                                onBlur={() => handleBlur(field)}
+                                disabled={!isEnabled}
+                                style={{ accentColor: colors.textInputText }}
+                            />
+                            <span className="ml-2">
+                                {field.label}
+                                {isRequired && <span className="text-red-500 ml-1">*</span>}
+                            </span>
+                        </label>
+                        {fieldErrors[field.wKey] && (
+                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                        )}
+                    </div>
+                );
             case 'WDisplayBox':
                 return (
-                    <div
-                        key={`displayBox-${field.Srno}-${field.wKey}`}
-                        className={marginBottom}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                         </label>
                         <div
@@ -469,102 +526,37 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             style={{
                                 borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : colors.textInputBorder,
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText
+                                color: colors.textInputText,
+                                width: fieldWidth // Apply width to display box
                             }}
                         >
                             {formValues[field.wKey] || '-'}
                         </div>
                     </div>
                 );
-
             case 'WFile':
                 return (
-                    <div
-                        key={`fileInput-${field.Srno}-${field.wKey}`}
-                        className={marginBottom}
-                    >
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
-                            {field.label}
-                            {isRequired && <span className="text-red-500 ml-1">*</span>}
-                        </label>
-
-                        {/* === PREVIEW EXISTING FILE IN EDIT MODE === */}
-                        {formValues[field.wKey] && (
-                            <div className="mb-2">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        handleViewFile(
-                                            formValues[field.wKey],
-                                            field.FieldType?.split(',')[0] || 'file' // optional second param for extension
-                                        )
-                                    }
-                                    className="text-blue-600 underline"
-                                >
-                                    View uploaded file
-                                </button>
-
-                                {/* Optional: show preview for image types */}
-                                {['jpeg', 'jpg', 'png', 'gif', 'webp'].includes(field.FieldType?.toLowerCase()) && (
-                                    <img
-                                        src={formValues[field.wKey]}
-                                        alt="Uploaded preview"
-                                        className="h-24 w-auto rounded border mt-2"
-                                    />
-                                )}
-                            </div>
-                        )}
-                        <input
-                            type="file"
-                            accept={field.FieldType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',')}
-                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled
-                                ? 'border-gray-300'
-                                : fieldErrors[field.wKey]
-                                    ? 'border-red-500'
-                                    : 'border-gray-700'
-                                }`}
-                            style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : '#344054',
-                                backgroundColor: !isEnabled ? '#f2f2f0' : colors.textInputBackground,
-                                color: colors.textInputText,
-                                paddingTop: '0.5rem',
-                            }}
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                    const allowedTypes = field.FieldType.split(',').map(ext => ext.trim().toLowerCase());
-                                    const fileType = file.name.split('.').pop()?.toLowerCase();
-
-                                    if (!allowedTypes.includes(fileType)) {
-                                        handleFieldError(field.wKey, `Allowed file types: ${field.FieldType}`);
-                                        return;
-                                    }
-
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        const base64 = reader.result as string;
-                                        handleInputChange(field.wKey, base64);
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-                            }}
-                            onBlur={() => handleBlur(field)}
-                            disabled={!isEnabled}
+                        <FileUploadWithCropForNormalForm
+                            key={`fileUpload-${field.Srno}-${field.wKey}`}
+                            field={field}
+                            formValues={formValues}
+                            setFormValues={setFormValues}
+                            fieldErrors={fieldErrors}
+                            setFieldErrors={setFieldErrors}
+                            colors={colors}
+                            handleBlur={handleBlur}
+                            isDisabled={!isEnabled}
+                            fieldWidth={fieldWidth}
                         />
-
-                        {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-                        )}
-                    </div>
-                );
-
+                    );
+              
             default:
                 return null;
         }
     };
 
     return (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="flex flex-wrap gap-4">
             {formData.map(renderFormField)}
         </div>
     );

@@ -19,6 +19,7 @@ export interface ApiResponse {
 
 export interface TabSettings {
     isTable: string;
+    isGroup?: string;
     maxAllowedRecords: string;
     SaveNextAPI: {
         J_Ui: {
@@ -45,6 +46,8 @@ export interface FormField {
     Srno: number;
     type: string;
     label: string;
+    isBR?: string;
+    CombinedName?: string;
     childDependents?: string[];
     wKey: string;
     FieldSize: string;
@@ -52,6 +55,7 @@ export interface FormField {
     FieldType: string;
     ValidationAPI: any;
     FieldEnabledTag: string;
+    FieldWidth?: string;
     isMandatory?: string;
     wQuery?: {
         Sql: string;
@@ -125,4 +129,14 @@ export interface ChildEntryModalProps {
     setChildEntriesTable: React.Dispatch<React.SetStateAction<any[]>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
     childModalZindex?: string;
+}
+
+export interface TabData {
+  Settings: TabSettings;
+  Data: FormField[];
+}
+
+export interface GroupedFormData {
+  groupName: string;
+  fields: FormField[];
 }
