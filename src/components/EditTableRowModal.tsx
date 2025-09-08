@@ -128,8 +128,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     //end
     // eky modal state 
     const [isEkycModalOpen, setIsKycModalOpen] = useState(false);
-    const [accountClouserOpen,setAccountClosureOpen] = useState(false)
-    const [accountClouserDataPass,setAccountClosureDataPass] = useState({
+    const [accountClouserOpen, setAccountClosureOpen] = useState(false)
+    const [accountClouserDataPass, setAccountClosureDataPass] = useState({
         "name": "Account Closure",
         "primaryHeaderKey": "",
         "primaryKey": "",
@@ -142,7 +142,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             "RequestFrom": "W"
         },
         "settings": {},
-        "clientCode":''
+        "clientCode": ''
     })
     // loading state for save/process button
     const [isSaving, setIsSaving] = useState(false);
@@ -321,12 +321,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             localStorage.setItem("ekyc_checker", "false");
             setIsKycModalOpen(true);
             clearMakerSates();
-        }else if(entryName === "account closure") {
+        } else if (entryName === "account closure") {
             setAccountClosureOpen(true)
             setAccountClosureDataPass(prev => ({
                 ...prev,
                 clientCode: rowData.ClientCode
-            }));            
+            }));
         }
         else {
             fetchPageDataForView(rowData);
@@ -608,8 +608,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, dynamicXmlGenratingFn(showViewApi, rowData));
             const rs0 = response?.data?.data?.rs0 || [];
 
-            console.log(response,'responseeeee');
-            
+            console.log(response, 'responseeeee');
+
 
             if (!Array.isArray(rs0) || rs0.length === 0) {
                 toast.error('No logs found.');
@@ -617,12 +617,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             }
             setProcessResponseData(rs0);
             setIsProcessModalOpen(true);
- 
+
 
         } catch (error) {
             console.error('Error in handleProcess:', error);
             toast.error('Failed to process request.');
-          
+
         } finally {
             setIsSaving(false);
         }
@@ -636,28 +636,28 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const handleSave = async () => {
         setIsSaving(true);
         const xmlData = generateDsXml(localData);
-    
+
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const responseData = response.data?.data?.rs0?.[0];
-    
+
             // Check API-level failure
             if (response.data?.success === false) {
                 let errorMessage = response.data.message || 'An error occurred while saving';
                 const messageMatch = errorMessage.match(/<Message>(.*?)<\/Message>/);
                 if (messageMatch) errorMessage = messageMatch[1];
-    
+
                 showValidationMessage(errorMessage, 'E');
                 return;
             }
-    
+
             // Check business logic error from rs0[0]
             if (responseData?.Flag === "E") {
                 const businessError = responseData?.Message || "Business error occurred";
                 showValidationMessage(businessError, "E");
                 return;
             }
-    
+
             // Success handling
             let successMessage = 'Record saved successfully';
             if (response.data?.message) {
@@ -665,32 +665,32 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 if (match) successMessage = match[1];
                 else successMessage = response.data.message;
             }
-    
+
             const RemarkArray = responseData?.Remark?.[0];
             if (RemarkArray?.fileContents) {
                 const base64 = RemarkArray.fileContents;
                 const fileDownloadName = RemarkArray.fileDownloadName;
                 displayAndDownloadFile(base64, fileDownloadName);
             }
-    
+
             toast.success(successMessage);
             onClose();
         } catch (error) {
             console.error('Error saving data:', error);
             let errorMessage = 'An error occurred while saving. Please try again.';
-    
+
             if (error.response?.data?.success === false) {
                 errorMessage = error.response.data.message || errorMessage;
                 const match = errorMessage.match(/<Message>(.*?)<\/Message>/);
                 if (match) errorMessage = match[1];
             }
-    
+
             showValidationMessage(errorMessage, 'E');
         } finally {
             setIsSaving(false);
         }
     };
-    
+
 
 
     //this logic can be use in future
@@ -1002,12 +1002,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const base64 = response?.data?.data?.rs0?.Base64PDF;
             const fileName = response?.data?.data?.rs0?.PDFName
-            console.log(response?.data?.data?.rs0,'response?.data?.data?.rs0?');
-            
-            if(base64){
-                 displayAndDownloadFile(base64)
+            console.log(response?.data?.data?.rs0, 'response?.data?.data?.rs0?');
+
+            if (base64) {
+                displayAndDownloadFile(base64)
             }
-            if(response?.data?.data?.rs0[0].Flag === "E"){
+            if (response?.data?.data?.rs0[0].Flag === "E") {
                 toast.error(response?.data?.data?.rs0[0]?.Message || "something went wrong")
             }
 
@@ -1022,13 +1022,13 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             <Dialog open={isOpen} onClose={() => console.log("close")} className="relative z-[100]" >
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 flex flex-col">
-                        <DialogTitle className="text-lg font-semibold mb-2">{title}</DialogTitle>
-                        {localData.length > 0 ? (
-                            showViewDocument ? (
-                                // Form layout for ShowViewDocument
-                                <div className="overflow-auto">
-                                    <div className="mx-auto">
+                    <DialogPanel className="bg-white rounded-lg shadow-xl max-w-5xl w-full p-6 flex flex-col max-h-[70vh]">
+                        <DialogTitle className="text-lg font-semibold mb-2 flex-shrink-0">{title}</DialogTitle>
+                        <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pr-2">
+                            {localData.length > 0 ? (
+                                showViewDocument ? (
+                                    // Form layout for ShowViewDocument
+                                    <div className="mx-auto p-2">
                                         {localData.map((row, rowIndex) => (
                                             <div key={rowIndex} className="mb-2">
                                                 {rowIndex > 0 && <hr className="my-6 border-gray-300" />}
@@ -1179,195 +1179,195 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-                            ) : (
-                                // Table layout for normal editing
-                                <div className="overflow-auto">
-                                    <table className="border text-sm">
-                                        <thead>
-                                            <tr>
-                                                {showViewTable === true && <th
-                                                    className="border px-2 py-2 text-left"
-                                                    style={{
-                                                        backgroundColor: colors.primary,
-                                                        color: colors.text,
-                                                        fontFamily: fonts.content,
-                                                        minWidth: '100px'
-                                                    }}
-                                                >
-                                                    Actions
-                                                </th>}
-                                                {getOrderedColumns(Object.keys(localData[0])).map((key) => {
-                                                    const columnWidth = getColumnWidth(key);
-                                                    return (
-                                                        <th
-                                                            key={key}
-                                                            className="border px-2 py-2 text-left"
-                                                            style={{
-                                                                backgroundColor: colors.primary,
-                                                                color: colors.text,
-                                                                fontFamily: fonts.content,
-                                                                ...(columnWidth && { minWidth: `${columnWidth}px` }),
-                                                            }}
-                                                        >
-                                                            {key}
-                                                        </th>
-                                                    );
-                                                })}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {localData.map((row, rowIndex) => (
-                                                <tr
-                                                    key={rowIndex}
-                                                    style={{
-                                                        backgroundColor:
-                                                            rowIndex % 2 === 0
-                                                                ? colors.evenCardBackground
-                                                                : colors.oddCardBackground,
-                                                        color: colors.text,
-                                                        fontFamily: fonts.content,
-                                                    }}
-                                                >
-                                                    {showViewTable === true && <td className="border px-2 py-2">
-                                                        <button
-                                                            onClick={() => handleViewRow(row, rowIndex)}
-                                                            className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
-                                                            style={{
-                                                                fontFamily: fonts.content,
-                                                            }}
-                                                        >
-                                                            View
-                                                        </button>
-                                                    </td>}
-                                                    {getOrderedColumns(Object.keys(row)).map((key) => {
-                                                        const value = row[key];
-                                                        const editable = getEditableColumn(key);
-                                                        const isValueNumeric = isNumeric(value);
-                                                        const hasChar = hasCharacterField(key);
-
-                                                        // Get columns that should be left-aligned even if they contain numbers
-                                                        const leftAlignedColumns = settings?.leftAlignedColumns || settings?.leftAlignedColums
-                                                            ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
-                                                            : [];
-
-                                                        const isLeftAligned = leftAlignedColumns.includes(key);
-
+                                ) : (
+                                    // Table layout for normal editing
+                                    <div className="p-2">
+                                        <table className="border text-sm">
+                                            <thead>
+                                                <tr>
+                                                    {showViewTable === true && <th
+                                                        className="border px-2 py-2 text-left"
+                                                        style={{
+                                                            backgroundColor: colors.primary,
+                                                            color: colors.text,
+                                                            fontFamily: fonts.content,
+                                                            minWidth: '100px'
+                                                        }}
+                                                    >
+                                                        Actions
+                                                    </th>}
+                                                    {getOrderedColumns(Object.keys(localData[0])).map((key) => {
+                                                        const columnWidth = getColumnWidth(key);
                                                         return (
-                                                            <td
+                                                            <th
                                                                 key={key}
-                                                                className="border px-2 py-2"
+                                                                className="border px-2 py-2 text-left"
                                                                 style={{
-                                                                    textAlign: isLeftAligned || editable ? 'left' : (hasChar ? 'left' : 'right')
+                                                                    backgroundColor: colors.primary,
+                                                                    color: colors.text,
+                                                                    fontFamily: fonts.content,
+                                                                    ...(columnWidth && { minWidth: `${columnWidth}px` }),
                                                                 }}
                                                             >
-                                                                {editable ? (
-                                                                    editable.type === "WTextBox" ? (
-                                                                        <input
-                                                                            type="text"
-                                                                            value={value ?? ""}
-                                                                            onChange={(e) =>
-                                                                                handleInputChange(rowIndex, key, e.target.value)
-                                                                            }
-                                                                            onFocus={() =>
-                                                                                setPreviousValues(prev => ({
-                                                                                    ...prev,
-                                                                                    [`${rowIndex}_${key}`]: value
-                                                                                }))
-                                                                            }
-                                                                            onBlur={() => {
-                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
-                                                                                setPreviousValues(prev => {
-                                                                                    const updated = { ...prev };
-                                                                                    delete updated[`${rowIndex}_${key}`];
-                                                                                    return updated;
-                                                                                });
-                                                                            }}
-                                                                            placeholder={editable.wPlaceholder}
-                                                                            className="w-full border border-gray-300 rounded px-2 py-1"
-                                                                            style={{
-                                                                                fontFamily: fonts.content,
-                                                                                color: colors.text,
-                                                                                backgroundColor: colors.textInputBackground,
-                                                                                borderColor: colors.textInputBorder,
-                                                                            }}
-                                                                        />
-                                                                    ) : editable.type === "WDropDownBox" ? (
-                                                                        <CustomDropdown
-                                                                            item={{
-                                                                                ...editable,
-                                                                                isMultiple: false,
-                                                                                label: "" // Override label to empty string for table layout too
-                                                                            } as any}
-                                                                            value={value ?? ""}
-                                                                            onChange={async (newValue) => {
-                                                                                const previousValue = value;
-                                                                                handleInputChange(rowIndex, key, newValue);
-
-                                                                                // Trigger validation API if configured
-                                                                                if (editable.ValidationAPI?.dsXml) {
-                                                                                    // Small delay to ensure state is updated
-                                                                                    setTimeout(() => {
-                                                                                        handleInputBlur(rowIndex, key, previousValue);
-                                                                                    }, 100);
-                                                                                }
-                                                                            }}
-                                                                            options={
-                                                                                editable.options
-                                                                                    ? editable.options.map(opt => ({
-                                                                                        label: opt.label,
-                                                                                        value: opt.Value,
-                                                                                    }))
-                                                                                    : editable.dependsOn
-                                                                                        ? dropdownOptions[`${key}_${rowIndex}`] || []
-                                                                                        : dropdownOptions[key] || []
-                                                                            }
-                                                                            isLoading={
-                                                                                editable.dependsOn
-                                                                                    ? loadingDropdowns[`${key}_${rowIndex}`] || false
-                                                                                    : loadingDropdowns[key] || false
-                                                                            }
-                                                                            colors={colors}
-                                                                            formData={[]}
-                                                                            handleFormChange={() => { }}
-                                                                            formValues={row}
-                                                                        />
-                                                                    ) : editable.type === "WDateBox" ? (
-                                                                        <div
-                                                                            style={{
-                                                                                fontFamily: fonts.content,
-                                                                                color: colors.text,
-                                                                                backgroundColor: colors.textInputBackground,
-                                                                                borderColor: colors.textInputBorder,
-                                                                            }}
-                                                                        >
-                                                                            <DatePicker
-                                                                                selected={value ? new Date(value) : null}
-                                                                                onChange={(date: Date | null) =>
-                                                                                    handleInputChange(rowIndex, key, date)
-                                                                                }
-                                                                                dateFormat="dd/MM/yyyy"
-                                                                                className="w-full border border-gray-300 rounded px-2 py-1"
-                                                                            />
-                                                                        </div>
-                                                                    ) : null
-                                                                ) : (
-                                                                    <span style={{ fontFamily: fonts.content }}>{value}</span>
-                                                                )}
-                                                            </td>
+                                                                {key}
+                                                            </th>
                                                         );
                                                     })}
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )
-                        ) : (
-                            <p className="text-gray-600">No data available.</p>
-                        )}
+                                            </thead>
+                                            <tbody>
+                                                {localData.map((row, rowIndex) => (
+                                                    <tr
+                                                        key={rowIndex}
+                                                        style={{
+                                                            backgroundColor:
+                                                                rowIndex % 2 === 0
+                                                                    ? colors.evenCardBackground
+                                                                    : colors.oddCardBackground,
+                                                            color: colors.text,
+                                                            fontFamily: fonts.content,
+                                                        }}
+                                                    >
+                                                        {showViewTable === true && <td className="border px-2 py-2">
+                                                            <button
+                                                                onClick={() => handleViewRow(row, rowIndex)}
+                                                                className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 px-3 py-1 rounded-md transition-colors"
+                                                                style={{
+                                                                    fontFamily: fonts.content,
+                                                                }}
+                                                            >
+                                                                View
+                                                            </button>
+                                                        </td>}
+                                                        {getOrderedColumns(Object.keys(row)).map((key) => {
+                                                            const value = row[key];
+                                                            const editable = getEditableColumn(key);
+                                                            const isValueNumeric = isNumeric(value);
+                                                            const hasChar = hasCharacterField(key);
 
-                        <div className="mt-2 flex justify-end gap-4">
+                                                            // Get columns that should be left-aligned even if they contain numbers
+                                                            const leftAlignedColumns = settings?.leftAlignedColumns || settings?.leftAlignedColums
+                                                                ? (settings?.leftAlignedColumns || settings?.leftAlignedColums).split(',').map((col: string) => col.trim())
+                                                                : [];
+
+                                                            const isLeftAligned = leftAlignedColumns.includes(key);
+
+                                                            return (
+                                                                <td
+                                                                    key={key}
+                                                                    className="border px-2 py-2"
+                                                                    style={{
+                                                                        textAlign: isLeftAligned || editable ? 'left' : (hasChar ? 'left' : 'right')
+                                                                    }}
+                                                                >
+                                                                    {editable ? (
+                                                                        editable.type === "WTextBox" ? (
+                                                                            <input
+                                                                                type="text"
+                                                                                value={value ?? ""}
+                                                                                onChange={(e) =>
+                                                                                    handleInputChange(rowIndex, key, e.target.value)
+                                                                                }
+                                                                                onFocus={() =>
+                                                                                    setPreviousValues(prev => ({
+                                                                                        ...prev,
+                                                                                        [`${rowIndex}_${key}`]: value
+                                                                                    }))
+                                                                                }
+                                                                                onBlur={() => {
+                                                                                    handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                                    setPreviousValues(prev => {
+                                                                                        const updated = { ...prev };
+                                                                                        delete updated[`${rowIndex}_${key}`];
+                                                                                        return updated;
+                                                                                    });
+                                                                                }}
+                                                                                placeholder={editable.wPlaceholder}
+                                                                                className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                                style={{
+                                                                                    fontFamily: fonts.content,
+                                                                                    color: colors.text,
+                                                                                    backgroundColor: colors.textInputBackground,
+                                                                                    borderColor: colors.textInputBorder,
+                                                                                }}
+                                                                            />
+                                                                        ) : editable.type === "WDropDownBox" ? (
+                                                                            <CustomDropdown
+                                                                                item={{
+                                                                                    ...editable,
+                                                                                    isMultiple: false,
+                                                                                    label: "" // Override label to empty string for table layout too
+                                                                                } as any}
+                                                                                value={value ?? ""}
+                                                                                onChange={async (newValue) => {
+                                                                                    const previousValue = value;
+                                                                                    handleInputChange(rowIndex, key, newValue);
+
+                                                                                    // Trigger validation API if configured
+                                                                                    if (editable.ValidationAPI?.dsXml) {
+                                                                                        // Small delay to ensure state is updated
+                                                                                        setTimeout(() => {
+                                                                                            handleInputBlur(rowIndex, key, previousValue);
+                                                                                        }, 100);
+                                                                                    }
+                                                                                }}
+                                                                                options={
+                                                                                    editable.options
+                                                                                        ? editable.options.map(opt => ({
+                                                                                            label: opt.label,
+                                                                                            value: opt.Value,
+                                                                                        }))
+                                                                                        : editable.dependsOn
+                                                                                            ? dropdownOptions[`${key}_${rowIndex}`] || []
+                                                                                            : dropdownOptions[key] || []
+                                                                                }
+                                                                                isLoading={
+                                                                                    editable.dependsOn
+                                                                                        ? loadingDropdowns[`${key}_${rowIndex}`] || false
+                                                                                        : loadingDropdowns[key] || false
+                                                                                }
+                                                                                colors={colors}
+                                                                                formData={[]}
+                                                                                handleFormChange={() => { }}
+                                                                                formValues={row}
+                                                                            />
+                                                                        ) : editable.type === "WDateBox" ? (
+                                                                            <div
+                                                                                style={{
+                                                                                    fontFamily: fonts.content,
+                                                                                    color: colors.text,
+                                                                                    backgroundColor: colors.textInputBackground,
+                                                                                    borderColor: colors.textInputBorder,
+                                                                                }}
+                                                                            >
+                                                                                <DatePicker
+                                                                                    selected={value ? new Date(value) : null}
+                                                                                    onChange={(date: Date | null) =>
+                                                                                        handleInputChange(rowIndex, key, date)
+                                                                                    }
+                                                                                    dateFormat="dd/MM/yyyy"
+                                                                                    className="w-full border border-gray-300 rounded px-2 py-1"
+                                                                                />
+                                                                            </div>
+                                                                        ) : null
+                                                                    ) : (
+                                                                        <span style={{ fontFamily: fonts.content }}>{value}</span>
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )
+                            ) : (
+                                <p className="text-gray-600">No data available.</p>
+                            )}
+                        </div>
+
+                        <div className="mt-2 flex justify-end gap-4 flex-shrink-0">
 
                             {showViewDocumentBtn === true &&
                                 <button
@@ -1386,7 +1386,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 // disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
                                 // (showViewDocumentBtn && showViewDocumentLabel ? handleProcess :
                                 //end
-                                onClick={ handleSave}
+                                onClick={handleSave}
                                 className="px-4 py-2 rounded ml-2 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                             >
                                 {isSaving && (
@@ -1424,171 +1424,181 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             </button>
                         </div>
                     </DialogPanel>
-                </div>
-            </Dialog>
+                </div >
+            </Dialog >
 
             {/* Validation Modal */}
-            {validationModal.isOpen && (
-                <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg p-6 w-full max-w-[400px] shadow-xl">
-                        <h4 className="text-xl font-semibold mb-4">
-                            {validationModal.type === 'M' ? 'Confirmation' : 'Message'}
-                        </h4>
-                        <p className="text-gray-600 mb-6">{validationModal.message}</p>
-                        <div className="flex justify-end gap-4">
-                            {validationModal.type === 'M' && (
+            {
+                validationModal.isOpen && (
+                    <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                        <div className="bg-white rounded-lg p-6 w-full max-w-[400px] shadow-xl">
+                            <h4 className="text-xl font-semibold mb-4">
+                                {validationModal.type === 'M' ? 'Confirmation' : 'Message'}
+                            </h4>
+                            <p className="text-gray-600 mb-6">{validationModal.message}</p>
+                            <div className="flex justify-end gap-4">
+                                {validationModal.type === 'M' && (
+                                    <button
+                                        onClick={handleValidationClose}
+                                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                                    >
+                                        No
+                                    </button>
+                                )}
                                 <button
                                     onClick={handleValidationClose}
-                                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-md"
+                                    className={`${validationModal.type === 'M'
+                                        ? 'bg-blue-500 hover:bg-blue-600'
+                                        : 'bg-green-500 hover:bg-green-600'
+                                        } text-white px-4 py-2 rounded-md`}
                                 >
-                                    No
+                                    {validationModal.type === 'M' ? 'Yes' : 'OK'}
                                 </button>
-                            )}
-                            <button
-                                onClick={handleValidationClose}
-                                className={`${validationModal.type === 'M'
-                                    ? 'bg-blue-500 hover:bg-blue-600'
-                                    : 'bg-green-500 hover:bg-green-600'
-                                    } text-white px-4 py-2 rounded-md`}
-                            >
-                                {validationModal.type === 'M' ? 'Yes' : 'OK'}
-                            </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Entry Form Modal */}
-            {isEntryModalOpen && pageData && (
-                <EntryFormModal
-                    isOpen={isEntryModalOpen}
-                    onClose={() => {
-                        console.log('EntryFormModal onClose called from EditTableRowModal');
-                        setIsEntryModalOpen(false);
-                        setEntryFormData(null);
-                        setPageData(null);
-                    }}
-                    pageData={pageData}
-                    editData={entryFormData}
-                    action="view"
-                    setEntryEditData={(data) => {
-                        console.log('setEntryEditData called from EditTableRowModal with:', data);
-                        setEntryFormData(data);
-                    }}
-                    refreshFunction={() => {
-                        console.log('EntryFormModal refreshFunction called from EditTableRowModal');
-                        // Refresh the main table data if needed
-                    }}
-                    childModalZindex="z-500"
-                    parentModalZindex="z-400"
-                />
-            )}
-            {isEkycModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[85vh] max-h-[85vh]">
-                        <div className="flex justify-end items-center pr-4 mb-2">
-                            <button
-                                onClick={() => {
-                                    localStorage.setItem('rekycRowData_viewMode', null);
-                                    localStorage.setItem("ekyc_viewMode_for_checker", "false");
-                                    setIsKycModalOpen(false);
-                                }}
-                                style={{
-                                    backgroundColor: colors.buttonBackground,
-                                    color: colors.buttonText,
-                                }}
-                                className="px-4 py-1 rounded-lg ml-4"
-
-                            >
-                                Close
-                            </button>
-                        </div>
-                        <KycPage />
-                    </div>
-                </div>
-            )}
-
-            {isProcessModalOpen && (
-                <Dialog open={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} className="relative z-[200]">
-                    <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-                    <div className="fixed inset-0 flex items-center justify-center p-4">
-                        <DialogPanel className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[80vh] overflow-auto">
-                            <DialogTitle className="text-lg font-semibold mb-4">Client Export Logs</DialogTitle>
-
-                            {/* Header Info */}
-                            <div className="grid grid-cols-3 gap-4 text-sm font-medium mb-4">
-                                {Object.keys(showViewApi.dsXml.X_Filter_Multiple)
-                                    .filter(key => key in localData[0])
-                                    .map(key => (
-                                        <div key={key}>
-                                            <strong>{key.replace(/([A-Z])/g, ' $1').trim()}:</strong> {localData[0][key]}
-                                        </div>
-                                    ))}
-                            </div>
-
-
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full border border-gray-300 text-sm">
-                                    <thead>
-                                        <tr className="bg-gray-100">
-                                            {processResponseData.length > 0 &&
-                                                Object.keys(processResponseData[0]).map((key) => (
-                                                    <th key={key} className="border px-4 py-2 text-left">{key}</th>
-                                                ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {processResponseData.map((row, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50">
-                                                {Object.keys(row).map((key) => (
-                                                    <td key={key} className="border px-4 py-2 break-all">
-                                                        {row[key]}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div className="mt-4 flex justify-end">
+            {
+                isEntryModalOpen && pageData && (
+                    <EntryFormModal
+                        isOpen={isEntryModalOpen}
+                        onClose={() => {
+                            console.log('EntryFormModal onClose called from EditTableRowModal');
+                            setIsEntryModalOpen(false);
+                            setEntryFormData(null);
+                            setPageData(null);
+                        }}
+                        pageData={pageData}
+                        editData={entryFormData}
+                        action="view"
+                        setEntryEditData={(data) => {
+                            console.log('setEntryEditData called from EditTableRowModal with:', data);
+                            setEntryFormData(data);
+                        }}
+                        refreshFunction={() => {
+                            console.log('EntryFormModal refreshFunction called from EditTableRowModal');
+                            // Refresh the main table data if needed
+                        }}
+                        childModalZindex="z-500"
+                        parentModalZindex="z-400"
+                    />
+                )
+            }
+            {
+                isEkycModalOpen && (
+                    <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                        <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[85vh] max-h-[85vh]">
+                            <div className="flex justify-end items-center pr-4 mb-2">
                                 <button
-                                    onClick={() => setIsProcessModalOpen(false)}
-                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                    onClick={() => {
+                                        localStorage.setItem('rekycRowData_viewMode', null);
+                                        localStorage.setItem("ekyc_viewMode_for_checker", "false");
+                                        setIsKycModalOpen(false);
+                                    }}
+                                    style={{
+                                        backgroundColor: colors.buttonBackground,
+                                        color: colors.buttonText,
+                                    }}
+                                    className="px-4 py-1 rounded-lg ml-4"
+
                                 >
                                     Close
                                 </button>
                             </div>
-                        </DialogPanel>
-                    </div>
-                </Dialog>
-            )}
-
-
-                {accountClouserOpen && (
-                <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[70vh] max-h-[75vh]">
-                        <div className="flex justify-end items-center pr-4 mb-2">
-                            <button
-                                onClick={() => {
-                                    setAccountClosureOpen(false);
-                                }}
-                                style={{
-                                    backgroundColor: colors.buttonBackground,
-                                    color: colors.buttonText,
-                                }}
-                                className="px-4 py-1 rounded-lg ml-4"
-
-                            >
-                                Close
-                            </button>
-                        </div>
-                        <div className="mt-4 border-t-2 border-solid p-4">
-                        <AccountClosure accountClouserOpen = {accountClouserOpen} accountClouserDataPass={accountClouserDataPass}/>
+                            <KycPage />
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
+
+            {
+                isProcessModalOpen && (
+                    <Dialog open={isProcessModalOpen} onClose={() => setIsProcessModalOpen(false)} className="relative z-[200]">
+                        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                        <div className="fixed inset-0 flex items-center justify-center p-4">
+                            <DialogPanel className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 max-h-[80vh] overflow-auto">
+                                <DialogTitle className="text-lg font-semibold mb-4">Client Export Logs</DialogTitle>
+
+                                {/* Header Info */}
+                                <div className="grid grid-cols-3 gap-4 text-sm font-medium mb-4">
+                                    {Object.keys(showViewApi.dsXml.X_Filter_Multiple)
+                                        .filter(key => key in localData[0])
+                                        .map(key => (
+                                            <div key={key}>
+                                                <strong>{key.replace(/([A-Z])/g, ' $1').trim()}:</strong> {localData[0][key]}
+                                            </div>
+                                        ))}
+                                </div>
+
+
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full border border-gray-300 text-sm">
+                                        <thead>
+                                            <tr className="bg-gray-100">
+                                                {processResponseData.length > 0 &&
+                                                    Object.keys(processResponseData[0]).map((key) => (
+                                                        <th key={key} className="border px-4 py-2 text-left">{key}</th>
+                                                    ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {processResponseData.map((row, idx) => (
+                                                <tr key={idx} className="hover:bg-gray-50">
+                                                    {Object.keys(row).map((key) => (
+                                                        <td key={key} className="border px-4 py-2 break-all">
+                                                            {row[key]}
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="mt-4 flex justify-end">
+                                    <button
+                                        onClick={() => setIsProcessModalOpen(false)}
+                                        className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </DialogPanel>
+                        </div>
+                    </Dialog>
+                )
+            }
+
+
+            {
+                accountClouserOpen && (
+                    <div className="fixed inset-0 flex items-center justify-center z-400" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                        <div className="bg-white rounded-lg py-3 w-full max-w-[85vw] overflow-y-auto min-h-[70vh] max-h-[75vh]">
+                            <div className="flex justify-end items-center pr-4 mb-2">
+                                <button
+                                    onClick={() => {
+                                        setAccountClosureOpen(false);
+                                    }}
+                                    style={{
+                                        backgroundColor: colors.buttonBackground,
+                                        color: colors.buttonText,
+                                    }}
+                                    className="px-4 py-1 rounded-lg ml-4"
+
+                                >
+                                    Close
+                                </button>
+                            </div>
+                            <div className="mt-4 border-t-2 border-solid p-4">
+                                <AccountClosure accountClouserOpen={accountClouserOpen} accountClouserDataPass={accountClouserDataPass} />
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
 
 
         </>
