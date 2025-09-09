@@ -43,7 +43,7 @@ const DropdownField: React.FC<{
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
         const isRequired = field.isMandatory === "true";
-        
+
         const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
 
         const containerStyle = {
@@ -51,7 +51,7 @@ const DropdownField: React.FC<{
         };
 
         const containerStylesForBr = {
-            width : "100%",
+            width: "100%",
             display: "grid",
             gridTemplateColumns: "120px 1fr",
             gap: "16px 24px",
@@ -107,7 +107,7 @@ const DropdownField: React.FC<{
 
         return (
             <div key={field.Srno} className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text ,wordBreak:"break-all" }}>
+                <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: "break-all" }}>
                     {field.label}
                     {isRequired && <span className="text-red-500 ml-1">*</span>}
 
@@ -374,7 +374,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         setFieldErrors(prev => ({ ...prev, [fieldKey]: errorMessage }));
     };
 
-    const renderFormField = (field: FormField) => {
+    const renderFormField = (field: FormField, index: number) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
         const isRequired = field.isMandatory === "true";
 
@@ -384,7 +384,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         // Common container style with dynamic width
         const containerStyle = {
             width: fieldWidth,
-            marginBottom: marginBottom 
+            marginBottom: marginBottom
         };
         const checkBoxStyle = {
             width: fieldWidth,
@@ -393,7 +393,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         };
 
         const containerStylesForBr = {
-            width : "100%",
+            width: "100%",
             display: "grid",
             gridTemplateColumns: "120px 1fr",
             gap: "16px 24px",
@@ -403,7 +403,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         switch (field.type) {
             case 'WDropDownBox':
                 return (
-                    <div style={containerStyle}>
+                    <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={containerStyle}>
                         <DropdownField
                             key={`dropdown-${field.Srno}-${field.wKey}`}
                             field={field}
@@ -425,8 +425,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WDateBox':
                 return (
-                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text,  wordBreak: 'break-all' }}>
+                    <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
@@ -458,7 +458,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
             case 'WTextBox':
                 return (
-                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                    <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
@@ -494,8 +494,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WCheckBox':
                 return (
-                    <div key={`checkbox-${field.Srno}-${field.wKey}`}  style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}>
-                        <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text, wordBreak:"break-all" }}>
+                    <div key={`checkbox-${field.Srno}-${field.wKey}`} style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}>
+                        <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text, wordBreak: "break-all" }}>
                             <input
                                 type="checkbox"
                                 className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
@@ -517,7 +517,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WDisplayBox':
                 return (
-                    <div style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                    <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                         </label>
@@ -536,20 +536,20 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 );
             case 'WFile':
                 return (
-                        <FileUploadWithCropForNormalForm
-                            key={`fileUpload-${field.Srno}-${field.wKey}`}
-                            field={field}
-                            formValues={formValues}
-                            setFormValues={setFormValues}
-                            fieldErrors={fieldErrors}
-                            setFieldErrors={setFieldErrors}
-                            colors={colors}
-                            handleBlur={handleBlur}
-                            isDisabled={!isEnabled}
-                            fieldWidth={fieldWidth}
-                        />
-                    );
-              
+                    <FileUploadWithCropForNormalForm
+                        key={`fileUpload-${field.Srno}-${field.wKey}`}
+                        field={field}
+                        formValues={formValues}
+                        setFormValues={setFormValues}
+                        fieldErrors={fieldErrors}
+                        setFieldErrors={setFieldErrors}
+                        colors={colors}
+                        handleBlur={handleBlur}
+                        isDisabled={!isEnabled}
+                        fieldWidth={fieldWidth}
+                    />
+                );
+
             default:
                 return null;
         }
@@ -557,7 +557,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
     return (
         <div className="flex flex-wrap gap-4">
-            {formData.map(renderFormField)}
+            {formData.map((field, index) => renderFormField(field, index))}
         </div>
     );
 };
