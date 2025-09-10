@@ -1,4 +1,4 @@
-import { displayAndDownloadFile} from '@/utils/helper';
+import { displayAndDownloadFile } from '@/utils/helper';
 import React, { useRef, useState, useEffect } from 'react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -39,7 +39,7 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const acceptedTypes = field.FileType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',');
+  const acceptedTypes = field.FileType ? field.FileType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',') : '';
   const isRequired = field.isMandatory === "true"
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,8 +62,8 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
         const reader = new FileReader();
         reader.onload = () => {
           const base64Data = getPureBase64(reader.result as string);
-          setFormValues(prev => ({ 
-            ...prev, 
+          setFormValues(prev => ({
+            ...prev,
             [field.wKey]: {
               data: base64Data,
               name: file.name,
@@ -142,8 +142,8 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
           reader.onloadend = () => {
             const base64Data = getPureBase64(reader.result as string);
             setCroppedImageUrl(base64Data);
-            setFormValues(prev => ({ 
-              ...prev, 
+            setFormValues(prev => ({
+              ...prev,
               [field.wKey]: {
                 data: base64Data,
                 name: fileName,
@@ -162,8 +162,8 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
 
   const handleCropDone = async () => {
     if (croppedImageUrl) {
-      setFormValues(prev => ({ 
-        ...prev, 
+      setFormValues(prev => ({
+        ...prev,
         [field.wKey]: {
           data: croppedImageUrl,
           name: fileName,
@@ -180,7 +180,7 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
   const getFileData = () => {
     const value = formValues[field.wKey];
     if (!value) return null;
-    
+
     // New format (object with data and name)
     if (typeof value === 'object' && value.data) {
       return value;
@@ -222,7 +222,7 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
           <p className="text-sm text-gray-600 mb-1">
             {currentFile.name}
           </p>
-          
+
           {currentFile.type.startsWith('image/') ? (
             <Image
               src={getDisplayUrl(croppedImageUrl || currentFile.data, currentFile.type)}

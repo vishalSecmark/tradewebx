@@ -1,4 +1,4 @@
-import { displayAndDownloadFile} from '@/utils/helper';
+import { displayAndDownloadFile } from '@/utils/helper';
 import React, { useRef, useState, useEffect } from 'react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -41,9 +41,9 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const imgRef = useRef<HTMLImageElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
-  const acceptedTypes = field.FileType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',');
+  const acceptedTypes = field.FileType ? field.FileType.split(',').map(ext => `.${ext.trim().toLowerCase()}`).join(',') : '';
 
-  console.log("check file type ",acceptedTypes)
+  console.log("check file type ", acceptedTypes)
   const isRequired = field.isMandatory === "true"
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,8 +66,8 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
         const reader = new FileReader();
         reader.onload = () => {
           const base64Data = getPureBase64(reader.result as string);
-          setFormValues(prev => ({ 
-            ...prev, 
+          setFormValues(prev => ({
+            ...prev,
             [field.wKey]: base64Data
           }));
           setCroppedImageUrl(base64Data);
@@ -142,8 +142,8 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
           reader.onloadend = () => {
             const base64Data = getPureBase64(reader.result as string);
             setCroppedImageUrl(base64Data);
-            setFormValues(prev => ({ 
-              ...prev, 
+            setFormValues(prev => ({
+              ...prev,
               [field.wKey]: base64Data
             }));
             resolve();
@@ -158,8 +158,8 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
 
   const handleCropDone = async () => {
     if (croppedImageUrl) {
-      setFormValues(prev => ({ 
-        ...prev, 
+      setFormValues(prev => ({
+        ...prev,
         [field.wKey]: croppedImageUrl
       }));
       // Clear field error when crop is done
@@ -172,7 +172,7 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
   const getFileData = () => {
     const value = formValues[field.wKey];
     if (!value) return null;
-    
+
     // New format (object with data and name)
     if (typeof value === 'object' && value.data) {
       return value;
@@ -187,18 +187,18 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
 
   const currentFile = getFileData();
   const containerStyle = {
-            width: fieldWidth,
-    
-        };
-  const containerStylesForBr = {
-            width : "100%",
-            display: "grid",
-            gridTemplateColumns: "120px 1fr",
-            gap: "16px 24px",
-            alignItems: "start"
-        }
+    width: fieldWidth,
 
-        
+  };
+  const containerStylesForBr = {
+    width: "100%",
+    display: "grid",
+    gridTemplateColumns: "120px 1fr",
+    gap: "16px 24px",
+    alignItems: "start"
+  }
+
+
 
   // Function to reconstruct full base64 URL for display
   const getDisplayUrl = (base64Data: string, type: string) => {
@@ -208,7 +208,7 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
 
   return (
     <div className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-      <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak : "break-all"}}>
+      <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: "break-all" }}>
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -228,7 +228,7 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
           <p className="text-sm text-gray-600 mb-1">
             {currentFile.name}
           </p>
-          
+
           {currentFile.type.startsWith('image/') ? (
             <Image
               src={getDisplayUrl(croppedImageUrl || currentFile.data, currentFile.type)}

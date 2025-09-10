@@ -8,8 +8,12 @@ import DataTable from '@/components/DataTable';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { RootState } from '@/redux/store';
 import FilterModal from '@/components/FilterModal';
-import { FaFilter, FaSync } from 'react-icons/fa';
+import { FaFileArchive, FaFilter, FaSync } from 'react-icons/fa';
 import apiService from '@/utils/apiService';
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { base64ToUint8Array, displayAndDownloadFile } from '@/utils/helper';
+import TooltipButton from '@/components/common/TooltipButton';
 
 const Downloads = () => {
     const [downloads, setDownloads] = useState([]);
@@ -26,6 +30,7 @@ const Downloads = () => {
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [downloadError, setDownloadError] = useState<string | null>(null);
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
+    const [downloadAllData,setDownloadAllData] = useState([])
 
     const { colors, fonts } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
@@ -67,6 +72,7 @@ const Downloads = () => {
             }
             if (response.data?.data?.rs0) {
                 setDownloads(response.data.data.rs0);
+                setDownloadAllData(response.data.data.rs0)
             }
 
             // Parse headings from RS1 if available
@@ -78,6 +84,8 @@ const Downloads = () => {
                 while ((match = headingsRegex.exec(xmlString)) !== null) {
                     extractedHeadings.push(match[1]);
                 }
+                console.log(extractedHeadings,'extractedHeadings');
+                
                 setHeadings(extractedHeadings);
             }
         } catch (error) {
@@ -92,9 +100,94 @@ const Downloads = () => {
         getDownloads(true);
     }, []);
 
+    
+    const downloadAllFn2 = () => {
+        console.log('down all fn ');
+        console.log(downloadAllData,'downloadAllData');
+        downloadAllData.map(record => handleDownload(record))
+    }
+
+
+const downloadAllFn = async () => {
+    if (!downloadAllData.length) {
+      console.warn("No records to download.");
+      return;
+    }
+  
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setDownloadError(null);
+  
+    const fromDateStr = moment(filterValues.fromDate).format("YYYYMMDD");
+    const toDateStr = moment(filterValues.toDate).format("YYYYMMDD");
+    const currentTime = moment().format("HHmmss");
+    const currentDate = moment().format("YYYYMMDD");
+  
+    // ✅ Get doctype (first column name in first record)
+    const doctype = downloadAllData[0].Doctype.replace("/","_") || "Doctype";
+  
+    const zipFolderName = `${doctype}_${fromDateStr}_${toDateStr}_${currentTime}_${currentDate}`;
+  
+    const zip = new JSZip();
+    const pdfFolder = zip.folder(zipFolderName); // ✅ folder inside zip
+  
+    let completed = 0;
+  
+    try {
+      for (const record of downloadAllData) {
+        try {
+          const xmlData = `<dsXml>
+              <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
+              <Sql></Sql>
+              <X_Filter>
+                  <FromDate>${fromDateStr}</FromDate>
+                  <ToDate>${toDateStr}</ToDate>
+                  <RepType></RepType>
+                  <DocumentType></DocumentType>
+                  <DocumentNo>${record["Document No"]}</DocumentNo>
+              </X_Filter>
+              <X_GFilter></X_GFilter>
+              <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
+          </dsXml>`;
+  
+          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+          const fileData = response.data.data.rs0?.[0];
+
+  
+          if (fileData?.Base64) {
+            const base64Data = fileData.Base64;
+            const fileName = fileData.FileName.split("\\").pop() || "file.pdf";
+            // ✅ Add to folder with Uint8Array for binary files
+            const fileContent = base64ToUint8Array(base64Data);
+            pdfFolder.file(fileName, fileContent);
+          }
+        } catch (err) {
+          console.error("Error downloading file:", err);
+        }
+  
+        completed++;
+        setDownloadProgress(Math.round((completed / downloadAllData.length) * 100));
+      }
+  
+      // ✅ Generate zip with folder inside
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `${zipFolderName}.zip`);
+    } catch (err) {
+      console.error("Error creating zip:", err);
+      setDownloadError("Failed to create zip file. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+  
+  
+
+
 
 
     const handleDownload = async (record) => {
+        console.log(record,'record');
+        
         const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
         const toDateStr = moment(filterValues.toDate).format('YYYYMMDD');
 
@@ -119,14 +212,7 @@ const Downloads = () => {
             if (fileData?.Base64) {
                 const base64Data = fileData.Base64;
                 const fileName = fileData.FileName.split('\\').pop();
-
-                // Create and download file
-                const link = document.createElement('a');
-                link.href = `data:application/octet-stream;base64,${base64Data}`;
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                displayAndDownloadFile(base64Data,fileName)
             }
         } catch (error) {
             console.error('Error downloading document:', error);
@@ -223,7 +309,13 @@ const Downloads = () => {
                     </button>
                 </div>
                 <div className="flex gap-2">
-                    <button
+                    <TooltipButton
+                    onClick={downloadAllFn}
+                    icon={<FaFileArchive size={20} />}
+                    label="Download All"
+                    />
+
+                    {/* <button
                         className="p-2 rounded"
                         onClick={() => getDownloads(true)}
                         disabled={loading}
@@ -234,7 +326,24 @@ const Downloads = () => {
                         ) : (
                             <FaSync size={20} />
                         )}
-                    </button>
+                    </button> */}
+
+                        <TooltipButton
+                        onClick={() => getDownloads(true)}
+                        icon={
+                            loading ? (
+                            <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                            ) : (
+                            <FaSync size={20} />
+                            )
+                        }
+                        label="Refresh"
+                        disabled={loading}
+                        className="p-2 rounded"
+                        style={{ color: colors.text }}
+                        />
+
+
                     <button
                         className="p-2 rounded"
                         onClick={() => setFilterModalVisible(true)}
@@ -333,7 +442,10 @@ const Downloads = () => {
             />
 
             {isDownloading && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                <div
+                className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50"
+                style={{ backgroundColor: colors?.background2 }}
+              >
                     <div className="bg-white p-6 rounded-lg shadow-lg text-center">
                         <div className="mb-4">
                             <svg className="animate-spin h-10 w-10 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

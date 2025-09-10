@@ -657,178 +657,183 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     };
 
     const fetchMasterEntryData = async (editData?: any, viewMode: boolean = false, shouldSetLoading: boolean = true) => {
-        console.log('fetchMasterEntryData called with:', { pageData, isTabs, isOpen });
-        if (!pageData?.[0]?.Entry) {
-            console.error('fetchMasterEntryData: pageData[0].Entry is not available');
-            return;
-        }
+    console.log('fetchMasterEntryData called with:', { pageData, isTabs, isOpen });
+    
+    // Check if pageData[0].Entry exists and is not an empty object
+    if (!pageData?.[0]?.Entry || Object.keys(pageData[0].Entry).length === 0) {
         if (shouldSetLoading) {
-            setIsLoading(true);
+            setIsLoading(false);
         }
-        try {
-            const entry = pageData[0].Entry;
-            const masterEntry = entry.MasterEntry;
-            const isEditData = Object.keys(editData || {}).length > 0;
-            console.log("check isEditData", isEditData);
+        return;
+    }
+    
+    if (shouldSetLoading) {
+        setIsLoading(true);
+    }
+    
+    try {
+        const entry = pageData[0].Entry;
+        const masterEntry = entry.MasterEntry;
+        const isEditData = Object.keys(editData || {}).length > 0;
+        console.log("check isEditData", isEditData);
 
-            console.log('fetchMasterEntryData: masterEntry:', masterEntry);
-            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
+        console.log('fetchMasterEntryData: masterEntry:', masterEntry);
+        const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
-            // Construct J_Ui - handle 'Option' key specially
-            const jUi = Object.entries(masterEntry.J_Ui)
-                .map(([key, value]) => {
-                    if (key === 'Option' && editData) {
-                        return `"${key}":"Master_Edit"`;
-                    }
-                    return `"${key}":"${value}"`;
-                })
-                .join(',');
-
-            // Construct J_Api
-            const jApi = Object.entries(masterEntry.J_Api)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
-
-            // Construct X_Filter with edit data if available
-            let xFilter = '';
-            Object.entries(masterEntry.X_Filter).forEach(([key, value]) => {
-                if (editData && editData[key] !== undefined && editData[key] !== null) {
-                    xFilter += `<${key}>${editData[key]}</${key}>`;
+        // Construct J_Ui - handle 'Option' key specially
+        const jUi = Object.entries(masterEntry.J_Ui)
+            .map(([key, value]) => {
+                if (key === 'Option' && editData) {
+                    return `"${key}":"Master_Edit"`;
                 }
-                else if (value === '##InstrumentType##' || value === '##IntRefNo##') {
-                    xFilter += `<${key}></${key}>`;
-                } else {
+                return `"${key}":"${value}"`;
+            })
+            .join(',');
+
+        // Construct J_Api
+        const jApi = Object.entries(masterEntry.J_Api)
+            .map(([key, value]) => `"${key}":"${value}"`)
+            .join(',');
+
+        // Construct X_Filter with edit data if available
+        let xFilter = '';
+        Object.entries(masterEntry.X_Filter).forEach(([key, value]) => {
+            if (editData && editData[key] !== undefined && editData[key] !== null) {
+                xFilter += `<${key}>${editData[key]}</${key}>`;
+            }
+            else if (value === '##InstrumentType##' || value === '##IntRefNo##') {
+                xFilter += `<${key}></${key}>`;
+            } else {
+                xFilter += `<${key}>${value}</${key}>`;
+            }
+        });
+
+        // Add any additional fields from editData that aren't in masterEntry.X_Filter
+        if (editData) {
+            Object.entries(editData).forEach(([key, value]) => {
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    !masterEntry.X_Filter.hasOwnProperty(key) &&
+                    !key.startsWith('_')
+                ) {
                     xFilter += `<${key}>${value}</${key}>`;
                 }
             });
+        }
 
-            // Add any additional fields from editData that aren't in masterEntry.X_Filter
-            if (editData) {
-                Object.entries(editData).forEach(([key, value]) => {
-                    if (
-                        value !== undefined &&
-                        value !== null &&
-                        !masterEntry.X_Filter.hasOwnProperty(key) &&
-                        !key.startsWith('_')
-                    ) {
-                        xFilter += `<${key}>${value}</${key}>`;
-                    }
-                });
-            }
-
-            const xmlData = `<dsXml>
+        const xmlData = `<dsXml>
         <J_Ui>${jUi}</J_Ui>
         <Sql>${sql}</Sql>
         <X_Filter>${xFilter}</X_Filter>
         <J_Api>${jApi}</J_Api>
         </dsXml>`;
 
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
-            let formData = response?.data?.data?.rs0 || [];
-            if (viewMode) {
-                formData = formData.map((field: any) => ({
-                    ...field,
-                    FieldEnabledTag: "N"
-                }));
+        let formData = response?.data?.data?.rs0 || [];
+        if (viewMode) {
+            formData = formData.map((field: any) => ({
+                ...field,
+                FieldEnabledTag: "N"
+            }));
+        }
+
+        setChildEntriesTable(response?.data?.data?.rs1 || []);
+
+        // Initialize form values with any preset values
+        const initialValues: Record<string, any> = {};
+        formData.forEach((field: FormField) => {
+            if (field.type === 'WDateBox' && field.wValue) {
+                initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
             }
+            else if (editData) {
+                initialValues[field.wKey] = field.wValue;
+            }
+        });
 
-            setChildEntriesTable(response?.data?.data?.rs1 || []);
+        setMasterFormValues(initialValues);
 
-            // Initialize form values with any preset values
-            const initialValues: Record<string, any> = {};
-            formData.forEach((field: FormField) => {
-                if (field.type === 'WDateBox' && field.wValue) {
-                    initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+        // Collect all validation updates
+        const allUpdates: Array<{
+            fieldKey: string;
+            isDisabled: boolean;
+            tagValue: string;
+            flag?: string;
+        }> = [];
+
+        // FIRST: Process all dropdown options in parallel
+        await Promise.all(
+            formData.map(async (field: FormField) => {
+                if (field.type === 'WDropDownBox' && field.wQuery) {
+                    await fetchDropdownOptions(field);
                 }
-                else if (editData) {
-                    initialValues[field.wKey] = field.wValue;
-                }
-            });
+            })
+        );
 
-            setMasterFormValues(initialValues);
-
-            // Collect all validation updates
-            const allUpdates: Array<{
-                fieldKey: string;
-                isDisabled: boolean;
-                tagValue: string;
-                flag?: string;
-            }> = [];
-
-            // FIRST: Process all dropdown options in parallel
-            await Promise.all(
-                formData.map(async (field: FormField) => {
-                    if (field.type === 'WDropDownBox' && field.wQuery) {
-                        await fetchDropdownOptions(field);
-                    }
-                })
-            );
-
-            // THEN: Process validations sequentially
-            for (const field of formData) {
-                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
-                    await handleValidationForDisabledField(
-                        field,
-                        editData,
-                        masterFormValues,
-                        (updates) => allUpdates.push(...updates)
-                    );
-                }
-            }
-
-            if (isEditData && !isViewMode) {
-                console.log("check all updates===>", allUpdates);
-                setMasterFormData(() => {
-                    const newFormData = [...formData];
-                    console.log("check updates", allUpdates);
-                    allUpdates.forEach(update => {
-                        const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
-                        if (fieldIndex >= 0) {
-                            if (update.flag !== "D") {
-                                newFormData[fieldIndex] = {
-                                    ...newFormData[fieldIndex],
-                                    FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
-                                };
-                            } else {
-                                newFormData[fieldIndex] = {
-                                    ...newFormData[fieldIndex],
-                                    FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
-                                };
-                            }
-                        }
-                    });
-                    return newFormData;
-                });
-                setMasterFormValues(prevValues => {
-                    const newValues = { ...prevValues };
-                    allUpdates.forEach(update => {
-                        if (update.fieldKey in newValues) {
-                            if (update.tagValue === "true" || update.tagValue === "false") {
-                                newValues[update.fieldKey] = newValues[update.fieldKey];
-                            } else {
-                                newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
-                            }
-                        }
-                    });
-                    return newValues;
-                });
-            } else {
-                setMasterFormData(formData)
-            }
-
-        } catch (error) {
-            console.error('Error fetching MasterEntry data:', error);
-            if (shouldSetLoading) {
-                setIsLoading(false);
-            }
-        } finally {
-            if (shouldSetLoading) {
-                setIsLoading(false);
+        // THEN: Process validations sequentially
+        for (const field of formData) {
+            if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                await handleValidationForDisabledField(
+                    field,
+                    editData,
+                    masterFormValues,
+                    (updates) => allUpdates.push(...updates)
+                );
             }
         }
-    };
 
+        if (isEditData && !isViewMode) {
+            console.log("check all updates===>", allUpdates);
+            setMasterFormData(() => {
+                const newFormData = [...formData];
+                console.log("check updates", allUpdates);
+                allUpdates.forEach(update => {
+                    const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
+                    if (fieldIndex >= 0) {
+                        if (update.flag !== "D") {
+                            newFormData[fieldIndex] = {
+                                ...newFormData[fieldIndex],
+                                FieldEnabledTag: update.isDisabled ? 'N' : newFormData[fieldIndex].FieldEnabledTag
+                            };
+                        } else {
+                            newFormData[fieldIndex] = {
+                                ...newFormData[fieldIndex],
+                                FieldEnabledTag: update.isDisabled ? 'N' : 'Y'
+                            };
+                        }
+                    }
+                });
+                return newFormData;
+            });
+            setMasterFormValues(prevValues => {
+                const newValues = { ...prevValues };
+                allUpdates.forEach(update => {
+                    if (update.fieldKey in newValues) {
+                        if (update.tagValue === "true" || update.tagValue === "false") {
+                            newValues[update.fieldKey] = newValues[update.fieldKey];
+                        } else {
+                            newValues[update.fieldKey] = update.tagValue || newValues[update.fieldKey];
+                        }
+                    }
+                });
+                return newValues;
+            });
+        } else {
+            setMasterFormData(formData)
+        }
+
+    } catch (error) {
+        console.error('Error fetching MasterEntry data:', error);
+        if (shouldSetLoading) {
+            setIsLoading(false);
+        }
+    } finally {
+        if (shouldSetLoading) {
+            setIsLoading(false);
+        }
+    }
+};
     const fetchChildEntryData = async (editData?: any) => {
         if (!pageData?.[0]?.Entry) return;
         setIsLoading(true);
