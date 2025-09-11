@@ -219,6 +219,51 @@ const VersionUpdateModal = ({
   );
 };
 
+// Component for the message modal
+const MessageModal = ({
+  isOpen,
+  onClose,
+  message,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  message: string;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+        <h4 className="text-xl font-semibold mb-4 dark:text-white">
+          Important Message
+        </h4>
+
+        <div className="mb-6">
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start">
+              <svg className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="whitespace-pre-wrap">{message}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 rounded-md font-medium bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function SignInForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -239,6 +284,10 @@ export default function SignInForm() {
   const [currentUserType, setCurrentUserType] = useState<string>(""); // Store user type from login response
   const [isCaptchaValid, setIsCaptchaValid] = useState(false); // CAPTCHA validation state
   const captchaRef = useRef<CaptchaComponentRef>(null); // Reference to CAPTCHA component
+
+  // State for message modal
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageContent, setMessageContent] = useState("");
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
@@ -370,6 +419,22 @@ export default function SignInForm() {
       }
     }
   }, [checkVersion, proceedAfterVersionCheck, dispatch]);
+
+  // Handle message modal close
+  const handleMessageModalClose = useCallback(() => {
+    setShowMessageModal(false);
+    setMessageContent("");
+
+    // After message modal is closed, proceed with the normal flow
+    if (loginData) {
+      const showUpdate = loginData.showUpdate; // We need to store this in loginData
+      if (showUpdate === 'Y') {
+        performVersionCheckAfterLogin(loginData);
+      } else {
+        proceedAfterVersionCheck(loginData);
+      }
+    }
+  }, [loginData, performVersionCheckAfterLogin, proceedAfterVersionCheck]);
 
   // Handle the update confirmation
   const handleUpdateConfirm = useCallback(async () => {
@@ -518,6 +583,16 @@ export default function SignInForm() {
         const userType = data.data[0].UserType;
         setCurrentUserType(userType);
 
+        // Check for ShowUpdate and Message fields
+        const showUpdate = data.data[0].ShowUpdate;
+        const message = data.data[0].Message;
+
+        console.log('Login response fields:', {
+          showUpdate,
+          message,
+          userType
+        });
+
         // For user type, refreshToken comes after OTP verification
         // For branch type, refreshToken comes in initial login response
         if (userType.toLowerCase() === 'branch' && !data.refreshToken) {
@@ -587,13 +662,29 @@ export default function SignInForm() {
           token: data.token,
           refreshToken: data.refreshToken || '', // Use empty string if refreshToken not present
           tokenExpireTime: data.tokenExpireTime,
-          LoginType: data.data[0].LoginType
+          LoginType: data.data[0].LoginType,
+          showUpdate: showUpdate // Store showUpdate value for later use
         };
 
         setLoginData(currentLoginData);
 
-        // Check for version updates after successful login
-        await performVersionCheckAfterLogin(currentLoginData);
+        // Handle message modal first if there's a message
+        if (message && message.trim() !== '') {
+          console.log('Showing message modal with content:', message);
+          setMessageContent(message);
+          setShowMessageModal(true);
+          return; // Don't proceed with version check or navigation yet
+        }
+
+        // Check for version updates only if ShowUpdate is 'Y'
+        if (showUpdate === 'Y') {
+          console.log('ShowUpdate is Y, checking for version updates');
+          await performVersionCheckAfterLogin(currentLoginData);
+        } else {
+          console.log('ShowUpdate is not Y, proceeding directly without version check');
+          // No version check needed, proceed directly
+          proceedAfterVersionCheck(currentLoginData);
+        }
       } else {
         dispatch(setAuthError(data.message || 'Login failed'));
         setError(data.message || 'Login failed');
@@ -783,6 +874,13 @@ export default function SignInForm() {
         onConfirm={handleUpdateConfirm}
         userType={currentUserType}
         isUpdating={isUpdating}
+      />
+
+      {/* Message Modal */}
+      <MessageModal
+        isOpen={showMessageModal}
+        onClose={handleMessageModalClose}
+        message={messageContent}
       />
     </div>
   );
