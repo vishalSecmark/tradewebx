@@ -246,6 +246,15 @@ const Downloads = () => {
         }, 300);
     };
 
+    const tableSettings = {
+        leftAlignedColumns: "ClientCode,Contract No",
+        dateFormat: {
+            key: "Document Date", // Comma-separated column names
+            format: "DD-MMM-YYYY" // Your desired format
+        },
+
+    };
+
     // Define filter fields for the FilterModal
     const filterFields = [
         [
@@ -472,6 +481,7 @@ const Downloads = () => {
                             format: 'DD-MMM-YYYY'
                         }
                     }}
+                    settings={tableSettings}
                 />
             )}
 
