@@ -95,9 +95,9 @@ export default function UserMetaCard() {
             const value = data[field];
 
             return (
-              <div key={field} className="flex justify-between">
-                <span className="text-sm" style={secondaryTextStyle}>{field}</span>
-                <span className="text-sm font-medium text-right" style={textStyle}>
+              <div key={field} className="flex">
+                <span className="text-sm" style={secondaryTextStyle}>{field} : </span>&nbsp;&nbsp;
+                <span className="text-sm font-medium text-left" style={textStyle}>
                   {value || '-'}
                 </span>
               </div>
