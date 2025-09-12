@@ -475,12 +475,6 @@ const Downloads = () => {
                 <DataTable
                     data={downloads}
                     onRowClick={handleDownload}
-                    settings={{
-                        dateFormat: {
-                            key: 'Document Date',
-                            format: 'DD-MMM-YYYY'
-                        }
-                    }}
                     settings={tableSettings}
                 />
             )}
