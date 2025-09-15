@@ -14,6 +14,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { base64ToUint8Array, displayAndDownloadFile } from '@/utils/helper';
 import TooltipButton from '@/components/common/TooltipButton';
+import Loader from '@/components/Loader';
 
 const Downloads = () => {
     const [downloads, setDownloads] = useState([]);
@@ -30,7 +31,8 @@ const Downloads = () => {
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [downloadError, setDownloadError] = useState<string | null>(null);
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
-    const [downloadAllData,setDownloadAllData] = useState([])
+    const [downloadAllData, setDownloadAllData] = useState([]);
+    const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
 
     const { colors, fonts } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
@@ -56,6 +58,7 @@ const Downloads = () => {
                 <DocumentType>${filterValuesLocal.DocumentType || ''}</DocumentType>
                 <DocumentNo></DocumentNo>
                 <Segment>${filterValuesLocal.segment}</Segment>
+                <ClientCode>${filterValuesLocal.ClientCode || ''}</ClientCode>
             </X_Filter>
             <X_GFilter></X_GFilter>
             <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
@@ -84,8 +87,8 @@ const Downloads = () => {
                 while ((match = headingsRegex.exec(xmlString)) !== null) {
                     extractedHeadings.push(match[1]);
                 }
-                console.log(extractedHeadings,'extractedHeadings');
-                
+                console.log(extractedHeadings, 'extractedHeadings');
+
                 setHeadings(extractedHeadings);
             }
         } catch (error) {
@@ -100,43 +103,43 @@ const Downloads = () => {
         getDownloads(true);
     }, []);
 
-    
+
     const downloadAllFn2 = () => {
         console.log('down all fn ');
-        console.log(downloadAllData,'downloadAllData');
+        console.log(downloadAllData, 'downloadAllData');
         downloadAllData.map(record => handleDownload(record))
     }
 
 
-const downloadAllFn = async () => {
-    if (!downloadAllData.length) {
-      console.warn("No records to download.");
-      return;
-    }
-  
-    setIsDownloading(true);
-    setDownloadProgress(0);
-    setDownloadError(null);
-  
-    const fromDateStr = moment(filterValues.fromDate).format("YYYYMMDD");
-    const toDateStr = moment(filterValues.toDate).format("YYYYMMDD");
-    const currentTime = moment().format("HHmmss");
-    const currentDate = moment().format("YYYYMMDD");
-  
-    // ✅ Get doctype (first column name in first record)
-    const doctype = downloadAllData[0].Doctype.replace("/","_") || "Doctype";
-  
-    const zipFolderName = `${doctype}_${fromDateStr}_${toDateStr}_${currentTime}_${currentDate}`;
-  
-    const zip = new JSZip();
-    const pdfFolder = zip.folder(zipFolderName); // ✅ folder inside zip
-  
-    let completed = 0;
-  
-    try {
-      for (const record of downloadAllData) {
+    const downloadAllFn = async () => {
+        if (!downloadAllData.length) {
+            console.warn("No records to download.");
+            return;
+        }
+
+        setIsDownloading(true);
+        setDownloadProgress(0);
+        setDownloadError(null);
+
+        const fromDateStr = moment(filterValues.fromDate).format("YYYYMMDD");
+        const toDateStr = moment(filterValues.toDate).format("YYYYMMDD");
+        const currentTime = moment().format("HHmmss");
+        const currentDate = moment().format("YYYYMMDD");
+
+        // ✅ Get doctype (first column name in first record)
+        const doctype = downloadAllData[0].Doctype.replace("/", "_") || "Doctype";
+
+        const zipFolderName = `${doctype}_${fromDateStr}_${toDateStr}_${currentTime}_${currentDate}`;
+
+        const zip = new JSZip();
+        const pdfFolder = zip.folder(zipFolderName); // ✅ folder inside zip
+
+        let completed = 0;
+
         try {
-          const xmlData = `<dsXml>
+            for (const record of downloadAllData) {
+                try {
+                    const xmlData = `<dsXml>
               <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
               <Sql></Sql>
               <X_Filter>
@@ -149,45 +152,47 @@ const downloadAllFn = async () => {
               <X_GFilter></X_GFilter>
               <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
           </dsXml>`;
-  
-          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-          const fileData = response.data.data.rs0?.[0];
 
-  
-          if (fileData?.Base64) {
-            const base64Data = fileData.Base64;
-            const fileName = fileData.FileName.split("\\").pop() || "file.pdf";
-            // ✅ Add to folder with Uint8Array for binary files
-            const fileContent = base64ToUint8Array(base64Data);
-            pdfFolder.file(fileName, fileContent);
-          }
+                    const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+                    const fileData = response.data.data.rs0?.[0];
+
+
+                    if (fileData?.Base64) {
+                        const base64Data = fileData.Base64;
+                        const fileName = fileData.FileName.split("\\").pop() || "file.pdf";
+                        // ✅ Add to folder with Uint8Array for binary files
+                        const fileContent = base64ToUint8Array(base64Data);
+                        pdfFolder.file(fileName, fileContent);
+                    }
+                } catch (err) {
+                    console.error("Error downloading file:", err);
+                }
+
+                completed++;
+                setDownloadProgress(Math.round((completed / downloadAllData.length) * 100));
+            }
+
+            // ✅ Generate zip with folder inside
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            saveAs(zipBlob, `${zipFolderName}.zip`);
         } catch (err) {
-          console.error("Error downloading file:", err);
+            console.error("Error creating zip:", err);
+            setDownloadError("Failed to create zip file. Please try again.");
+        } finally {
+            setIsDownloading(false);
         }
-  
-        completed++;
-        setDownloadProgress(Math.round((completed / downloadAllData.length) * 100));
-      }
-  
-      // ✅ Generate zip with folder inside
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      saveAs(zipBlob, `${zipFolderName}.zip`);
-    } catch (err) {
-      console.error("Error creating zip:", err);
-      setDownloadError("Failed to create zip file. Please try again.");
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-  
-  
+    };
+
+
 
 
 
 
     const handleDownload = async (record) => {
-        console.log(record,'record');
-        
+        console.log(record, 'record');
+
+        setDownloadingFile(record['Document No']);
+
         const fromDateStr = moment(filterValues.fromDate).format('YYYYMMDD');
         const toDateStr = moment(filterValues.toDate).format('YYYYMMDD');
 
@@ -212,10 +217,12 @@ const downloadAllFn = async () => {
             if (fileData?.Base64) {
                 const base64Data = fileData.Base64;
                 const fileName = fileData.FileName.split('\\').pop();
-                displayAndDownloadFile(base64Data,fileName)
+                displayAndDownloadFile(base64Data, fileName)
             }
         } catch (error) {
             console.error('Error downloading document:', error);
+        } finally {
+            setDownloadingFile(null);
         }
     };
 
@@ -237,6 +244,15 @@ const downloadAllFn = async () => {
         setTimeout(() => {
             getDownloads(true, values);
         }, 300);
+    };
+
+    const tableSettings = {
+        leftAlignedColumns: "ClientCode,Contract No",
+        dateFormat: {
+            key: "Document Date", // Comma-separated column names
+            format: "DD-MMM-YYYY" // Your desired format
+        },
+
     };
 
     // Define filter fields for the FilterModal
@@ -292,9 +308,45 @@ const downloadAllFn = async () => {
                     key: "DisplayName",
                     value: "Value"
                 }
+            },
+            {
+                type: 'WDropDownBox',
+                label: 'Client',
+                wKey: 'ClientCode',
+                wQuery: {
+                    Sql: "",
+                    J_Ui: {
+                        ActionName: "Common",
+                        Option: "Search",
+                        RequestFrom: "W"
+                    },
+                    X_Filter: "",
+                    J_Api: {
+                        UserId: userData.userId,
+                        AccYear: 24,
+                        MyDbPrefix: "SVVS",
+                        MemberCode: "undefined",
+                        SecretKey: "undefined",
+                        MenuCode: 7,
+                        UserType: userData.userType
+                    }
+                },
+                wDropDownKey: {
+                    key: "DisplayName",
+                    value: "Value"
+                }
             }
+
         ]
     ];
+
+
+    // <dsXml>
+    //             <J_Ui>"ActionName":"Common","Option":"Search","RequestFrom":"W"</J_Ui>
+    //             <Sql/>
+    //             <X_Filter></X_Filter>
+    //             <J_Api>"UserId":"ADMIN","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"branch"</J_Api>
+    //         </dsXml>
 
     return (
         <div className="px-1">
@@ -310,9 +362,9 @@ const downloadAllFn = async () => {
                 </div>
                 <div className="flex gap-2">
                     <TooltipButton
-                    onClick={downloadAllFn}
-                    icon={<FaFileArchive size={20} />}
-                    label="Download All"
+                        onClick={downloadAllFn}
+                        icon={<FaFileArchive size={20} />}
+                        label="Download All"
                     />
 
                     {/* <button
@@ -328,20 +380,20 @@ const downloadAllFn = async () => {
                         )}
                     </button> */}
 
-                        <TooltipButton
+                    <TooltipButton
                         onClick={() => getDownloads(true)}
                         icon={
                             loading ? (
-                            <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
+                                <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
                             ) : (
-                            <FaSync size={20} />
+                                <FaSync size={20} />
                             )
                         }
                         label="Refresh"
                         disabled={loading}
                         className="p-2 rounded"
                         style={{ color: colors.text }}
-                        />
+                    />
 
 
                     <button
@@ -419,16 +471,13 @@ const downloadAllFn = async () => {
             </div>
 
             {/* Data Table */}
-            <DataTable
-                data={downloads}
-                onRowClick={handleDownload}
-                settings={{
-                    dateFormat: {
-                        key: 'Document Date',
-                        format: 'DD-MMM-YYYY'
-                    }
-                }}
-            />
+            {!loading && !downloadingFile && (
+                <DataTable
+                    data={downloads}
+                    onRowClick={handleDownload}
+                    settings={tableSettings}
+                />
+            )}
 
             {/* Filter Modal */}
             <FilterModal
@@ -441,11 +490,44 @@ const downloadAllFn = async () => {
                 onApply={handleApplyFilters}
             />
 
+            {/* Loading State */}
+            {loading && (
+                <div className="flex items-center justify-center py-8 border rounded-lg" style={{
+                    backgroundColor: colors.cardBackground,
+                    borderColor: '#e5e7eb',
+                    minHeight: '200px'
+                }}>
+                    <div className="text-center">
+                        <Loader />
+                        <div className="mt-4 text-sm font-medium" style={{ color: colors.text }}>
+                            Loading downloads...
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Individual file download loading */}
+            {downloadingFile && !loading && (
+                <div className="flex items-center justify-center py-8 border rounded-lg" style={{
+                    backgroundColor: colors.cardBackground,
+                    borderColor: '#e5e7eb',
+                    minHeight: '200px'
+                }}>
+                    <div className="text-center">
+                        <Loader />
+                        <div className="mt-4 text-sm font-medium" style={{ color: colors.text }}>
+                            Downloading file {downloadingFile}...
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Download progress modal */}
             {isDownloading && (
                 <div
-                className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50"
-                style={{ backgroundColor: colors?.background2 }}
-              >
+                    className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50"
+                    style={{ backgroundColor: colors?.background2 }}
+                >
                     <div className="bg-white p-6 rounded-lg shadow-lg text-center">
                         <div className="mb-4">
                             <svg className="animate-spin h-10 w-10 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
