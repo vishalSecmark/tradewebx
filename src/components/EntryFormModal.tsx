@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
@@ -194,6 +194,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabsModal, setTabsModal] = useState<boolean>(false);
     const [editTabModalData, setEditTabModalData] = useState<boolean>(false);
     const [editTabRowIndex, setEditTabRowIndex] = useState(null);
+
+    console.log("<------------------check data--------------------->",tabTableData)
 
 
     console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
@@ -1393,31 +1395,48 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return errors;
     };
 
-    const submitTabsFormData = async () => {
-        const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
-        const currentTabFormValues = tabFormValues[currentTabKey] || {};
+   const submitTabsFormData = async () => {
+    const currentTab = tabsData[activeTabIndex];
+    const currentTabKey = `tab_${activeTabIndex}`;
+    const currentTabFormValues = tabFormValues[currentTabKey] || {};
 
-        // Validate master form first
-        const masterErrors = validateForm(masterFormData, masterFormValues);
+    // Validate master form first
+    const masterErrors = validateForm(masterFormData, masterFormValues);
 
-        // Validate current tab
-        const tabErrors = validateTabForm(currentTab, currentTabFormValues);
+    // Only validate current tab if it's NOT a table
+    let tabErrors = {};
+    if (currentTab.Settings.isTable !== "true") {
+        tabErrors = validateTabForm(currentTab, currentTabFormValues);
+    }
 
-        // Combine all errors
-        const allErrors = { ...masterErrors, ...tabErrors };
+    // Combine all errors
+    const allErrors = { ...masterErrors, ...tabErrors };
 
-        if (Object.keys(allErrors).length > 0) {
-            setFieldErrors(allErrors);
-            if (Object.keys(masterErrors).length > 0) {
-                toast.error("Please fill all mandatory fields in the Master form before submitting.");
-            } else {
-                toast.error("Please fill all mandatory fields in the current tab before submitting.");
-            }
-            return;
+    if (Object.keys(allErrors).length > 0) {
+        setFieldErrors(allErrors);
+        if (Object.keys(masterErrors).length > 0) {
+            toast.error("Please fill all mandatory fields in the Master form before submitting.");
+        } else {
+            toast.error("Please fill all mandatory fields in the current tab before submitting.");
         }
+        return;
+    }
 
-        setIsFormSubmit(true);
+    let allData = {
+        Master: masterFormValues,
+    }
+
+    if (currentTab.Settings.isTable === "true") {
+        allData[currentTab.TabName] = tabTableData[currentTabKey] || []
+    } else {
+        allData[currentTab.TabName] = currentTabFormValues
+    }
+
+    console.log("check xdatajson", allData);
+    const xDataJson = JSON.stringify(allData);
+    console.log("check xdatajson", allData);
+
+     setIsFormSubmit(true);
         try {
             const saveNextAPI = currentTab.Settings.SaveNextAPI;
 
@@ -1430,7 +1449,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 .join(',');
 
             // Create X_DataJson with current tab form values
-            const xDataJson = JSON.stringify(currentTabFormValues);
+            // const xDataJson = JSON.stringify(currentTabFormValues);
 
             // Replace placeholders in X_Filter_Multiple
             let xFilterMultiple = '';
@@ -1478,9 +1497,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             toast.error('Failed to submit the form. Please try again.');
             setIsFormSubmit(false);
         }
-    };
 
-    // Helper to generate unique id for table rows
+};
+    
+   
+   
+   
+        // Helper to generate unique id for table rows
     const generateUniqueId = () => {
         return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     };
@@ -1518,6 +1541,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setEditTabModalData(true);
         setEditTabRowIndex(idx);
     }
+
     const handleAddTabsFormTableRow = () => {
         const currentTab = tabsData[activeTabIndex];
         const currentTabKey = `tab_${activeTabIndex}`;
@@ -1537,13 +1561,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 ...prev,
                 [currentTabKey]: prev[currentTabKey].map((row, idx) => idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row)
             }));
-            // Update existing row in tabsData
-            setTabsData(prevTabs => {
-                const newTabs = [...prevTabs];
-                newTabs[activeTabIndex].tableData = newTabs[activeTabIndex].tableData.map((row, idx) => idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row);
-                return newTabs;
-            });
-        } else {
+          } else {
             // Add new row
             const newRow = {
                 ...currentTabFormValues,
@@ -1553,11 +1571,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 ...prev,
                 [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
             }));
-            setTabsData(prevTabs => {
-                const newTabs = [...prevTabs];
-                newTabs[activeTabIndex].tableData = [...(newTabs[activeTabIndex].tableData || []), newRow];
-                return newTabs;
-            });
         }
         // Reset edit state
         setEditTabModalData(false);
@@ -1570,6 +1583,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setTabsModal(false); // Close modal after adding/editing
     }
 
+    
     const handleClearTabTableRowEntry = () => {
         const currentTab = tabsData[activeTabIndex];
         const currentTabKey = `tab_${activeTabIndex}`;
