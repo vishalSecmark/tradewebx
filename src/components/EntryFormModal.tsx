@@ -8,11 +8,12 @@ import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 
-import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData } from '@/types';
+import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData, GuardianEntryModalProps } from '@/types';
 import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
+import { groupFormData } from './component-forms/form-helper/utils';
 
 
 
@@ -163,8 +164,142 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     );
 };
 
+const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
+    isOpen,
+    onClose,
+    masterValues,
+    formData,
+    masterFormData,
+    formValues,
+    setFormValues,
+    dropdownOptions,
+    loadingDropdowns,
+    onDropdownChange,
+    fieldErrors,
+    setFieldErrors,
+    setFormData,
+    resetChildForm,
+    isEdit,
+    onChildFormSubmit,
+    setValidationModal,
+    viewAccess,
+    isLoading,
+    setChildEntriesTable,
+    setDropDownOptions,
+    childModalZindex
+}) => {
+    const isChildInvalid = Object.values(fieldErrors).some(error => error);
 
+    console.log("check form data",formData)
+    const handleFormSubmit = () => {
+         const childErrors = validateForm(formData, formValues);
 
+        if (Object.keys(childErrors).length > 0) {
+            setFieldErrors({...childErrors });
+            toast.error("Please fill all mandatory fields before submitting.");
+            return;
+        }else {
+            onChildFormSubmit();
+        }
+       
+    }
+
+    return (
+        <div className={`fixed inset-0 flex items-center justify-center z-500`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+            <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Add Guardian Details</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        ✕
+                    </button>
+                </div>
+                {isLoading ? (
+                    <div className="text-center py-4">Loading...</div>
+                ) : (
+                    <>
+                        <div className="text-end mt-5">
+                            <button
+                                onClick={resetChildForm}
+                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                    }`}
+                                disabled={viewAccess}
+                            >
+                                Reset
+                            </button>
+                            <button
+                                onClick={handleFormSubmit}
+                                disabled={viewAccess || isChildInvalid}
+                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-green-500 hover:bg-green-600 text-white'
+                                    }`}
+                            >
+                                Submit
+                            </button>
+                        </div>
+                        <div>
+                            {(() => {
+                                const groupedFormData: GroupedFormData[] = groupFormData(
+                                    formData,
+                                    true
+                                );
+                                return (
+                                    <div>
+                                        {groupedFormData.map((group, idx) => (
+                                            <div
+                                                key={idx}
+                                                style={{
+                                                    border: group.groupName ? "1px solid #ccc" : "none",
+                                                    borderRadius: "6px",
+                                                    padding: group.groupName ? "12px" : "0",
+                                                    marginBottom: "16px",
+                                                }}
+                                            >
+                                                {group.groupName && (
+                                                    <h6
+                                                        style={{
+                                                            marginBottom: "10px",
+                                                            fontWeight: "bold",
+                                                            background: "#f7f7f7",
+                                                            padding: "6px 10px",
+                                                            borderRadius: "4px",
+                                                        }}
+                                                    >
+                                                        {group.groupName}
+                                                    </h6>
+                                                )}
+
+                                                <EntryForm
+                                                    formData={group.fields}
+                                                    formValues={formValues}
+                                                    masterValues={masterValues}
+                                                    setFormValues={setFormValues}
+                                                    dropdownOptions={dropdownOptions}
+                                                    loadingDropdowns={loadingDropdowns}
+                                                    onDropdownChange={onDropdownChange}
+                                                    fieldErrors={fieldErrors}
+                                                    setFieldErrors={setFieldErrors}
+                                                    setFormData={setFormData}
+                                                    setValidationModal={setValidationModal}
+                                                    setDropDownOptions={setDropDownOptions}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
 const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
 
     const [formSubmitConfirmation, setFormSubmitConfirmation] = useState<boolean>(false);
@@ -195,6 +330,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [editTabModalData, setEditTabModalData] = useState<boolean>(false);
     const [editTabRowIndex, setEditTabRowIndex] = useState(null);
 
+    //Nominee related States
+    const [isMinor,setIsMinor] = useState(false);
+    const [isGuardianModalOpen,setIsGuardianModalOpen] = useState(false);
+    const [guardianFormData,setGuardianFormData] = useState<FormField[]>([]);
+    const [guardianFormValues,setGuardianFormValues] = useState<Record<string, any>>({});
+    const [guardianDropdownOptions,setGuardianDropdownOptions] = useState<Record<string, any[]>>({});
+    const [guardianLoadingDropdowns,setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
+    const [guardianLoading,setGuardianLoading] = useState(false);
     console.log("<------------------check data--------------------->",tabTableData)
 
 
@@ -307,6 +450,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 // Set up master form data from Master tab
                 if (masterTab) {
                     let masterFormData = masterTab.Data || [];
+                    const masterTableData = masterTab?.tableData[0] || [];
 
                     // Set all fields to disabled if in view mode
                     if (viewMode) {
@@ -323,10 +467,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     masterFormData.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialMasterValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
-                        } else if (editData && editData[field.wKey] !== undefined) {
-                            initialMasterValues[field.wKey] = editData[field.wKey];
-                        } else if (field.wValue) {
-                            initialMasterValues[field.wKey] = field.wValue;
+                        } else if (editData) {
+                            initialMasterValues[field.wKey] = masterTableData[field.wKey] || editData[field.wKey] || "";
+                        } else {
+                            initialMasterValues[field.wKey] = "";
                         }
                     });
 
@@ -358,15 +502,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     initialTabDropdownOptions[tabKey] = {};
                     initialTabLoadingDropdowns[tabKey] = {};
                     initialTabTableData[tabKey] = tab.tableData || [];
+                    console.log("-------------->",initialTabTableData[tabKey])
 
                     // Initialize form values with any preset values
                     tab.Data.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialTabFormValues[tabKey][field.wKey] = moment(field.wValue).format('YYYYMMDD');
-                        } else if (editData && editData[field.wKey] !== undefined) {
-                            initialTabFormValues[tabKey][field.wKey] = editData[field.wKey];
-                        } else if (field.wValue) {
-                            initialTabFormValues[tabKey][field.wKey] = field.wValue;
+                        } else if (tab.tableData.length && tab.Settings.isTable === "false") {
+                            initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey];
+                        } else  {
+                            initialTabFormValues[tabKey][field.wKey] = "";
                         }
                     });
 
@@ -443,6 +588,40 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
+    const fetchDropdownOptionsForGuardianTab = async (field: FormField) => {
+        if (!field.wQuery) return;
+        try {
+            setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
+            const jUi = Object.entries(field.wQuery.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(field.wQuery.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${field.wQuery.Sql || ''}</Sql>
+                <X_Filter>${field.wQuery.X_Filter || ''}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+            const options = response.data?.data?.rs0?.map((item: any) => ({
+                label: item[field.wDropDownKey?.key || 'DisplayName'],
+                value: item[field.wDropDownKey?.value || 'Value']
+            }));
+
+            setGuardianDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
+        } catch (error) {
+            console.error(`Error fetching options for ${field.wKey}:`, error);
+        } finally {
+            setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
+        }
+    };
+
     const fetchDropdownOptions = async (field: FormField, isChild: boolean = false) => {
         if (!field.wQuery) return;
 
@@ -482,6 +661,75 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
         }
     };
+
+    const fetchGuardianDependentOptions = async (field: FormField, parentValue: string, isChild: boolean = false) => {
+        if (!field.dependsOn) return;
+
+        try {
+            setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
+
+            const jUi = Object.entries(field.dependsOn.wQuery.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(field.dependsOn.wQuery.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            let xFilter = '';
+            if (field.dependsOn.wQuery.X_Filter_Multiple) {
+                if (Array.isArray(field.dependsOn.field)) {
+                    field.dependsOn.field.forEach(fieldName => {
+                        // Check if fieldName is actually a comma-separated string
+                        if (typeof fieldName === 'string' && fieldName.includes(',')) {
+                            // Split the string into individual field names
+                            const fieldNames = fieldName.split(',').map(name => name.trim());
+
+                            // Process each individual field name
+                            fieldNames.forEach(individualField => {
+                                if (!guardianFormValues[individualField] && !masterFormValues[individualField]) {
+                                    toast.error(`Please select the field: ${individualField}`);
+                                    return;
+                                }
+                                xFilter += `<${individualField}>${guardianFormValues[individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
+                            });
+                        } else {
+                            // Normal case - fieldName is already a single field name
+                            if (!guardianFormValues[fieldName] && !masterFormValues[fieldName]) {
+                                toast.error(`Please select the field: ${fieldName}`);
+                                return;
+                            }
+                            xFilter += `<${fieldName}>${guardianFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
+                        }
+                    });
+                } else {
+                    xFilter = `<${field.dependsOn.field}>${parentValue}</${field.dependsOn.field}>`;
+                }
+            }
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+            const options = response.data?.data?.rs0?.map((item: any) => ({
+                label: item[field.wDropDownKey?.key || 'DisplayName'],
+                value: item[field.wDropDownKey?.value || 'Value']
+            }));
+
+            setGuardianDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
+
+        } catch (error) {
+            console.error(`Error fetching dependent options for ${field.wKey}:`, error);
+        } finally {
+            setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
+        }
+    };
+
 
     // to fetch dependent option for forms without tabs 
     const fetchDependentOptions = async (field: FormField, parentValue: string, isChild: boolean = false) => {
@@ -636,6 +884,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
+    const handleGuardianDependentOptions = (field:any) => {
+          if (field.dependsOn) {
+            if (Array.isArray(field.dependsOn.field)) {
+                fetchGuardianDependentOptions(field, "");
+            }
+        }
+
+    }
 
     const handleMasterDropdownChange = (field: any) => {
         // Find dependent fields and update them
@@ -1395,7 +1651,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return errors;
     };
 
-   const submitTabsFormData = async () => {
+    const submitTabsFormData = async () => {
     const currentTab = tabsData[activeTabIndex];
     const currentTabKey = `tab_${activeTabIndex}`;
     const currentTabFormValues = tabFormValues[currentTabKey] || {};
@@ -1422,7 +1678,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return;
     }
 
-    let allData = {
+    const allData = {
         Master: masterFormValues,
     }
 
@@ -1485,8 +1741,91 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     toast.info(`Moved to next tab: ${tabsData[activeTabIndex + 1].TabName}`);
                 } else {
                     // All tabs completed, close modal
-                    resetTabsForm();
+                    // resetTabsForm();
                 }
+            } else {
+                const message = response?.data?.message?.replace(/<\/?Message>/g, '') || 'Submission failed';
+                toast.warning(message);
+                setIsFormSubmit(false);
+            }
+        } catch (error) {
+            console.error('Error submitting tab form:', error);
+            toast.error('Failed to submit the form. Please try again.');
+            setIsFormSubmit(false);
+        } finally{
+            setIsFormSubmit(false)
+        }
+
+};
+    
+ const FinalSubmitTabsFormData = async () => {
+     const currentTab = tabsData[activeTabIndex];
+    const currentTabKey = `tab_${activeTabIndex}`;
+    const currentTabFormValues = tabFormValues[currentTabKey] || {};
+
+  
+    const allData = {
+        Master: masterFormValues,
+    }
+
+    tabsData.forEach((tabs,index) => {
+        const currentKey = `tab_${index}`
+        if(tabs.Settings.isTable === "true"){
+            allData[tabs.TabName] = tabTableData[currentKey]
+        }else{
+            allData[tabs.TabName] = tabFormValues[currentKey]
+        }
+    })
+
+    console.log("check all data", allData);
+
+    
+     const xDataJson = JSON.stringify(allData);
+     console.log("json",xDataJson)
+
+     setIsFormSubmit(true);
+        try {
+            const saveNextAPI = currentTab.Settings.SaveNextAPI;
+
+            const jUi = Object.entries(saveNextAPI.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(saveNextAPI.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            // Create X_DataJson with current tab form values
+            // const xDataJson = JSON.stringify(currentTabFormValues);
+
+            // Replace placeholders in X_Filter_Multiple
+            let xFilterMultiple = '';
+            Object.entries(saveNextAPI.X_Filter_Multiple).forEach(([key, value]) => {
+                let finalValue = value;
+                if (typeof value === 'string' && value.includes('##')) {
+                    // Replace placeholders with actual values
+                    finalValue = value.replace(/##(\w+)##/g, (match, placeholder) => {
+                        return currentTabFormValues[placeholder] || '';
+                    });
+                }
+                xFilterMultiple += `<${key}>${finalValue}</${key}>`;
+            });
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql></Sql>
+                <X_Filter></X_Filter>
+                <X_Filter_Multiple>${xFilterMultiple}</X_Filter_Multiple>
+                <X_DataJson>${xDataJson}</X_DataJson>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+
+            if (response?.data?.success) {
+                toast.success('Tab form submitted successfully!');
+                setIsFormSubmit(false);
+                 // resetTabsForm();
             } else {
                 const message = response?.data?.message?.replace(/<\/?Message>/g, '') || 'Submission failed';
                 toast.warning(message);
@@ -1542,45 +1881,171 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setEditTabRowIndex(idx);
     }
 
+    
+      const checkIfMinor = (dob: string) => {
+        if (!dob) {
+          setIsMinor(false);
+          return false;
+        }
+    
+        const birthDate = moment(dob, 'YYYYMMDD');
+        if (!birthDate.isValid()) {
+          setIsMinor(false);
+          return false;
+        }
+    
+        const age = moment().diff(birthDate, 'years');
+        const minor = age < 18;
+        setIsMinor(minor);
+        return minor;
+      };
+    
+    
+
     const handleAddTabsFormTableRow = () => {
-        const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
-        const currentTabFormValues = tabFormValues[currentTabKey] || {};
-        // Validate current tab
-        const tabErrors = validateTabForm(currentTab, currentTabFormValues);
-        // Combine all errors
-        const allErrors = { ...tabErrors };
-        if (Object.keys(allErrors).length > 0) {
-            setFieldErrors(allErrors);
-            toast.error("Please fill all mandatory fields in the current tab before submitting.");
+    const currentTab = tabsData[activeTabIndex];
+    const currentTabKey = `tab_${activeTabIndex}`;
+    const currentTabFormValues = tabFormValues[currentTabKey] || {};
+    
+    // Validate current tab
+    const tabErrors = validateTabForm(currentTab, currentTabFormValues);
+    const allErrors = { ...tabErrors };
+    
+    if (Object.keys(allErrors).length > 0) {
+        setFieldErrors(allErrors);
+        toast.error("Please fill all mandatory fields in the current tab before submitting.");
+        return;
+    }
+    
+    // Check if guardian details are needed
+    const needsGuardianDetails = currentTab.Settings.IsChildEntryAllowed === "true" && 
+                                currentTab.TabName === "NomineeDetails" && 
+                                checkIfMinor(currentTabFormValues?.NomineeDOB);
+    
+    if (needsGuardianDetails) {
+        const guardianTabsError = validateForm(guardianFormData, guardianFormValues);
+        console.log("in this loop----------->", guardianFormValues, guardianTabsError, guardianFormData);
+        
+        if (Object.keys(guardianFormValues).length === 0 || Object.keys(guardianTabsError).length > 0) { 
+            toast.error("Please fill all mandatory fields in Guardian details before submitting.");
             return;
         }
-        if (editTabModalData && editTabRowIndex !== null) {
-            // Update existing row in tabTableData
-            setTabTableData(prev => ({
-                ...prev,
-                [currentTabKey]: prev[currentTabKey].map((row, idx) => idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row)
-            }));
-          } else {
-            // Add new row
-            const newRow = {
-                ...currentTabFormValues,
-                _id: generateUniqueId(),
-            };
-            setTabTableData(prev => ({
-                ...prev,
-                [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
-            }));
-        }
-        // Reset edit state
-        setEditTabModalData(false);
-        setEditTabRowIndex(null);
-        // Optionally clear form values for next entry
-        setTabFormValues(pre => ({
-            ...pre,
-            [currentTabKey]: {}
+    }
+    
+    if (editTabModalData && editTabRowIndex !== null) {
+        // Update existing row in tabTableData
+        setTabTableData(prev => ({
+            ...prev,
+            [currentTabKey]: prev[currentTabKey].map((row, idx) => 
+                idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row
+            )
         }));
-        setTabsModal(false); // Close modal after adding/editing
+    } else {
+        // Add new row - conditionally include guardian details
+        const newRow = {
+            ...currentTabFormValues,
+            _id: generateUniqueId(),
+            // Only add guardian details if conditions are met
+            ...(needsGuardianDetails && {
+                guardianDetails: {
+                    ...guardianFormValues,
+                    _id: generateUniqueId()
+                }
+            })
+        };
+        
+        setTabTableData(prev => ({
+            ...prev,
+            [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
+        }));
+           setIsMinor(false);
+        setGuardianFormValues(null)
+    
+    }
+    
+    // Reset edit state
+    setEditTabModalData(false);
+    setEditTabRowIndex(null);
+    
+    // Optionally clear form values for next entry
+    setTabFormValues(pre => ({
+        ...pre,
+        [currentTabKey]: {}
+    }));
+    
+    setTabsModal(false); // Close modal after adding/editing
+}
+
+    const fetchGuardianFormData = async () => {
+        const currentTab = tabsData[activeTabIndex];
+        const guardianFormFetchAPI = currentTab?.Settings?.ChildEntryAPI;
+        const currentTabKey = `tab_${activeTabIndex}`;
+
+        const currentTabFormValues = tabFormValues[currentTabKey] || {};
+
+          try {
+      
+         const jUi = Object.entries(guardianFormFetchAPI.J_Ui)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            const jApi = Object.entries(guardianFormFetchAPI.J_Api)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+         
+
+      let xFilter = '';
+      Object.entries(guardianFormFetchAPI.X_Filter).forEach(([key, value]) => {
+        if (key === 'NomSerial') {
+          xFilter += `<${key}>${currentTabFormValues[key] || ""}</${key}>`;
+        } else {
+          xFilter += `<${key}>${masterFormValues[key] || currentTabFormValues[key] || value}</${key}>`;
+        }
+      });
+
+
+
+      const xmlData = `<dsXml>
+                <J_Ui>${jUi}</J_Ui>
+                <Sql></Sql>
+                <X_Filter>${xFilter}</X_Filter>
+                <J_Api>${jApi}</J_Api>
+            </dsXml>`;
+
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+      const formData = response?.data?.data?.rs0[0].Data || [];
+
+      setGuardianFormData(formData)
+      const initialValues: Record<string, any> = {};
+      formData.forEach((field: any) => {
+        if (field.type === 'WDateBox' && field.wValue) {
+          initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+        } else {
+          initialValues[field.wKey] = '';
+        }
+      });
+      setGuardianFormValues(initialValues);
+
+
+      
+      await Promise.all(
+                formData?.map(async (field: FormField) => {
+                    if (field.type === 'WDropDownBox' && field.wQuery) {
+                        await fetchDropdownOptionsForGuardianTab(field);
+                    }
+                })
+            );
+
+    } catch (error) {
+      console.error('Error fetching childEntry data:', error);
+    }
+
+    }
+
+    const handleAddNominee = () => {
+        setIsGuardianModalOpen(true)
+        fetchGuardianFormData()
     }
 
     
@@ -1599,6 +2064,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             ...pre,
             [currentTabKey]: {}
         }))
+        setIsMinor(false);
+        setGuardianFormValues(null)
     }
 
     const handleTabTableDataDelete = (idx) => {
@@ -1614,32 +2081,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         });
     }
 
-    function groupFormData(
-        fields: FormField[],
-        isGroup: boolean
-    ): GroupedFormData[] {
-        if (!isGroup) {
-            return [{ groupName: "", fields }];
-        }
-
-        const groups = fields.reduce<Record<string, FormField[]>>((acc, field) => {
-            const groupName = field.CombinedName?.trim() || "";
-            if (groupName) {
-                if (!acc[groupName]) acc[groupName] = [];
-                acc[groupName].push(field);
-            } else {
-                if (!acc.__ungrouped) acc.__ungrouped = [];
-                acc.__ungrouped.push(field);
-            }
-            return acc;
-        }, {});
-
-        return Object.entries(groups).map(([groupName, fields]) => ({
-            groupName: groupName !== "__ungrouped" ? groupName : "",
-            fields,
-        }));
+    const handleGuardianFormSubmit = () => {
+         setIsGuardianModalOpen(false);
     }
 
+   
     if (!isOpen) return null;
     return (
         <>
@@ -1731,10 +2177,29 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         {isFormSubmit ? "Submitting..." : (
                                                             <>
                                                                 <FaSave />
-                                                                {activeTabIndex < tabsData.length - 1 ? "Save & Next" : "Save & Complete"}
+                                                                {activeTabIndex < tabsData.length - 1 ? "Save & Next" : "Save"}
                                                             </>
                                                         )}
                                                     </button>
+                                                    {
+                                                        activeTabIndex === tabsData.length - 1 && (
+                                                             <button
+                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode
+                                                            ? 'bg-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-500 hover:bg-blue-600'
+                                                            } text-white rounded-md`}
+                                                        onClick={FinalSubmitTabsFormData}
+                                                        disabled={isFormInvalid || viewMode || isFormSubmit}
+                                                    >
+                                                        {isFormSubmit ? "Submitting..." : (
+                                                            <>
+                                                                <FaSave />
+                                                                {"Final Submit"}
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                        )
+                                                    }
                                                 </div>
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
@@ -1763,7 +2228,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 >
                                                                     Add
                                                                 </button>
-                                                            </div>{(() => {
+                                                                {
+                                                                    isMinor && (<button
+                                                                    className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
+                                                                    onClick={handleAddNominee}
+                                                                >
+                                                                    Add Guardian Details
+                                                                </button>)
+                                                                }
+                                                            </div>
+                                                            {(() => {
                                                                 const currentTab = tabsData[activeTabIndex];
                                                                 const groupedFormData: GroupedFormData[] = groupFormData(
                                                                     currentTab.Data,
@@ -1918,7 +2392,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                {(tabTableData[`tab_${activeTabIndex}`] || []).map((row, idx) => (
+                                                                {(tabTableData[`tab_${activeTabIndex}`] || [])?.map((row, idx) => (
                                                                     <tr key={row._id}>
                                                                         <td className="px-4 py-2 border-b">
                                                                             {/* Add Edit/Delete buttons here if needed */}
@@ -2218,6 +2692,27 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     viewAccess={viewMode}
                     childModalZindex={childModalZindex}
                 />
+            )}
+
+            {isGuardianModalOpen && (
+               <GuardianFEntryForm
+                isOpen={isGuardianModalOpen}
+                onClose={() => setIsGuardianModalOpen(false)}
+                isLoading={guardianLoading}
+                formData={guardianFormData}
+                formValues={guardianFormValues}
+                setFormValues={setGuardianFormValues}
+                dropdownOptions={guardianDropdownOptions}
+                setDropDownOptions={setGuardianDropdownOptions}
+                loadingDropdowns={guardianLoadingDropdowns}
+                onDropdownChange={handleGuardianDependentOptions}
+                setValidationModal={setValidationModal}
+                childModalZindex={childModalZindex}
+                viewAccess={viewMode}
+                fieldErrors={fieldErrors}
+                setFieldErrors={setFieldErrors}
+                onChildFormSubmit={handleGuardianFormSubmit}
+               />
             )}
         </>
     );

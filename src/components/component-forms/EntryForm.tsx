@@ -369,14 +369,10 @@ const EntryForm: React.FC<EntryFormProps> = ({
         }
     };
 
-    //this error function is used to show file uploadation
-    const handleFieldError = (fieldKey: string, errorMessage: string) => {
-        setFieldErrors(prev => ({ ...prev, [fieldKey]: errorMessage }));
-    };
-
     const renderFormField = (field: FormField, index: number) => {
         const isEnabled = field.FieldEnabledTag === 'Y';
         const isRequired = field.isMandatory === "true";
+        const isFieldVisible  = field.FieldVisibleTag === "Y";
 
         // Get field width or default to full width
         const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
@@ -398,6 +394,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
             gridTemplateColumns: "120px 1fr",
             gap: "16px 24px",
             alignItems: "start"
+        }
+        if(!isFieldVisible){
+            return;
         }
 
         switch (field.type) {

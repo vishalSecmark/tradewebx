@@ -20,6 +20,8 @@ export interface ApiResponse {
 export interface TabSettings {
     isTable: string;
     isGroup?: string;
+    IsChildEntryAllowed?: string;
+    ChildEntryAPI?: any;
     maxAllowedRecords: string;
     SaveNextAPI: {
         J_Ui: {
@@ -47,6 +49,7 @@ export interface FormField {
     type: string;
     label: string;
     isBR?: string;
+    FieldVisibleTag?:string;
     CombinedName?: string;
     childDependents?: string[];
     wKey: string;
@@ -139,4 +142,35 @@ export interface TabData {
 export interface GroupedFormData {
   groupName: string;
   fields: FormField[];
+}
+
+export interface GuardianEntryModalProps {
+ isOpen: boolean;
+    onClose: () => void;
+    masterValues?: Record<string, any>;
+    formData?: FormField[];
+    masterFormData?: FormField[];
+    formValues?: Record<string, any>;
+    setFormValues?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    dropdownOptions?: Record<string, any[]>;
+    loadingDropdowns?: Record<string, boolean>;
+    onDropdownChange?: (key: string, value: any) => void;
+    fieldErrors?: Record<string, string>;
+    setFieldErrors?: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    setFormData?: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+    resetChildForm?: () => void;
+    isEdit?: boolean;
+    onChildFormSubmit?: () => void;
+    setValidationModal?: React.Dispatch<React.SetStateAction<{
+        isOpen: boolean;
+        message: string;
+        type: 'M' | 'S' | 'E' | 'D';
+        callback?: (confirmed: boolean) => void;
+    }>>;
+    viewAccess?: boolean;
+    isLoading?: boolean;
+    setChildEntriesTable?: React.Dispatch<React.SetStateAction<any[]>>;
+    setDropDownOptions?: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    childModalZindex?: string;
+
 }
