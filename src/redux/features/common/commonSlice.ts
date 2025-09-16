@@ -9,6 +9,7 @@ interface CommonState {
     companyLogo: string;
     companyName: string;
     status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    encPayload: boolean;
     error: string | null;
     companyInfo: {
         CompanyCode?: string;
@@ -25,6 +26,7 @@ const initialState: CommonState = {
     companyLogo: '',
     companyName: '',
     status: 'idle',
+    encPayload: true,
     error: null,
     companyInfo: null,
 };
