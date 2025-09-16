@@ -5,6 +5,7 @@ import CryptoJS from 'crypto-js';
 import { SECURITY_CONFIG, isAllowedHttpHost } from './securityConfig';
 import { clearAllAuthData } from './auth';
 import { decodeFernetToken } from './helper';
+import { store } from '@/redux/store';
 
 // Router instance for navigation
 let routerInstance: any = null;
@@ -437,9 +438,12 @@ class ApiService {
 
             const response: AxiosResponse<T> = await axios(requestConfig);
 
+            // Check both ENABLE_FERNET constant and encPayload from Redux state
+            const shouldDecode = ENABLE_FERNET && store.getState().common.encPayload;
+
             return {
                 success: true,
-                data: ENABLE_FERNET ? decodeFernetToken((response.data as any).data) : response.data,
+                data: shouldDecode ? decodeFernetToken((response.data as any).data) : response.data,
                 message: 'Request successful'
             };
         } catch (error: any) {

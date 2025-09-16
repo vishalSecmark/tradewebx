@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { APP_METADATA_KEY, ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL, PATH_URL } from '@/utils/constants';
+import { APP_METADATA_KEY, ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL, PATH_URL, ENABLE_FERNET } from '@/utils/constants';
 import apiService from '@/utils/apiService';
 
 interface CommonState {
@@ -9,6 +9,7 @@ interface CommonState {
     companyLogo: string;
     companyName: string;
     status: 'idle' | 'loading' | 'succeeded' | 'failed';
+    encPayload: boolean;
     error: string | null;
     companyInfo: {
         CompanyCode?: string;
@@ -25,6 +26,7 @@ const initialState: CommonState = {
     companyLogo: '',
     companyName: '',
     status: 'idle',
+    encPayload: true,
     error: null,
     companyInfo: null,
 };
@@ -57,7 +59,7 @@ export const fetchInitializeLogin = createAsyncThunk(
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"InitializeLogin", "Level":1, "RequestFrom":"w"</J_Ui>
             <Sql></Sql>
             <X_Filter> </X_Filter>
-            <X_Data></X_Data>
+            <X_Data><EncPayload>${ENABLE_FERNET ? 'Y' : 'N'}</EncPayload></X_Data>
             <X_GFilter />
             <J_Api></J_Api>
         </dsXml>`;
@@ -117,6 +119,9 @@ export const commonSlice = createSlice({
                 // Also update the companyLogo and companyName for backward compatibility
                 state.companyLogo = action.payload.CompanyLogo || '';
                 state.companyName = action.payload.CompanyName ? action.payload.CompanyName.trim() : '';
+
+                // Store EncPayload as boolean (Y = true, anything else = false)
+                state.encPayload = action.payload.EncPayload === 'Y';
 
                 // Save to localStorage for persistence
                 const appMetadata = {

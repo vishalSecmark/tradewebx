@@ -274,7 +274,7 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const { companyInfo, status } = useSelector((state: RootState) => state.common);
+  const { companyInfo, status, encPayload } = useSelector((state: RootState) => state.common);
 
   // State for version update modal
   const [showVersionModal, setShowVersionModal] = useState(false);
@@ -566,7 +566,9 @@ export default function SignInForm() {
         }
       });
 
-      const data = ENABLE_FERNET ? decodeFernetToken(response.data.data) : response.data;
+      // Check both ENABLE_FERNET constant and encPayload from Redux state
+      const shouldDecode = ENABLE_FERNET && encPayload;
+      const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
       console.log('Login Response:', data);
       console.log('Response status:', data.status);
       console.log('Response token:', data.token);
