@@ -8,6 +8,7 @@ import Button from "@/components/ui/button/Button";
 import apiService from "@/utils/apiService";
 import { ACTION_NAME, BASE_URL, PATH_URL, BASE_PATH_FRONT_END } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
+import { getLocalStorage } from "@/utils/helper";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -70,7 +71,7 @@ export default function ChangePassword() {
             <X_Data>
                 <EOldPassword>${Encryption(formData.currentPassword)}</EOldPassword>
                 <ENewPassword>${Encryption(formData.newPassword)}</ENewPassword>
-                <ClientCode>${localStorage.getItem('userId')}</ClientCode>
+                <ClientCode>${getLocalStorage('userId')}</ClientCode>
             </X_Data>
             <X_Filter></X_Filter>
             <X_GFilter></X_GFilter>

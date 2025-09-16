@@ -47,7 +47,7 @@ import Link from "next/link";
 import CryptoJS from 'crypto-js';
 import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
 import CaptchaComponent, { CaptchaComponentRef } from './CaptchaComponent';
-import { decodeFernetToken } from "@/utils/helper";
+import { decodeFernetToken, getLocalStorage, removeLocalStorage, storeLocalStorage } from "@/utils/helper";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -332,7 +332,7 @@ export default function SignInForm() {
     console.log('proceedAfterVersionCheck called:', {
       loginType: currentLoginData.LoginType,
       forceLogout,
-      hasTempToken: !!localStorage.getItem('temp_token')
+      hasTempToken: !!getLocalStorage('temp_token')
     });
 
     // If forceLogout is true (mandatory update for non-admin users), clear everything and stay on login
@@ -354,10 +354,10 @@ export default function SignInForm() {
       router.push('/otp-verification');
     } else {
       // Set localStorage only
-      localStorage.setItem('auth_token', currentLoginData.token);
-      localStorage.setItem('refreshToken', currentLoginData.refreshToken);
-      localStorage.setItem('tokenExpireTime', currentLoginData.tokenExpireTime);
-      localStorage.removeItem('temp_token');
+      storeLocalStorage('auth_token', currentLoginData.token);
+      storeLocalStorage('refreshToken', currentLoginData.refreshToken);
+      storeLocalStorage('tokenExpireTime', currentLoginData.tokenExpireTime);
+      storeLocalStorage('temp_token', '');
       console.log('Redirecting to dashboard');
       router.push('/dashboard');
     }
@@ -520,9 +520,9 @@ export default function SignInForm() {
     // HTTPS enforcement removed - HTTP is now allowed for all hosts
 
     // Security: Rate limiting check
-    const loginAttempts = localStorage.getItem('login_attempts') || '0';
+    const loginAttempts = getLocalStorage('login_attempts') || '0';
     const attemptCount = parseInt(loginAttempts);
-    const lastAttemptTime = localStorage.getItem('last_login_attempt') || '0';
+    const lastAttemptTime = getLocalStorage('last_login_attempt') || '0';
     const timeSinceLastAttempt = Date.now() - parseInt(lastAttemptTime);
 
     if (attemptCount >= SECURITY_CONFIG.RATE_LIMITING.MAX_LOGIN_ATTEMPTS &&
@@ -535,8 +535,8 @@ export default function SignInForm() {
     }
 
     // Update login attempts
-    localStorage.setItem('login_attempts', (attemptCount + 1).toString());
-    localStorage.setItem('last_login_attempt', Date.now().toString());
+    storeLocalStorage('login_attempts', (attemptCount + 1).toString());
+    storeLocalStorage('last_login_attempt', Date.now().toString());
 
     const xmlData = `<dsXml>
     <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
@@ -605,8 +605,8 @@ export default function SignInForm() {
         }
 
         // Security: Clear login attempts on successful login
-        localStorage.removeItem('login_attempts');
-        localStorage.removeItem('last_login_attempt');
+        removeLocalStorage('login_attempts');
+        removeLocalStorage('last_login_attempt');
 
         // Handle different field names based on UserType
         const clientCode = data.data[0].ClientCode || data.data[0].UserCode || '';
@@ -638,8 +638,8 @@ export default function SignInForm() {
         }));
 
         // Security: Store tokens with integrity checks (handled by API service)
-        localStorage.setItem('userId', userId);
-        localStorage.setItem('temp_token', data.token);
+        storeLocalStorage('userId', userId);
+        storeLocalStorage('temp_token', data.token);
 
         // Debug: Log token storage
         console.log('Token stored for 2FA:', {
@@ -650,15 +650,15 @@ export default function SignInForm() {
 
         // Only store refreshToken if it exists (for branch users)
         if (data.refreshToken) {
-          localStorage.setItem('refreshToken', data.refreshToken);
+          storeLocalStorage('refreshToken', data.refreshToken);
         }
-        localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
-        localStorage.setItem('clientCode', clientCode);
-        localStorage.setItem('clientName', clientName);
-        localStorage.setItem('userType', userType);
-        localStorage.setItem('loginType', data.data[0].LoginType);
-        localStorage.removeItem("ekyc_dynamicData");
-        localStorage.removeItem("ekyc_activeTab");
+        storeLocalStorage('tokenExpireTime', data.tokenExpireTime);
+        storeLocalStorage('clientCode', clientCode);
+        storeLocalStorage('clientName', clientName);
+        storeLocalStorage('userType', userType);
+        storeLocalStorage('loginType', data.data[0].LoginType);
+        removeLocalStorage("ekyc_dynamicData");
+        removeLocalStorage("ekyc_activeTab");
 
         // Store login data for navigation after version check
         const currentLoginData = {

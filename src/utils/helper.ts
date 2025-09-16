@@ -1,18 +1,24 @@
 import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeContext";
-import { APP_METADATA_KEY } from "./constants";
+import { APP_METADATA_KEY, SECURE_STORAGE_KEY } from "./constants";
 import { toast } from "react-toastify";
 import { log } from "node:console";
 //@ts-ignore
 import { Token, Secret } from 'fernet';
+import CryptoJS from 'crypto-js';
 
 export const clearLocalStorage = () => {
+    // Preserve essential app data
     const appMetadata = localStorage.getItem(APP_METADATA_KEY);
     const appThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
     const appTheme = localStorage.getItem(THEME_STORAGE_KEY);
+
+    // Clear all localStorage including secure storage
     localStorage.clear();
-    localStorage.setItem(APP_METADATA_KEY, appMetadata);
-    if (appThemeColors) localStorage.setItem(THEME_COLORS_STORAGE_KEY, appThemeColors);
-    if (appTheme) localStorage.setItem(THEME_STORAGE_KEY, appTheme);
+
+    // Restore essential app data
+    if (appMetadata) storeLocalStorage(APP_METADATA_KEY, appMetadata);
+    if (appThemeColors) storeLocalStorage(THEME_COLORS_STORAGE_KEY, appThemeColors);
+    if (appTheme) storeLocalStorage(THEME_STORAGE_KEY, appTheme);
 }
 
 // Utility to find page data by component name in menuItems
@@ -202,7 +208,7 @@ export const dynamicXmlGenratingFn = (ApiData, rowData) => {
         <Sql>${ApiData.dsXml.Sql || ''}</Sql>
         <X_Filter>${ApiData.dsXml.X_Filter || ''}</X_Filter>
         <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
-        <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+        <J_Api>"UserId":"${getLocalStorage('userId')}"</J_Api>
       </dsXml>`;
 
     return xmlData
@@ -328,3 +334,104 @@ export const decodeFernetToken = (data: string) => {
 };
 
 
+// Encryption key - in production, this should be derived from user session or other secure method
+const getEncryptionKey = (): string => {
+    // You can modify this to use a more secure key generation method
+    // For now, using a combination of browser fingerprint and a constant
+    const browserFingerprint = navigator.userAgent + navigator.language + screen.width + screen.height;
+    return CryptoJS.SHA256(browserFingerprint + 'tradewebx_secure_key').toString();
+};
+
+// Encrypt data using AES encryption
+const encryptData = (data: string): string => {
+    try {
+        const key = getEncryptionKey();
+        const encrypted = CryptoJS.AES.encrypt(data, key).toString();
+        return encrypted;
+    } catch (error) {
+        console.error('Encryption error:', error);
+        throw new Error('Failed to encrypt data');
+    }
+};
+
+// Decrypt data using AES decryption
+const decryptData = (encryptedData: string): string => {
+    try {
+        const key = getEncryptionKey();
+        const decrypted = CryptoJS.AES.decrypt(encryptedData, key).toString(CryptoJS.enc.Utf8);
+        return decrypted;
+    } catch (error) {
+        console.error('Decryption error:', error);
+        throw new Error('Failed to decrypt data');
+    }
+};
+
+// Get all encrypted data from localStorage
+const getEncryptedStorageData = (): Record<string, string> => {
+    try {
+        const encryptedData = localStorage.getItem(SECURE_STORAGE_KEY);
+        if (!encryptedData) {
+            return {};
+        }
+        const decryptedData = decryptData(encryptedData);
+        return JSON.parse(decryptedData);
+    } catch (error) {
+        console.error('Error getting encrypted storage data:', error);
+        return {};
+    }
+};
+
+// Save all encrypted data to localStorage
+const saveEncryptedStorageData = (data: Record<string, string>): void => {
+    try {
+        const jsonData = JSON.stringify(data);
+        const encryptedData = encryptData(jsonData);
+        localStorage.setItem(SECURE_STORAGE_KEY, encryptedData);
+    } catch (error) {
+        console.error('Error saving encrypted storage data:', error);
+        throw new Error('Failed to save encrypted data');
+    }
+};
+
+// Secure localStorage methods
+export const storeLocalStorage = (key: string, value: string): void => {
+    try {
+        const currentData = getEncryptedStorageData();
+        currentData[key] = value;
+        saveEncryptedStorageData(currentData);
+    } catch (error) {
+        console.error('Error storing data securely:', error);
+        throw new Error('Failed to store data securely');
+    }
+};
+
+export const getLocalStorage = (key: string): string | null => {
+    try {
+        const currentData = getEncryptedStorageData();
+        return currentData[key] || null;
+    } catch (error) {
+        console.error('Error retrieving data securely:', error);
+        return null;
+    }
+};
+
+export const removeLocalStorage = (key: string): void => {
+    try {
+        const currentData = getEncryptedStorageData();
+        delete currentData[key];
+        saveEncryptedStorageData(currentData);
+    } catch (error) {
+        console.error('Error removing data securely:', error);
+        throw new Error('Failed to remove data securely');
+    }
+};
+
+// Clear all secure storage data
+export const clearSecureStorage = (): void => {
+    try {
+        localStorage.removeItem(SECURE_STORAGE_KEY);
+    } catch (error) {
+        console.error('Error clearing secure storage:', error);
+        throw new Error('Failed to clear secure storage');
+    }
+};

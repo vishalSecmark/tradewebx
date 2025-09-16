@@ -10,7 +10,7 @@ import { useSaveLoading } from '@/context/SaveLoadingContext';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
-import { displayAndDownloadPDF } from '@/utils/helper';
+import { displayAndDownloadPDF, getLocalStorage, removeLocalStorage, storeLocalStorage } from '@/utils/helper';
 import { getFromDB } from '@/utils/indexDB';
 import apiService from '@/utils/apiService';
 
@@ -64,7 +64,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     // Load state from localStorage on component mount
     useEffect(() => {
         const loadState = () => {
-            const savedState = localStorage.getItem('ekyc_pdf_state');
+            const savedState = getLocalStorage('ekyc_pdf_state');
             if (savedState) {
                 const state = JSON.parse(savedState);
                 setKraPdfGenerated(state.kraPdfGenerated || false);
@@ -86,8 +86,8 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         if (isFinalSigned) {
             setViewFinalPdf(true);
         } if (checkViewMode) {
-            localStorage.setItem("ekyc_viewMode", "true");
-            localStorage.setItem("ekyc_checker", "true")
+            storeLocalStorage("ekyc_viewMode", "true");
+            storeLocalStorage("ekyc_checker", "true")
         } if (isKraSigned && !isFinalSigned) {
             setFinalPdfGenerated(true);
         }
@@ -96,7 +96,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     // Save state to localStorage whenever it changes
     useEffect(() => {
         if (ekycChecker) {
-            localStorage.setItem('ekyc_pdf_state', JSON.stringify({
+            storeLocalStorage('ekyc_pdf_state', JSON.stringify({
                 kraPdfGenerated,
                 kraESignEnabled,
                 finalPdfGenerated,
@@ -108,7 +108,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     // Handle E-Sign callback
     useEffect(() => {
         if (success === 'true' && id && signerIdentifier && esp) {
-            const savedState = localStorage.getItem('ekyc_esign_state');
+            const savedState = getLocalStorage('ekyc_esign_state');
             if (savedState) {
                 const state = JSON.parse(savedState);
                 if (state.currentStep === 'kra_esign_completed') {
@@ -116,7 +116,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                 } else if (state.currentStep === 'final_esign_completed') {
                     handleKRACallBack("FINALPDF")
                 }
-                localStorage.removeItem('ekyc_esign_state');
+                removeLocalStorage('ekyc_esign_state');
                 router.replace(pathname);
             }
         }
@@ -225,12 +225,12 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const handleGenerateKraPdf = async () => {
         setIsGeneratingKraPdf(true);
         try {
-            const userId = localStorage.getItem('userId') || 'ADMIN';
-            const accYear = localStorage.getItem('accYear') || '24';
-            const myDbPrefix = localStorage.getItem('myDbPrefix') || 'undefined';
-            const memberCode = localStorage.getItem('memberCode') || 'undefined';
-            const secretKey = localStorage.getItem('secretKey') || 'undefined';
-            const menuCode = localStorage.getItem('menuCode') || '27';
+            const userId = getLocalStorage('userId') || 'ADMIN';
+            const accYear = getLocalStorage('accYear') || '24';
+            const myDbPrefix = getLocalStorage('myDbPrefix') || 'undefined';
+            const memberCode = getLocalStorage('memberCode') || 'undefined';
+            const secretKey = getLocalStorage('secretKey') || 'undefined';
+            const menuCode = getLocalStorage('menuCode') || '27';
 
             const xmlData = `<dsXml>
                 <J_Ui>"ActionName":"TradeWeb","Option":"KRAPDF","RequestFrom":"W"</J_Ui>
@@ -267,7 +267,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
     const handleGenerateRekycPdf = async (reportName: string) => {
         try {
-            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const userId = getLocalStorage('userId') || 'ADMIN';
             const entryName = 'REKYC';
             const clientCode = userId;
 
@@ -316,7 +316,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
         try {
             setIsSigningKra(true);
-            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const userId = getLocalStorage('userId') || 'ADMIN';
 
             const J_Ui = {
                 ActionName: "Rekyc",
@@ -361,7 +361,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
                         if (url) {
-                            localStorage.setItem('ekyc_esign_state', JSON.stringify({
+                            storeLocalStorage('ekyc_esign_state', JSON.stringify({
                                 kraPdfData,
                                 finalPdfData,
                                 kraPdfGenerated: true,
@@ -370,7 +370,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                                 finalESignEnabled: false,
                                 currentStep: 'kra_esign_completed'
                             }));
-                            localStorage.setItem("KRAredirectedField", "kraESign");
+                            storeLocalStorage("KRAredirectedField", "kraESign");
                             window.open(url, '_self');
                             return;
                         } else {
@@ -395,12 +395,12 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
     const handleGenerateFinalPdf = async () => {
         setIsGeneratingFinalPdf(true);
         try {
-            const userId = localStorage.getItem('userId') || 'ADMIN';
-            const accYear = localStorage.getItem('accYear') || '24';
-            const myDbPrefix = localStorage.getItem('myDbPrefix') || 'undefined';
-            const memberCode = localStorage.getItem('memberCode') || 'undefined';
-            const secretKey = localStorage.getItem('secretKey') || 'undefined';
-            const menuCode = localStorage.getItem('menuCode') || '27';
+            const userId = getLocalStorage('userId') || 'ADMIN';
+            const accYear = getLocalStorage('accYear') || '24';
+            const myDbPrefix = getLocalStorage('myDbPrefix') || 'undefined';
+            const memberCode = getLocalStorage('memberCode') || 'undefined';
+            const secretKey = getLocalStorage('secretKey') || 'undefined';
+            const menuCode = getLocalStorage('menuCode') || '27';
 
             const xmlData = `<dsXml>
                 <J_Ui>"ActionName":"TradeWeb","Option":"FinalPDF","RequestFrom":"W"</J_Ui>
@@ -439,7 +439,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
         try {
             setIsSigningFinal(true);
-            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const userId = getLocalStorage('userId') || 'ADMIN';
 
             const J_Ui = {
                 ActionName: "Rekyc",
@@ -484,7 +484,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
                         if (url) {
-                            localStorage.setItem('ekyc_esign_state', JSON.stringify({
+                            storeLocalStorage('ekyc_esign_state', JSON.stringify({
                                 kraPdfData,
                                 finalPdfData,
                                 kraPdfGenerated: true,
@@ -493,7 +493,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                                 finalESignEnabled: true,
                                 currentStep: 'final_esign_completed'
                             }));
-                            localStorage.setItem("KRAredirectedField", "kraFinalEsign");
+                            storeLocalStorage("KRAredirectedField", "kraFinalEsign");
 
                             window.open(url, '_self');
                             return;
@@ -520,7 +520,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
 
     const handleKRACallBack = async (reportName: string) => {
         try {
-            const userId = localStorage.getItem('userId') || 'ADMIN';
+            const userId = getLocalStorage('userId') || 'ADMIN';
             const entryName = 'REKYC';
             const clientCode = userId;
 
@@ -540,7 +540,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             if (response.data?.data?.rs0) {
-                localStorage.removeItem("KRAredirectedField");
+                removeLocalStorage("KRAredirectedField");
 
                 // Extract message from XML string in Column1
                 const column1Data = response.data.data.rs0[0].Column1;
@@ -573,9 +573,9 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
         }
     }
     useEffect(() => {
-        if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") === "FinalFormSubmission") {
+        if (scope && scope.includes("ADHAR") && success === "True" && getLocalStorage("redirectedField") === "FinalFormSubmission") {
             handleDigiLockerCallBackAPI(Settings, setCheckKRAMode, fetchFormData, setSaving);
-            localStorage.removeItem("redirectedField");
+            removeLocalStorage("redirectedField");
             router.replace(pathname);
         }
     }, [scope, success, Settings, router]);
@@ -604,7 +604,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                             className="px-4 py-1 rounded-lg ml-4"
                             onClick={() => {
                                 handleThirdPartyApi(Settings)
-                                localStorage.setItem('redirectedField', "FinalFormSubmission");
+                                storeLocalStorage('redirectedField', "FinalFormSubmission");
                             }}
                         >verify aadhar</button>
                     ) : (

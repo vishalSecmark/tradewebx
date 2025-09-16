@@ -1,5 +1,6 @@
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { getLocalStorage, storeLocalStorage } from "@/utils/helper";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -93,7 +94,7 @@ export const handleSaveSinglePageData = async (
                 if (setActiveTab && tabName) {
                     setActiveTab(tabName);
                     if (page === "finalPage") {
-                        localStorage.setItem("ekyc_submit", "true");
+                        storeLocalStorage("ekyc_submit", "true");
                     }
                 }
             } else {
@@ -154,13 +155,13 @@ export const SubmitEkycForm = async (settings: any, data: any, setSaving?: (load
             } else if (responseData?.Flag === "S") {
                 // Success case
                 toast.success(responseData.Message || "Data saved successfully");
-                localStorage.setItem("ekyc_viewMode", "true");
-                localStorage.setItem("ekyc_checker", "true");
-                localStorage.setItem("hideVerifyAadhar","true");
+                storeLocalStorage("ekyc_viewMode", "true");
+                storeLocalStorage("ekyc_checker", "true");
+                storeLocalStorage("hideVerifyAadhar", "true");
 
             } else if (responseData?.Flag === "A") {
                 handleThirdPartyApi(MasterSettings)
-                localStorage.setItem('redirectedField', "FinalFormSubmission");
+                storeLocalStorage('redirectedField', "FinalFormSubmission");
             } else {
                 // Handle other cases or default success
                 toast.error(responseData.Message || "Something went wrong");
@@ -254,9 +255,9 @@ export const handleDigiLockerCallBackAPI = async (Settings: any, setCheckKRAMode
         const flagValue = columnData.match(/<Flag>(.*?)<\/Flag>/)[1];
 
         if (flagValue === "S") {
-            localStorage.setItem('redirectedField', null);
-            localStorage.setItem("ekyc_viewMode", "true");
-            localStorage.setItem("ekyc_checker", "true");
+            storeLocalStorage('redirectedField', null);
+            storeLocalStorage("ekyc_viewMode", "true");
+            storeLocalStorage("ekyc_checker", "true");
 
             toast.success("E-verification successfull");
             setCheckKRAMode(true);

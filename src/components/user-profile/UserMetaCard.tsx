@@ -8,6 +8,7 @@ import Image from "next/image";
 import axios from "axios";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "../../utils/constants";
 import apiService from "@/utils/apiService";
+import { getLocalStorage } from "@/utils/helper";
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -26,7 +27,7 @@ export default function UserMetaCard() {
     // Get userid from URL parameters, fallback to localStorage
     const urlUserId = searchParams.get('userid');
     const userData = {
-      userId: localStorage.getItem('userId') || ''
+      userId: getLocalStorage('userId') || ''
     };
 
     const xmlData = `<dsXml>
@@ -35,7 +36,7 @@ export default function UserMetaCard() {
         <X_Filter></X_Filter>
         <X_Filter_Multiple>${urlUserId ? `<ClientCode>${urlUserId}</ClientCode>` : ''}</X_Filter_Multiple>
         <X_GFilter></X_GFilter>
-        <J_Api>"UserId":"${userData.userId}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+        <J_Api>"UserId":"${userData.userId}", "UserType":"${getLocalStorage('userType')}"</J_Api>
     </dsXml>`;
 
     try {

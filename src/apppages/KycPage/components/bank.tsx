@@ -9,11 +9,12 @@ import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
+import { getLocalStorage } from '@/utils/helper';
 
 const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+  const viewMode = getLocalStorage("ekyc_viewMode") === "true" || getLocalStorage("ekyc_viewMode_for_checker") === "true";
 
   const [openAddBank, setOpenAddBank] = useState(false);
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
@@ -183,9 +184,9 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         const prevTableData = prevState.bankTabData.tableData || [];
         const updatedTableData = [...prevTableData];
         const isDefaultChecked = currentFormData.IsDefault === "true";
-    
+
         let newTableData;
-    
+
         if (isDefaultChecked) {
           // If current is set as default, uncheck others
           newTableData = updatedTableData.map((entry, index) => {
@@ -214,42 +215,42 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             if (index === editingIndex) {
               const wasPreviouslyDefault = entry.IsDefault === "true";
               const isOld = !!entry.BankID;
-    
+
               const modifiedEntry = {
                 ...currentFormData,
                 IsDefault: "false"
               };
-    
+
               return modifiedEntry;
             }
-    
+
             // Remove IsModified from old defaults if any
             if (entry.BankID && entry.IsDefault === "true") {
               delete entry.IsModified;
             }
-    
+
             return { ...entry };
           });
-    
+
           // Ensure at least one default remains
           const hasDefault = newTableData.some((entry) => entry.IsDefault === "true");
           if (!hasDefault) {
             const firstOldIndex = newTableData.findIndex(
               (entry, idx) => idx !== editingIndex && !!entry.BankID
             );
-    
+
             if (firstOldIndex !== -1) {
               const restoredEntry = {
                 ...newTableData[firstOldIndex],
                 IsDefault: "true"
               };
-    
+
               delete restoredEntry.IsModified; // Ensure IsModified is not sent
               newTableData[firstOldIndex] = restoredEntry;
             }
           }
         }
-    
+
         return {
           ...prevState,
           bankTabData: {
@@ -264,26 +265,26 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         ...currentFormData,
         IsDefault: isDefaultChecked ? "true" : "false"
       };
-    
+
       setFieldData((prevState: any) => {
         const prevTableData = prevState.bankTabData.tableData || [];
-    
+
         const updatedTableData = isDefaultChecked
           ? prevTableData.map((bank) => {
-              if (bank.IsDefault === "true" && bank.BankID) {
-                return {
-                  ...bank,
-                  IsDefault: "false",
-                  IsModified: "true"
-                };
-              }
+            if (bank.IsDefault === "true" && bank.BankID) {
               return {
                 ...bank,
-                IsDefault: "false"
+                IsDefault: "false",
+                IsModified: "true"
               };
-            })
+            }
+            return {
+              ...bank,
+              IsDefault: "false"
+            };
+          })
           : prevTableData;
-    
+
         return {
           ...prevState,
           bankTabData: {
@@ -293,7 +294,7 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
         };
       });
     }
-    
+
 
     clearFormAndCloseModal();
   };

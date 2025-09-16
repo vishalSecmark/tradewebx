@@ -9,11 +9,12 @@ import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { IoArrowBack } from 'react-icons/io5';
 import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
+import { getLocalStorage } from '@/utils/helper';
 
 const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+  const viewMode = getLocalStorage("ekyc_viewMode") === "true" || getLocalStorage("ekyc_viewMode_for_checker") === "true";
 
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
   const [openAddDemat, setOpenAddDemat] = useState(false);
@@ -184,11 +185,11 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         const prevTableData = prevState.dematTabData.tableData || [];
         const updatedTableData = [...prevTableData];
         const isDefaultChecked = currentFormData.IsDefault === "true";
-    
+
         let newTableData;
-    
+
         if (isDefaultChecked) {
-            // If the current one is checked, uncheck others
+          // If the current one is checked, uncheck others
           newTableData = updatedTableData.map((entry, index) => {
             if (index === editingIndex) {
               return {
@@ -216,44 +217,44 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
             if (index === editingIndex) {
               const wasPreviouslyDefault = entry.IsDefault === "true";
               const isOld = !!entry.DematId;
-          
+
               const modifiedEntry = {
                 ...currentFormData,
                 IsDefault: "false"
               };
               return modifiedEntry;
             }
-          
+
             // If any old account (DematId exists) and it was default, remove it
             if (entry.DematId && entry.IsDefault === "true") {
               delete entry.IsModified;
             }
-          
+
             return { ...entry }; // Keep other entries as is
           }).filter(Boolean); // Filter out removed (null) entries
-          
-    
+
+
           // Ensure at least one default exists
           const hasDefault = newTableData.some((entry) => entry.IsDefault === "true");
           if (!hasDefault) {
             const firstOldIndex = newTableData.findIndex(
               (entry, idx) => idx !== editingIndex && !!entry.DematId
             );
-          
+
             if (firstOldIndex !== -1) {
-          
+
               const restoredEntry = {
                 ...newTableData[firstOldIndex],
                 IsDefault: "true"
               };
-          
+
               delete restoredEntry.IsModified; // Ensure IsModified is not sent
-          
+
               newTableData[firstOldIndex] = restoredEntry;
             }
           }
         }
-    
+
         return {
           ...prevState,
           dematTabData: {
@@ -269,32 +270,32 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
         ...currentFormData,
         IsDefault: isDefaultChecked ? "true" : "false"
       };
-    
+
       setFieldData((prevState: any) => {
         const prevTableData = prevState.dematTabData.tableData || [];
-    
+
         const updatedTableData = isDefaultChecked
           ? prevTableData.map((demat) => {
-              // Uncheck old defaults if they exist and mark them modified
-              if (demat.IsDefault === "true" && demat.DematId) {
-                return {
-                  ...demat,
-                  IsDefault: "false",
-                  IsModified: "true"
-                };
-              }
+            // Uncheck old defaults if they exist and mark them modified
+            if (demat.IsDefault === "true" && demat.DematId) {
               return {
                 ...demat,
-                IsDefault: "false"
+                IsDefault: "false",
+                IsModified: "true"
               };
-            })
+            }
+            return {
+              ...demat,
+              IsDefault: "false"
+            };
+          })
           : prevTableData;
-    
+
         return {
           ...prevState,
           dematTabData: {
             ...prevState.dematTabData,
-              tableData: [...updatedTableData, newEntry]
+            tableData: [...updatedTableData, newEntry]
           }
         };
       });

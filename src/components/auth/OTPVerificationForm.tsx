@@ -12,7 +12,8 @@ import { useTheme } from "@/context/ThemeContext";
 
 import Image from "next/image";
 import { RootState } from "@/redux/store";
-import { decodeFernetToken } from "@/utils/helper";
+import { decodeFernetToken, getLocalStorage } from "@/utils/helper";
+import { storeLocalStorage } from "@/utils/helper";
 
 export default function OTPVerificationForm() {
   const router = useRouter();
@@ -25,8 +26,8 @@ export default function OTPVerificationForm() {
 
   // Check if temp_token exists on component mount
   useEffect(() => {
-    const tempToken = localStorage.getItem('temp_token');
-    const userId = localStorage.getItem('userId');
+    const tempToken = getLocalStorage('temp_token');
+    const userId = getLocalStorage('userId');
 
     if (!tempToken || !userId) {
       console.log('Missing authentication data, redirecting to signin');
@@ -41,9 +42,9 @@ export default function OTPVerificationForm() {
     setError("");
 
     // Debug: Check if temp_token is available
-    const tempToken = localStorage.getItem('temp_token');
-    const userId = localStorage.getItem('userId');
-    const userType = localStorage.getItem('userType');
+    const tempToken = getLocalStorage('temp_token');
+    const userId = getLocalStorage('userId');
+    const userType = getLocalStorage('userType');
 
     console.log('OTP Verification Debug:', {
       tempToken: tempToken ? 'Available' : 'Missing',
@@ -111,15 +112,15 @@ export default function OTPVerificationForm() {
         }));
 
         // Update localStorage
-        localStorage.setItem('clientCode', clientCode);
-        localStorage.setItem('clientName', clientName);
-        localStorage.setItem('userType', data.data[0].UserType);
-        localStorage.setItem('auth_token', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('tokenExpireTime', data.tokenExpireTime);
+        storeLocalStorage('clientCode', clientCode);
+        storeLocalStorage('clientName', clientName);
+        storeLocalStorage('userType', data.data[0].UserType);
+        storeLocalStorage('auth_token', data.token);
+        storeLocalStorage('refreshToken', data.refreshToken);
+        storeLocalStorage('tokenExpireTime', data.tokenExpireTime);
 
         // Clean up temporary token
-        localStorage.removeItem('temp_token');
+        storeLocalStorage('temp_token', '');
 
         router.push('/dashboard');
       } else {

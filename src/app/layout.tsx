@@ -16,10 +16,11 @@ import TableStyling from "@/components/ui/table/TableStyling";
 import { setupApiRouter } from "@/utils/apiService";
 import AuthGuard from "@/components/auth/AuthGuard";
 import DevelopmentModeIndicator from "@/components/common/DevelopmentModeIndicator";
+import { getLocalStorage } from "@/utils/helper";
 
 const appMetadata = (() => {
   try {
-    return JSON.parse(localStorage.getItem(APP_METADATA_KEY))
+    return JSON.parse(getLocalStorage(APP_METADATA_KEY) || '{}')
   } catch (err) {
     return store.getState().common
   }

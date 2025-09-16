@@ -9,7 +9,7 @@ import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import moment from 'moment';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
-import { findPageData } from '@/utils/helper';
+import { findPageData, getLocalStorage } from '@/utils/helper';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { toast } from 'react-toastify';
 import { IoArrowBack } from "react-icons/io5";
@@ -19,8 +19,8 @@ import apiService from '@/utils/apiService';
 const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode1 = localStorage.getItem("ekyc_viewMode") === "true" ;
-  const viewMode2 =  localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+  const viewMode1 = getLocalStorage("ekyc_viewMode") === "true";
+  const viewMode2 = getLocalStorage("ekyc_viewMode_for_checker") === "true";
   const viewMode = viewMode1 || viewMode2;
   const [localFormData, setLocalFormData] = useState<any>(formFields || {});
 
@@ -312,9 +312,9 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
       const entry = pageData[0].Entry;
       const childEntry = entry.ChildEntry;
 
-      const userData = localStorage.getItem("rekycRowData_viewMode");
-      const clientCode1 = localStorage.getItem("clientCode");
-      const clientCode2 = localStorage.getItem("userId");
+      const userData = getLocalStorage("rekycRowData_viewMode");
+      const clientCode1 = getLocalStorage("clientCode");
+      const clientCode2 = getLocalStorage("userId");
       const parsedUserData = userData ? JSON.parse(userData) : null;
       const payload = !viewMode ? childEntry.X_Filter : {
         EntryName: parsedUserData?.EntryName || "Rekyc",
@@ -335,7 +335,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
                 <J_Ui>"ActionName":"${ACTION_NAME}","Option":"ChildEntry"</J_Ui>
                 <Sql></Sql>
                 <X_Filter>${xFilter}</X_Filter>
-                <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
+                <J_Api>"UserId":"${getLocalStorage('userId') || 'ADMIN'}","AccYear":"${getLocalStorage('accYear') || '24'}","MyDbPrefix":"${getLocalStorage('myDbPrefix') || 'undefined'}","MemberCode":"${getLocalStorage('memberCode') || ''}","SecretKey":"${getLocalStorage('secretKey') || ''}","MenuCode":"${getLocalStorage('menuCode') || 27}","ModuleID":"${getLocalStorage('moduleID') || '27'}","MyDb":"${getLocalStorage('myDb') || 'undefined'}","DenyRights":"${getLocalStorage('denyRights') || ''}"</J_Api>
             </dsXml>`;
 
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);

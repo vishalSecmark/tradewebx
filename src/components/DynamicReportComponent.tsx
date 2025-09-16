@@ -21,7 +21,7 @@ import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
 import Loader from './Loader';
 import apiService from '@/utils/apiService';
-import { parseSettingsFromXml } from '@/utils/helper';
+import { getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
 import { toast } from "react-toastify";
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
@@ -336,7 +336,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const appMetadata = (() => {
         try {
-            return JSON.parse(localStorage.getItem(APP_METADATA_KEY))
+            return JSON.parse(getLocalStorage(APP_METADATA_KEY))
         } catch (err) {
             return store.getState().common
         }
@@ -718,7 +718,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 <Sql>${pageData[0].Sql || ''}</Sql>
                 <X_Filter>${filterXml}</X_Filter>
                 <X_GFilter></X_GFilter>
-                <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+                <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);

@@ -1,5 +1,6 @@
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants"
+import { getLocalStorage } from "@/utils/helper";
 import axios from "axios"
 
 export const tableHeader = ['Code', 'Name', 'ISIN', 'Rate', 'Holding', 'Value', 'HairCut', 'Net Value', 'Request', 'Value']
@@ -25,9 +26,9 @@ export const dropDownApiCall = async (setDematId) => {
     <J_Ui>"ActionName":"Tradeweb", "Option":"GetBenefAccountNo","RequestFrom" :"W"</J_Ui>
     <Sql/>
     <X_Filter>
-      <ClientCode>${localStorage.getItem('userId')}</ClientCode>
+      <ClientCode>${getLocalStorage('userId')}</ClientCode>
     </X_Filter>
-    <J_Api>"UserId":"${localStorage.getItem('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+    <J_Api>"UserId":"${getLocalStorage('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
   </dsXml>
   `;
 
@@ -50,11 +51,11 @@ export const tableApiCall = async (selectedDemat, setTableHeaders, setTableRows)
 	<J_Ui>"ActionName":"Tradeweb", "Option":"GetHolding","RequestFrom" :"W"</J_Ui>
 	<Sql/>
 	<X_Filter>
-        <ClientCode>${localStorage.getItem('userId')}</ClientCode>
+        <ClientCode>${getLocalStorage('userId')}</ClientCode>
         <DematActNo>${selectedDemat.DPAccountNo}</DematActNo>
         <DPType>${selectedDemat.DPType}</DPType>
 	</X_Filter>
-	<J_Api>"UserId":"${localStorage.getItem('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+	<J_Api>"UserId":"${getLocalStorage('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
 </dsXml>
 `
 

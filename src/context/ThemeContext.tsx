@@ -9,6 +9,7 @@ import { RootState } from '@/redux/store';
 import { isEqual } from "lodash"
 import apiService from '@/utils/apiService';
 import { ThemeColors } from '@/types/ThemeColors';
+import { getLocalStorage, storeLocalStorage } from '@/utils/helper';
 // Define theme types
 export type ThemeType = 'dark' | 'light' | 'lightDark' | 'blue';
 
@@ -168,7 +169,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <X_Filter>
         </X_Filter>
         <X_GFilter/>
-        <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
+        <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":0,"MyDbPrefix":null,"MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${getLocalStorage('userType')}"</J_Api>
       </dsXml>`;
 
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
@@ -181,7 +182,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (parsedFontSettings.fontSettings) {
               setFonts(parsedFontSettings.fontSettings);
               // Save to localStorage
-              localStorage.setItem(FONTS_STORAGE_KEY, JSON.stringify(parsedFontSettings.fontSettings));
+              storeLocalStorage(FONTS_STORAGE_KEY, JSON.stringify(parsedFontSettings.fontSettings));
             }
           } catch (error) {
             console.error('Error parsing font settings:', error);
@@ -196,20 +197,20 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }));
 
         // Save to localStorage
-        const localSavedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
+        const localSavedThemeColors = getLocalStorage(THEME_COLORS_STORAGE_KEY);
         try {
           const parsedLocalThemeColors = JSON.parse(localSavedThemeColors);
           if (!isEqual(parsedLocalThemeColors, parsedThemeSettings)) {
-            localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
+            storeLocalStorage(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
           }
         } catch (err) {
-          localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
+          storeLocalStorage(THEME_COLORS_STORAGE_KEY, JSON.stringify(parsedThemeSettings));
         }
       }
     } catch (error) {
       console.error('Error fetching theme data:', error);
       // Fallback to initial themes if API fails (from Localstorage or intialThemes)
-      const savedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
+      const savedThemeColors = getLocalStorage(THEME_COLORS_STORAGE_KEY);
       if (savedThemeColors) {
         setThemes(JSON.parse(savedThemeColors));
       } else {
@@ -222,19 +223,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const loadTheme = async () => {
       try {
         // First try to load from localStorage
-        const savedThemeColors = localStorage.getItem(THEME_COLORS_STORAGE_KEY);
+        const savedThemeColors = getLocalStorage(THEME_COLORS_STORAGE_KEY);
         if (savedThemeColors) {
           setThemes(JSON.parse(savedThemeColors));
         } else {
           setThemes(initialThemes);
         }
 
-        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+        const savedTheme = getLocalStorage(THEME_STORAGE_KEY);
         if (savedTheme) {
           setTheme(savedTheme as ThemeType);
         }
 
-        const savedFonts = localStorage.getItem(FONTS_STORAGE_KEY);
+        const savedFonts = getLocalStorage(FONTS_STORAGE_KEY);
         if (savedFonts) {
           setFonts(JSON.parse(savedFonts));
         }
@@ -254,7 +255,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Update theme and save to localStorage
   const handleSetTheme = (newTheme: ThemeType) => {
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      storeLocalStorage(THEME_STORAGE_KEY, newTheme);
       setTheme(newTheme);
       // Optional: Update document body class for global CSS changes
       document.body.className = newTheme;
@@ -267,7 +268,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateTheme = (themeData: Record<ThemeType, ThemeColors>) => {
     try {
       setThemes(themeData);
-      localStorage.setItem(THEME_COLORS_STORAGE_KEY, JSON.stringify(themeData));
+      storeLocalStorage(THEME_COLORS_STORAGE_KEY, JSON.stringify(themeData));
     } catch (error) {
       console.error('Failed to update theme colors:', error);
     }
@@ -277,7 +278,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateFonts = (fontData: FontSettings) => {
     try {
       setFonts(fontData);
-      localStorage.setItem(FONTS_STORAGE_KEY, JSON.stringify(fontData));
+      storeLocalStorage(FONTS_STORAGE_KEY, JSON.stringify(fontData));
     } catch (error) {
       console.error('Failed to update font settings:', error);
     }

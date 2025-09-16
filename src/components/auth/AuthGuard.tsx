@@ -6,6 +6,7 @@ import { getAuthToken, clearAllAuthData } from '@/utils/auth';
 import apiService from '@/utils/apiService';
 import { toast } from 'react-toastify';
 import { isAllowedHttpHost } from '@/utils/securityConfig';
+import { getLocalStorage } from '@/utils/helper';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -59,7 +60,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         // Additional security checks for authenticated users
         if (authToken && !isAuthPage) {
           // Check if token has expired by looking at tokenExpireTime
-          const tokenExpireTime = localStorage.getItem('tokenExpireTime');
+          const tokenExpireTime = getLocalStorage('tokenExpireTime');
           if (tokenExpireTime) {
             const expireDate = new Date(tokenExpireTime);
             const now = new Date();
@@ -127,7 +128,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       // Check token every 5 minutes
       intervalId = setInterval(() => {
         const authToken = getAuthToken();
-        const tokenExpireTime = localStorage.getItem('tokenExpireTime');
+        const tokenExpireTime = getLocalStorage('tokenExpireTime');
 
         if (authToken && tokenExpireTime) {
           const expireDate = new Date(tokenExpireTime);
@@ -158,7 +159,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       if (!document.hidden && isAuthenticated) {
         // User has returned to the tab, check if token is still valid
         const authToken = getAuthToken();
-        const tokenExpireTime = localStorage.getItem('tokenExpireTime');
+        const tokenExpireTime = getLocalStorage('tokenExpireTime');
 
         if (authToken && tokenExpireTime) {
           const expireDate = new Date(tokenExpireTime);
@@ -188,8 +189,8 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       // HTTPS enforcement removed - HTTP is now allowed for all hosts
 
       // Check for localStorage tampering
-      const authToken = localStorage.getItem('auth_token');
-      const tokenIntegrity = localStorage.getItem('auth_token_integrity');
+      const authToken = getLocalStorage('auth_token');
+      const tokenIntegrity = getLocalStorage('auth_token_integrity');
 
       if (authToken && tokenIntegrity) {
         // Verify token integrity (this should be handled by the API service)
@@ -197,7 +198,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       }
 
       // Check for suspicious activity patterns
-      const loginAttempts = localStorage.getItem('login_attempts');
+      const loginAttempts = getLocalStorage('login_attempts');
       if (loginAttempts && parseInt(loginAttempts) > 5) {
         console.warn('Multiple login attempts detected');
         // Could implement rate limiting here

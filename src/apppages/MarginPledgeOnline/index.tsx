@@ -7,6 +7,7 @@ import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { FaFileExcel } from 'react-icons/fa';
 import { exportTableToExcel } from '@/components/DataTable';
 import apiService from '@/utils/apiService';
+import { getLocalStorage } from '@/utils/helper';
 
 type TableRow = {
   [key: string]: any;
@@ -127,14 +128,14 @@ export default function MarginPledgeOnline() {
         <J_Ui>"ActionName":"Tradeweb", "Option":"PostData","RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Filter>
-          <ClientCode>${localStorage.getItem('userId')}</ClientCode>
+          <ClientCode>${getLocalStorage('userId')}</ClientCode>
           <DematActNo>${selectedDemat?.DPAccountNo}</DematActNo>
           <DPType>${selectedDemat?.DPType}</DPType>
         </X_Filter>
         <X_Data>
           ${tableData.filter(t => parseFloat(t.ReqValue) > 0).map(t => `
             <HOLDING>
-              <ClientCode>${localStorage.getItem('userId')}</ClientCode>
+              <ClientCode>${getLocalStorage('userId')}</ClientCode>
               <ScripCode>${t.ScripCode}</ScripCode>
               <ISIN>${t.ISIN}</ISIN>
               <ISINName>${t.ScripName}</ISINName>
@@ -144,7 +145,7 @@ export default function MarginPledgeOnline() {
             </HOLDING>
           `).join('')}
         </X_Data>
-        <J_Api>"UserId":"${localStorage.getItem('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
+        <J_Api>"UserId":"${getLocalStorage('userId')}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":0,"ModuleID":0,"MyDb":null,"DenyRights":null</J_Api>
       </dsXml>
     `;
     try {

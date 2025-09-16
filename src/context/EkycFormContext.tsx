@@ -1,6 +1,7 @@
 // context/FormContext.tsx
 "use client";
 
+import { getLocalStorage, storeLocalStorage } from '@/utils/helper';
 import React, { createContext, useContext, useState } from 'react';
 
 interface FormData {
@@ -25,7 +26,7 @@ export const EkycFormProvider = ({ children }: { children: React.ReactNode }) =>
   const [formData, setFormData] = useState<FormData>(() => {
     // Load from localStorage if available
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('kycFormData');
+      const saved = getLocalStorage('kycFormData');
       return saved ? JSON.parse(saved) : {
         personal: {},
         nominee: {},
@@ -56,7 +57,7 @@ export const EkycFormProvider = ({ children }: { children: React.ReactNode }) =>
       };
       // Save to localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem('kycFormData', JSON.stringify(newData));
+        storeLocalStorage('kycFormData', JSON.stringify(newData));
       }
       return newData;
     });

@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import CryptoJS from 'crypto-js';
 import { SECURITY_CONFIG, isAllowedHttpHost } from './securityConfig';
 import { clearAllAuthData } from './auth';
-import { decodeFernetToken } from './helper';
+import { decodeFernetToken, getLocalStorage, storeLocalStorage } from './helper';
 import { store } from '@/redux/store';
 
 // Router instance for navigation
@@ -326,13 +326,13 @@ class ApiService {
 
     // Get authorization token from localStorage
     private getAuthToken(): string | null {
-        const authToken = localStorage.getItem('auth_token');
+        const authToken = getLocalStorage('auth_token');
         return authToken;
     }
 
     // Get refresh token from localStorage
     private getRefreshToken(): string | null {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = getLocalStorage('refreshToken');
         return refreshToken;
     }
 
@@ -352,7 +352,7 @@ class ApiService {
     <X_Data>
         <RefreshToken>${refreshToken}</RefreshToken>
     </X_Data>
-    <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+    <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
 </dsXml>`;
 
         console.log('Attempting to refresh token...');
@@ -378,8 +378,8 @@ class ApiService {
                 const tokenData = response.data.data.rs0[0];
 
                 // Update tokens in localStorage
-                localStorage.setItem('auth_token', tokenData.AccessToken);
-                localStorage.setItem('refreshToken', tokenData.RefreshToken);
+                storeLocalStorage('auth_token', tokenData.AccessToken);
+                storeLocalStorage('refreshToken', tokenData.RefreshToken);
                 console.log('Tokens refreshed successfully');
             } else {
                 console.error('Refresh token API returned unsuccessful response:', response.data);
