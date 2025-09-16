@@ -2,6 +2,8 @@ import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeCont
 import { APP_METADATA_KEY } from "./constants";
 import { toast } from "react-toastify";
 import { log } from "node:console";
+//@ts-ignore
+import { Token, Secret } from 'fernet';
 
 export const clearLocalStorage = () => {
     const appMetadata = localStorage.getItem(APP_METADATA_KEY);
@@ -185,17 +187,17 @@ export const clearIndexedDB = () => {
     });
 };
 
-export const dynamicXmlGenratingFn = (ApiData,rowData) => {
+export const dynamicXmlGenratingFn = (ApiData, rowData) => {
     const J_Ui = Object.entries(ApiData.dsXml.J_Ui)
         .map(([key, value]) => `"${key}":"${value}"`)
         .join(',');
-    
-      const X_Filter_Multiple = Object.keys(ApiData.dsXml.X_Filter_Multiple)
+
+    const X_Filter_Multiple = Object.keys(ApiData.dsXml.X_Filter_Multiple)
         .filter(key => key in rowData)
         .map(key => `<${key}>${rowData[key]}</${key}>`)
         .join('');
 
-        const xmlData = `<dsXml>
+    const xmlData = `<dsXml>
         <J_Ui>${J_Ui}</J_Ui>
         <Sql>${ApiData.dsXml.Sql || ''}</Sql>
         <X_Filter>${ApiData.dsXml.X_Filter || ''}</X_Filter>
@@ -203,24 +205,24 @@ export const dynamicXmlGenratingFn = (ApiData,rowData) => {
         <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
       </dsXml>`;
 
-      return xmlData
+    return xmlData
 
 }
 
 export const parseXmlList = (xmlString: string, tag: string): string[] => {
-        const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
-        const matches = xmlString.match(regex);
-        return matches ? matches.map((match: any) => match.replace(new RegExp(`</?${tag}>`, 'g'), '').split(',')) : [];
-    };
+    const regex = new RegExp(`<${tag}>(.*?)</${tag}>`, 'g');
+    const matches = xmlString.match(regex);
+    return matches ? matches.map((match: any) => match.replace(new RegExp(`</?${tag}>`, 'g'), '').split(',')) : [];
+};
 export const parseXmlValue = (xmlString: string, tag: string): string => {
-        const regex = new RegExp(`<${tag}>(.*?)</${tag}>`);
-        const match = xmlString.match(regex);
-        return match ? match[1] : '';
-    };
-export  const parseHeadings = (xmlString: string): any => {
-        // Implement heading parsing logic if needed
-        return {};
-    };
+    const regex = new RegExp(`<${tag}>(.*?)</${tag}>`);
+    const match = xmlString.match(regex);
+    return match ? match[1] : '';
+};
+export const parseHeadings = (xmlString: string): any => {
+    // Implement heading parsing logic if needed
+    return {};
+};
 
 
 export const parseSettingsFromXml = (xmlString: string) => {
@@ -290,17 +292,39 @@ export const base64ToUint8Array = (base64: string): Uint8Array => {
     const binaryStr = atob(base64);
     const len = binaryStr.length;
     const bytes = new Uint8Array(len);
-  
+
     for (let i = 0; i < len; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
+        bytes[i] = binaryStr.charCodeAt(i);
     }
     return bytes;
-  };
+};
 
 
+export const decodeFernetToken = (data: string) => {
+    try {
+        // Create a secret (usually generated server-side)
+        const secret = new Secret("wM0zxSButFBLsbqvtBFfu2iJR2aC6FSvB9e20q8aOJA=");
 
+        // Decode a token (typical frontend use case)
+        const token = new Token({
+            secret: secret,
+            token: data,
+            ttl: 0
+        });
 
+        const decodedString = token.decode();
+        console.log('Decoded string:', decodedString);
 
+        // Parse the decoded string as JSON
+        const parsedData = JSON.parse(decodedString);
+        console.log('Parsed JSON:', parsedData);
 
+        return parsedData;
+
+    } catch (error) {
+        console.error('Error decoding/parsing token:', error);
+        throw new Error('Failed to decode or parse token');
+    }
+};
 
 

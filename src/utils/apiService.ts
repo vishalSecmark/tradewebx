@@ -1,9 +1,10 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants';
+import { BASE_PATH_FRONT_END, BASE_URL, ENABLE_FERNET, OTP_VERIFICATION_URL } from './constants';
 import { toast } from 'react-toastify';
 import CryptoJS from 'crypto-js';
 import { SECURITY_CONFIG, isAllowedHttpHost } from './securityConfig';
 import { clearAllAuthData } from './auth';
+import { decodeFernetToken } from './helper';
 
 // Router instance for navigation
 let routerInstance: any = null;
@@ -56,7 +57,7 @@ class ApiService {
     // Setup security checks
     private setupSecurityChecks(): void {
         // HTTPS enforcement removed - HTTP is now allowed for all hosts
-        
+
         // Prevent localStorage tampering detection
         this.setupLocalStorageProtection();
     }
@@ -418,7 +419,8 @@ class ApiService {
         method: 'GET' | 'POST' | 'PUT' | 'DELETE',
         url: string,
         data?: any,
-        config?: AxiosRequestConfig
+        config?: AxiosRequestConfig,
+
     ): Promise<ApiResponse<T>> {
         try {
             const requestConfig: AxiosRequestConfig = {
@@ -437,7 +439,7 @@ class ApiService {
 
             return {
                 success: true,
-                data: response.data,
+                data: ENABLE_FERNET ? decodeFernetToken((response.data as any).data) : response.data,
                 message: 'Request successful'
             };
         } catch (error: any) {

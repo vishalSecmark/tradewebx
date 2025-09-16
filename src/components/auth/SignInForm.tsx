@@ -39,7 +39,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME, ENABLE_CAPTCHA } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME, ENABLE_CAPTCHA, ENABLE_FERNET } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import { clearAuthStorage } from '@/utils/auth';
@@ -47,6 +47,7 @@ import Link from "next/link";
 import CryptoJS from 'crypto-js';
 import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
 import CaptchaComponent, { CaptchaComponentRef } from './CaptchaComponent';
+import { decodeFernetToken } from "@/utils/helper";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -565,7 +566,7 @@ export default function SignInForm() {
         }
       });
 
-      const data = response.data;
+      const data = ENABLE_FERNET ? decodeFernetToken(response.data.data) : response.data;
       console.log('Login Response:', data);
       console.log('Response status:', data.status);
       console.log('Response token:', data.token);

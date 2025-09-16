@@ -7,11 +7,12 @@ import { useRouter } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setFinalAuthData, setError as setAuthError } from '@/redux/features/authSlice';
-import { ACTION_NAME, BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_PATH_FRONT_END, BASE_URL, ENABLE_FERNET, OTP_VERIFICATION_URL } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
 
 import Image from "next/image";
 import { RootState } from "@/redux/store";
+import { decodeFernetToken } from "@/utils/helper";
 
 export default function OTPVerificationForm() {
   const router = useRouter();
@@ -78,7 +79,7 @@ export default function OTPVerificationForm() {
         data: xmlData
       });
 
-      const data = response.data;
+      const data = ENABLE_FERNET ? decodeFernetToken(response.data.data) : response.data;
 
       if (data.status && data.status_code === 200) {
         // Handle different field names based on UserType
