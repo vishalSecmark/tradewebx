@@ -120,6 +120,9 @@ export const commonSlice = createSlice({
                 state.companyLogo = action.payload.CompanyLogo || '';
                 state.companyName = action.payload.CompanyName ? action.payload.CompanyName.trim() : '';
 
+                // Store EncPayload as boolean (Y = true, anything else = false)
+                state.encPayload = action.payload.EncPayload === 'Y';
+
                 // Save to localStorage for persistence
                 const appMetadata = {
                     companyLogo: state.companyLogo,
