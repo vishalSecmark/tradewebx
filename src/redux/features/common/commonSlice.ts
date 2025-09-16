@@ -60,7 +60,7 @@ export const fetchInitializeLogin = createAsyncThunk(
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"InitializeLogin", "Level":1, "RequestFrom":"w"</J_Ui>
             <Sql></Sql>
             <X_Filter> </X_Filter>
-            <X_Data><EncPayload>${ENABLE_FERNET ? 'Y' : 'N'}</EncPayload></X_Data>
+            <X_Data></X_Data>
             <X_GFilter />
             <J_Api></J_Api>
         </dsXml>`;
