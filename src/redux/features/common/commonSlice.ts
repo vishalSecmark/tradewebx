@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { APP_METADATA_KEY, ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL, PATH_URL } from '@/utils/constants';
+import { APP_METADATA_KEY, ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL, PATH_URL, ENABLE_FERNET } from '@/utils/constants';
 import apiService from '@/utils/apiService';
 
 interface CommonState {
@@ -57,7 +57,7 @@ export const fetchInitializeLogin = createAsyncThunk(
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"InitializeLogin", "Level":1, "RequestFrom":"w"</J_Ui>
             <Sql></Sql>
             <X_Filter> </X_Filter>
-            <X_Data></X_Data>
+            <X_Data><EncPayload>${ENABLE_FERNET ? 'Y' : 'N'}</EncPayload></X_Data>
             <X_GFilter />
             <J_Api></J_Api>
         </dsXml>`;
