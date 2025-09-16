@@ -20,7 +20,7 @@ export default function OTPVerificationForm() {
   const [otp, setOtp] = useState<any>("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const { companyInfo, status } = useSelector((state: RootState) => state.common);
+  const { companyInfo, status, encPayload } = useSelector((state: RootState) => state.common);
   const { colors } = useTheme();
 
   // Check if temp_token exists on component mount
@@ -79,7 +79,9 @@ export default function OTPVerificationForm() {
         data: xmlData
       });
 
-      const data = ENABLE_FERNET ? decodeFernetToken(response.data.data) : response.data;
+      // Check both ENABLE_FERNET constant and encPayload from Redux state
+      const shouldDecode = ENABLE_FERNET && encPayload;
+      const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
 
       if (data.status && data.status_code === 200) {
         // Handle different field names based on UserType
