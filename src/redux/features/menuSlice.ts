@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { RootState } from '../store';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from '@/utils/apiService';
+import { getLocalStorage } from '@/utils/helper';
 
 // Enhanced types to include pageData
 type PageSettings = {
@@ -138,8 +139,8 @@ export const fetchMenuItems = createAsyncThunk(
     'menu/fetchMenuItems',
     async () => {
         const userData = {
-            UserId: localStorage.getItem('userId') || '',
-            UserType: localStorage.getItem('userType') || ''
+            UserId: getLocalStorage('userId') || '',
+            UserType: getLocalStorage('userType') || ''
         };
 
         const xmlData = `<dsXml>

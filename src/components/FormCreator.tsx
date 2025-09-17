@@ -11,6 +11,8 @@ import { FaCalendarAlt } from 'react-icons/fa';
 import CustomDropdown from './form/CustomDropdown';
 import apiService from '@/utils/apiService';
 
+import { getLocalStorage } from '@/utils/helper';
+
 export interface FormElement {
     type: string;
     label: string;
@@ -432,7 +434,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${item.wQuery?.Sql || ''}</Sql>
                 <X_Filter>${item.wQuery?.X_Filter || ''}</X_Filter>
-                <J_Api>${jApi},"UserType":"${localStorage.getItem('userType')}"</J_Api>
+                <J_Api>${jApi},"UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
             // console.log('Dropdown request XML:', xmlData);

@@ -1,10 +1,9 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
-import axios from 'axios';
 import SidebarWidget from "./SidebarWidget";
 import { useTheme } from "@/context/ThemeContext";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -31,6 +30,7 @@ import {
 import { PATH_URL } from "@/utils/constants";
 import { BASE_URL } from "@/utils/constants";
 import { fetchInitializeLogin } from "@/redux/features/common/commonSlice";
+import { getLocalStorage } from "@/utils/helper";
 
 const iconMap = {
   'home': <FaHome />,
@@ -114,9 +114,9 @@ const AppSidebar: React.FC = () => {
       let timeoutId: NodeJS.Timeout;
 
       const checkTokenAndFetchMenu = () => {
-        const authToken = localStorage.getItem('auth_token');
-        const userId = localStorage.getItem('userId');
-        const userType = localStorage.getItem('userType');
+        const authToken = getLocalStorage('auth_token');
+        const userId = getLocalStorage('userId');
+        const userType = getLocalStorage('userType');
 
         if (authToken && userId && userType) {
           console.log('✅ Auth token found, fetching menu items');

@@ -10,6 +10,7 @@ import { toast } from "react-toastify";  //  Import toast
 import { BASE_URL, OTP_VERIFICATION_URL, LOGIN_KEY, PRODUCT, LOGIN_AS } from "@/utils/constants";
 import CryptoJS from "crypto-js";
 import { useTheme } from "@/context/ThemeContext";
+import { getLocalStorage } from "@/utils/helper";
 
 const passKey = "TradeWebX1234567";
 
@@ -57,7 +58,7 @@ export default function Family() {
       const data = await res.json();
       return data.ip;
     } catch (err) {
-        toast.error(" Ipify lookup failed, using backup service...");
+      toast.error(" Ipify lookup failed, using backup service...");
       try {
         // Fallback to ipapi
         const backupRes = await fetch("https://ipapi.co/json/");
@@ -71,7 +72,7 @@ export default function Family() {
       }
     }
   };
-  
+
 
   // Load Family Mapping Data on page load
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function Family() {
         <X_Filter></X_Filter>
         <X_Filter_Multiple></X_Filter_Multiple>
         <X_Data></X_Data>
-        <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+        <J_Api>"UserId":"${getLocalStorage('userId')}"</J_Api>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
@@ -207,7 +208,7 @@ export default function Family() {
         <J_Ui>"ActionName":"TradeWeb","Option":"Verify2FA","Level":1,"RequestFrom":"M"</J_Ui>
         <Sql/>
         <X_Data><OTP>${otp}</OTP></X_Data>
-        <J_Api>"UserId":"${loginData.userId}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+        <J_Api>"UserId":"${loginData.userId}", "UserType":"${getLocalStorage('userType')}"</J_Api>
       </dsXml>`;
 
       await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
@@ -220,7 +221,7 @@ export default function Family() {
       await saveUccData();
       setIsLoading(false);
     } catch {
-        setIsLoading(false);
+      setIsLoading(false);
       setOtpError("OTP verification failed.");
     }
   };
@@ -236,7 +237,7 @@ export default function Family() {
           <UccCode>${ucc}</UccCode>
           <IPAddress>${ipAddress}</IPAddress>
         </X_Data>
-        <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+        <J_Api>"UserId":"${getLocalStorage('userId')}"</J_Api>
       </dsXml>`;
 
       const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
@@ -269,12 +270,12 @@ export default function Family() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold">Family Mapping</h2>
           <button
-           onClick={openUccModal}
-           className="py-2 px-4 rounded text-white flex items-center mt-3"
-           style={{
-             backgroundColor: colors.buttonBackground,
-             color: colors.buttonText
-           }}>
+            onClick={openUccModal}
+            className="py-2 px-4 rounded text-white flex items-center mt-3"
+            style={{
+              backgroundColor: colors.buttonBackground,
+              color: colors.buttonText
+            }}>
             Add
           </button>
         </div>
@@ -290,32 +291,32 @@ export default function Family() {
       </div>
 
       {/* Modal 1: UCC Code */}
-      <Modal isOpen={isUccModalOpen} onClose={closeUccModal}  isOutsideClickAllowed={false} className="max-w-[400px] p-6">
+      <Modal isOpen={isUccModalOpen} onClose={closeUccModal} isOutsideClickAllowed={false} className="max-w-[400px] p-6">
         <h4 className="text-lg font-semibold mb-4 mt-4"> UCC/Code</h4>
         {/* <Label>UCC Code</Label> */}
         <Input value={ucc} onChange={(e) => setUcc(e.target.value)} placeholder="Enter UCC Code" />
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
         <div className="flex justify-end gap-3 mt-5">
-          <button 
-          className="py-2 px-4 rounded text-black bg-white flex items-center mt-3 border-2 border-solid"
+          <button
+            className="py-2 px-4 rounded text-black bg-white flex items-center mt-3 border-2 border-solid"
 
             onClick={closeUccModal}
-            >Cancel
-            </button>
+          >Cancel
+          </button>
           <button
             className="py-2 px-4 rounded text-white flex items-center mt-3"
             style={{
               backgroundColor: colors.buttonBackground,
               color: colors.buttonText
-            }}  
+            }}
             onClick={handleUccNext}
-            >Next
-            </button>
+          >Next
+          </button>
         </div>
       </Modal>
 
       {/*  Modal 2: Login & OTP */}
-      <Modal isOpen={isLoginModalOpen} onClose={closeLoginModal}  isOutsideClickAllowed={false} className="max-w-[500px] p-6">
+      <Modal isOpen={isLoginModalOpen} onClose={closeLoginModal} isOutsideClickAllowed={false} className="max-w-[500px] p-6">
         <h4 className="text-lg font-semibold mb-4">{otpRequired ? "Verify OTP" : "Verify User"}</h4>
 
         {!otpRequired && (
@@ -338,13 +339,13 @@ export default function Family() {
         )}
 
         <div className="flex justify-end gap-3 mt-6">
-          <button 
-          className="py-2 px-4 rounded text-black bg-white flex items-center mt-3 border-2 border-solid"
-          onClick={closeLoginModal}
+          <button
+            className="py-2 px-4 rounded text-black bg-white flex items-center mt-3 border-2 border-solid"
+            onClick={closeLoginModal}
           >Cancel
           </button>
           {!otpRequired ? (
-            <button 
+            <button
               className="py-2 px-4 rounded text-white flex items-center mt-3"
               style={{
                 backgroundColor: colors.buttonBackground,
@@ -355,15 +356,15 @@ export default function Family() {
               {isLoading ? "Verifying..." : "Verify"}
             </button>
           ) : (
-            <button 
+            <button
               className="py-2 px-4 rounded text-white flex items-center mt-3"
               style={{
                 backgroundColor: colors.buttonBackground,
                 color: colors.buttonText
               }}
-              onClick={handleOTPVerify} 
+              onClick={handleOTPVerify}
               disabled={isLoading}
-              >
+            >
               {isLoading ? "Verifying..." : "Verify OTP"}
             </button>
           )}

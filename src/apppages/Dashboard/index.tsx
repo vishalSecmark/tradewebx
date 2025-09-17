@@ -13,6 +13,7 @@ import { fetchLastTradingDate, fetchInitializeLogin } from '@/redux/features/com
 import Select from 'react-select';
 import CommonCustomDropdown from '@/components/form/DropDown/CommonDropDown';
 import apiService from '@/utils/apiService';
+import { getLocalStorage } from '@/utils/helper';
 
 const ReactApexChart = nextDynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -368,7 +369,7 @@ function Dashboard() {
 
     // Utility function to get session key for current user
     const getSessionKey = () => {
-        const userId = localStorage.getItem('userId');
+        const userId = getLocalStorage('userId');
         return `dashboard_session_${userId}`;
     };
 
@@ -398,8 +399,8 @@ function Dashboard() {
     console.log("user data", userDashData);
     const getUserDashboardData = async () => {
         try {
-            const userId = localStorage.getItem('userId');
-            const userType = localStorage.getItem('userType') || '';
+            const userId = getLocalStorage('userId');
+            const userType = getLocalStorage('userType') || '';
 
             console.log('🔍 getUserDashboardData called with:', { userId, userType });
 
@@ -468,7 +469,7 @@ function Dashboard() {
                 <J_Ui>"ActionName":"Common","Option":"Search","RequestFrom":"W"</J_Ui>
                 <Sql/>
                 <X_Filter></X_Filter>
-                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${localStorage.getItem('userType')}"</J_Api>
+                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
             console.log('🌐 Making API call for fresh dropdown data...');
@@ -483,7 +484,7 @@ function Dashboard() {
             console.log('🔧 CURL equivalent:');
             console.log(`curl -X POST "${BASE_URL}${PATH_URL}" \\`);
             console.log(`  -H "Content-Type: application/xml" \\`);
-            console.log(`  -H "Authorization: Bearer ${localStorage.getItem('token')}" \\`);
+            console.log(`  -H "Authorization: Bearer ${getLocalStorage('token')}" \\`);
             console.log(`  -d '${xmlData1.replace(/'/g, "'\\''")}'`);
 
             const startTime = Date.now();
@@ -607,7 +608,7 @@ function Dashboard() {
                     ${selectedClient ? `<ClientCode>${selectedClient.value}</ClientCode>` : ''}
                 </X_Filter>
                 <X_GFilter></X_GFilter>
-                <J_Api>"UserId":"${localStorage.getItem('userId')}", "UserType":"${localStorage.getItem('userType')}"</J_Api>
+                <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
             console.log('🌐 Making API call for dashboard data...');
@@ -619,7 +620,7 @@ function Dashboard() {
             console.log('🔧 CURL equivalent:');
             console.log(`curl -X POST "${BASE_URL}${PATH_URL}" \\`);
             console.log(`  -H "Content-Type: application/xml" \\`);
-            console.log(`  -H "Authorization: Bearer ${localStorage.getItem('token')}" \\`);
+            console.log(`  -H "Authorization: Bearer ${getLocalStorage('token')}" \\`);
             console.log(`  -d '${xmlData.replace(/'/g, "'\\''")}'`);
 
             const startTime = Date.now();

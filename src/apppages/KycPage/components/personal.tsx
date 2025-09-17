@@ -6,12 +6,13 @@ import CaseConfirmationModal from '@/components/Modals/CaseConfirmationModal';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
+import { getLocalStorage } from '@/utils/helper';
 
 
 const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
 
     const { colors } = useTheme();
-    const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true" ;
+    const viewMode = getLocalStorage("ekyc_viewMode") === "true" || getLocalStorage("ekyc_viewMode_for_checker") === "true";
 
     const { setSaving } = useSaveLoading();
     const [localFormData, setLocalFormData] = useState<any>(formFields || {});
@@ -53,7 +54,7 @@ const Personal = ({ formFields, tableData, fieldErrors, setFieldData, setActiveT
 
     const handleSaveAndNext = () => {
         const { isValid, errors } = validateMandatoryFields(fieldVlaues);
-        const localPersonalData : any = [fieldVlaues];
+        const localPersonalData: any = [fieldVlaues];
         setPersonalFieldErrors(errors);
         if (!isValid) {
             toast.error("Please fill all mandatory fields");

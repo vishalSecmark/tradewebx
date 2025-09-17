@@ -10,7 +10,7 @@ import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
-import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn } from "@/utils/helper";
+import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn, getLocalStorage, storeLocalStorage } from "@/utils/helper";
 import { getFileTypeFromBase64 } from "@/utils/helper";
 import apiService from "@/utils/apiService";
 import AccountClosure from "@/apppages/KycPage/account-closure";
@@ -199,7 +199,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 <Sql></Sql>
                 <X_Filter></X_Filter>
                 <X_Filter_Multiple>${xFilterTags}</X_Filter_Multiple>
-                <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
+                <J_Api>"UserId":"${getLocalStorage('userId') || 'ADMIN'}","AccYear":"${getLocalStorage('accYear') || '24'}","MyDbPrefix":"${getLocalStorage('myDbPrefix') || 'undefined'}","MemberCode":"${getLocalStorage('memberCode') || ''}","SecretKey":"${getLocalStorage('secretKey') || ''}","MenuCode":"${getLocalStorage('menuCode') || 27}","ModuleID":"${getLocalStorage('moduleID') || '27'}","MyDb":"${getLocalStorage('myDb') || 'undefined'}","DenyRights":"${getLocalStorage('denyRights') || ''}"</J_Api>
             </dsXml>`;
 
             console.log('Fetching page data for EntryFormModal:', xmlData);
@@ -234,15 +234,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         Option: "ChildEntry_Edit"
                     },
                     J_Api: {
-                        UserId: localStorage.getItem('userId') || 'ADMIN',
-                        AccYear: localStorage.getItem('accYear') || '24',
-                        MyDbPrefix: localStorage.getItem('myDbPrefix') || '',
-                        MemberCode: localStorage.getItem('memberCode') || '',
-                        SecretKey: localStorage.getItem('secretKey') || '',
-                        MenuCode: localStorage.getItem('menuCode') || 0,
-                        ModuleID: localStorage.getItem('moduleID') || 0,
-                        MyDb: localStorage.getItem('myDb') || '',
-                        DenyRights: localStorage.getItem('denyRights') || ''
+                        UserId: getLocalStorage('userId') || 'ADMIN',
+                        AccYear: getLocalStorage('accYear') || '24',
+                        MyDbPrefix: getLocalStorage('myDbPrefix') || '',
+                        MemberCode: getLocalStorage('memberCode') || '',
+                        SecretKey: getLocalStorage('secretKey') || '',
+                        MenuCode: getLocalStorage('menuCode') || 0,
+                        ModuleID: getLocalStorage('moduleID') || 0,
+                        MyDb: getLocalStorage('myDb') || '',
+                        DenyRights: getLocalStorage('denyRights') || ''
                     },
                     X_Filter: rowData, // Use the current row data as filter for child entries
                     sql: {}
@@ -275,15 +275,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             Option: "Master_Edit"
                         },
                         J_Api: {
-                            UserId: localStorage.getItem('userId') || 'ADMIN',
-                            AccYear: localStorage.getItem('accYear') || '24',
-                            MyDbPrefix: localStorage.getItem('myDbPrefix') || '',
-                            MemberCode: localStorage.getItem('memberCode') || '',
-                            SecretKey: localStorage.getItem('secretKey') || '',
-                            MenuCode: localStorage.getItem('menuCode') || 0,
-                            ModuleID: localStorage.getItem('moduleID') || 0,
-                            MyDb: localStorage.getItem('myDb') || '',
-                            DenyRights: localStorage.getItem('denyRights') || ''
+                            UserId: getLocalStorage('userId') || 'ADMIN',
+                            AccYear: getLocalStorage('accYear') || '24',
+                            MyDbPrefix: getLocalStorage('myDbPrefix') || '',
+                            MemberCode: getLocalStorage('memberCode') || '',
+                            SecretKey: getLocalStorage('secretKey') || '',
+                            MenuCode: getLocalStorage('menuCode') || 0,
+                            ModuleID: getLocalStorage('moduleID') || 0,
+                            MyDb: getLocalStorage('myDb') || '',
+                            DenyRights: getLocalStorage('denyRights') || ''
                         },
                         X_Filter: rowData,
                         sql: {}
@@ -315,10 +315,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
         // this condition is specifically for ekyc component form (check for entry name)
         if (entryName === "rekyc") {
-            localStorage.setItem('rekycRowData_viewMode', JSON.stringify(rowData));
-            localStorage.setItem("ekyc_viewMode_for_checker", "true");
-            localStorage.setItem("ekyc_activeTab", "personal");
-            localStorage.setItem("ekyc_checker", "false");
+            storeLocalStorage('rekycRowData_viewMode', JSON.stringify(rowData));
+            storeLocalStorage("ekyc_viewMode_for_checker", "true");
+            storeLocalStorage("ekyc_activeTab", "personal");
+            storeLocalStorage("ekyc_checker", "false");
             setIsKycModalOpen(true);
             clearMakerSates();
         } else if (entryName === "account closure") {
@@ -490,7 +490,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         const jUi = Object.entries(J_Ui || {}).map(([k, v]) => `"${k}":"${v}"`).join(',');
         const jApi = Object.entries({
             ...(J_Api || {}),
-            UserId: (J_Api?.UserId === '<<USERID>>') ? localStorage.getItem('userId') || '' : J_Api?.UserId
+            UserId: (J_Api?.UserId === '<<USERID>>') ? getLocalStorage('userId') || '' : J_Api?.UserId
         })
             .map(([k, v]) => `"${k}":"${v}"`)
             .join(',');
@@ -577,8 +577,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 return `<item>${itemFields}</item>`;
             })
             .join('');
-        const userId = localStorage.getItem('userId') || 'ADMIN';
-        const userType = localStorage.getItem('userType') || 'Branch';
+        const userId = getLocalStorage('userId') || 'ADMIN';
+        const userType = getLocalStorage('userType') || 'Branch';
         const optiontag = (showViewDocumentBtn && showViewDocumentLabel ? 'Process' : 'Edit')
         return `<dsXml>
                     <J_Ui>"ActionName":"${wPage}","Option":"${optiontag}","RequestFrom":"W"</J_Ui>
@@ -795,7 +795,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 <J_Ui>${jUi}</J_Ui>
                 <Sql>${column.dependsOn?.wQuery?.Sql || ''}</Sql>
                 <X_Filter>${column.dependsOn?.wQuery?.X_Filter || ''}</X_Filter>
-                <J_Api>${jApi},"UserType":"${localStorage.getItem('userType')}"</J_Api>
+                <J_Api>${jApi},"UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
             console.log('Dropdown request XML:', xmlData);
@@ -917,7 +917,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                     ? `<X_Filter_Multiple>${xmlFilterContent}</X_Filter_Multiple><X_Filter></X_Filter>`
                     : `<X_Filter>${xmlFilterContent}</X_Filter>`
                 }
-                <J_Api>${jApi},"UserType":"${localStorage.getItem('userType')}"</J_Api>
+                <J_Api>${jApi},"UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
             console.log('Dependent dropdown request XML:', xmlData);
@@ -995,7 +995,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
           <Sql>${showViewDocumentAPI.dsXml.Sql || ''}</Sql>
           <X_Filter>${showViewDocumentAPI.dsXml.X_Filter || ''}</X_Filter>
           <X_Filter_Multiple>${X_Filter_Multiple}</X_Filter_Multiple>
-          <J_Api>"UserId":"${localStorage.getItem('userId')}"</J_Api>
+          <J_Api>"UserId":"${getLocalStorage('userId')}"</J_Api>
         </dsXml>`;
 
         try {
@@ -1494,8 +1494,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             <div className="flex justify-end items-center pr-4 mb-2">
                                 <button
                                     onClick={() => {
-                                        localStorage.setItem('rekycRowData_viewMode', null);
-                                        localStorage.setItem("ekyc_viewMode_for_checker", "false");
+                                        storeLocalStorage('rekycRowData_viewMode', null);
+                                        storeLocalStorage("ekyc_viewMode_for_checker", "false");
                                         setIsKycModalOpen(false);
                                     }}
                                     style={{

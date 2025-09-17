@@ -15,7 +15,7 @@ import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
-import { buildFilterXml } from '@/utils/helper';
+import { buildFilterXml, getLocalStorage } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
@@ -38,80 +38,80 @@ const ColumnFilterDropdown: React.FC<{
     // Enhanced data type detection
     const columnDataType = useMemo(() => {
         console.log('Column Type Detection for:', column);
-        
+
         // Force date type for columns with "date" in the name
         if (column.toLowerCase().includes('date')) {
             console.log('Detected as date column (name contains date)');
             return 'date';
         }
-        
+
         if (!data || data.length === 0) {
             console.log('No data, defaulting to text');
             return 'text';
         }
-        
+
         // Sample first 10 rows to determine data type
         const sampleSize = Math.min(10, data.length);
         const sample = data.slice(0, sampleSize);
-        
+
         let numericCount = 0;
         let dateCount = 0;
         let pureTextCount = 0;
         let validValuesCount = 0;
-        
+
         console.log('Analyzing sample data for column:', column, 'Sample size:', sampleSize);
-        
+
         for (const row of sample) {
             const value = row[column];
-            
+
             // Handle React elements (styled values)
-            const actualValue = React.isValidElement(value) 
-                ? (value as StyledValue).props.children 
+            const actualValue = React.isValidElement(value)
+                ? (value as StyledValue).props.children
                 : value;
-                
+
             // Skip null/undefined/empty values
             if (actualValue === null || actualValue === undefined || actualValue === '') {
                 continue;
             }
-            
+
             validValuesCount++;
             const strValue = String(actualValue).trim();
-            
+
             console.log('Sample value:', strValue, 'from row:', row[column]);
-            
+
             // Check if it's a date (but this is now secondary to name-based detection)
             const momentDate = moment(strValue, ['YYYYMMDD', 'DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'], true);
             const isValidDate = momentDate.isValid();
-            
+
             if (isValidDate) {
                 dateCount++;
                 continue;
             }
-            
+
             // Check if it's numeric (including decimals, formatted numbers, currency)
             const cleanValue = strValue.replace(/[,\s₹$€£¥]/g, ''); // Remove commas, spaces, and currency symbols
             const numValue = parseFloat(cleanValue);
-            
+
             // More comprehensive numeric pattern that handles currency and formatting
             const numericPattern = /^[₹$€£¥]?-?[\d,]+\.?\d*[₹$€£¥]?$/;
-            
+
             if (!isNaN(numValue) && isFinite(numValue) && numericPattern.test(strValue.replace(/\s/g, ''))) {
                 console.log('Detected as numeric:', strValue, '-> parsed:', numValue);
                 numericCount++;
                 continue;
             }
-            
+
             // Check for alphanumeric content - distinguish between codes vs regular data
             // Complex codes that shouldn't have filters (longer, complex patterns)
             const isComplexCode = /^[a-zA-Z]{2,}[\d]{3,}$/.test(strValue) || // NS250123 type (2+ letters, 3+ digits)
-                                 /^[\d]{3,}[a-zA-Z]{2,}$/.test(strValue) || // 12345AB type (3+ digits, 2+ letters)  
-                                 /^[a-zA-Z]+\d+[a-zA-Z]+/.test(strValue) || // ABC123DEF type (mixed)
-                                 strValue.length >= 8; // Very long strings are likely codes
-            
+                /^[\d]{3,}[a-zA-Z]{2,}$/.test(strValue) || // 12345AB type (3+ digits, 2+ letters)  
+                /^[a-zA-Z]+\d+[a-zA-Z]+/.test(strValue) || // ABC123DEF type (mixed)
+                strValue.length >= 8; // Very long strings are likely codes
+
             // Simple alphanumeric that should have text filters (shorter, simpler patterns)
             const isSimpleAlphanumeric = /^[a-zA-Z]{1,3}[\d]{1,3}$/.test(strValue) || // ABP289, A12 type
-                                        /^[\d]{1,3}[a-zA-Z]{1,3}$/.test(strValue);   // 12A, 123AB type
-            
+                /^[\d]{1,3}[a-zA-Z]{1,3}$/.test(strValue);   // 12A, 123AB type
+
             // Check for pure text or complex codes that shouldn't have filters
             if (/^[a-zA-Z\s]+$/.test(strValue) || // Pure alphabetic text
                 isComplexCode || // Complex alphanumeric codes
@@ -119,17 +119,17 @@ const ColumnFilterDropdown: React.FC<{
                 pureTextCount++;
             }
         }
-        
+
         // Determine data type based on majority
         if (validValuesCount === 0) {
             console.log('No valid values, returning none');
             return 'none'; // No valid data - no filter
         }
-        
+
         const numericPercentage = numericCount / validValuesCount;
         const datePercentage = dateCount / validValuesCount;
         const pureTextPercentage = pureTextCount / validValuesCount;
-        
+
         console.log('Column analysis results:', {
             column,
             validValuesCount,
@@ -140,25 +140,25 @@ const ColumnFilterDropdown: React.FC<{
             datePercentage,
             pureTextPercentage
         });
-        
+
         // If 70% or more is dates, treat as date column
         if (datePercentage >= 0.7) {
             console.log('Detected as date column');
             return 'date';
         }
-        
+
         // If 70% or more is numeric, treat as numeric column
         if (numericPercentage >= 0.7) {
             console.log('Detected as number column');
             return 'number';
         }
-        
+
         // If 80% or more is pure text/very short/alphanumeric codes, don't show filter
         if (pureTextPercentage >= 0.6) {
             console.log('Detected as none (too much text/codes)');
             return 'none'; // Reduced from 0.8 to 0.6 to be more strict
         }
-        
+
         // Mixed data - allow text filtering
         console.log('Detected as text (mixed data)');
         return 'text';
@@ -183,13 +183,13 @@ const ColumnFilterDropdown: React.FC<{
                 const spaceOnLeft = rect.left;
 
                 let left = rect.left + window.scrollX;
-                
+
                 // If dropdown would go off-screen on the right, position it to the left
                 if (spaceOnRight < dropdownWidth && spaceOnLeft >= dropdownWidth) {
                     // Position dropdown to the right edge of the button, extending leftward
                     left = rect.right + window.scrollX - dropdownWidth;
                 }
-                
+
                 // Ensure dropdown doesn't go off-screen on the left
                 if (left < window.scrollX) {
                     left = window.scrollX + 8; // 8px margin from edge
@@ -237,19 +237,19 @@ const ColumnFilterDropdown: React.FC<{
             localFilterFromDate: localFilter.fromDate,
             localFilterToDate: localFilter.toDate
         });
-        
+
         // Check if filter has valid values
-        const hasValue = localFilter.operator === 'dateRange' 
+        const hasValue = localFilter.operator === 'dateRange'
             ? (localFilter.fromDate && localFilter.toDate) // Date range needs both dates
             : (localFilter.value !== null && localFilter.value !== '' && localFilter.value !== undefined); // Other filters need value
-        
+
         if (!hasValue) {
             console.log('No valid filter values, clearing filter');
             onFilterChange(column, null);
         } else {
             // For number filters, ensure the value is stored as a number for comparison
             const filterToApply = { ...localFilter };
-            
+
             // Override type based on detected column type, but preserve dateRange logic
             if (localFilter.operator === 'dateRange') {
                 // Date range always needs type: 'date' regardless of column detection
@@ -258,9 +258,9 @@ const ColumnFilterDropdown: React.FC<{
                 // For other operators, use the detected column type
                 filterToApply.type = filterType as 'number' | 'text' | 'date';
             }
-            
+
             console.log('Final filter being applied:', filterToApply);
-            
+
             if (filterType === 'number' && localFilter.value !== '' && localFilter.operator !== 'dateRange') {
                 const numValue = parseFloat(localFilter.value as string);
                 if (!isNaN(numValue)) {
@@ -295,7 +295,7 @@ const ColumnFilterDropdown: React.FC<{
                 ref={buttonRef}
                 className={`ml-1 p-1 rounded hover:bg-gray-200 ${filter ? 'text-black' : 'text-gray-400'}`}
                 onClick={(e) => {
-                    e.stopPropagation(); 
+                    e.stopPropagation();
                     e.preventDefault();
                     setIsOpen(prev => !prev);
                 }}
@@ -307,14 +307,14 @@ const ColumnFilterDropdown: React.FC<{
             </button>
 
             {isOpen && createPortal(
-                <div 
+                <div
                     ref={dropdownRef}
                     className="w-64 bg-white border border-gray-300 rounded shadow-lg p-3"
-                    style={{ 
+                    style={{
                         position: 'fixed',
                         top: dropdownPosition.top,
                         left: dropdownPosition.left,
-                        zIndex: 999999, 
+                        zIndex: 999999,
                         boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
                     }}
                 >
@@ -415,7 +415,7 @@ const ColumnFilterDropdown: React.FC<{
                                         value={localFilter.value as string || ''}
                                         onChange={(e) => {
                                             const inputValue = e.target.value;
-                                            
+
                                             if (filterType === 'number') {
                                                 // Allow empty string, numbers, negative numbers, and decimals
                                                 if (inputValue === '' || /^-?\d*\.?\d*$/.test(inputValue)) {
@@ -622,7 +622,7 @@ const useScreenSize = () => {
 };
 
 const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig }) => {
-    
+
     // Helper function to check if a button is enabled
     const isButtonEnabled = (buttonType: string): boolean => {
         if (!buttonConfig) return true; // Default to enabled if no config
@@ -659,10 +659,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         return data.filter(row => {
             return Object.entries(filters).every(([columnKey, filter]) => {
                 const cellValue = row[columnKey];
-                
+
                 // Handle React elements (from value-based text color formatting)
-                const actualValue = React.isValidElement(cellValue) 
-                    ? (cellValue as StyledValue).props.children 
+                const actualValue = React.isValidElement(cellValue)
+                    ? (cellValue as StyledValue).props.children
                     : cellValue;
 
                 if (actualValue === null || actualValue === undefined || actualValue === '') {
@@ -679,35 +679,35 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             filterValue: filter.value,
                             stringValue
                         });
-                        
+
                         // Runtime date detection: if column name contains 'date' or value looks like a date, treat as date
                         const isDateColumn = columnKey.toLowerCase().includes('date');
                         const cellLooksLikeDate = moment(stringValue, ['DD-MM-YYYY', 'YYYYMMDD', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true).isValid();
                         const filterLooksLikeDate = moment(filter.value as string, ['DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true).isValid();
-                        
+
                         const treatAsDate = filter.type === 'date' || isDateColumn || (cellLooksLikeDate && filterLooksLikeDate);
-                        
+
                         if (treatAsDate) {
                             // Parse cell date in multiple formats
                             const cellDate = moment(stringValue, ['DD-MM-YYYY', 'YYYYMMDD', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
                             const filterDate = moment(filter.value as string, ['DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true);
-                            
-                            const result = cellDate.isValid() && filterDate.isValid() && 
-                                   cellDate.isSame(filterDate, 'day');
+
+                            const result = cellDate.isValid() && filterDate.isValid() &&
+                                cellDate.isSame(filterDate, 'day');
                             return result;
                         } else if (filter.type === 'number') {
                             // Handle formatted numbers (with commas, spaces, currency symbols)
                             const cleanCellValue = stringValue.replace(/[,\s₹$€£¥]/g, '');
                             const cleanFilterValue = String(filter.value).replace(/[,\s₹$€£¥]/g, '');
-                            
+
                             const numValue = parseFloat(cleanCellValue);
                             const filterValue = parseFloat(cleanFilterValue);
-                            
+
                             // Check if both are valid numbers
                             if (isNaN(numValue) || isNaN(filterValue)) {
                                 return false;
                             }
-                            
+
                             // For equals, always use exact number comparison
                             const result = numValue === filterValue;
                             return result;
@@ -722,7 +722,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             const cleanFilterValue = String(filter.value).replace(/[,\s₹$€£¥]/g, '');
                             const numValue = parseFloat(cleanCellValue);
                             const filterValue = parseFloat(cleanFilterValue);
-                            
+
                             // Temporary debug for number filtering issue
                             console.log('GTE Number filter:', {
                                 original: stringValue,
@@ -734,7 +734,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                 comparison: `${numValue} >= ${filterValue}`,
                                 result: numValue >= filterValue
                             });
-                            
+
                             return !isNaN(numValue) && !isNaN(filterValue) && numValue >= filterValue;
                         } else {
                             return stringValue.toLowerCase() >= String(filter.value).toLowerCase();
@@ -759,15 +759,15 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             cellDate: cellDate.isValid() ? cellDate.format('YYYY-MM-DD') : 'Invalid',
                             isValid: cellDate.isValid()
                         });
-                        
+
                         if (!cellDate.isValid()) {
                             console.log('❌ Cell date invalid, filtering out');
                             return false;
                         }
-                        
+
                         const fromDate = filter.fromDate ? moment(filter.fromDate, ['DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true) : null;
                         const toDate = filter.toDate ? moment(filter.toDate, ['DD-MM-YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD/MM/YYYY'], true) : null;
-                        
+
                         // Debug logging for date range filtering
                         console.log('📅 Date range filter debug:', {
                             cellValue: stringValue,
@@ -777,7 +777,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             filterFromDate: filter.fromDate,
                             filterToDate: filter.toDate
                         });
-                        
+
                         let rangeResult = false;
                         if (fromDate && toDate) {
                             rangeResult = cellDate.isBetween(fromDate, toDate, 'day', '[]');
@@ -792,7 +792,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             rangeResult = true;
                             console.log('📅 No date range specified, returning true');
                         }
-                        
+
                         console.log('📅 Date range final result:', rangeResult);
                         return rangeResult;
 
@@ -1198,39 +1198,39 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             }] : []),
             ...columnsToShow.map((key: any) => {
                 const isLeftAligned = leftAlignedColumns.includes(key);
-                
+
                 // Enhanced numeric column detection
                 const isNumericColumn = !isLeftAligned && (() => {
                     // Sample first 10 rows to determine if column is numeric
                     const sampleSize = Math.min(10, formattedData.length);
                     const sample = formattedData.slice(0, sampleSize);
-                    
+
                     let numericCount = 0;
                     let validValuesCount = 0;
-                    
+
                     for (const row of sample) {
                         const value = row[key];
                         const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
-                        
+
                         if (rawValue === null || rawValue === undefined || rawValue === '') {
                             continue;
                         }
-                        
+
                         validValuesCount++;
                         const strValue = String(rawValue).trim();
-                        
+
                         // Check if it's numeric (including decimals, formatted numbers, currency)
                         const cleanValue = strValue.replace(/[,\s₹$€£¥]/g, ''); // Remove commas, spaces, and currency symbols
                         const numValue = parseFloat(cleanValue);
-                        
+
                         // More comprehensive numeric pattern that handles currency and formatting
                         const numericPattern = /^[₹$€£¥]?-?[\d,]+\.?\d*[₹$€£¥]?$/;
-                        
+
                         if (!isNaN(numValue) && isFinite(numValue) && numericPattern.test(strValue.replace(/\s/g, ''))) {
                             numericCount++;
                         }
                     }
-                    
+
                     // If 70% or more values are numeric, treat as numeric column
                     return validValuesCount > 0 && (numericCount / validValuesCount) >= 0.7;
                 })();
@@ -1814,7 +1814,7 @@ export const exportTableToPdf = async (
     currentLevel: any,
     mode: 'download' | 'email',
 ) => {
-    
+
 
     if (!allData || allData.length === 0) return;
 
@@ -1840,8 +1840,8 @@ export const exportTableToPdf = async (
     const rightAlignedKeys: string[] = jsonData?.RightList?.[0] || [];
     const normalizedRightAlignedKeys = rightAlignedKeys.map(k => k.replace(/\s+/g, ''));
     const reportHeader = (jsonData?.ReportHeader?.[0] || '').replace(/\\n/g, '\n');
-    console.log(reportHeader,'reportHeaderreportHeader');
-    
+    console.log(reportHeader, 'reportHeaderreportHeader');
+
     let fileTitle = 'Report';
     let dateRange = '';
     let clientName = '';
@@ -1850,15 +1850,15 @@ export const exportTableToPdf = async (
     if (reportHeader.includes('From Date')) {
         const [left, right] = reportHeader.split('From Date');
         fileTitle = left.trim();
-    
+
         if (right) {
             // Handle \n or \\n in different inputs
             const lineBreak = right.includes('\n') ? '\n' : right.includes('\\n') ? '\\n' : '';
-    
+
             if (lineBreak) {
                 const [range, clientLine] = right.split(lineBreak);
                 dateRange = `From Date${range?.trim() ? ' ' + range.trim() : ''}`;
-    
+
                 if (clientLine) {
                     const match = clientLine.trim().match(/^(.*)\((.*)\)$/);
                     if (match) {
@@ -1874,7 +1874,7 @@ export const exportTableToPdf = async (
             }
         }
     }
-    
+
 
     const totals: Record<string, number> = {};
     totalColumns.forEach(col => (totals[col.key] = 0));
@@ -1981,7 +1981,7 @@ export const exportTableToPdf = async (
             },
             // Add dynamic space between logo and table
             { text: '', margin: [0, logoImage ? 30 : 15, 0, 0] },
-    
+
             // Table block
             {
                 style: 'tableStyle',
@@ -2019,7 +2019,7 @@ export const exportTableToPdf = async (
         pageOrientation: 'landscape',
         pageSize: headers.length > 15 ? 'A3' : 'A4',
     };
-    
+
 
     if (mode === 'download') {
         pdfMake.createPdf(docDefinition).download(`${fileTitle}.pdf`);
@@ -2027,8 +2027,8 @@ export const exportTableToPdf = async (
     } else if (mode === 'email') {
         const showTypes = pageData[0]?.levels[0]?.settings?.showTypstFlag || false;
         const currentLevelData = pageData[0]?.levels[currentLevel];
-        const userId = localStorage.getItem('userId') || '';
-        const userType = localStorage.getItem('userType') || '';
+        const userId = getLocalStorage('userId') || '';
+        const userType = getLocalStorage('userType') || '';
 
         const filterXml = buildFilterXml(filters, userId);
 
@@ -2111,7 +2111,7 @@ export const downloadOption = async (
     currentLevel: any,
 ) => {
 
-    const userId = localStorage.getItem('userId') || '';
+    const userId = getLocalStorage('userId') || '';
 
     const filterXml = buildFilterXml(filters, userId);
 
@@ -2122,7 +2122,7 @@ export const downloadOption = async (
     <X_Filter>
     ${filterXml}
     </X_Filter>
-    <J_Api>"UserId":"${userId}","UserType":"${localStorage.getItem('userType')}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+        <J_Api>"UserId":"${userId}","UserType":"${getLocalStorage('userType')}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
     </dsXml>`;
 
     try {

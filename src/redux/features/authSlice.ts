@@ -1,5 +1,5 @@
 import { APP_METADATA_KEY } from '@/utils/constants';
-import { clearIndexedDB, clearLocalStorage } from '@/utils/helper';
+import { clearIndexedDB, clearLocalStorage, getLocalStorage } from '@/utils/helper';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface AuthState {
@@ -36,19 +36,19 @@ const defaultInitialState: AuthState = {
 const loadInitialState = (): AuthState => {
     if (typeof window === 'undefined') return defaultInitialState;
 
-    const authToken = localStorage.getItem('auth_token');
+    const authToken = getLocalStorage('auth_token');
 
     return {
         isAuthenticated: !!authToken,
-        userId: localStorage.getItem('userId'),
-        tempToken: localStorage.getItem('temp_token'),
+        userId: getLocalStorage('userId'),
+        tempToken: getLocalStorage('temp_token'),
         authToken: authToken,
-        refreshToken: localStorage.getItem('refreshToken'),
-        tokenExpireTime: localStorage.getItem('tokenExpireTime'),
-        clientCode: localStorage.getItem('clientCode'),
-        clientName: localStorage.getItem('clientName'),
-        userType: localStorage.getItem('userType'),
-        loginType: localStorage.getItem('loginType'),
+        refreshToken: getLocalStorage('refreshToken'),
+        tokenExpireTime: getLocalStorage('tokenExpireTime'),
+        clientCode: getLocalStorage('clientCode'),
+        clientName: getLocalStorage('clientName'),
+        userType: getLocalStorage('userType'),
+        loginType: getLocalStorage('loginType'),
         error: null,
         loading: false,
     };

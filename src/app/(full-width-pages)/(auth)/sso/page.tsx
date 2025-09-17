@@ -6,7 +6,7 @@ import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
 import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL } from "@/utils/constants"
 import Image from "next/image"
-import { clearIndexedDB } from '@/utils/helper'
+import { clearIndexedDB, removeLocalStorage, storeLocalStorage } from '@/utils/helper'
 
 // SSO Component that uses useSearchParams
 const SSOContent = () => {
@@ -80,22 +80,22 @@ const SSOContent = () => {
                 }))
 
                 // Store auth data in localStorage
-                localStorage.setItem('userId', data.data[0].ClientCode)
-                localStorage.setItem('temp_token', data.token)
-                localStorage.setItem('refreshToken', data.refreshToken)
-                localStorage.setItem('tokenExpireTime', data.tokenExpireTime)
-                localStorage.setItem('clientCode', data.data[0].ClientCode)
-                localStorage.setItem('clientName', data.data[0].ClientName)
-                localStorage.setItem('userType', data.data[0].UserType)
-                localStorage.setItem('loginType', 'SSO')
+                storeLocalStorage('userId', data.data[0].ClientCode)
+                storeLocalStorage('temp_token', data.token)
+                storeLocalStorage('refreshToken', data.refreshToken)
+                storeLocalStorage('tokenExpireTime', data.tokenExpireTime)
+                storeLocalStorage('clientCode', data.data[0].ClientCode)
+                storeLocalStorage('clientName', data.data[0].ClientName)
+                storeLocalStorage('userType', data.data[0].UserType)
+                storeLocalStorage('loginType', 'SSO')
 
                 // Clean up any existing ekyc data
                 clearIndexedDB();
 
                 // Set localStorage only
-                localStorage.setItem('auth_token', data.token);
+                storeLocalStorage('auth_token', data.token);
 
-                localStorage.removeItem('temp_token')
+                removeLocalStorage('temp_token')
 
                 // Navigate directly to dashboard (no OTP for SSO)
                 router.push('/dashboard')

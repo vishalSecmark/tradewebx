@@ -2,6 +2,7 @@ import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { APP_METADATA_KEY, ACTION_NAME, BASE_URL, OTP_VERIFICATION_URL, PATH_URL, ENABLE_FERNET } from '@/utils/constants';
 import apiService from '@/utils/apiService';
+import { getLocalStorage, storeLocalStorage } from '@/utils/helper';
 
 interface CommonState {
     tableStyle: 'small' | 'medium' | 'large';
@@ -35,8 +36,8 @@ const initialState: CommonState = {
 export const fetchLastTradingDate = createAsyncThunk(
     'common/fetchLastTradingDate',
     async () => {
-        const userId = localStorage.getItem('userId') || '';
-        const userType = localStorage.getItem('userType') || '';
+        const userId = getLocalStorage('userId') || '';
+        const userType = getLocalStorage('userType') || '';
         const xmlData = `<dsXml>
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"LastTradingDate","Level":1, "RequestFrom":"W"</J_Ui>
             <Sql></Sql>
@@ -59,7 +60,7 @@ export const fetchInitializeLogin = createAsyncThunk(
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"InitializeLogin", "Level":1, "RequestFrom":"w"</J_Ui>
             <Sql></Sql>
             <X_Filter> </X_Filter>
-            <X_Data><EncPayload>${ENABLE_FERNET ? 'Y' : 'N'}</EncPayload></X_Data>
+            <X_Data></X_Data>
             <X_GFilter />
             <J_Api></J_Api>
         </dsXml>`;
@@ -128,7 +129,7 @@ export const commonSlice = createSlice({
                     companyLogo: state.companyLogo,
                     companyName: state.companyName
                 };
-                localStorage.setItem(APP_METADATA_KEY, JSON.stringify(appMetadata));
+                storeLocalStorage(APP_METADATA_KEY, JSON.stringify(appMetadata));
             })
             .addCase(fetchInitializeLogin.rejected, (state, action) => {
                 state.status = 'failed';

@@ -8,9 +8,10 @@ import React, { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import CaseConfirmationModal from "@/components/Modals/CaseConfirmationModal";
 import apiService from "@/utils/apiService";
-import { BASE_URL, PATH_URL,ACTION_NAME } from "@/utils/constants";
+import { BASE_URL, PATH_URL, ACTION_NAME } from "@/utils/constants";
 import { toast } from "react-toastify";
 import { ThemeColors } from "@/types/ThemeColors";
+import { getLocalStorage, storeLocalStorage } from "@/utils/helper";
 
 const colorLabelMap: Record<string, string> = {
   background: "Full Background",
@@ -64,7 +65,7 @@ const ThemePage = () => {
     updateTheme(((prevThemes) => {
       const updatedThemes = { ...prevThemes, [theme]: editedColors };
       //  Store in localStorage properly
-      localStorage.setItem("app_theme_colors", JSON.stringify(updatedThemes));
+      storeLocalStorage("app_theme_colors", JSON.stringify(updatedThemes));
       return updatedThemes;
     }) as any);
     setApplyMessage("Theme colors applied! Please check the UI.");
@@ -87,13 +88,13 @@ const ThemePage = () => {
       const updatedColors = { ...colors, ...editedColors };
 
       //  Retrieve previously saved themes from localStorage
-      const storedThemes = JSON.parse(localStorage.getItem("app_theme_colors") || "{}");
+      const storedThemes = JSON.parse(getLocalStorage("app_theme_colors") || "{}");
 
       //  Update the theme in storage
       const finalThemes = { ...storedThemes, [theme]: updatedColors };
 
       // Save the updated themes and update context
-      localStorage.setItem("app_theme_colors", JSON.stringify(finalThemes));
+      storeLocalStorage("app_theme_colors", JSON.stringify(finalThemes));
       updateTheme(finalThemes); // apply to context
 
       setIsLoading(true)
@@ -107,8 +108,8 @@ const ThemePage = () => {
           <X_Filter_Multiple/>
           <X_Data>${JSON.stringify(finalThemes)}</X_Data>
           <J_Api>
-            "UserId":"${localStorage.getItem("userId")}",
-            "UserType":"${localStorage.getItem("userType")}"
+            "UserId":"${getLocalStorage("userId")}",
+            "UserType":"${getLocalStorage("userType")}"
           </J_Api>
         </dsXml>
       `;

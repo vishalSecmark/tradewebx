@@ -4,7 +4,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAppSelector } from "@/redux/hooks";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
-import { findPageData } from "@/utils/helper";
+import { findPageData, getLocalStorage, storeLocalStorage } from "@/utils/helper";
 import axios from "axios";
 import Loader from "@/components/Loader";
 import { buildTabs, TabData } from "./KycTabs";
@@ -140,12 +140,12 @@ const Kyc = () => {
         try {
             const { MasterEntry = {} } = pageData && pageData[0]?.Entry || {};
             console.log("Check data", MasterEntry, pageData);
-            const userData = localStorage.getItem("rekycRowData_viewMode");
+            const userData = getLocalStorage("rekycRowData_viewMode");
             const parsedUserData = userData ? JSON.parse(userData) : null;
             const isKeysPresent = Object.keys(MasterEntry || {}).length > 0;
             const payload = isKeysPresent ? MasterEntry?.X_Filter : {
                 EntryName: parsedUserData?.EntryName || "Rekyc",
-                ClientCode: parsedUserData?.ClientCode || localStorage.getItem("clientCode"),
+                ClientCode: parsedUserData?.ClientCode || getLocalStorage("clientCode"),
                 FormNo: parsedUserData?.FormNo || ""
             };
 
@@ -161,7 +161,7 @@ const Kyc = () => {
                 <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Master_Edit"</J_Ui>
                 <Sql></Sql>
                 <X_Filter>${xFilter}</X_Filter>
-                <J_Api>"UserId":"${localStorage.getItem('userId') || 'ADMIN'}","AccYear":"${localStorage.getItem('accYear') || '24'}","MyDbPrefix":"${localStorage.getItem('myDbPrefix') || 'undefined'}","MemberCode":"${localStorage.getItem('memberCode') || ''}","SecretKey":"${localStorage.getItem('secretKey') || ''}","MenuCode":"${localStorage.getItem('menuCode') || 27}","ModuleID":"${localStorage.getItem('moduleID') || '27'}","MyDb":"${localStorage.getItem('myDb') || 'undefined'}","DenyRights":"${localStorage.getItem('denyRights') || ''}"</J_Api>
+                <J_Api>"UserId":"${getLocalStorage('userId') || 'ADMIN'}","AccYear":"${getLocalStorage('accYear') || '24'}","MyDbPrefix":"${getLocalStorage('myDbPrefix') || 'undefined'}","MemberCode":"${getLocalStorage('memberCode') || ''}","SecretKey":"${getLocalStorage('secretKey') || ''}","MenuCode":"${getLocalStorage('menuCode') || 27}","ModuleID":"${getLocalStorage('moduleID') || '27'}","MyDb":"${getLocalStorage('myDb') || 'undefined'}","DenyRights":"${getLocalStorage('denyRights') || ''}"</J_Api>
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
@@ -189,11 +189,11 @@ const Kyc = () => {
                     if (key === "attachments") {
                         const isViewMode = tab?.Settings?.viewMode === "true";
                         if (isViewMode) {
-                            localStorage.setItem("ekyc_viewMode", "true");
-                            localStorage.setItem("ekyc_checker", "true");
-                            localStorage.setItem("ekyc_submit", "true")
+                            storeLocalStorage("ekyc_viewMode", "true");
+                            storeLocalStorage("ekyc_checker", "true");
+                            storeLocalStorage("ekyc_submit", "true")
                         } else {
-                            localStorage.setItem("ekyc_viewMode", "false");
+                            storeLocalStorage("ekyc_viewMode", "false");
                         }
                     }
                 }
@@ -209,7 +209,7 @@ const Kyc = () => {
     };
 
     useEffect(() => {
-        const viewMode = localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+        const viewMode = getLocalStorage("ekyc_viewMode_for_checker") === "true";
         fetchFormData(viewMode);
     }, []);
 
@@ -222,7 +222,7 @@ const Kyc = () => {
                 <div className="flex items-center">
                     {lastUpdated && <span className="text-sm mr-4" style={{ color: colors.secondary }}>Last updated: {new Date(lastUpdated).toLocaleString()}</span>}
                     <button
-                        onClick={() => fetchFormData(localStorage.getItem("ekyc_viewMode_for_checker") === "true")}
+                        onClick={() => fetchFormData(getLocalStorage("ekyc_viewMode_for_checker") === "true")}
                         className="px-3 py-1 text-sm rounded flex items-center"
                         style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
                     >

@@ -13,3 +13,4 @@ export const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL || '/TradeWebAPI/api/Main
 export const VERSION = "2.0.0.1"
 export const ENABLE_CAPTCHA = process.env.NEXT_PUBLIC_ENABLE_CAPTCHA !== 'false' // Default to true if not set to 'false'
 export const ENABLE_FERNET = process.env.NEXT_PUBLIC_ENABLE_FERNET || false
+export const SECURE_STORAGE_KEY = 'secure_data' // Single key for all encrypted localStorage data

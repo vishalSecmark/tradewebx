@@ -11,7 +11,7 @@ import { BASE_URL, PATH_URL } from '@/utils/constants';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import FileUploadWithCrop from './formComponents/FileUploadWithCrop';
-import { handleViewFile } from "@/utils/helper";
+import { getLocalStorage, handleViewFile, removeLocalStorage, storeLocalStorage } from "@/utils/helper";
 import OtpVerificationModal from "./formComponents/OtpVerificationComponent";
 import LoaderOverlay from "../Loaders/LoadingSpinner";
 import CustomDatePicker from "./formComponents/CustomDatePicker";
@@ -489,7 +489,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
     const handleThirdActions = (field: any) => {
         if (field.redirectUrl === "true") {
             handleThirdPartyApi(field);
-            localStorage.setItem('redirectedField', field.wKey);
+            storeLocalStorage('redirectedField', field.wKey);
             router.replace(pathname);
         } else if (field.OTPRequire) {
             setCurrentOtpField(field);
@@ -807,14 +807,14 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
         }
     };
     useEffect(() => {
-        if (scope && scope.includes("ADHAR") && success === "True" && localStorage.getItem("redirectedField") !== "FinalFormSubmission") {
-            const redirectedField = localStorage.getItem('redirectedField')
+        if (scope && scope.includes("ADHAR") && success === "True" && getLocalStorage("redirectedField") !== "FinalFormSubmission") {
+            const redirectedField = getLocalStorage('redirectedField')
             // Find the field related to ADHAR (by wKey or label containing ADHAR)
             const adharField = formData.find(f => (f.wKey && f.wKey === redirectedField));
             if (adharField && redirectedField) {
                 handleThirdPartyApi(adharField, "thirdparty");
                 // Clean up localStorage after processing
-                localStorage.removeItem('redirectedField');
+                removeLocalStorage('redirectedField');
                 router.replace(pathname);
             }
             // Clear query params from URL

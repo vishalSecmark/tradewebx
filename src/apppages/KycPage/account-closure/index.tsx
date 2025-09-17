@@ -2,7 +2,7 @@
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
-import { displayAndDownloadPDF, findPageData, displayAndDownloadFile } from "@/utils/helper";
+import { displayAndDownloadPDF, findPageData, displayAndDownloadFile, getLocalStorage, storeLocalStorage, removeLocalStorage } from "@/utils/helper";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTheme } from "@/context/ThemeContext";
@@ -159,7 +159,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
   const handleGenerateClosurePdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const userId = localStorage.getItem('userId') || '';
+      const userId = getLocalStorage('userId') || '';
       const clientCode = data?.ClientCode || '';
 
       const xmlData = `<dsXml>
@@ -194,7 +194,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
   const handleGenerateRekycPdf = async (reportName: string) => {
     try {
-      const userId = localStorage.getItem('clientCode') || '';
+      const userId = getLocalStorage('clientCode') || '';
       const clientCode = data?.ClientCode || '';
       const entryName = 'REKYC';
 
@@ -248,10 +248,10 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
       const clientCode = accountClouserOpen ? accountClouserDataPass?.clientCode : '';
 
-      const userId = localStorage.getItem("userId");
+      const userId = getLocalStorage("userId");
       if (!userId) throw new Error("User ID not found in local storage");
 
-      const authToken = localStorage.getItem("auth_token");
+      const authToken = getLocalStorage("auth_token");
       if (!authToken) throw new Error("Authentication token not found");
 
       const xmlData = `<dsXml>
@@ -335,7 +335,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
     try {
       setLoading(true);
-      const userId = localStorage.getItem("userId") || "";
+      const userId = getLocalStorage("userId") || "";
       if (!base64CRMI) {
         toast.error("please upload CRM file");
         return
@@ -392,7 +392,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
     try {
       setLoading(true);
-      const userId = localStorage.getItem('userId') || 'ADMIN';
+      const userId = getLocalStorage('userId') || 'ADMIN';
 
       const J_Ui = {
         ActionName: "Rekyc",
@@ -437,7 +437,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
             const doc = parser.parseFromString(columnData, 'text/html');
             const url = doc.querySelector('Url')?.textContent;
             if (url) {
-              localStorage.setItem("ClosureredirectedField", "ClosureFinalEsign");
+              storeLocalStorage("ClosureredirectedField", "ClosureFinalEsign");
               window.open(url, '_self');
               return;
             }
@@ -471,7 +471,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
 
   const handleKRACallBack = async (reportName: string) => {
     try {
-      const userId = localStorage.getItem('userId') || 'ADMIN';
+      const userId = getLocalStorage('userId') || 'ADMIN';
       const entryName = 'REKYC';
       const clientCode = userId;
 
@@ -491,7 +491,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       if (response.data?.data?.rs0) {
-        localStorage.removeItem("ClosureredirectedField");
+        removeLocalStorage("ClosureredirectedField");
 
         // Extract message from XML string in Column1
         const column1Data = response.data.data.rs0[0].Column1;

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { APP_METADATA_KEY, BASE_PATH_FRONT_END, BASE_URL } from './constants';
-import { clearIndexedDB, clearLocalStorage } from './helper';
+import { clearIndexedDB, clearLocalStorage, getLocalStorage, removeLocalStorage } from './helper';
 
 // Create axios instance with default config
 export const api = axios.create({
@@ -58,34 +58,38 @@ export const isAuthenticated = () => {
 };
 
 export const getAuthToken = () => {
-  return localStorage.getItem('auth_token');
+  return getLocalStorage('auth_token');
 };
 
 export const getUserData = () => {
   return {
-    clientCode: localStorage.getItem('clientCode'),
-    clientName: localStorage.getItem('clientName'),
-    userType: localStorage.getItem('userType'),
+    clientCode: getLocalStorage('clientCode'),
+    clientName: getLocalStorage('clientName'),
+    userType: getLocalStorage('userType'),
   };
 };
 
 export const clearAuthStorage = () => {
-  localStorage.removeItem('userId');
-  localStorage.removeItem('temp_token');
-  localStorage.removeItem('tokenExpireTime');
-  localStorage.removeItem('clientCode');
-  localStorage.removeItem('clientName');
-  localStorage.removeItem('userType');
-  localStorage.removeItem('loginType');
+  removeLocalStorage('userId');
+  removeLocalStorage('temp_token');
+  removeLocalStorage('tokenExpireTime');
+  removeLocalStorage('clientCode');
+  removeLocalStorage('clientName');
+  removeLocalStorage('userType');
+  removeLocalStorage('loginType');
 
   // ekyc related states 
-  localStorage.removeItem('ekyc_dynamicData');
-  localStorage.removeItem('ekyc_activeTab');
-  localStorage.removeItem('redirectedField');
-  localStorage.removeItem('ekyc_submit');
-  localStorage.removeItem('ekyc_viewMode');
-  localStorage.removeItem("ekyc_viewMode_for_checker");
-  localStorage.removeItem('ekyc_checker');
+  removeLocalStorage('ekyc_dynamicData');
+  removeLocalStorage('ekyc_activeTab');
+  removeLocalStorage('redirectedField');
+  removeLocalStorage('ekyc_submit');
+  removeLocalStorage('ekyc_viewMode');
+  removeLocalStorage("ekyc_viewMode_for_checker");
+  removeLocalStorage('ekyc_checker');
+  removeLocalStorage('ekyc_submit');
+  removeLocalStorage('ekyc_viewMode');
+  removeLocalStorage("ekyc_viewMode_for_checker");
+  removeLocalStorage('ekyc_checker');
   clearIndexedDB();
 };
 
@@ -93,29 +97,29 @@ export const clearAuthStorage = () => {
 export const clearAllAuthData = () => {
   if (typeof window !== 'undefined') {
     // Clear all authentication-related localStorage items
-    localStorage.removeItem('userId');
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('tokenExpireTime');
-    localStorage.removeItem('clientCode');
-    localStorage.removeItem('clientName');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('loginType');
-    localStorage.removeItem('temp_token');
+    removeLocalStorage('userId');
+    removeLocalStorage('auth_token');
+    removeLocalStorage('refreshToken');
+    removeLocalStorage('tokenExpireTime');
+    removeLocalStorage('clientCode');
+    removeLocalStorage('clientName');
+    removeLocalStorage('userType');
+    removeLocalStorage('loginType');
+    removeLocalStorage('temp_token');
 
     // Clear ekyc related states
-    localStorage.removeItem('ekyc_dynamicData');
-    localStorage.removeItem('ekyc_activeTab');
-    localStorage.removeItem('redirectedField');
-    localStorage.removeItem('ekyc_submit');
-    localStorage.removeItem('ekyc_viewMode');
-    localStorage.removeItem('ekyc_viewMode_for_checker');
-    localStorage.removeItem('ekyc_checker');
+    removeLocalStorage('ekyc_dynamicData');
+    removeLocalStorage('ekyc_activeTab');
+    removeLocalStorage('redirectedField');
+    removeLocalStorage('ekyc_submit');
+    removeLocalStorage('ekyc_viewMode');
+    removeLocalStorage('ekyc_viewMode_for_checker');
+    removeLocalStorage('ekyc_checker');
 
     // Clear any other auth-related items
-    localStorage.removeItem('auth_token_integrity');
-    localStorage.removeItem('login_attempts');
-    localStorage.removeItem('KRAredirectedField');
+    removeLocalStorage('auth_token_integrity');
+    removeLocalStorage('login_attempts');
+    removeLocalStorage('KRAredirectedField');
 
     // Clear IndexedDB
     clearIndexedDB();

@@ -6,6 +6,7 @@ import { BASE_URL, PATH_URL, ACTION_NAME } from "@/utils/constants";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { getLocalStorage } from "@/utils/helper";
 
 const UserAccessMenu = () => {
     const [groupOptions, setGroupOptions] = useState<any[]>([]);
@@ -15,8 +16,8 @@ const UserAccessMenu = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const { colors } = useTheme();
-    const UserID = localStorage.getItem("userId");
-    const userType = localStorage.getItem("userType");
+    const UserID = getLocalStorage("userId");
+    const userType = getLocalStorage("userType");
     const authToken = useSelector((state: RootState) => state.auth.authToken);
 
     const config = {

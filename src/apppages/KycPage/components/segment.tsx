@@ -6,11 +6,12 @@ import { DataGrid } from 'react-data-grid';
 import { IoArrowBack } from 'react-icons/io5';
 import { handleSaveSinglePageData } from '../ekychelper';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
+import { getLocalStorage } from '@/utils/helper';
 
 const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTab, Settings }: EkycComponentProps) => {
   const { colors, fonts } = useTheme();
   const { setSaving } = useSaveLoading();
-  const viewMode = localStorage.getItem("ekyc_viewMode") === "true" || localStorage.getItem("ekyc_viewMode_for_checker") === "true";
+  const viewMode = getLocalStorage("ekyc_viewMode") === "true" || getLocalStorage("ekyc_viewMode_for_checker") === "true";
 
 
   // Handler to update the segment tableData
