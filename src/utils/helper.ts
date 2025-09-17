@@ -343,7 +343,7 @@ const getEncryptionKey = (): string => {
 };
 
 // Encrypt data using AES encryption
-const encryptData = (data: string): string => {
+export const encryptData = (data: string): string => {
     try {
         const key = getEncryptionKey();
         const encrypted = CryptoJS.AES.encrypt(data, key).toString();
@@ -355,7 +355,7 @@ const encryptData = (data: string): string => {
 };
 
 // Decrypt data using AES decryption
-const decryptData = (encryptedData: string): string => {
+export const decryptData = (encryptedData: string): string => {
     try {
         const key = getEncryptionKey();
         const decrypted = CryptoJS.AES.decrypt(encryptedData, key).toString(CryptoJS.enc.Utf8);
@@ -368,37 +368,37 @@ const decryptData = (encryptedData: string): string => {
 
 // Get all encrypted data from localStorage
 const getEncryptedStorageData = (): Record<string, string> => {
-  try {
-    if (typeof window === "undefined") {
-      // Running on server, return empty
-      return {};
+    try {
+        if (typeof window === "undefined") {
+            // Running on server, return empty
+            return {};
+        }
+        const encryptedData = localStorage.getItem(SECURE_STORAGE_KEY);
+        if (!encryptedData) {
+            return {};
+        }
+        const decryptedData = decryptData(encryptedData);
+        return JSON.parse(decryptedData);
+    } catch (error) {
+        console.error("Error getting encrypted storage data:", error);
+        return {};
     }
-    const encryptedData = localStorage.getItem(SECURE_STORAGE_KEY);
-    if (!encryptedData) {
-      return {};
-    }
-    const decryptedData = decryptData(encryptedData);
-    return JSON.parse(decryptedData);
-  } catch (error) {
-    console.error("Error getting encrypted storage data:", error);
-    return {};
-  }
 };
 
 // Save all encrypted data to localStorage
 const saveEncryptedStorageData = (data: Record<string, string>): void => {
-  try {
-    if (typeof window === "undefined") {
-      // Running on server, do nothing
-      return;
+    try {
+        if (typeof window === "undefined") {
+            // Running on server, do nothing
+            return;
+        }
+        const jsonData = JSON.stringify(data);
+        const encryptedData = encryptData(jsonData);
+        localStorage.setItem(SECURE_STORAGE_KEY, encryptedData);
+    } catch (error) {
+        console.error("Error saving encrypted storage data:", error);
+        throw new Error("Failed to save encrypted data");
     }
-    const jsonData = JSON.stringify(data);
-    const encryptedData = encryptData(jsonData);
-    localStorage.setItem(SECURE_STORAGE_KEY, encryptedData);
-  } catch (error) {
-    console.error("Error saving encrypted storage data:", error);
-    throw new Error("Failed to save encrypted data");
-  }
 };
 
 // Secure localStorage methods

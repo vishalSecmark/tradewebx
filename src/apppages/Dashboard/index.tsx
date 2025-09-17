@@ -13,7 +13,7 @@ import { fetchLastTradingDate, fetchInitializeLogin } from '@/redux/features/com
 import Select from 'react-select';
 import CommonCustomDropdown from '@/components/form/DropDown/CommonDropDown';
 import apiService from '@/utils/apiService';
-import { getLocalStorage } from '@/utils/helper';
+import { encryptData, getLocalStorage } from '@/utils/helper';
 
 const ReactApexChart = nextDynamic(() => import("react-apexcharts"), { ssr: false });
 
@@ -892,7 +892,7 @@ function Dashboard() {
 
                         {selectedClient && (
                             <Link
-                                href={`/profile?userid=${selectedClient.value}`}
+                                href={`/profile?userid=${encryptData(selectedClient.value)}`}
                                 style={{
                                     backgroundColor: colors.primary,
                                     color: colors.buttonText
