@@ -1666,27 +1666,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             tabErrors = validateTabForm(currentTab, currentTabFormValues);
         }
 
-        // Combine all errors
-        const allErrors = { ...masterErrors, ...tabErrors };
-
-        if (Object.keys(allErrors).length > 0) {
-            setFieldErrors(allErrors);
-            if (Object.keys(masterErrors).length > 0) {
-                toast.error("Please fill all mandatory fields in the Master form before submitting.");
-            } else {
-                toast.error("Please fill all mandatory fields in the current tab before submitting.");
-            }
-            return;
-        }
-
         const allData = {
-            Master: masterFormValues,
+            Master: [masterFormValues],
         }
 
         if (currentTab.Settings.isTable === "true") {
             allData[currentTab.TabName] = tabTableData[currentTabKey] || []
         } else {
-            allData[currentTab.TabName] = currentTabFormValues
+            allData[currentTab.TabName] = Object.keys(currentTabFormValues).length > 0
+                ? [currentTabFormValues]
+                : [];
+
         }
 
         console.log("check xdatajson", allData);
