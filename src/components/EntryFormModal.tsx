@@ -1666,6 +1666,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             tabErrors = validateTabForm(currentTab, currentTabFormValues);
         }
 
+        // Combine all errors
+        const allErrors = { ...masterErrors, ...tabErrors };
+
+        if (Object.keys(allErrors).length > 0) {
+            setFieldErrors(allErrors);
+            if (Object.keys(masterErrors).length > 0) {
+                toast.error("Please fill all mandatory fields in the Master form before submitting.");
+            } else {
+                toast.error("Please fill all mandatory fields in the current tab before submitting.");
+            }
+            return;
+        }
+
         const allData = {
             Master: [masterFormValues],
         }
