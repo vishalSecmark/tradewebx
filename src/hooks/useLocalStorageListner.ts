@@ -1,10 +1,12 @@
 // Create a new file hooks/useLocalStorage.ts
 import { useState, useEffect } from 'react';
+import { getLocalStorage, storeLocalStorage } from '@/utils/helper';
+
 
 export function useLocalStorageListener(key: string, initialValue: any) {
     const [value, setValue] = useState(() => {
         if (typeof window !== 'undefined') {
-            const storedValue = localStorage.getItem(key);
+            const storedValue = getLocalStorage(key);
             return storedValue ? JSON.parse(storedValue) : initialValue;
         }
         return initialValue;

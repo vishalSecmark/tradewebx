@@ -368,29 +368,37 @@ const decryptData = (encryptedData: string): string => {
 
 // Get all encrypted data from localStorage
 const getEncryptedStorageData = (): Record<string, string> => {
-    try {
-        const encryptedData = localStorage.getItem(SECURE_STORAGE_KEY);
-        if (!encryptedData) {
-            return {};
-        }
-        const decryptedData = decryptData(encryptedData);
-        return JSON.parse(decryptedData);
-    } catch (error) {
-        console.error('Error getting encrypted storage data:', error);
-        return {};
+  try {
+    if (typeof window === "undefined") {
+      // Running on server, return empty
+      return {};
     }
+    const encryptedData = localStorage.getItem(SECURE_STORAGE_KEY);
+    if (!encryptedData) {
+      return {};
+    }
+    const decryptedData = decryptData(encryptedData);
+    return JSON.parse(decryptedData);
+  } catch (error) {
+    console.error("Error getting encrypted storage data:", error);
+    return {};
+  }
 };
 
 // Save all encrypted data to localStorage
 const saveEncryptedStorageData = (data: Record<string, string>): void => {
-    try {
-        const jsonData = JSON.stringify(data);
-        const encryptedData = encryptData(jsonData);
-        localStorage.setItem(SECURE_STORAGE_KEY, encryptedData);
-    } catch (error) {
-        console.error('Error saving encrypted storage data:', error);
-        throw new Error('Failed to save encrypted data');
+  try {
+    if (typeof window === "undefined") {
+      // Running on server, do nothing
+      return;
     }
+    const jsonData = JSON.stringify(data);
+    const encryptedData = encryptData(jsonData);
+    localStorage.setItem(SECURE_STORAGE_KEY, encryptedData);
+  } catch (error) {
+    console.error("Error saving encrypted storage data:", error);
+    throw new Error("Failed to save encrypted data");
+  }
 };
 
 // Secure localStorage methods
