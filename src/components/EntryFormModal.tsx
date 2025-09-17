@@ -1679,13 +1679,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }
 
     const allData = {
-        Master: masterFormValues,
+        Master: [masterFormValues],
     }
 
     if (currentTab.Settings.isTable === "true") {
         allData[currentTab.TabName] = tabTableData[currentTabKey] || []
     } else {
-        allData[currentTab.TabName] = currentTabFormValues
+        allData[currentTab.TabName] = Object.keys(currentTabFormValues).length > 0 
+            ? [currentTabFormValues] 
+            : [];            
+       
     }
 
     console.log("check xdatajson", allData);
