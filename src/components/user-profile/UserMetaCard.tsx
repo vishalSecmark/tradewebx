@@ -8,7 +8,7 @@ import Image from "next/image";
 import axios from "axios";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "../../utils/constants";
 import apiService from "@/utils/apiService";
-import { getLocalStorage } from "@/utils/helper";
+import { decryptData, getLocalStorage } from "@/utils/helper";
 
 export default function UserMetaCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -25,7 +25,7 @@ export default function UserMetaCard() {
     setIsLoading(true);
 
     // Get userid from URL parameters, fallback to localStorage
-    const urlUserId = searchParams.get('userid');
+    const urlUserId = decryptData(searchParams.get('userid'));
     const userData = {
       userId: getLocalStorage('userId') || ''
     };
