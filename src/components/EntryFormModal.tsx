@@ -1783,15 +1783,18 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             // Replace placeholders in X_Filter_Multiple
             let xFilterMultiple = '';
             Object.entries(saveNextAPI.X_Filter_Multiple).forEach(([key, value]) => {
-                let finalValue = value;
-                if (typeof value === 'string' && value.includes('##')) {
-                    // Replace placeholders with actual values
-                    finalValue = value.replace(/##(\w+)##/g, (match, placeholder) => {
-                        return currentTabFormValues[placeholder] || '';
-                    });
-                }
-                xFilterMultiple += `<${key}>${finalValue}</${key}>`;
+                    if (editData && editData[key] !== undefined && editData[key] !== null) {
+                        xFilterMultiple += `<${key}>${editData[key]}</${key}>`;
+                    }
+                    // Otherwise use the default value from masterEntry
+                    else if (masterFormValues[key] || currentTabFormValues[key]) {
+                        xFilterMultiple += `<${key}>${masterFormValues[key] || currentTabFormValues[key]}</${key}>`;
+                    } else {
+                        xFilterMultiple += `<${key}></${key}>`;
+                    }
             });
+
+            console.log("check x filter-------->",xFilterMultiple, editData, masterFormValues,currentTabFormValues)
 
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
