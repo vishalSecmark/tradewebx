@@ -20,6 +20,7 @@ export interface ApiResponse {
 export interface TabSettings {
     isTable: string;
     isGroup?: string;
+    MakerSaveAPI? : any;
     IsChildEntryAllowed?: string;
     ChildEntryAPI?: any;
     maxAllowedRecords: string;
