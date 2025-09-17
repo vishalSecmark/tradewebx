@@ -190,7 +190,6 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
 }) => {
     const isChildInvalid = Object.values(fieldErrors).some(error => error);
 
-    console.log("check form data",formData)
     const handleFormSubmit = () => {
          const childErrors = validateForm(formData, formValues);
 
@@ -208,7 +207,7 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
         <div className={`fixed inset-0 flex items-center justify-center z-500`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Add Guardian Details</h2>
+                    <h2 className="text-xl font-semibold">{viewAccess ? "Guardian Details" :  isEdit ? "Edit Guardian Details"  : "Add Guardian Details"}</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700"
@@ -220,7 +219,7 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                     <div className="text-center py-4">Loading...</div>
                 ) : (
                     <>
-                        <div className="text-end mt-5">
+                        <div className="text-end mt-1 mb-2">
                             <button
                                 onClick={resetChildForm}
                                 className={`px-4 py-2 rounded-md mr-2 ${viewAccess
@@ -301,7 +300,6 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
     );
 };
 const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
-
     const [formSubmitConfirmation, setFormSubmitConfirmation] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
@@ -338,14 +336,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [guardianDropdownOptions,setGuardianDropdownOptions] = useState<Record<string, any[]>>({});
     const [guardianLoadingDropdowns,setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [guardianLoading,setGuardianLoading] = useState(false);
+    const [finalTabSubmitSuccess,setFinalTabSubmitSuccess] = useState(false);
+
     console.log("<------------------check data--------------------->",tabTableData)
-
-
     console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
 
     const childEntryPresent = pageData[0]?.Entry?.ChildEntry;
     const isThereChildEntry = !isTabs && (!childEntryPresent || Object.keys(childEntryPresent).length === 0);
-    const isViewMode = action === "view" ? true : false
+    const isViewMode = (action === "view" && editData) ? true : false
 
     const [validationModal, setValidationModal] = useState<{
         isOpen: boolean;
@@ -357,14 +355,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [viewMode, setViewMode] = useState<boolean>(false);
 
     const fetchTabsData = async (editData?: any, viewMode: boolean = false) => {
-        console.log('fetchTabsData called with:', { pageData, isTabs, isOpen });
         if (!pageData?.[0]) {
             console.error('fetchTabsData: pageData[0] is not available');
             return;
         }
-
-        console.log('fetchTabsData: pageData[0]:', pageData[0]);
-        console.log('fetchTabsData: pageData[0].Entry:', pageData[0].Entry);
 
         setIsLoading(true);
         try {
@@ -383,7 +377,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 return;
             }
 
-            console.log('fetchTabsData: masterEntry:', masterEntry);
             const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
             // Construct J_Ui - handle 'Option' key specially
@@ -429,14 +422,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             if (response?.data?.data?.rs0) {
                 const allTabs: TabData[] = response.data.data.rs0;
-                console.log('All tabs received:', allTabs.map(tab => ({ TabName: tab.TabName })));
-
                 // Find and extract Master tab data
                 const masterTab = allTabs.find(tab =>
                     tab.TabName && tab.TabName.toLowerCase().trim() === 'master'
                 );
-
-                console.log('Master tab found:', masterTab ? masterTab.TabName : 'Not found');
 
                 // Filter out Master tab from tabs navigation - be more comprehensive
                 const tabs = allTabs.filter(tab =>
@@ -444,8 +433,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     tab.TabName.toLowerCase().trim() !== 'master' &&
                     tab.TabName.toLowerCase().trim() !== 'master form'
                 );
-
-                console.log('Filtered tabs:', tabs.map(tab => ({ TabName: tab.TabName })));
 
                 // Set up master form data from Master tab
                 if (masterTab) {
@@ -502,13 +489,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     initialTabDropdownOptions[tabKey] = {};
                     initialTabLoadingDropdowns[tabKey] = {};
                     initialTabTableData[tabKey] = tab.tableData || [];
-                    console.log("-------------->",initialTabTableData[tabKey])
-
+                 
                     // Initialize form values with any preset values
                     tab.Data.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialTabFormValues[tabKey][field.wKey] = moment(field.wValue).format('YYYYMMDD');
-                        } else if (tab.tableData.length && tab.Settings.isTable === "false") {
+                        } else if (tab?.tableData?.length && tab.Settings.isTable === "false") {
                             initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey];
                         } else  {
                             initialTabFormValues[tabKey][field.wKey] = "";
@@ -627,7 +613,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const setLoadingDropdowns = isChild ? setChildLoadingDropdowns : setMasterLoadingDropdowns;
         const setDropdownOptions = isChild ? setChildDropdownOptions : setMasterDropdownOptions;
-        const formValues = isChild ? childFormValues : masterFormValues;
 
         try {
             setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
@@ -833,7 +818,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                             // Process each individual field name
                             fieldNames.forEach(individualField => {
-                                console.log("check list array", individualField, tabFormValues?.[tabKey][individualField]);
                                 if (!tabFormValues?.[tabKey][individualField] && !masterFormValues[individualField]) {
                                     toast.error(`Please select the field: ${individualField}`);
                                     return;
@@ -842,7 +826,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             });
                         } else {
                             // Normal case - fieldName is already a single field name
-                            console.log("check list array", fieldName, tabFormValues?.[tabKey][fieldName]);
                             if (!tabFormValues?.[tabKey][fieldName] && !masterFormValues[fieldName]) {
                                 toast.error(`Please select the field: ${fieldName}`);
                                 return;
@@ -913,7 +896,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     };
 
     const fetchMasterEntryData = async (editData?: any, viewMode: boolean = false, shouldSetLoading: boolean = true) => {
-    console.log('fetchMasterEntryData called with:', { pageData, isTabs, isOpen });
     
     // Check if pageData[0].Entry exists and is not an empty object
     if (!pageData?.[0]?.Entry || Object.keys(pageData[0].Entry).length === 0) {
@@ -931,9 +913,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         const entry = pageData[0].Entry;
         const masterEntry = entry.MasterEntry;
         const isEditData = Object.keys(editData || {}).length > 0;
-        console.log("check isEditData", isEditData);
 
-        console.log('fetchMasterEntryData: masterEntry:', masterEntry);
         const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
         // Construct J_Ui - handle 'Option' key specially
@@ -1040,10 +1020,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
 
         if (isEditData && !isViewMode) {
-            console.log("check all updates===>", allUpdates);
             setMasterFormData(() => {
                 const newFormData = [...formData];
-                console.log("check updates", allUpdates);
                 allUpdates.forEach(update => {
                     const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                     if (fieldIndex >= 0) {
@@ -1184,8 +1162,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 flag?: string;
             }> = [];
 
-            console.log("check all updates", allUpdates);
-
             // FIRST: Process all dropdown options in parallel
             await Promise.all(
                 response.data?.data?.rs0?.map(async (field: FormField) => {
@@ -1211,7 +1187,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 // Apply all updates at once
                 setChildFormData(() => {
                     const newFormData = [...formData];
-                    console.log("check updates", allUpdates);
+
                     allUpdates.forEach(update => {
                         const fieldIndex = newFormData.findIndex(f => f.wKey === update.fieldKey);
                         if (fieldIndex >= 0) {
@@ -1232,7 +1208,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 });
                 setChildFormValues(prevValues => {
                     const newValues = { ...prevValues };
-                    console.log("check new values", allUpdates)
+                  
                     allUpdates.forEach(update => {
                         if (update.fieldKey in newValues) {
                             if (update.tagValue === "true" || update.tagValue === "false") {
@@ -1634,8 +1610,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (Array.isArray(field.dependsOn.field)) {
                 // Handle dependent dropdowns for tabs if needed
                 fetchTabsDependentOptions(field, tabKey);
-                console.log('Handle dependent dropdown for tab:----------->', tabKey, tabFormValues?.[tabKey]['PinCode']);
-            }
+             }
         }
     };
 
@@ -1691,9 +1666,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
        
     }
 
-    console.log("check xdatajson", allData);
     const xDataJson = JSON.stringify(allData);
-    console.log("check xdatajson", allData);
 
      setIsFormSubmit(true);
         try {
@@ -1706,9 +1679,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const jApi = Object.entries(saveNextAPI.J_Api)
                 .map(([key, value]) => `"${key}":"${value}"`)
                 .join(',');
-
-            // Create X_DataJson with current tab form values
-            // const xDataJson = JSON.stringify(currentTabFormValues);
 
             // Replace placeholders in X_Filter_Multiple
             let xFilterMultiple = '';
@@ -1741,8 +1711,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 // Check if there are more tabs to navigate to
                 if (activeTabIndex < tabsData.length - 1) {
                     setActiveTabIndex(activeTabIndex + 1);
-                    toast.info(`Moved to next tab: ${tabsData[activeTabIndex + 1].TabName}`);
+                    // toast.info(`Moved to next tab: ${tabsData[activeTabIndex + 1].TabName}`);
                 } else {
+                    setFinalTabSubmitSuccess(true)
                     // All tabs completed, close modal
                     // resetTabsForm();
                 }
@@ -1762,13 +1733,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 };
     
  const FinalSubmitTabsFormData = async () => {
-     const currentTab = tabsData[activeTabIndex];
+    const currentTab = tabsData[activeTabIndex];
     const currentTabKey = `tab_${activeTabIndex}`;
     const currentTabFormValues = tabFormValues[currentTabKey] || {};
 
   
     const allData = {
-        Master: masterFormValues,
+        Master: [masterFormValues],
     }
 
     tabsData.forEach((tabs,index) => {
@@ -1776,19 +1747,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         if(tabs.Settings.isTable === "true"){
             allData[tabs.TabName] = tabTableData[currentKey]
         }else{
-            allData[tabs.TabName] = tabFormValues[currentKey]
+              allData[tabs.TabName] = Object.keys(currentTabFormValues).length > 0 
+            ? [currentTabFormValues] 
+            : [];            
         }
+        // allData[tabs.TabName] = tabFormValues[currentKey]
     })
-
-    console.log("check all data", allData);
 
     
      const xDataJson = JSON.stringify(allData);
-     console.log("json",xDataJson)
 
      setIsFormSubmit(true);
         try {
-            const saveNextAPI = currentTab.Settings.SaveNextAPI;
+            const saveNextAPI = currentTab.Settings.MakerSaveAPI;
 
             const jUi = Object.entries(saveNextAPI.J_Ui)
                 .map(([key, value]) => `"${key}":"${value}"`)
@@ -1828,7 +1799,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (response?.data?.success) {
                 toast.success('Tab form submitted successfully!');
                 setIsFormSubmit(false);
-                 // resetTabsForm();
+                resetTabsForm();
             } else {
                 const message = response?.data?.message?.replace(/<\/?Message>/g, '') || 'Submission failed';
                 toast.warning(message);
@@ -1869,22 +1840,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         onClose();
         setViewMode(false);
         refreshFunction?.();
+        setFinalTabSubmitSuccess(false);
     };
 
-    // In your component
-    const dynamicColumns = getAllColumns(childEntriesTable);
 
-    const handleTabTableDataEdit = (row: any, idx: any) => {
-        setTabFormValues(pre => ({
-            ...pre,
-            [`tab_${activeTabIndex}`]: row
-        }))
-        setTabsModal(true);
-        setEditTabModalData(true);
-        setEditTabRowIndex(idx);
-    }
-
-    
       const checkIfMinor = (dob: string) => {
         if (!dob) {
           setIsMinor(false);
@@ -1902,6 +1861,37 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setIsMinor(minor);
         return minor;
       };
+    
+    // In your component
+    const dynamicColumns = getAllColumns(childEntriesTable);
+
+    const handleTabTableDataEdit = (row: any, idx: any) => {
+        const currentTab = tabsData[activeTabIndex];
+        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabFormValues = row || {};
+  
+          // Check if guardian details are needed
+    const needsGuardianDetails = currentTab.Settings.IsChildEntryAllowed === "true" && 
+                                currentTab.TabName === "NomineeDetails" && 
+                                checkIfMinor(currentTabFormValues?.NomineeDOB);
+  
+
+        if(needsGuardianDetails){
+            setIsMinor(true);
+            if(Object.keys(row?.guardianDetails || {}).length){
+                setGuardianFormValues(row?.guardianDetails)
+            }
+        }
+        setTabFormValues(pre => ({
+            ...pre,
+            [`tab_${activeTabIndex}`]: row
+        }))
+        setTabsModal(true);
+        setEditTabModalData(true);
+        setEditTabRowIndex(idx);
+    }
+
+    
     
     
 
@@ -1927,7 +1917,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     
     if (needsGuardianDetails) {
         const guardianTabsError = validateForm(guardianFormData, guardianFormValues);
-        console.log("in this loop----------->", guardianFormValues, guardianTabsError, guardianFormData);
         
         if (Object.keys(guardianFormValues).length === 0 || Object.keys(guardianTabsError).length > 0) { 
             toast.error("Please fill all mandatory fields in Guardian details before submitting.");
@@ -1940,7 +1929,24 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setTabTableData(prev => ({
             ...prev,
             [currentTabKey]: prev[currentTabKey].map((row, idx) => 
-                idx === editTabRowIndex ? { ...currentTabFormValues, _id: row._id } : row
+                idx === editTabRowIndex ? { 
+                    ...currentTabFormValues, 
+                    _id: row._id,
+                    // Update guardian details if they exist and are being edited
+                    ...(needsGuardianDetails && row.guardianDetails && {
+                        guardianDetails: {
+                            ...guardianFormValues,
+                            _id: row.guardianDetails._id // Keep the same ID
+                        }
+                    }),
+                    // Add guardian details if they didn't exist before but are needed now
+                    ...(needsGuardianDetails && !row.guardianDetails && {
+                        guardianDetails: {
+                            ...guardianFormValues,
+                            _id: generateUniqueId()
+                        }
+                    })
+                } : row
             )
         }));
     } else {
@@ -1961,18 +1967,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             ...prev,
             [currentTabKey]: [...(prev[currentTabKey] || []), newRow]
         }));
-           setIsMinor(false);
-        setGuardianFormValues(null)
-    
     }
     
-    // Reset edit state
+    // Reset states
+    setIsMinor(false);
+    setGuardianFormValues({});
     setEditTabModalData(false);
     setEditTabRowIndex(null);
     
     // Optionally clear form values for next entry
-    setTabFormValues(pre => ({
-        ...pre,
+    setTabFormValues(prev => ({
+        ...prev,
         [currentTabKey]: {}
     }));
     
@@ -1980,6 +1985,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 }
 
     const fetchGuardianFormData = async () => {
+        setGuardianLoading(true);
         const currentTab = tabsData[activeTabIndex];
         const guardianFormFetchAPI = currentTab?.Settings?.ChildEntryAPI;
         const currentTabKey = `tab_${activeTabIndex}`;
@@ -2017,7 +2023,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             </dsXml>`;
 
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-      const formData = response?.data?.data?.rs0[0].Data || [];
+      let formData = response?.data?.data?.rs0[0].Data || [];
+
+
+      if (editData && action === "view") {
+                formData = formData.map((field: any) => ({
+                    ...field,
+                    FieldEnabledTag: "N"
+                }));
+            }
 
       setGuardianFormData(formData)
       const initialValues: Record<string, any> = {};
@@ -2025,11 +2039,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         if (field.type === 'WDateBox' && field.wValue) {
           initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
         } else {
-          initialValues[field.wKey] = '';
+          initialValues[field.wKey] = guardianFormValues[field.wKey] || "";
         }
       });
       setGuardianFormValues(initialValues);
-
 
       
       await Promise.all(
@@ -2042,6 +2055,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     } catch (error) {
       console.error('Error fetching childEntry data:', error);
+    }finally{
+        setGuardianLoading(false);
     }
 
     }
@@ -2050,8 +2065,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setIsGuardianModalOpen(true)
         fetchGuardianFormData()
     }
-
-    
+ 
     const handleClearTabTableRowEntry = () => {
         const currentTab = tabsData[activeTabIndex];
         const currentTabKey = `tab_${activeTabIndex}`;
@@ -2145,7 +2159,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     {tabsData.map((tab, index) => (
                                                         <button
                                                             key={index}
-                                                            onClick={() => setActiveTabIndex(index)}
+                                                            // onClick={() => setActiveTabIndex(index)}
                                                             className={`py-2 px-4 border-b-2 font-medium text-sm ${activeTabIndex === index
                                                                 ? 'border-blue-500 text-blue-600'
                                                                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -2163,8 +2177,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 <div className="flex justify-end mb-4 gap-2">
                                                     {tabsData[activeTabIndex].Settings.isTable === "true" && (
                                                         <button
-                                                            className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
-                                                            onClick={() => setTabsModal(true)}
+                                                            className={`flex items-center gap-2 px-4 py-2 ${viewMode
+                                                            ? 'bg-gray-400 cursor-not-allowed'
+                                                            : 'bg-blue-500 hover:bg-blue-600'
+                                                            } text-white rounded-md`}
+                                                        onClick={() => setTabsModal(true)}
+                                                            disabled={action === "view" && editData}
                                                         >
                                                             Add Entry
                                                         </button>
@@ -2187,12 +2205,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     {
                                                         activeTabIndex === tabsData.length - 1 && (
                                                              <button
-                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode
+                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || !finalTabSubmitSuccess
                                                             ? 'bg-gray-400 cursor-not-allowed'
                                                             : 'bg-blue-500 hover:bg-blue-600'
                                                             } text-white rounded-md`}
                                                         onClick={FinalSubmitTabsFormData}
-                                                        disabled={isFormInvalid || viewMode || isFormSubmit}
+                                                        disabled={isFormInvalid || viewMode || isFormSubmit || !finalTabSubmitSuccess}
                                                     >
                                                         {isFormSubmit ? "Submitting..." : (
                                                             <>
@@ -2218,28 +2236,42 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                     ✕
                                                                 </button>
                                                             </div>
+                                                                {!isViewMode ? (
                                                             <div className='flex justify-end mb-2 gap-2'>
-                                                                <button
+                                                                      <button
                                                                     className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                     onClick={handleClearTabTableRowEntry}
                                                                 >
-                                                                    cancel
+                                                                    reset
                                                                 </button>
                                                                 <button
                                                                     className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                     onClick={handleAddTabsFormTableRow}
                                                                 >
-                                                                    Add
+                                                                    Save
                                                                 </button>
-                                                                {
+                                                                 {
                                                                     isMinor && (<button
                                                                     className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                     onClick={handleAddNominee}
                                                                 >
-                                                                    Add Guardian Details
+                                                                    Add/Edit Guardian 
                                                                 </button>)
                                                                 }
+                                                               
                                                             </div>
+                                                                ) : (
+                                                            <div className='flex justify-end mb-2 gap-2'>
+                                                                 {
+                                                                    isMinor && (<button
+                                                                    className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
+                                                                    onClick={handleAddNominee}
+                                                                >
+                                                                    View Guardian Details
+                                                                </button>)
+                                                                }
+                                                            </div>  
+                                                                )}
                                                             {(() => {
                                                                 const currentTab = tabsData[activeTabIndex];
                                                                 const groupedFormData: GroupedFormData[] = groupFormData(
@@ -2398,8 +2430,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 {(tabTableData[`tab_${activeTabIndex}`] || [])?.map((row, idx) => (
                                                                     <tr key={row._id}>
                                                                         <td className="px-4 py-2 border-b">
-                                                                            {/* Add Edit/Delete buttons here if needed */}
-                                                                            <div className="flex gap-2">
+                                                                                {viewMode ? (
+                                                                                    <button
+                                                                                    className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                    onClick={() => {
+                                                                                        handleTabTableDataEdit(row, idx);
+                                                                                    }}>
+                                                                                    view
+                                                                                </button>
+                                                                                ) : (
+                                                                                    <div className="flex gap-2">
                                                                                 <button
                                                                                     className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
                                                                                     onClick={() => {
@@ -2413,8 +2453,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                 >
                                                                                     Delete
                                                                                 </button>
-                                                                            </div>
-
+                                                                            </div>)}
                                                                         </td>
                                                                         {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
                                                                             <td key={col} className="px-4 py-2 border-b">{row[col] ?? "-"}</td>
@@ -2715,6 +2754,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fieldErrors={fieldErrors}
                 setFieldErrors={setFieldErrors}
                 onChildFormSubmit={handleGuardianFormSubmit}
+                isEdit={editTabModalData}
                />
             )}
         </>
