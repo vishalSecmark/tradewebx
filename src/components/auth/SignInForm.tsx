@@ -598,7 +598,8 @@ export default function SignInForm() {
 
         // For user type, refreshToken comes after OTP verification
         // For branch type, refreshToken comes in initial login response
-        if (userType.toLowerCase() === 'branch' && !data.refreshToken) {
+        // Exception: If branch user has LoginType "2FA", refreshToken will come after OTP verification
+        if (userType.toLowerCase() === 'branch' && !data.refreshToken && data.data[0].LoginType !== "2FA") {
           setError('Invalid response from server');
           dispatch(setAuthError('Invalid response from server'));
           return;
