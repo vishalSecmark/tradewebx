@@ -1850,16 +1850,23 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
 
         const allData = {
-            Master: [masterFormValues],
+            Master: [{ 
+                ...masterFormValues,
+                isInserted: action !== "edit",
+                isModified: action === "edit" && editData ? true : false
+            }],
         }
 
         if (currentTab.Settings.isTable === "true") {
             allData[currentTab.TabName] = tabTableData[currentTabKey] || []
         } else {
             allData[currentTab.TabName] = Object.keys(currentTabFormValues).length > 0
-                ? [currentTabFormValues]
+                ? [{
+                    ...currentTabFormValues,
+                    isInserted: action !== "edit",
+                    isModified: action === "edit" && editData ? true : false
+                  }]
                 : [];
-
         }
 
         const xDataJson = JSON.stringify(allData);
@@ -1978,7 +1985,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 else if (masterFormValues[key] || currentTabFormValues[key]) {
                     xFilterMultiple += `<${key}>${masterFormValues[key] || currentTabFormValues[key]}</${key}>`;
                 } else {
-                    xFilterMultiple += `<${key}></${key}>`;
+                    let finalValue = value;
+                    if (typeof value === 'string' && value.includes('##')) {
+                    // Replace placeholders with actual values
+                    finalValue = value.replace(/##(\w+)##/g, (match, placeholder) => {
+                        return currentTabFormValues[placeholder] || '';
+                    });
+                }
+                    xFilterMultiple += `<${key}>${finalValue}</${key}>`;
                 }
             });
 
@@ -2131,6 +2145,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     idx === editTabRowIndex ? {
                         ...currentTabFormValues,
                         _id: row._id,
+                        isModified: action === "edit" && editData ? true : false,
+                        isInserted: action !== "edit",
                         // Update guardian details if they exist and are being edited
                         ...(needsGuardianDetails && row.guardianDetails && {
                             guardianDetails: {
@@ -2153,6 +2169,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const newRow = {
                 ...currentTabFormValues,
                 _id: generateUniqueId(),
+                isModified: action === "edit" && editData ? true : false,
+                isInserted: action !== "edit",
                 // Only add guardian details if conditions are met
                 ...(needsGuardianDetails && {
                     guardianDetails: {
