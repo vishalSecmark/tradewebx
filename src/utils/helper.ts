@@ -351,8 +351,10 @@ const getEncryptionKey = (): string => {
 // Encrypt data using AES encryption
 export const encryptData = (data: string): string => {
     try {
-        if (!data) {
-            throw new Error('No data provided for encryption');
+        // Handle empty or undefined data gracefully
+        if (!data || data.trim() === '') {
+            console.warn('Empty data provided for encryption, returning empty string');
+            return '';
         }
 
         const key = getEncryptionKey();
