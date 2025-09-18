@@ -252,7 +252,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     console.log("check comp names", componentName, componentType)
     const menuItems = useAppSelector(selectAllMenuItems);
     const searchParams = useSearchParams();
-    const clientCode = decryptData(searchParams.get('clientCode'));
+    const clientCodeParam = searchParams.get('clientCode');
+    const clientCode = clientCodeParam ? decryptData(clientCodeParam) : null;
     const [currentLevel, setCurrentLevel] = useState(0);
     const [apiData, setApiData] = useState<any>(null);
     const [additionalTables, setAdditionalTables] = useState<Record<string, any[]>>({});
