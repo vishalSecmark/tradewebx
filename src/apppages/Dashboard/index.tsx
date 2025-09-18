@@ -51,21 +51,31 @@ function Card({ cardData, onRefresh, selectedClient, auth }: any) {
 
     // Helper function to generate proper link path for navigateTo values
     const getLinkPath = (navigateTo: string, queryParams?: Record<string, string>) => {
-        if (!navigateTo) return "";
+            if (!navigateTo) return "";
 
-        // Format the component name to match the dynamic routing pattern
-        // Convert PascalCase or regular text to kebab-case
-        const formattedPath = navigateTo
-            .replace(/([a-z])([A-Z])/g, '$1-$2')
-            .toLowerCase();
+            // Format the component name to match the dynamic routing pattern
+            const formattedPath = navigateTo
+                .replace(/([a-z])([A-Z])/g, '$1-$2')
+                .toLowerCase();
 
-        // If query parameters are provided, add them to the URL
-        if (queryParams) {
-            const queryString = new URLSearchParams(queryParams).toString();
-            return `/${formattedPath}?${queryString}`;
-        }
+            // If query parameters are provided, encrypt all values and add them to the URL
+            if (queryParams) {
+                // Encrypt all parameter values
+                const encryptedParams: Record<string, string> = {};
 
-        return `/${formattedPath}`;
+                Object.entries(queryParams).forEach(([key, value]) => {
+                    if (value) {
+                        encryptedParams[key] = encryptData(value);
+                    } else {
+                        encryptedParams[key] = value || '';
+                    }
+                });
+            
+                const queryString = new URLSearchParams(encryptedParams).toString();
+                return `/${formattedPath}?${queryString}`;
+            }
+        
+            return `/${formattedPath}`;
     };
 
     const renderPieChart = (pieData: any) => {
