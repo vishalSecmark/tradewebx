@@ -54,14 +54,24 @@ function Card({ cardData, onRefresh, selectedClient, auth }: any) {
         if (!navigateTo) return "";
 
         // Format the component name to match the dynamic routing pattern
-        // Convert PascalCase or regular text to kebab-case
         const formattedPath = navigateTo
             .replace(/([a-z])([A-Z])/g, '$1-$2')
             .toLowerCase();
 
-        // If query parameters are provided, add them to the URL
+        // If query parameters are provided, encrypt all values and add them to the URL
         if (queryParams) {
-            const queryString = new URLSearchParams(queryParams).toString();
+            // Encrypt all parameter values
+            const encryptedParams: Record<string, string> = {};
+
+            Object.entries(queryParams).forEach(([key, value]) => {
+                if (value && value.trim() !== '') {
+                    encryptedParams[key] = encryptData(value);
+                } else {
+                    encryptedParams[key] = value || '';
+                }
+            });
+
+            const queryString = new URLSearchParams(encryptedParams).toString();
             return `/${formattedPath}?${queryString}`;
         }
 
@@ -890,7 +900,7 @@ function Dashboard() {
                             </div>
                         </div>
 
-                        {selectedClient && (
+                        {selectedClient && selectedClient.value && (
                             <Link
                                 href={`/profile?userid=${encryptData(selectedClient.value)}`}
                                 style={{

@@ -21,7 +21,7 @@ import EditTableRowModal from './EditTableRowModal';
 import FormCreator from './FormCreator';
 import Loader from './Loader';
 import apiService from '@/utils/apiService';
-import { getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
+import { decryptData, getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
 import { toast } from "react-toastify";
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
@@ -252,7 +252,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     console.log("check comp names", componentName, componentType)
     const menuItems = useAppSelector(selectAllMenuItems);
     const searchParams = useSearchParams();
-    const clientCode = searchParams.get('clientCode');
+    const clientCodeParam = searchParams.get('clientCode');
+    const clientCode = clientCodeParam ? decryptData(clientCodeParam) : null;
     const [currentLevel, setCurrentLevel] = useState(0);
     const [apiData, setApiData] = useState<any>(null);
     const [additionalTables, setAdditionalTables] = useState<Record<string, any[]>>({});

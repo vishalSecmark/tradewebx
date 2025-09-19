@@ -367,6 +367,53 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         });
     }, [editableColumns]);
 
+    // Initialize dependent fields when modal opens and tableData is available
+    useEffect(() => {
+        if (isOpen && localData.length > 0) {
+            console.log('EditTableRowModal: Initializing dependent fields for table data:', localData);
+
+            // Initialize dependent fields for each row
+            localData.forEach((row, rowIndex) => {
+                editableColumns.forEach(column => {
+                    if (column.type === 'WDropDownBox' && column.dependsOn && !column.options) {
+                        let shouldInitialize = false;
+                        let parentFieldValue: any = null;
+
+                        if (Array.isArray(column.dependsOn.field)) {
+                            // Handle multiple dependencies
+                            const parentValues: Record<string, any> = {};
+                            let allFieldsHaveValues = true;
+
+                            column.dependsOn.field.forEach(fieldName => {
+                                const value = row[fieldName];
+                                parentValues[fieldName] = value;
+                                if (!value) {
+                                    allFieldsHaveValues = false;
+                                }
+                            });
+
+                            if (allFieldsHaveValues) {
+                                shouldInitialize = true;
+                                parentFieldValue = parentValues;
+                            }
+                        } else {
+                            // Handle single dependency
+                            parentFieldValue = row[column.dependsOn.field];
+                            if (parentFieldValue) {
+                                shouldInitialize = true;
+                            }
+                        }
+
+                        if (shouldInitialize) {
+                            console.log(`EditTableRowModal: Initializing dependent field ${column.wKey} for row ${rowIndex} with parent value:`, parentFieldValue);
+                            fetchDependentOptions(column, parentFieldValue, rowIndex);
+                        }
+                    }
+                });
+            });
+        }
+    }, [isOpen, localData, editableColumns]);
+
     // Console log EntryFormModal data when modal opens
     useEffect(() => {
         if (isEntryModalOpen && pageData) {

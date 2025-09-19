@@ -25,7 +25,8 @@ export default function UserMetaCard() {
     setIsLoading(true);
 
     // Get userid from URL parameters, fallback to localStorage
-    const urlUserId = decryptData(searchParams.get('userid'));
+    const urlUserIdParam = searchParams.get('userid');
+    const urlUserId = urlUserIdParam ? decryptData(urlUserIdParam) : null;
     const userData = {
       userId: getLocalStorage('userId') || ''
     };

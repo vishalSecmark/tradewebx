@@ -27,7 +27,7 @@ const initialState: CommonState = {
     companyLogo: '',
     companyName: '',
     status: 'idle',
-    encPayload: true,
+    encPayload: false,
     error: null,
     companyInfo: null,
 };
@@ -122,7 +122,7 @@ export const commonSlice = createSlice({
                 state.companyName = action.payload.CompanyName ? action.payload.CompanyName.trim() : '';
 
                 // Store EncPayload as boolean (Y = true, anything else = false)
-                state.encPayload = action.payload.EncPayload === 'Y';
+                state.encPayload = action.payload?.EncPayload === 'Y' || false;
 
                 // Save to localStorage for persistence
                 const appMetadata = {

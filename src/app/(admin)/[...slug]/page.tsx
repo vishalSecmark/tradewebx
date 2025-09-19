@@ -156,6 +156,15 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
           if (subItem.componentName?.toLowerCase() === componentName.toLowerCase()) {
             return subItem.componentType;
           }
+
+          // Check 3rd level menu items (subSubItems)
+          if (subItem.subItems) {
+            for (const subSubItem of subItem.subItems) {
+              if (subSubItem.componentName?.toLowerCase() === componentName.toLowerCase()) {
+                return subSubItem.componentType;
+              }
+            }
+          }
         }
       }
     }
@@ -163,12 +172,13 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   };
 
   const componentType = findComponentType(menuItems);
-
+  console.log('Component type:', componentType);
   // Fallback: if componentType is undefined, infer from componentName patterns
   const finalComponentType = componentType ||
-    (componentName.toLowerCase().includes('entry') ? 'entry' :
-      componentName.toLowerCase().includes('report') ? 'report' :
-        componentType);
+    (componentName.toLowerCase().includes('multientry') ? 'multientry' :
+      componentName.toLowerCase().includes('entry') ? 'entry' :
+        componentName.toLowerCase().includes('report') ? 'report' :
+          componentType);
 
   console.log('Using DynamicReportComponent for:', componentName, 'with type:', finalComponentType);
   return (

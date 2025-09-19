@@ -357,7 +357,10 @@ export default function SignInForm() {
     } else {
       // Set localStorage only
       storeLocalStorage('auth_token', currentLoginData.token);
-      storeLocalStorage('refreshToken', currentLoginData.refreshToken);
+      // Only store refresh token if it's not empty
+      if (currentLoginData.refreshToken) {
+        storeLocalStorage('refreshToken', currentLoginData.refreshToken);
+      }
       storeLocalStorage('tokenExpireTime', currentLoginData.tokenExpireTime);
       storeLocalStorage('temp_token', '');
       console.log('Redirecting to dashboard');
@@ -600,13 +603,11 @@ export default function SignInForm() {
           userType
         });
 
-        // For user type, refreshToken comes after OTP verification
-        // For branch type, refreshToken comes in initial login response
-        // Exception: If branch user has LoginType "2FA", refreshToken will come after OTP verification
-        if (userType.toLowerCase() === 'branch' && !data.refreshToken && data.data[0].LoginType !== "2FA") {
-          setError('Invalid response from server');
-          dispatch(setAuthError('Invalid response from server'));
-          return;
+        // Refresh token should be available for all users in the login response
+        // For 2FA users, refresh token will also be available after OTP verification
+        if (!data.refreshToken) {
+          console.warn('No refresh token received in login response');
+          // Don't throw error, just log warning as refresh token might come later for 2FA users
         }
 
         // Security: Clear login attempts on successful login
@@ -653,9 +654,12 @@ export default function SignInForm() {
           userType: userType
         });
 
-        // Only store refreshToken if it exists (for branch users)
+        // Store refreshToken if it exists (for all users)
         if (data.refreshToken) {
           storeLocalStorage('refreshToken', data.refreshToken);
+          console.log('Refresh token stored successfully:', data.refreshToken);
+        } else {
+          console.warn('No refresh token in login response');
         }
         storeLocalStorage('tokenExpireTime', data.tokenExpireTime);
         storeLocalStorage('clientCode', clientCode);

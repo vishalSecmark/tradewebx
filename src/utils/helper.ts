@@ -336,6 +336,12 @@ export const decodeFernetToken = (data: string) => {
 
 // Encryption key - in production, this should be derived from user session or other secure method
 const getEncryptionKey = (): string => {
+    // Check if we're running in a browser environment
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || typeof screen === 'undefined') {
+        // Fallback key for server-side rendering
+        return CryptoJS.SHA256('tradewebx_secure_key_ssr_fallback').toString();
+    }
+
     // You can modify this to use a more secure key generation method
     // For now, using a combination of browser fingerprint and a constant
     const browserFingerprint = navigator.userAgent + navigator.language + screen.width + screen.height;
@@ -345,7 +351,17 @@ const getEncryptionKey = (): string => {
 // Encrypt data using AES encryption
 export const encryptData = (data: string): string => {
     try {
+        // Handle empty or undefined data gracefully
+        if (!data || data.trim() === '') {
+            console.warn('Empty data provided for encryption, returning empty string');
+            return '';
+        }
+
         const key = getEncryptionKey();
+        if (!key) {
+            throw new Error('Failed to generate encryption key');
+        }
+
         const encrypted = CryptoJS.AES.encrypt(data, key).toString();
         return encrypted;
     } catch (error) {
@@ -355,14 +371,27 @@ export const encryptData = (data: string): string => {
 };
 
 // Decrypt data using AES decryption
-export const decryptData = (encryptedData: string): string => {
+export const decryptData = (encryptedData: string): string | null => {
     try {
+        if (!encryptedData) {
+            return null; // Return null instead of throwing error for empty data
+        }
+
         const key = getEncryptionKey();
+        if (!key) {
+            throw new Error('Failed to generate encryption key');
+        }
+
         const decrypted = CryptoJS.AES.decrypt(encryptedData, key).toString(CryptoJS.enc.Utf8);
+
+        if (!decrypted) {
+            throw new Error('Failed to decrypt data - invalid key or corrupted data');
+        }
+
         return decrypted;
     } catch (error) {
         console.error('Decryption error:', error);
-        throw new Error('Failed to decrypt data');
+        return null; // Return null instead of throwing error for graceful handling
     }
 };
 
@@ -378,6 +407,9 @@ const getEncryptedStorageData = (): Record<string, string> => {
             return {};
         }
         const decryptedData = decryptData(encryptedData);
+        if (!decryptedData) {
+            return {};
+        }
         return JSON.parse(decryptedData);
     } catch (error) {
         console.error("Error getting encrypted storage data:", error);
