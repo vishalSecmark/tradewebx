@@ -2410,7 +2410,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </button>
                                                         )}
                                                     </div>
-                                                    {tabsData[activeTabIndex].Settings.isTable === "true" && (
+                                                    {
+                                                        isViewMode ?  (
+                                                            <div>
+                                                                {!(activeTabIndex === tabsData.length - 1) && 
+                                                                
+                                                                <Button
+                                                                    className={`flex items-center bg-blue-500 hover:bg-blue-600 text-white`}
+                                                                    onClick={() => setActiveTabIndex((prev) => prev + 1)}>
+                                                                         Next
+                                                                 </Button>
+                                                                }
+                                                                 
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex gap-2">
+                                                                {tabsData[activeTabIndex].Settings.isTable === "true" && (
                                                         <Button
                                                             className={`flex items-center ${viewMode
                                                                 ? 'bg-gray-400 cursor-not-allowed'
@@ -2456,6 +2471,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </Button>
                                                         )
                                                     }
+                                                            </div>
+                                                        )
+                                                    }
+                                                    
                                                 </div>
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
