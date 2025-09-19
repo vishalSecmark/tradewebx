@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import { FaPlus, FaSave } from 'react-icons/fa';
@@ -13,30 +12,11 @@ import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
-import { groupFormData } from './component-forms/form-helper/utils';
+import { generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
 import { getLocalStorage } from '@/utils/helper';
-
-
-
-const validateForm = (formData, formValues) => {
-    const errors = {};
-
-    formData.forEach(field => {
-        if (field.FieldEnabledTag === "Y" && field.isMandatory === "true" && field.type !== "WDisplayBox") {
-            if (!formValues[field.wKey] || formValues[field.wKey]?.toString()?.trim() === "") {
-                errors[field.wKey] = `${field.label} is required`;
-            }
-        }
-    });
-
-    return errors;
-};
-
-
-// Helper function to generate unique ID
-const generateUniqueId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
+import { useTheme } from '@/context/ThemeContext';
+import Button from './ui/button/Button';
+import { DataGrid } from 'react-data-grid';
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
@@ -122,26 +102,26 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                 ) : (
                     <>
                         <div className="text-end mt-5">
-                            <button
+                            <Button
                                 onClick={resetChildForm}
-                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                className={`mr-2 ${viewAccess
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white'
                                     }`}
                                 disabled={viewAccess}
                             >
                                 Reset
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleFormSubmit}
                                 disabled={viewAccess || isChildInvalid}
-                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
+                                className={`${(viewAccess || isChildInvalid)
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
                             >
                                 Submit
-                            </button>
+                            </Button>
                         </div>
                         <EntryForm
                             formData={formData}
@@ -221,26 +201,26 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                 ) : (
                     <>
                         <div className="text-end mt-1 mb-2">
-                            <button
+                            <Button
                                 onClick={resetChildForm}
-                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                className={`mr-2 ${viewAccess
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white'
                                     }`}
                                 disabled={viewAccess}
                             >
                                 Reset
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleFormSubmit}
                                 disabled={viewAccess || isChildInvalid}
-                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
+                                className={`${(viewAccess || isChildInvalid)
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
                             >
                                 Submit
-                            </button>
+                            </Button>
                         </div>
                         <div>
                             {(() => {
@@ -300,7 +280,8 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
         </div>
     );
 };
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100', pageName }) => {
+    const {colors,fonts} = useTheme()
     const [formSubmitConfirmation, setFormSubmitConfirmation] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
@@ -345,6 +326,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [guardianLoadingDropdowns, setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [guardianLoading, setGuardianLoading] = useState(false);
     const [finalTabSubmitSuccess, setFinalTabSubmitSuccess] = useState(false);
+    const [filtersValueObject,setFiltersValueObject] = useState<Record<string,any>>({});
 
     console.log("<------------------check data--------------------->", tabTableData)
     console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
@@ -418,6 +400,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     }
                 });
             }
+            const filtersObject = parseXMLStringToObject(xFilter);
+            setFiltersValueObject(filtersObject);
 
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
@@ -443,6 +427,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 );
 
                 // Set up master form data from Master tab
+                const initialMasterValues: Record<string, any> = {};
                 if (masterTab) {
                     let masterFormData = masterTab.Data || [];
                     const masterTableData = masterTab?.tableData[0] || [];
@@ -458,7 +443,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     setMasterFormData(masterFormData);
 
                     // Initialize master form values with any preset values
-                    const initialMasterValues: Record<string, any> = {};
                     masterFormData.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialMasterValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
@@ -609,7 +593,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                             if (shouldInitialize) {
                                 console.log(`Initializing dependent tab field ${field.wKey} with parent value:`, parentFieldValue);
-                                fetchTabsDependentOptions(field, tabKey);
+                                fetchTabsDependentOptions(field, tabKey,initialTabFormValues,initialMasterValues);
                             }
                         }
                     });
@@ -851,11 +835,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             });
                         } else {
                             // Normal case - fieldName is already a single field name
-                            if (!childFormValues[fieldName] && !masterFormValues[fieldName]) {
+                            if (!childFormValues[fieldName] && !masterFormValues[fieldName] && !parentValue) {
                                 toast.error(`Please select the field: ${fieldName}`);
                                 return;
                             }
-                            xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
+                            xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || parentValue ||''}</${fieldName}>`;
                         }
                     });
                 } else {
@@ -878,10 +862,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }));
 
             setDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
-
-            //setting the dependent field value to empty if master dropdown values is changed to reselect the value
-            // setDependentfieldEmpty(prev => ({ ...prev, [field.wKey]: '' }));
-
         } catch (error) {
             console.error(`Error fetching dependent options for ${field.wKey}:`, error);
         } finally {
@@ -889,7 +869,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const fetchTabsDependentOptions = async (field: FormField, tabKey: string) => {
+    const fetchTabsDependentOptions = async (field: FormField, tabKey: string, tabFormValues: any , masterFormValues : any) => {
         if (!field.dependsOn) return;
         try {
             setTabLoadingDropdowns(prev => ({
@@ -1041,6 +1021,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     xFilter += `<${key}>${value}</${key}>`;
                 }
             });
+            const filtersObject = parseXMLStringToObject(xFilter);
+            setFiltersValueObject(filtersObject);
+
 
             // Add any additional fields from editData that aren't in masterEntry.X_Filter
             if (editData) {
@@ -1805,7 +1788,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         if (field.dependsOn) {
             if (Array.isArray(field.dependsOn.field)) {
                 // Handle dependent dropdowns for tabs if needed
-                fetchTabsDependentOptions(field, tabKey);
+                fetchTabsDependentOptions(field, tabKey,tabFormValues,masterFormValues);
             }
         }
     };
@@ -1910,12 +1893,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (response?.data?.success) {
                 toast.success('Tab form submitted successfully!');
                 setIsFormSubmit(false);
-
+                const nextIndex = activeTabIndex + 1
                 // Check if there are more tabs to navigate to
                 if (activeTabIndex < tabsData.length - 1) {
-                    setActiveTabIndex(activeTabIndex + 1);
-                    // toast.info(`Moved to next tab: ${tabsData[activeTabIndex + 1].TabName}`);
-                } else {
+                    setActiveTabIndex(nextIndex);
+                  } else {
                     setFinalTabSubmitSuccess(true)
                     // All tabs completed, close modal
                     // resetTabsForm();
@@ -2325,32 +2307,40 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         <>
             {isOpen && (
                 <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold">
-                                {isTabs
-                                    ? `${isEdit ? "Edit " : "Add "}Master Form`
-                                    : `${isEdit ? "Edit " : "Add "}Entry Form`
-                                }
-                            </h2>
-                            <button
-                                onClick={() => { resetParentForm() }}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                ✕
-                            </button>
+                    <div className="bg-white rounded-lg w-full max-w-[80vw] min-h-[75vh] max-h-[75vh] flex flex-col">
+                        <div className="sticky top-0 bg-white z-10 px-6 pt-6">
+                            <div className="flex justify-between items-center mb-4 border-b pb-4">
+                                <div>
+                                    <h2 className="text-xl font-semibold">
+                                        {pageName}
+                                    </h2>
+                                    {(Object.keys(filtersValueObject).length > 0 && editData && action === "edit" )&& (
+                                        <div className="text-sm text-gray-600 mt-1">
+                                            {Object.entries(filtersValueObject).map(([key, value], index) => (
+                                                <span key={key} className="mr-3">
+                                                    {key}: {value}
+                                                    {index < Object.entries(filtersValueObject).length - 1 ? ',' : ''}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => { resetParentForm() }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
-
-                        {isLoading ? (
+                        <div className="flex-1 overflow-y-auto px-6 pb-6">
+                            {isLoading ? (
                             <div className="text-center py-4">Loading...</div>
                         ) : isTabs ? (
                             // Tabs-based form rendering with Master always shown first
                             <>
                                 {/* Master Form - Always visible at top */}
                                 <div className="mb-8">
-                                    {/* <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                                        <h3 className="text-lg font-semibold text-blue-800">Master</h3>
-                                    </div> */}
                                     <EntryForm
                                         formData={masterFormData}
                                         formValues={masterFormValues}
@@ -2371,20 +2361,35 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 {tabsData.length > 0 && (
                                     <div className="border-t pt-6">
                                         <div className="mb-6 relative">
-                                            <div className="border-b border-gray-200 overflow-x-auto" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                                                <nav className="-mb-px flex items-center space-x-8 min-w-max px-4">
-                                                    {tabsData.map((tab, index) => (
-                                                        <button
-                                                            key={index}
-                                                            // onClick={() => setActiveTabIndex(index)}
-                                                            className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${activeTabIndex === index
-                                                                ? 'border-blue-500 text-blue-600'
-                                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            <div className="overflow-x-auto" style={{ 
+                                                msOverflowStyle: 'none', 
+                                                scrollbarWidth: 'none',
+                                                borderBottom: `1px solid ${colors.textInputBorder}`,
+                                                backgroundColor: colors.background
+                                            }}>
+                                                <nav className="-mb-px flex items-center min-w-max px-4 gap-1">
+                                                    {tabsData.map((tab, index) => {
+                                                        const isActive = activeTabIndex === index;
+                                                        return (
+                                                            <button
+                                                                key={index}
+                                                                // onClick={() => setActiveTabIndex(index)}
+                                                                className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
+                                                                    isActive 
+                                                                    ? 'text-opacity-100' 
+                                                                    : 'text-opacity-70 hover:text-opacity-100'
                                                                 }`}
-                                                        >
-                                                            {tab.TabName}
-                                                        </button>
-                                                    ))}
+                                                                style={{
+                                                                    backgroundColor: isActive ? colors.tabBackground : 'transparent',
+                                                                    color: colors.tabText,
+                                                                    borderColor: isActive ? colors.primary : 'transparent',
+                                                                    boxShadow: isActive ? `0 1px 3px ${colors.primary}20` : 'none'
+                                                                }}
+                                                            >
+                                                                {tab.TabName}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </nav>
                                             </div>
                                         </div>
@@ -2406,22 +2411,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         )}
                                                     </div>
                                                     {tabsData[activeTabIndex].Settings.isTable === "true" && (
-                                                        <button
-                                                            className={`flex items-center gap-2 px-4 py-2 ${viewMode
+                                                        <Button
+                                                            className={`flex items-center ${viewMode
                                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                                 : 'bg-blue-500 hover:bg-blue-600'
-                                                                } text-white rounded-md`}
+                                                                } text-white`}
                                                             onClick={() => setTabsModal(true)}
                                                             disabled={action === "view" && editData}
                                                         >
                                                             Add Entry
-                                                        </button>
+                                                        </Button>
                                                     )}
-                                                    <button
-                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode
+                                                    <Button
+                                                        className={`flex items-center ${isFormInvalid || viewMode
                                                             ? 'bg-gray-400 cursor-not-allowed'
                                                             : 'bg-blue-500 hover:bg-blue-600'
-                                                            } text-white rounded-md`}
+                                                            } text-white`}
                                                         onClick={submitTabsFormData}
                                                         disabled={isFormInvalid || viewMode || isFormSubmit}
                                                     >
@@ -2431,14 +2436,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 {activeTabIndex < tabsData.length - 1 ? "Save & Next" : "Save"}
                                                             </>
                                                         )}
-                                                    </button>
+                                                    </Button>
                                                     {
                                                         activeTabIndex === tabsData.length - 1 && (
-                                                            <button
-                                                                className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || !finalTabSubmitSuccess
+                                                            <Button
+                                                                className={`flex items-center ${isFormInvalid || viewMode || !finalTabSubmitSuccess
                                                                     ? 'bg-gray-400 cursor-not-allowed'
                                                                     : 'bg-blue-500 hover:bg-blue-600'
-                                                                    } text-white rounded-md`}
+                                                                    } text-white`}
                                                                 onClick={FinalSubmitTabsFormData}
                                                                 disabled={isFormInvalid || viewMode || isFormSubmit || !finalTabSubmitSuccess}
                                                             >
@@ -2448,16 +2453,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         {"Final Submit"}
                                                                     </>
                                                                 )}
-                                                            </button>
+                                                            </Button>
                                                         )
                                                     }
                                                 </div>
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
                                                         <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                                                            <div className="flex justify-between items-center mb-4">
+                                                            <div className="flex justify-between items-center">
                                                                 <h2 className="text-xl font-semibold">
-                                                                    {editTabModalData ? 'Edit Data' : "Add Data"}
+                                                                    {tabsData[activeTabIndex]?.TabName || "Add Record"}
                                                                 </h2>
                                                                 <button
                                                                     onClick={() => setTabsModal(false)}
@@ -2468,37 +2473,37 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </div>
                                                             {!isViewMode ? (
                                                                 <div className='flex justify-end mb-2 gap-2'>
-                                                                    <button
+                                                                    <Button
                                                                         className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                         onClick={handleClearTabTableRowEntry}
                                                                     >
                                                                         reset
-                                                                    </button>
-                                                                    <button
+                                                                    </Button>
+                                                                    <Button
                                                                         className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                         onClick={handleAddTabsFormTableRow}
                                                                     >
                                                                         Save
-                                                                    </button>
+                                                                    </Button>
                                                                     {
-                                                                        isMinor && (<button
+                                                                        isMinor && (<Button
                                                                             className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                             onClick={handleAddNominee}
                                                                         >
                                                                             Add/Edit Guardian
-                                                                        </button>)
+                                                                        </Button>)
                                                                     }
 
                                                                 </div>
                                                             ) : (
                                                                 <div className='flex justify-end mb-2 gap-2'>
                                                                     {
-                                                                        isMinor && (<button
+                                                                        isMinor && (<Button
                                                                             className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                             onClick={handleAddNominee}
                                                                         >
                                                                             View Guardian Details
-                                                                        </button>)
+                                                                        </Button>)
                                                                     }
                                                                 </div>
                                                             )}
@@ -2647,51 +2652,58 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                                 {tabsData[activeTabIndex]?.Settings?.isTable === "true" && (
                                                     <div className="overflow-x-auto mt-4">
-                                                        <table className="min-w-full bg-white border border-gray-200">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th className="px-4 py-2 border-b">Actions</th>
-                                                                    {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
-                                                                        <th key={col} className="px-4 py-2 border-b capitalize">{col}</th>
-                                                                    ))}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {(tabTableData[`tab_${activeTabIndex}`] || [])?.map((row, idx) => (
-                                                                    <tr key={row._id}>
-                                                                        <td className="px-4 py-2 border-b">
-                                                                            {viewMode ? (
-                                                                                <button
-                                                                                    className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                    onClick={() => {
-                                                                                        handleTabTableDataEdit(row, idx);
-                                                                                    }}>
-                                                                                    view
-                                                                                </button>
-                                                                            ) : (
-                                                                                <div className="flex gap-2">
-                                                                                    <button
-                                                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                        onClick={() => {
-                                                                                            handleTabTableDataEdit(row, idx);
-                                                                                        }}>
-                                                                                        Edit
-                                                                                    </button>
-                                                                                    <button
-                                                                                        className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
-                                                                                        onClick={() => handleTabTableDataDelete(idx)}
-                                                                                    >
-                                                                                        Delete
-                                                                                    </button>
-                                                                                </div>)}
-                                                                        </td>
-                                                                        {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
-                                                                            <td key={col} className="px-4 py-2 border-b">{row[col] ?? "-"}</td>
-                                                                        ))}
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
+                                                    <DataGrid
+                                                        columns={[
+                                                            {
+                                                                key: 'actions',
+                                                                name: 'Actions',
+                                                                width: 230,
+                                                                renderCell: ({ row } :any) => (
+                                                                    viewMode ? (
+                                                                        <button
+                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                            onClick={() => {
+                                                                                handleTabTableDataEdit(row,  row._index);
+                                                                            }}>
+                                                                            view
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                onClick={() => {
+                                                                                    handleTabTableDataEdit(row,  row._index);
+                                                                                }}>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button
+                                                                                className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
+                                                                                onClick={() => handleTabTableDataDelete( row._index)}
+                                                                            >
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    )
+                                                                )
+                                                            },
+                                                            ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
+                                                                key: col,
+                                                                name: col
+                                                            }))
+                                                        ]}
+                                                        rows={(tabTableData[`tab_${activeTabIndex}`] || []).map((row, index) => ({
+                                                                ...row,
+                                                                _index: index
+                                                              }))}
+                                                        className="rdg-light"
+                                                        rowHeight={40}
+                                                        headerRowHeight={40}
+                                                        style={{
+                                                            backgroundColor: colors.background,
+                                                            color: colors.text,
+                                                            fontFamily: fonts.content,
+                                                        }}
+                                                    />
                                                     </div>
                                                 )}
                                             </>
@@ -2739,9 +2751,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                             <>
                                                 <h3 className="text-lg font-semibold">Child Entries</h3>
                                                 <div className="flex gap-3">
-                                                    <button
+                                                    <Button
                                                         onClick={handleAddChildEntry}
-                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
+                                                        className={`flex items-center ${isFormInvalid || viewMode || isThereChildEntry
                                                             ? 'bg-gray-400 cursor-not-allowed'
                                                             : 'bg-blue-500 hover:bg-blue-600'
                                                             } text-white rounded-md`}
@@ -2752,9 +2764,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 <FaPlus /> Add Entry
                                                             </>
                                                         )}
-                                                    </button>
-                                                    <button
-                                                        className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                                    </Button>
+                                                    <Button
+                                                        className={`flex items-center ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
                                                         onClick={() => {
                                                             handleFormSubmitWhenMasterOnly()
                                                         }}
@@ -2766,147 +2778,114 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </>
                                                         )}
 
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </>
                                         )}
-
-
                                     </div>
-                                    {!isThereChildEntry && (
-                                        <div className="overflow-x-auto">
-                                            <table className="min-w-full bg-white border border-gray-200">
-                                                <thead>
-                                                    <tr>
-                                                        {/* Static headers */}
-                                                        <th className="px-4 py-2 border-b" style={{ width: columnWidthMap['Sr. No'] || 'auto', minWidth: columnWidthMap['Sr. No'] ? '50px' : '80px' }}>Sr. No</th>
-                                                        <th className="px-4 py-2 border-b" style={{ width: columnWidthMap['Actions'] || 'auto', minWidth: columnWidthMap['Actions'] ? '50px' : '120px' }}>Actions</th>
-
-                                                        {/* Dynamic headers - get all unique keys from the first entry */}
-                                                        {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
-                                                            key !== "SerialNo" && // Exclude SerialNo as it has its own column
-                                                            <th
-                                                                key={key}
-                                                                className="px-4 py-2 border-b capitalize"
-                                                                style={{
-                                                                    width: columnWidthMap[key] || 'auto',
-                                                                    minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
-                                                                    maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px'
-                                                                }}
+                                        {(!isThereChildEntry && childEntriesTable?.length > 0) && (
+                                          <div className="overflow-x-auto">
+                                            <DataGrid
+                                              columns={[
+                                                {
+                                                  key: "srno",
+                                                  name: "Sr. No",
+                                                  width: columnWidthMap["Sr. No"] || 80,
+                                                  renderCell: ({ row }) => row._index + 1,
+                                                },
+                                                {
+                                                  key: "actions",
+                                                  name: "Actions",
+                                                  width: columnWidthMap["Actions"] || 250,
+                                                  renderCell: ({ row }) => (
+                                                    <div className="flex gap-1 justify-center">
+                                                      {viewMode && (
+                                                        <button
+                                                          className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                          onClick={() => {
+                                                            setChildFormValues(row);
+                                                            handleChildEditNonSavedData(row);
+                                                          }}
+                                                        >
+                                                          View
+                                                        </button>
+                                                      )}
+                                                      <button
+                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors ${
+                                                          viewMode
+                                                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                            : "bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700"
+                                                        }`}
+                                                        onClick={() => {
+                                                          setChildFormValues(row);
+                                                          handleChildEditNonSavedData(row);
+                                                        }}
+                                                        disabled={viewMode}
+                                                      >
+                                                        Edit
+                                                      </button>
+                                                      <button
+                                                        className={`px-3 py-1 rounded-md transition-colors ${
+                                                          viewMode
+                                                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                            : "bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700"
+                                                        }`}
+                                                        onClick={() => {
+                                                          setChildFormValues(row);
+                                                          setIsConfirmationModalOpen(true);
+                                                        }}
+                                                        disabled={viewMode}
+                                                      >
+                                                        Delete
+                                                      </button>
+                                                    </div>
+                                                  ),
+                                                },
+                                                ...(childEntriesTable.length > 0
+                                                  ? Object.keys(childEntriesTable[0])
+                                                      .filter((key) => key !== "SerialNo") // Exclude SerialNo
+                                                      .map((key) => ({
+                                                        key,
+                                                        name: key,
+                                                        width: columnWidthMap[key] || 150,
+                                                        renderCell: ({ row }) => {
+                                                          const value =
+                                                            row[key] == null || row[key] === "" ? "-" : String(row[key]);
+                                                          return (
+                                                            <div
+                                                              className="truncate text-center"
+                                                              title={value}
+                                                              style={{
+                                                                whiteSpace: "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                              }}
                                                             >
-                                                                {key}
-                                                            </th>
-                                                        ))}
-
-                                                        {/* Static headers */}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {childEntriesTable.map((entry, index) => {
-                                                        // Create a safe entry object with all dynamic columns initialized
-                                                        const safeEntry = { ...entry };
-                                                        dynamicColumns.forEach(col => {
-                                                            if (!(col in safeEntry)) {
-                                                                safeEntry[col] = "";
-                                                            }
-                                                        });
-
-                                                        return (
-                                                            <tr key={index}>
-                                                                {/* Serial number */}
-                                                                <td
-                                                                    className="px-4 py-2 border-b text-center"
-                                                                    style={{
-                                                                        width: columnWidthMap['Sr. No'] || 'auto',
-                                                                        minWidth: columnWidthMap['Sr. No'] ? '50px' : '80px'
-                                                                    }}
-                                                                >
-                                                                    {index + 1}
-                                                                </td>
-
-                                                                {/* Actions */}
-                                                                <td
-                                                                    className="px-4 py-2 text-center border-b"
-                                                                    style={{
-                                                                        width: columnWidthMap['Actions'] || 'auto',
-                                                                        minWidth: columnWidthMap['Actions'] ? '50px' : '120px'
-                                                                    }}
-                                                                >
-                                                                    <div className='flex gap-1'>
-                                                                        {viewMode && (
-                                                                            <button
-                                                                                className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
-                                                                                onClick={() => {
-                                                                                    setChildFormValues(entry);
-                                                                                    handleChildEditNonSavedData(entry);
-                                                                                }}
-                                                                            >
-                                                                                view
-                                                                            </button>
-                                                                        )}
-                                                                        <button
-                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                                : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
-                                                                                }`}
-                                                                            onClick={() => {
-                                                                                setChildFormValues(entry);
-                                                                                handleChildEditNonSavedData(entry);
-
-                                                                            }}
-                                                                            disabled={viewMode}
-                                                                        >
-                                                                            Edit
-                                                                        </button>
-                                                                        <button
-                                                                            className={`px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                                : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
-                                                                                }`}
-                                                                            onClick={() => {
-                                                                                setChildFormValues(entry);
-                                                                                setIsConfirmationModalOpen(true);
-                                                                            }}
-                                                                            disabled={viewMode}
-                                                                        >
-                                                                            Delete
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-
-                                                                {/* Dynamic values */}
-                                                                {dynamicColumns.map((key) => {
-                                                                    const cellValue = safeEntry[key] == null || safeEntry[key] === "" ? "-" : String(safeEntry[key]);
-
-                                                                    return (
-                                                                        <td
-                                                                            key={key}
-                                                                            className="px-4 py-2 border-b text-center truncate"
-                                                                            style={{
-                                                                                width: columnWidthMap[key] || 'auto',
-                                                                                minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
-                                                                                maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px',
-                                                                                whiteSpace: 'nowrap',
-                                                                                overflow: 'hidden',
-                                                                                textOverflow: 'ellipsis',
-                                                                            }}
-                                                                            title={cellValue} // Show full text on hover
-                                                                        >
-                                                                            {cellValue}
-                                                                        </td>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-
+                                                              {value}
+                                                            </div>
+                                                          );
+                                                        },
+                                                      }))
+                                                  : []),
+                                              ]}
+                                              rows={childEntriesTable.map((entry, index) => ({
+                                                ...entry,
+                                                _index: index, // 👈 attach index here
+                                              }))}
+                                              className="rdg-light"
+                                              rowHeight={40}
+                                              headerRowHeight={40}
+                                              style={{
+                                                backgroundColor: "white",
+                                                fontFamily: "inherit",
+                                              }}
+                                            />
+                                          </div>
+                                        )}
                                 </div>
                             </>
                         )}
+                        </div>
                     </div>
                 </div>
             )}
