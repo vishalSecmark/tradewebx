@@ -316,7 +316,9 @@ export default function SignInForm() {
       });
 
       console.log('Version check response:', response.data);
-      return response.data;
+      const shouldDecode = ENABLE_FERNET && encPayload;
+      const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
+      return data;
     } catch (error) {
       console.error('Version check error:', error);
       throw error;
@@ -468,7 +470,9 @@ export default function SignInForm() {
       console.log('Version update response:', response.data);
 
       // Check if update was successful
-      if (response.data.success) {
+      const shouldDecode = ENABLE_FERNET && encPayload;
+      const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
+      if (data.success) {
         setShowVersionModal(false);
         setIsUpdating(false);
         // Only proceed with login after successful update
