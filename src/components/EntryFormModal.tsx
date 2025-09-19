@@ -16,6 +16,7 @@ import { generateUniqueId, groupFormData, parseXMLStringToObject, validateForm }
 import { getLocalStorage } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
+import { DataGrid } from 'react-data-grid';
 
 
 
@@ -283,7 +284,7 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
     );
 };
 const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100', pageName }) => {
-    const {colors} = useTheme()
+    const {colors,fonts} = useTheme()
     const [formSubmitConfirmation, setFormSubmitConfirmation] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
@@ -1023,6 +1024,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     xFilter += `<${key}>${value}</${key}>`;
                 }
             });
+            const filtersObject = parseXMLStringToObject(xFilter);
+            setFiltersValueObject(filtersObject);
+
 
             // Add any additional fields from editData that aren't in masterEntry.X_Filter
             if (editData) {
@@ -2314,7 +2318,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     <h2 className="text-xl font-semibold">
                                         {pageName}
                                     </h2>
-                                    {Object.keys(filtersValueObject).length > 0 && (
+                                    {(Object.keys(filtersValueObject).length > 0 && editData && action === "edit" )&& (
                                         <div className="text-sm text-gray-600 mt-1">
                                             {Object.entries(filtersValueObject).map(([key, value], index) => (
                                                 <span key={key} className="mr-3">
@@ -2460,9 +2464,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
                                                         <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                                                            <div className="flex justify-between items-center mb-4">
+                                                            <div className="flex justify-between items-center">
                                                                 <h2 className="text-xl font-semibold">
-                                                                    {editTabModalData ? 'Edit Data' : "Add Data"}
+                                                                    {tabsData[activeTabIndex]?.TabName || "Add Record"}
                                                                 </h2>
                                                                 <button
                                                                     onClick={() => setTabsModal(false)}
@@ -2652,51 +2656,57 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                                 {tabsData[activeTabIndex]?.Settings?.isTable === "true" && (
                                                     <div className="overflow-x-auto mt-4">
-                                                        <table className="min-w-full bg-white border border-gray-200">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th className="px-4 py-2 border-b">Actions</th>
-                                                                    {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
-                                                                        <th key={col} className="px-4 py-2 border-b capitalize">{col}</th>
-                                                                    ))}
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {(tabTableData[`tab_${activeTabIndex}`] || [])?.map((row, idx) => (
-                                                                    <tr key={row._id}>
-                                                                        <td className="px-4 py-2 border-b">
-                                                                            {viewMode ? (
-                                                                                <button
-                                                                                    className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                    onClick={() => {
-                                                                                        handleTabTableDataEdit(row, idx);
-                                                                                    }}>
-                                                                                    view
-                                                                                </button>
-                                                                            ) : (
-                                                                                <div className="flex gap-2">
-                                                                                    <button
-                                                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                        onClick={() => {
-                                                                                            handleTabTableDataEdit(row, idx);
-                                                                                        }}>
-                                                                                        Edit
-                                                                                    </button>
-                                                                                    <button
-                                                                                        className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
-                                                                                        onClick={() => handleTabTableDataDelete(idx)}
-                                                                                    >
-                                                                                        Delete
-                                                                                    </button>
-                                                                                </div>)}
-                                                                        </td>
-                                                                        {getTabTableColumns(tabsData[activeTabIndex]).map(col => (
-                                                                            <td key={col} className="px-4 py-2 border-b">{row[col] ?? "-"}</td>
-                                                                        ))}
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
+                                                    <DataGrid
+                                                        columns={[
+                                                            {
+                                                                key: 'actions',
+                                                                name: 'Actions',
+                                                                renderCell: ({ row } :any) => (
+                                                                    viewMode ? (
+                                                                        <button
+                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                            onClick={() => {
+                                                                                handleTabTableDataEdit(row,  row._index);
+                                                                            }}>
+                                                                            view
+                                                                        </button>
+                                                                    ) : (
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                onClick={() => {
+                                                                                    handleTabTableDataEdit(row,  row._index);
+                                                                                }}>
+                                                                                Edit
+                                                                            </button>
+                                                                            <button
+                                                                                className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
+                                                                                onClick={() => handleTabTableDataDelete( row._index)}
+                                                                            >
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+                                                                    )
+                                                                )
+                                                            },
+                                                            ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
+                                                                key: col,
+                                                                name: col
+                                                            }))
+                                                        ]}
+                                                        rows={(tabTableData[`tab_${activeTabIndex}`] || []).map((row, index) => ({
+                                                                ...row,
+                                                                _index: index
+                                                              }))}
+                                                        className="rdg-light"
+                                                        rowHeight={40}
+                                                        headerRowHeight={40}
+                                                        style={{
+                                                            backgroundColor: colors.background,
+                                                            color: colors.text,
+                                                            fontFamily: fonts.content,
+                                                        }}
+                                                    />
                                                     </div>
                                                 )}
                                             </>
@@ -2744,9 +2754,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                             <>
                                                 <h3 className="text-lg font-semibold">Child Entries</h3>
                                                 <div className="flex gap-3">
-                                                    <button
+                                                    <Button
                                                         onClick={handleAddChildEntry}
-                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || isThereChildEntry
+                                                        className={`flex items-center ${isFormInvalid || viewMode || isThereChildEntry
                                                             ? 'bg-gray-400 cursor-not-allowed'
                                                             : 'bg-blue-500 hover:bg-blue-600'
                                                             } text-white rounded-md`}
@@ -2757,9 +2767,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 <FaPlus /> Add Entry
                                                             </>
                                                         )}
-                                                    </button>
-                                                    <button
-                                                        className={`flex items-center gap-2 px-4 py-2 ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                                    </Button>
+                                                    <Button
+                                                        className={`flex items-center ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
                                                         onClick={() => {
                                                             handleFormSubmitWhenMasterOnly()
                                                         }}
@@ -2771,144 +2781,110 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </>
                                                         )}
 
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </>
                                         )}
-
-
                                     </div>
-                                    {!isThereChildEntry && (
-                                        <div className="overflow-x-auto">
-                                            <table className="min-w-full bg-white border border-gray-200">
-                                                <thead>
-                                                    <tr>
-                                                        {/* Static headers */}
-                                                        <th className="px-4 py-2 border-b" style={{ width: columnWidthMap['Sr. No'] || 'auto', minWidth: columnWidthMap['Sr. No'] ? '50px' : '80px' }}>Sr. No</th>
-                                                        <th className="px-4 py-2 border-b" style={{ width: columnWidthMap['Actions'] || 'auto', minWidth: columnWidthMap['Actions'] ? '50px' : '120px' }}>Actions</th>
-
-                                                        {/* Dynamic headers - get all unique keys from the first entry */}
-                                                        {childEntriesTable.length > 0 && Object.keys(childEntriesTable[0]).map((key) => (
-                                                            key !== "SerialNo" && // Exclude SerialNo as it has its own column
-                                                            <th
-                                                                key={key}
-                                                                className="px-4 py-2 border-b capitalize"
-                                                                style={{
-                                                                    width: columnWidthMap[key] || 'auto',
-                                                                    minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
-                                                                    maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px'
-                                                                }}
+                                        {(!isThereChildEntry && childEntriesTable?.length > 0) && (
+                                          <div className="overflow-x-auto">
+                                            <DataGrid
+                                              columns={[
+                                                {
+                                                  key: "srno",
+                                                  name: "Sr. No",
+                                                  width: columnWidthMap["Sr. No"] || 80,
+                                                  renderCell: ({ row }) => row._index + 1,
+                                                },
+                                                {
+                                                  key: "actions",
+                                                  name: "Actions",
+                                                  width: columnWidthMap["Actions"] || 250,
+                                                  renderCell: ({ row }) => (
+                                                    <div className="flex gap-1 justify-center">
+                                                      {viewMode && (
+                                                        <button
+                                                          className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
+                                                          onClick={() => {
+                                                            setChildFormValues(row);
+                                                            handleChildEditNonSavedData(row);
+                                                          }}
+                                                        >
+                                                          View
+                                                        </button>
+                                                      )}
+                                                      <button
+                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors ${
+                                                          viewMode
+                                                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                            : "bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700"
+                                                        }`}
+                                                        onClick={() => {
+                                                          setChildFormValues(row);
+                                                          handleChildEditNonSavedData(row);
+                                                        }}
+                                                        disabled={viewMode}
+                                                      >
+                                                        Edit
+                                                      </button>
+                                                      <button
+                                                        className={`px-3 py-1 rounded-md transition-colors ${
+                                                          viewMode
+                                                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                                            : "bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700"
+                                                        }`}
+                                                        onClick={() => {
+                                                          setChildFormValues(row);
+                                                          setIsConfirmationModalOpen(true);
+                                                        }}
+                                                        disabled={viewMode}
+                                                      >
+                                                        Delete
+                                                      </button>
+                                                    </div>
+                                                  ),
+                                                },
+                                                ...(childEntriesTable.length > 0
+                                                  ? Object.keys(childEntriesTable[0])
+                                                      .filter((key) => key !== "SerialNo") // Exclude SerialNo
+                                                      .map((key) => ({
+                                                        key,
+                                                        name: key,
+                                                        width: columnWidthMap[key] || 150,
+                                                        renderCell: ({ row }) => {
+                                                          const value =
+                                                            row[key] == null || row[key] === "" ? "-" : String(row[key]);
+                                                          return (
+                                                            <div
+                                                              className="truncate text-center"
+                                                              title={value}
+                                                              style={{
+                                                                whiteSpace: "nowrap",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                              }}
                                                             >
-                                                                {key}
-                                                            </th>
-                                                        ))}
-
-                                                        {/* Static headers */}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {childEntriesTable.map((entry, index) => {
-                                                        // Create a safe entry object with all dynamic columns initialized
-                                                        const safeEntry = { ...entry };
-                                                        dynamicColumns.forEach(col => {
-                                                            if (!(col in safeEntry)) {
-                                                                safeEntry[col] = "";
-                                                            }
-                                                        });
-
-                                                        return (
-                                                            <tr key={index}>
-                                                                {/* Serial number */}
-                                                                <td
-                                                                    className="px-4 py-2 border-b text-center"
-                                                                    style={{
-                                                                        width: columnWidthMap['Sr. No'] || 'auto',
-                                                                        minWidth: columnWidthMap['Sr. No'] ? '50px' : '80px'
-                                                                    }}
-                                                                >
-                                                                    {index + 1}
-                                                                </td>
-
-                                                                {/* Actions */}
-                                                                <td
-                                                                    className="px-4 py-2 text-center border-b"
-                                                                    style={{
-                                                                        width: columnWidthMap['Actions'] || 'auto',
-                                                                        minWidth: columnWidthMap['Actions'] ? '50px' : '120px'
-                                                                    }}
-                                                                >
-                                                                    <div className='flex gap-1'>
-                                                                        {viewMode && (
-                                                                            <button
-                                                                                className="bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700 mr-2 px-3 py-1 rounded-md transition-colors"
-                                                                                onClick={() => {
-                                                                                    setChildFormValues(entry);
-                                                                                    handleChildEditNonSavedData(entry);
-                                                                                }}
-                                                                            >
-                                                                                view
-                                                                            </button>
-                                                                        )}
-                                                                        <button
-                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                                : 'bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700'
-                                                                                }`}
-                                                                            onClick={() => {
-                                                                                setChildFormValues(entry);
-                                                                                handleChildEditNonSavedData(entry);
-
-                                                                            }}
-                                                                            disabled={viewMode}
-                                                                        >
-                                                                            Edit
-                                                                        </button>
-                                                                        <button
-                                                                            className={`px-3 py-1 rounded-md transition-colors ${viewMode
-                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                                : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'
-                                                                                }`}
-                                                                            onClick={() => {
-                                                                                setChildFormValues(entry);
-                                                                                setIsConfirmationModalOpen(true);
-                                                                            }}
-                                                                            disabled={viewMode}
-                                                                        >
-                                                                            Delete
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
-
-                                                                {/* Dynamic values */}
-                                                                {dynamicColumns.map((key) => {
-                                                                    const cellValue = safeEntry[key] == null || safeEntry[key] === "" ? "-" : String(safeEntry[key]);
-
-                                                                    return (
-                                                                        <td
-                                                                            key={key}
-                                                                            className="px-4 py-2 border-b text-center truncate"
-                                                                            style={{
-                                                                                width: columnWidthMap[key] || 'auto',
-                                                                                minWidth: columnWidthMap[key] ? Math.min(50, Math.floor(columnWidthMap[key] * 0.5)) + 'px' : '80px',
-                                                                                maxWidth: columnWidthMap[key] ? Math.max(400, Math.floor(columnWidthMap[key] * 2)) + 'px' : '300px',
-                                                                                whiteSpace: 'nowrap',
-                                                                                overflow: 'hidden',
-                                                                                textOverflow: 'ellipsis',
-                                                                            }}
-                                                                            title={cellValue} // Show full text on hover
-                                                                        >
-                                                                            {cellValue}
-                                                                        </td>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-
+                                                              {value}
+                                                            </div>
+                                                          );
+                                                        },
+                                                      }))
+                                                  : []),
+                                              ]}
+                                              rows={childEntriesTable.map((entry, index) => ({
+                                                ...entry,
+                                                _index: index, // 👈 attach index here
+                                              }))}
+                                              className="rdg-light"
+                                              rowHeight={40}
+                                              headerRowHeight={40}
+                                              style={{
+                                                backgroundColor: "white",
+                                                fontFamily: "inherit",
+                                              }}
+                                            />
+                                          </div>
+                                        )}
                                 </div>
                             </>
                         )}

@@ -367,7 +367,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const pageData: any = findPageData();
     console.log(pageData, 'pageData');
-    const OpenedPageName = pageData.length ? pageData[0]?.level : "Add Master From Details"
+    const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
 
     // Validate pageData whenever it changes
     useEffect(() => {
