@@ -18,9 +18,6 @@ import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
 
-
-
-
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
     onClose,
@@ -1896,12 +1893,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             if (response?.data?.success) {
                 toast.success('Tab form submitted successfully!');
                 setIsFormSubmit(false);
-
+                const nextIndex = activeTabIndex + 1
                 // Check if there are more tabs to navigate to
                 if (activeTabIndex < tabsData.length - 1) {
-                    setActiveTabIndex(activeTabIndex + 1);
-                    // toast.info(`Moved to next tab: ${tabsData[activeTabIndex + 1].TabName}`);
-                } else {
+                    setActiveTabIndex(nextIndex);
+                  } else {
                     setFinalTabSubmitSuccess(true)
                     // All tabs completed, close modal
                     // resetTabsForm();
@@ -2377,7 +2373,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         return (
                                                             <button
                                                                 key={index}
-                                                                onClick={() => setActiveTabIndex(index)}
+                                                                // onClick={() => setActiveTabIndex(index)}
                                                                 className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
                                                                     isActive 
                                                                     ? 'text-opacity-100' 
@@ -2661,6 +2657,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             {
                                                                 key: 'actions',
                                                                 name: 'Actions',
+                                                                width: 230,
                                                                 renderCell: ({ row } :any) => (
                                                                     viewMode ? (
                                                                         <button
