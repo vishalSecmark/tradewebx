@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import { FaPlus, FaSave } from 'react-icons/fa';
@@ -13,30 +12,13 @@ import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
-import { groupFormData } from './component-forms/form-helper/utils';
+import { generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
 import { getLocalStorage } from '@/utils/helper';
+import { useTheme } from '@/context/ThemeContext';
+import Button from './ui/button/Button';
 
 
 
-const validateForm = (formData, formValues) => {
-    const errors = {};
-
-    formData.forEach(field => {
-        if (field.FieldEnabledTag === "Y" && field.isMandatory === "true" && field.type !== "WDisplayBox") {
-            if (!formValues[field.wKey] || formValues[field.wKey]?.toString()?.trim() === "") {
-                errors[field.wKey] = `${field.label} is required`;
-            }
-        }
-    });
-
-    return errors;
-};
-
-
-// Helper function to generate unique ID
-const generateUniqueId = () => {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
@@ -122,26 +104,26 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                 ) : (
                     <>
                         <div className="text-end mt-5">
-                            <button
+                            <Button
                                 onClick={resetChildForm}
-                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                className={`mr-2 ${viewAccess
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white'
                                     }`}
                                 disabled={viewAccess}
                             >
                                 Reset
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleFormSubmit}
                                 disabled={viewAccess || isChildInvalid}
-                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
+                                className={`${(viewAccess || isChildInvalid)
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
                             >
                                 Submit
-                            </button>
+                            </Button>
                         </div>
                         <EntryForm
                             formData={formData}
@@ -221,26 +203,26 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                 ) : (
                     <>
                         <div className="text-end mt-1 mb-2">
-                            <button
+                            <Button
                                 onClick={resetChildForm}
-                                className={`px-4 py-2 rounded-md mr-2 ${viewAccess
+                                className={`mr-2 ${viewAccess
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-blue-500 hover:bg-blue-600 text-white'
                                     }`}
                                 disabled={viewAccess}
                             >
                                 Reset
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 onClick={handleFormSubmit}
                                 disabled={viewAccess || isChildInvalid}
-                                className={`px-4 py-2 rounded-md ${(viewAccess || isChildInvalid)
+                                className={`${(viewAccess || isChildInvalid)
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                     : 'bg-green-500 hover:bg-green-600 text-white'
                                     }`}
                             >
                                 Submit
-                            </button>
+                            </Button>
                         </div>
                         <div>
                             {(() => {
@@ -300,7 +282,8 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
         </div>
     );
 };
-const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100' }) => {
+const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageData, editData, action, setEntryEditData, refreshFunction, isTabs, childModalZindex = 'z-200', parentModalZindex = 'z-100', pageName }) => {
+    const {colors} = useTheme()
     const [formSubmitConfirmation, setFormSubmitConfirmation] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [masterFormData, setMasterFormData] = useState<FormField[]>([]);
@@ -345,6 +328,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [guardianLoadingDropdowns, setGuardianLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [guardianLoading, setGuardianLoading] = useState(false);
     const [finalTabSubmitSuccess, setFinalTabSubmitSuccess] = useState(false);
+    const [filtersValueObject,setFiltersValueObject] = useState<Record<string,any>>({});
 
     console.log("<------------------check data--------------------->", tabTableData)
     console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
@@ -418,6 +402,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     }
                 });
             }
+            const filtersObject = parseXMLStringToObject(xFilter);
+            setFiltersValueObject(filtersObject);
 
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
@@ -443,6 +429,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 );
 
                 // Set up master form data from Master tab
+                const initialMasterValues: Record<string, any> = {};
                 if (masterTab) {
                     let masterFormData = masterTab.Data || [];
                     const masterTableData = masterTab?.tableData[0] || [];
@@ -458,7 +445,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     setMasterFormData(masterFormData);
 
                     // Initialize master form values with any preset values
-                    const initialMasterValues: Record<string, any> = {};
                     masterFormData.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialMasterValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
@@ -609,7 +595,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                             if (shouldInitialize) {
                                 console.log(`Initializing dependent tab field ${field.wKey} with parent value:`, parentFieldValue);
-                                fetchTabsDependentOptions(field, tabKey);
+                                fetchTabsDependentOptions(field, tabKey,initialTabFormValues,initialMasterValues);
                             }
                         }
                     });
@@ -851,11 +837,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             });
                         } else {
                             // Normal case - fieldName is already a single field name
-                            if (!childFormValues[fieldName] && !masterFormValues[fieldName]) {
+                            if (!childFormValues[fieldName] && !masterFormValues[fieldName] && !parentValue) {
                                 toast.error(`Please select the field: ${fieldName}`);
                                 return;
                             }
-                            xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
+                            xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || parentValue ||''}</${fieldName}>`;
                         }
                     });
                 } else {
@@ -878,10 +864,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }));
 
             setDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
-
-            //setting the dependent field value to empty if master dropdown values is changed to reselect the value
-            // setDependentfieldEmpty(prev => ({ ...prev, [field.wKey]: '' }));
-
         } catch (error) {
             console.error(`Error fetching dependent options for ${field.wKey}:`, error);
         } finally {
@@ -889,7 +871,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const fetchTabsDependentOptions = async (field: FormField, tabKey: string) => {
+    const fetchTabsDependentOptions = async (field: FormField, tabKey: string, tabFormValues: any , masterFormValues : any) => {
         if (!field.dependsOn) return;
         try {
             setTabLoadingDropdowns(prev => ({
@@ -1805,7 +1787,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         if (field.dependsOn) {
             if (Array.isArray(field.dependsOn.field)) {
                 // Handle dependent dropdowns for tabs if needed
-                fetchTabsDependentOptions(field, tabKey);
+                fetchTabsDependentOptions(field, tabKey,tabFormValues,masterFormValues);
             }
         }
     };
@@ -2325,32 +2307,40 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         <>
             {isOpen && (
                 <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-semibold">
-                                {isTabs
-                                    ? `${isEdit ? "Edit " : "Add "}Master Form`
-                                    : `${isEdit ? "Edit " : "Add "}Entry Form`
-                                }
-                            </h2>
-                            <button
-                                onClick={() => { resetParentForm() }}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                ✕
-                            </button>
+                    <div className="bg-white rounded-lg w-full max-w-[80vw] min-h-[75vh] max-h-[75vh] flex flex-col">
+                        <div className="sticky top-0 bg-white z-10 px-6 pt-6">
+                            <div className="flex justify-between items-center mb-4 border-b pb-4">
+                                <div>
+                                    <h2 className="text-xl font-semibold">
+                                        {pageName}
+                                    </h2>
+                                    {Object.keys(filtersValueObject).length > 0 && (
+                                        <div className="text-sm text-gray-600 mt-1">
+                                            {Object.entries(filtersValueObject).map(([key, value], index) => (
+                                                <span key={key} className="mr-3">
+                                                    {key}: {value}
+                                                    {index < Object.entries(filtersValueObject).length - 1 ? ',' : ''}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => { resetParentForm() }}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    ✕
+                                </button>
+                            </div>
                         </div>
-
-                        {isLoading ? (
+                        <div className="flex-1 overflow-y-auto px-6 pb-6">
+                            {isLoading ? (
                             <div className="text-center py-4">Loading...</div>
                         ) : isTabs ? (
                             // Tabs-based form rendering with Master always shown first
                             <>
                                 {/* Master Form - Always visible at top */}
                                 <div className="mb-8">
-                                    {/* <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                                        <h3 className="text-lg font-semibold text-blue-800">Master</h3>
-                                    </div> */}
                                     <EntryForm
                                         formData={masterFormData}
                                         formValues={masterFormValues}
@@ -2371,20 +2361,35 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 {tabsData.length > 0 && (
                                     <div className="border-t pt-6">
                                         <div className="mb-6 relative">
-                                            <div className="border-b border-gray-200 overflow-x-auto" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                                                <nav className="-mb-px flex items-center space-x-8 min-w-max px-4">
-                                                    {tabsData.map((tab, index) => (
-                                                        <button
-                                                            key={index}
-                                                            // onClick={() => setActiveTabIndex(index)}
-                                                            className={`py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${activeTabIndex === index
-                                                                ? 'border-blue-500 text-blue-600'
-                                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            <div className="overflow-x-auto" style={{ 
+                                                msOverflowStyle: 'none', 
+                                                scrollbarWidth: 'none',
+                                                borderBottom: `1px solid ${colors.textInputBorder}`,
+                                                backgroundColor: colors.background
+                                            }}>
+                                                <nav className="-mb-px flex items-center min-w-max px-4 gap-1">
+                                                    {tabsData.map((tab, index) => {
+                                                        const isActive = activeTabIndex === index;
+                                                        return (
+                                                            <button
+                                                                key={index}
+                                                                onClick={() => setActiveTabIndex(index)}
+                                                                className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
+                                                                    isActive 
+                                                                    ? 'text-opacity-100' 
+                                                                    : 'text-opacity-70 hover:text-opacity-100'
                                                                 }`}
-                                                        >
-                                                            {tab.TabName}
-                                                        </button>
-                                                    ))}
+                                                                style={{
+                                                                    backgroundColor: isActive ? colors.tabBackground : 'transparent',
+                                                                    color: colors.tabText,
+                                                                    borderColor: isActive ? colors.primary : 'transparent',
+                                                                    boxShadow: isActive ? `0 1px 3px ${colors.primary}20` : 'none'
+                                                                }}
+                                                            >
+                                                                {tab.TabName}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </nav>
                                             </div>
                                         </div>
@@ -2406,22 +2411,22 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         )}
                                                     </div>
                                                     {tabsData[activeTabIndex].Settings.isTable === "true" && (
-                                                        <button
-                                                            className={`flex items-center gap-2 px-4 py-2 ${viewMode
+                                                        <Button
+                                                            className={`flex items-center ${viewMode
                                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                                 : 'bg-blue-500 hover:bg-blue-600'
-                                                                } text-white rounded-md`}
+                                                                } text-white`}
                                                             onClick={() => setTabsModal(true)}
                                                             disabled={action === "view" && editData}
                                                         >
                                                             Add Entry
-                                                        </button>
+                                                        </Button>
                                                     )}
-                                                    <button
-                                                        className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode
+                                                    <Button
+                                                        className={`flex items-center ${isFormInvalid || viewMode
                                                             ? 'bg-gray-400 cursor-not-allowed'
                                                             : 'bg-blue-500 hover:bg-blue-600'
-                                                            } text-white rounded-md`}
+                                                            } text-white`}
                                                         onClick={submitTabsFormData}
                                                         disabled={isFormInvalid || viewMode || isFormSubmit}
                                                     >
@@ -2431,14 +2436,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 {activeTabIndex < tabsData.length - 1 ? "Save & Next" : "Save"}
                                                             </>
                                                         )}
-                                                    </button>
+                                                    </Button>
                                                     {
                                                         activeTabIndex === tabsData.length - 1 && (
-                                                            <button
-                                                                className={`flex items-center gap-2 px-4 py-2 ${isFormInvalid || viewMode || !finalTabSubmitSuccess
+                                                            <Button
+                                                                className={`flex items-center ${isFormInvalid || viewMode || !finalTabSubmitSuccess
                                                                     ? 'bg-gray-400 cursor-not-allowed'
                                                                     : 'bg-blue-500 hover:bg-blue-600'
-                                                                    } text-white rounded-md`}
+                                                                    } text-white`}
                                                                 onClick={FinalSubmitTabsFormData}
                                                                 disabled={isFormInvalid || viewMode || isFormSubmit || !finalTabSubmitSuccess}
                                                             >
@@ -2448,7 +2453,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         {"Final Submit"}
                                                                     </>
                                                                 )}
-                                                            </button>
+                                                            </Button>
                                                         )
                                                     }
                                                 </div>
@@ -2468,37 +2473,37 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </div>
                                                             {!isViewMode ? (
                                                                 <div className='flex justify-end mb-2 gap-2'>
-                                                                    <button
+                                                                    <Button
                                                                         className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                         onClick={handleClearTabTableRowEntry}
                                                                     >
                                                                         reset
-                                                                    </button>
-                                                                    <button
+                                                                    </Button>
+                                                                    <Button
                                                                         className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                         onClick={handleAddTabsFormTableRow}
                                                                     >
                                                                         Save
-                                                                    </button>
+                                                                    </Button>
                                                                     {
-                                                                        isMinor && (<button
+                                                                        isMinor && (<Button
                                                                             className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                             onClick={handleAddNominee}
                                                                         >
                                                                             Add/Edit Guardian
-                                                                        </button>)
+                                                                        </Button>)
                                                                     }
 
                                                                 </div>
                                                             ) : (
                                                                 <div className='flex justify-end mb-2 gap-2'>
                                                                     {
-                                                                        isMinor && (<button
+                                                                        isMinor && (<Button
                                                                             className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                             onClick={handleAddNominee}
                                                                         >
                                                                             View Guardian Details
-                                                                        </button>)
+                                                                        </Button>)
                                                                     }
                                                                 </div>
                                                             )}
@@ -2907,6 +2912,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 </div>
                             </>
                         )}
+                        </div>
                     </div>
                 </div>
             )}

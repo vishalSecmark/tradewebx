@@ -309,6 +309,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         timestamp: number;
     }>>({});
 
+    console.log("check level stack",levelStack)
+
     // Function to generate cache key based on current state
     const generateCacheKey = (level: number, filters: Record<string, any>, primaryFilters: Record<string, any>) => {
         const filterString = JSON.stringify(filters);
@@ -365,6 +367,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const pageData: any = findPageData();
     console.log(pageData, 'pageData');
+    const OpenedPageName = pageData.length ? pageData[0]?.level : "Add Master From Details"
 
     // Validate pageData whenever it changes
     useEffect(() => {
@@ -1988,6 +1991,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     pageData={pageData}
                     editData={entryFormData}
                     action={entryAction}
+                    pageName={OpenedPageName}
                     isTabs={componentType === "multientry" ? true : false}
                     setEntryEditData={setEntryFormData}
                     refreshFunction={() => fetchData()}

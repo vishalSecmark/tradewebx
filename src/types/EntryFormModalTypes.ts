@@ -9,6 +9,7 @@ export interface EntryFormModalProps {
     isTabs?: boolean;
     childModalZindex?: string;
     parentModalZindex?: string;
+    pageName?: string;
 }
 
 export interface ApiResponse {
