@@ -296,8 +296,8 @@ export default function SignInForm() {
   const [messageContent, setMessageContent] = useState("");
 
   // Check version function inside component using useCallback to memoize
-  const checkVersion = useCallback(async () => {
-    console.log('checkVersion function called');
+  const checkVersion = useCallback(async (token?: string) => {
+    console.log('checkVersion function called with token:', token ? 'Present' : 'Not provided');
     try {
       const xmlData = `
         <dsXml>
@@ -315,13 +315,21 @@ export default function SignInForm() {
       console.log('Sending version check request to:', BASE_URL + OTP_VERIFICATION_URL);
       console.log('Version check XML data:', xmlData);
 
+      const headers: any = {
+        'Content-Type': 'application/xml',
+      };
+
+      // Add token to headers if provided
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Token added to version check request headers');
+      }
+
       const response = await axios({
         method: 'post',
         url: BASE_URL + OTP_VERIFICATION_URL,
         data: xmlData,
-        headers: {
-          'Content-Type': 'application/xml',
-        }
+        headers: headers
       });
 
       console.log('Version check response:', response.data);
@@ -383,7 +391,10 @@ export default function SignInForm() {
     console.log('performVersionCheckAfterLogin called with:', currentLoginData);
     try {
       console.log('Calling checkVersion API...');
-      const result = await checkVersion();
+      // Get token from loginData or from localStorage (temp_token or auth_token)
+      const token = currentLoginData?.token || getLocalStorage('temp_token') || getLocalStorage('auth_token');
+      console.log('Using token for version check:', token ? 'Present' : 'Not found');
+      const result = await checkVersion(token);
 
       // Check if the API returned success: false
       if (result.success === false) {
@@ -462,6 +473,10 @@ export default function SignInForm() {
     setError(""); // Clear any previous errors
 
     try {
+      // Get token from loginData or from localStorage (temp_token or auth_token)
+      const token = loginData?.token || getLocalStorage('temp_token') || getLocalStorage('auth_token');
+      console.log('Using token for version update:', token ? 'Present' : 'Not found');
+
       const xmlData = `
         <dsXml>
           <J_Ui>"ActionName":"${ACTION_NAME}","Option":"UpdateVersion","RequestFrom":"W","ReportDisplay":"A"</J_Ui>
@@ -475,13 +490,24 @@ export default function SignInForm() {
         </dsXml>
       `;
 
+      const headers: any = {
+        'Content-Type': 'application/xml',
+      };
+
+      // Add token to headers if provided
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Token added to version update request headers');
+      }
+
+      console.log('Sending version update request to:', BASE_URL + OTP_VERIFICATION_URL);
+      console.log('Version update XML data:', xmlData);
+
       const response = await axios({
         method: 'post',
         url: BASE_URL + OTP_VERIFICATION_URL,
         data: xmlData,
-        headers: {
-          'Content-Type': 'application/xml',
-        }
+        headers: headers
       });
 
       console.log('Version update response:', response.data);
