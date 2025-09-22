@@ -2154,8 +2154,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const newRow = {
                 ...currentTabFormValues,
                 _id: generateUniqueId(),
-                isModified: action === "edit" && editData ? true : false,
-                isInserted: action !== "edit",
+                isModified: false,
+                isInserted: true,
                 // Only add guardian details if conditions are met
                 ...(needsGuardianDetails && {
                     guardianDetails: {
@@ -2292,10 +2292,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setTabTableData(prev => ({
             ...prev,
             [currentTabKey]: prev[currentTabKey].filter((_, i) => i !== idx)
-        }));
+        }
+    ));
         setTabsData(prevTabs => {
             const newTabs = [...prevTabs];
-            newTabs[activeTabIndex].tableData = newTabs[activeTabIndex].tableData.filter((_, i) => i !== idx);
+            newTabs[activeTabIndex].tableData = newTabs[activeTabIndex]?.tableData.filter((_, i) => i !== idx);
             return newTabs;
         });
     }

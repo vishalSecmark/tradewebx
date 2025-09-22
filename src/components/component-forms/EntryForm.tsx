@@ -373,6 +373,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const isEnabled = field.FieldEnabledTag === 'Y';
         const isRequired = field.isMandatory === "true";
         const isFieldVisible  = field.FieldVisibleTag === "Y";
+        const fieldValue = formValues[field.wKey]?.trim();
 
         // Get field width or default to full width
         const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
@@ -430,7 +431,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <DatePicker
-                            selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
+                            selected={fieldValue ? moment(fieldValue, 'YYYYMMDD').toDate() : null}
                             onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
                             dateFormat="dd/MM/yyyy"
                             className={`
@@ -472,7 +473,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                 color: colors.textInputText,
                                 width: fieldWidth // Apply width to input directly
                             }}
-                            value={formValues[field.wKey] || ''}
+                            value={fieldValue || ''}
                             onChange={(e) => {
                                 const value = e.target.value;
                                 if (field.FieldType === 'INT' && !/^[0-9]*$/.test(value)) {
@@ -498,7 +499,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             <input
                                 type="checkbox"
                                 className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
-                                checked={formValues[field.wKey] === "true" || formValues[field.wKey] === true}
+                                checked={fieldValue === "true" || fieldValue === true}
                                 onChange={e => handleInputChange(field.wKey, String(e.target.checked))}
                                 onBlur={() => handleBlur(field)}
                                 disabled={!isEnabled}
