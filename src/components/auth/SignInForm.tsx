@@ -81,7 +81,8 @@ const VersionUpdateModal = ({
   updates,
   onConfirm,
   userType = "User", // Add userType prop to determine if user can update
-  isUpdating = false // Add loading state prop
+  isUpdating = false, // Add loading state prop
+  showUpdate = "N" // Add showUpdate prop to control button visibility
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -89,6 +90,7 @@ const VersionUpdateModal = ({
   onConfirm: () => void;
   userType?: string;
   isUpdating?: boolean;
+  showUpdate?: string;
 }) => {
   if (!isOpen) return null;
 
@@ -98,6 +100,9 @@ const VersionUpdateModal = ({
   // Determine if user has update rights based on UserType from login response
   // "user" = normal user (cannot update), anything else = admin (can update)
   const canUpdate = userType.toLowerCase() !== "user";
+
+  // Show update button only if ShowUpdate is 'Y' AND user can update
+  const showUpdateButton = showUpdate === 'Y' && canUpdate;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
@@ -162,7 +167,7 @@ const VersionUpdateModal = ({
 
         <div className="flex justify-end gap-4">
           {/* For users with mandatory updates: Only OK button that closes modal and prevents login */}
-          {hasMandatoryUpdates && !canUpdate ? (
+          {hasMandatoryUpdates && !showUpdateButton ? (
             <button
               onClick={onClose}
               disabled={isUpdating}
@@ -175,7 +180,7 @@ const VersionUpdateModal = ({
             </button>
           ) : (
             <>
-              {/* For optional updates or admin users: Show skip/cancel option */}
+              {/* For optional updates or when update button is not shown: Show skip/cancel option */}
               {!hasMandatoryUpdates && (
                 <button
                   onClick={onClose}
@@ -185,12 +190,12 @@ const VersionUpdateModal = ({
                     : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200'
                     }`}
                 >
-                  {userType.toLowerCase() === "user" ? "OK" : "Skip for Now"}
+                  OK
                 </button>
               )}
 
-              {/* Update button - only for users who can update */}
-              {canUpdate && (
+              {/* Update button - only if ShowUpdate is 'Y' AND user can update */}
+              {showUpdateButton && (
                 <button
                   onClick={onConfirm}
                   disabled={isUpdating}
@@ -292,6 +297,7 @@ export default function SignInForm() {
 
   // Check version function inside component using useCallback to memoize
   const checkVersion = useCallback(async () => {
+    console.log('checkVersion function called');
     try {
       const xmlData = `
         <dsXml>
@@ -306,6 +312,9 @@ export default function SignInForm() {
         </dsXml>
       `;
 
+      console.log('Sending version check request to:', BASE_URL + OTP_VERIFICATION_URL);
+      console.log('Version check XML data:', xmlData);
+
       const response = await axios({
         method: 'post',
         url: BASE_URL + OTP_VERIFICATION_URL,
@@ -318,6 +327,7 @@ export default function SignInForm() {
       console.log('Version check response:', response.data);
       const shouldDecode = ENABLE_FERNET && encPayload;
       const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
+      console.log('Version check decoded data:', data);
       return data;
     } catch (error) {
       console.error('Version check error:', error);
@@ -370,7 +380,9 @@ export default function SignInForm() {
 
   // Function to perform version check after successful login
   const performVersionCheckAfterLogin = useCallback(async (currentLoginData: any) => {
+    console.log('performVersionCheckAfterLogin called with:', currentLoginData);
     try {
+      console.log('Calling checkVersion API...');
       const result = await checkVersion();
 
       // Check if the API returned success: false
@@ -433,10 +445,12 @@ export default function SignInForm() {
 
     // After message modal is closed, proceed with the normal flow
     if (loginData) {
-      const showUpdate = loginData.showUpdate; // We need to store this in loginData
-      if (showUpdate === 'Y') {
+      // Check for version updates if UserType is 'branch' (regardless of ShowUpdate value)
+      if (loginData.userType && loginData.userType.toLowerCase() === 'branch') {
+        console.log('Message modal closed, UserType is branch, checking for version updates');
         performVersionCheckAfterLogin(loginData);
       } else {
+        console.log('Message modal closed, UserType is not branch, proceeding directly');
         proceedAfterVersionCheck(loginData);
       }
     }
@@ -675,7 +689,8 @@ export default function SignInForm() {
           refreshToken: data.refreshToken || '', // Use empty string if refreshToken not present
           tokenExpireTime: data.tokenExpireTime,
           LoginType: data.data[0].LoginType,
-          showUpdate: showUpdate // Store showUpdate value for later use
+          showUpdate: showUpdate, // Store showUpdate value for later use
+          userType: userType // Store userType for later use
         };
 
         setLoginData(currentLoginData);
@@ -688,12 +703,12 @@ export default function SignInForm() {
           return; // Don't proceed with version check or navigation yet
         }
 
-        // Check for version updates only if ShowUpdate is 'Y'
-        if (showUpdate === 'Y') {
-          console.log('ShowUpdate is Y, checking for version updates');
+        // Check for version updates if UserType is 'branch' (regardless of ShowUpdate value)
+        if (userType.toLowerCase() === 'branch') {
+          console.log('UserType is branch, checking for version updates');
           await performVersionCheckAfterLogin(currentLoginData);
         } else {
-          console.log('ShowUpdate is not Y, proceeding directly without version check');
+          console.log('UserType is not branch, proceeding directly without version check');
           // No version check needed, proceed directly
           proceedAfterVersionCheck(currentLoginData);
         }
@@ -873,8 +888,10 @@ export default function SignInForm() {
           // Use UserType from login response to determine user permissions
           // "user" = normal user (cannot update), anything else = admin (can update)
           const canUpdate = currentUserType.toLowerCase() !== "user";
+          // Show update button only if ShowUpdate is 'Y' AND user can update
+          const showUpdateButton = loginData?.showUpdate === 'Y' && canUpdate;
 
-          if (hasMandatoryUpdates && !canUpdate) {
+          if (hasMandatoryUpdates && !showUpdateButton) {
             // Force logout for users with mandatory updates who cannot update
             proceedAfterVersionCheck(loginData, true);
           } else {
@@ -886,6 +903,7 @@ export default function SignInForm() {
         onConfirm={handleUpdateConfirm}
         userType={currentUserType}
         isUpdating={isUpdating}
+        showUpdate={loginData?.showUpdate || 'N'}
       />
 
       {/* Message Modal */}
