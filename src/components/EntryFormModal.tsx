@@ -17,6 +17,7 @@ import { getLocalStorage } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
+import { handleNextValidationFields } from './component-forms/form-helper/apiHelper';
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
@@ -1897,6 +1898,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 // Check if there are more tabs to navigate to
                 if (activeTabIndex < tabsData.length - 1) {
                     setActiveTabIndex(nextIndex);
+                    handleNextValidationFields(editData,nextIndex,currentTab,masterFormValues,tabsData,setTabsData,tabFormValues,setTabFormValues,tabTableData,setTabTableData);
+
                   } else {
                     setFinalTabSubmitSuccess(true)
                     // All tabs completed, close modal
@@ -2587,7 +2590,23 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                     fieldErrors={fieldErrors}
                                                                                     setFieldErrors={setFieldErrors}
                                                                                     masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                                                    setFormData={() => { }}
+                                                                                   setFormData={(updatedFormData: FormField[]) => { 
+                                                                                      const currentTab = tabsData[activeTabIndex];
+                                                                                      const currentTabName = currentTab?.TabName;                                           
+                                                                                      setTabsData((prev: TabData[]) => {
+                                                                                        return prev.map(tab => {
+                                                                                          if (tab.TabName === currentTabName) {
+                                                                                            // Found the matching tab, update its Data array
+                                                                                            return {
+                                                                                              ...tab,
+                                                                                              Data: updatedFormData
+                                                                                            };
+                                                                                          }
+                                                                                          // Return unchanged tab for other tabs
+                                                                                          return tab;
+                                                                                        });
+                                                                                      });
+                                                                                    }}
                                                                                     setValidationModal={setValidationModal}
                                                                                 />
                                                                             </div>
@@ -2659,8 +2678,25 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         }
                                                                         fieldErrors={fieldErrors}
                                                                         setFieldErrors={setFieldErrors}
-                                                                        masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                                        setFormData={() => { }}
+                                                                        masterValues={masterFormValues}
+                                                                        setFormData={(updatedFormData: FormField[]) => { 
+                                                                          const currentTab = tabsData[activeTabIndex];
+                                                                          const currentTabName = currentTab?.TabName;
+
+                                                                          setTabsData((prev: TabData[]) => {
+                                                                            return prev.map(tab => {
+                                                                              if (tab.TabName === currentTabName) {
+                                                                                // Found the matching tab, update its Data array
+                                                                                return {
+                                                                                  ...tab,
+                                                                                  Data: updatedFormData
+                                                                                };
+                                                                              }
+                                                                              // Return unchanged tab for other tabs
+                                                                              return tab;
+                                                                            });
+                                                                          });
+                                                                        }}
                                                                         setValidationModal={setValidationModal}
                                                                     />
                                                                 </div>
