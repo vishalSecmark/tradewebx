@@ -333,7 +333,7 @@ export default function SignInForm() {
       console.error('Version check error:', error);
       throw error;
     }
-  }, [version]);
+  }, [version, encPayload]);
 
   // Function to proceed with navigation after version check
   const proceedAfterVersionCheck = useCallback((dataToUse?: any, forceLogout = false) => {
