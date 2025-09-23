@@ -25,6 +25,7 @@ const DropdownField: React.FC<{
     handleDropDownChange: any;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
     fieldWidth?: string;
+    isJustUpdated?: boolean;
 }> = ({
     field,
     formValues,
@@ -37,7 +38,8 @@ const DropdownField: React.FC<{
     handleBlur,
     isDisabled,
     handleDropDownChange,
-    setDropDownOptions
+    setDropDownOptions,
+    isJustUpdated = false
 }) => {
         const options = dropdownOptions[field.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
@@ -102,7 +104,7 @@ const DropdownField: React.FC<{
             }
         };
 
-        const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field);
+        const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field, isJustUpdated);
 
 
         return (
@@ -374,6 +376,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const isRequired = field.isMandatory === "true";
         const isFieldVisible  = field.FieldVisibleTag === "Y";
         const fieldValue = formValues[field.wKey]?.trim();
+        const isJustUpdated = field?.fieldJustUpdated?.toLowerCase() === "true" || field?.isChangeColumn?.toLowerCase() === "true";
+
 
         // Get field width or default to full width
         const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
@@ -418,7 +422,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             isDisabled={!isEnabled}
                             handleDropDownChange={onDropdownChange}
                             setDropDownOptions={setDropDownOptions}
-                            fieldWidth={fieldWidth} // Pass width to DropdownField if needed
+                            fieldWidth={fieldWidth}
+                            isJustUpdated={isJustUpdated}
                         />
                     </div>
                 );
@@ -444,6 +449,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                         : 'border-gray-700'
                                 }
                             ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
+                            ${isJustUpdated ? 'text-green-500' : ''}
+
                         `}
                             wrapperClassName="w-full"
                             placeholderText="Select Date"
@@ -470,7 +477,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             style={{
                                 borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText,
+                                color: isJustUpdated ? "#22c55e" : colors.textInputText,
                                 width: fieldWidth // Apply width to input directly
                             }}
                             value={fieldValue || ''}
@@ -495,7 +502,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
             case 'WCheckBox':
                 return (
                     <div key={`checkbox-${field.Srno}-${field.wKey}`} style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}>
-                        <label className="inline-flex items-center text-sm font-medium" style={{ color: colors.text, wordBreak: "break-all" }}>
+                        <label className="inline-flex items-center text-sm font-medium" style={{ color: isJustUpdated ? "#22c55e" : colors.textInputText, wordBreak: "break-all" }}>
                             <input
                                 type="checkbox"
                                 className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
@@ -503,7 +510,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                 onChange={e => handleInputChange(field.wKey, String(e.target.checked))}
                                 onBlur={() => handleBlur(field)}
                                 disabled={!isEnabled}
-                                style={{ accentColor: colors.textInputText }}
+                                style={{ accentColor: isJustUpdated ? "#22c55e" : colors.textInputText, }}
                             />
                             <span className="ml-2">
                                 {field.label}
@@ -526,7 +533,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             style={{
                                 borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : colors.textInputBorder,
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: colors.textInputText,
+                                color: isJustUpdated ? "#22c55e" : colors.textInputText,
                                 width: fieldWidth // Apply width to display box
                             }}
                         >

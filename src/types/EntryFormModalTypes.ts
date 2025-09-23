@@ -51,6 +51,8 @@ export interface FormField {
     type: string;
     label: string;
     isBR?: string;
+    fieldJustUpdated?:string;
+    isChangeColumn?:string;
     FieldVisibleTag?:string;
     CombinedName?: string;
     childDependents?: string[];

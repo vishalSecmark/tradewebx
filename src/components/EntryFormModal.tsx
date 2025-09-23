@@ -1893,9 +1893,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            if (response?.data?.success) {
-                toast.success('Tab form submitted successfully!');
+            const responseMessageFlag = response?.data?.data?.rs0[0]
+            console.log("check res",response)
+            if (response?.data?.success && responseMessageFlag.Flag?.toLowerCase() === "s") {
+                toast.success(responseMessageFlag?.Message || 'Tab form submitted successfully!');
                 setIsFormSubmit(false);
                 const nextIndex = activeTabIndex + 1
                 // Check if there are more tabs to navigate to
@@ -1909,7 +1910,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     // resetTabsForm();
                 }
             } else {
-                const message = response?.data?.message?.replace(/<\/?Message>/g, '') || 'Submission failed';
+                const message = responseMessageFlag?.Message || 'Submission failed';
                 toast.warning(message);
                 setIsFormSubmit(false);
             }
@@ -1996,13 +1997,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            if (response?.data?.success) {
-                toast.success('Tab form submitted successfully!');
+            const responseMessageFlag = response?.data?.data?.rs0[0]
+            console.log("check response",response);
+            if (response?.data?.success && responseMessageFlag.Flag?.toLowerCase() === "s") {
+                toast.success(responseMessageFlag?.Message || "Form Submitted")
                 setIsFormSubmit(false);
                 resetTabsForm();
             } else {
-                const message = response?.data?.message?.replace(/<\/?Message>/g, '') || 'Submission failed';
+                const message = responseMessageFlag?.Message || 'Submission failed';
                 toast.warning(message);
                 setIsFormSubmit(false);
             }
