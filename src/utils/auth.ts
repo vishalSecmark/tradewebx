@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { APP_METADATA_KEY, BASE_PATH_FRONT_END, BASE_URL } from './constants';
-import { clearIndexedDB, clearLocalStorage, getLocalStorage, removeLocalStorage } from './helper';
+import { APP_METADATA_KEY, BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants';
+import { clearIndexedDB, clearLocalStorage, getLocalStorage, removeLocalStorage, storeLocalStorage } from './helper';
 
 // Create axios instance with default config
 export const api = axios.create({
@@ -21,18 +21,135 @@ api.interceptors.request.use(
   }
 );
 
-// // Add response interceptor to handle token expiration
-// api.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     if (error.response?.status === 401) {
-//       // Token expired or invalid
-//       logout();
-//       window.location.href = `${BASE_PATH_FRONT_END}/signin`;
-//     }
-//     return Promise.reject(error);
-//   }
-// );
+// Response interceptor to handle token expiration and refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (error?: any) => void;
+}> = [];
+
+const processQueue = (error: any) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve();
+    }
+  });
+  failedQueue = [];
+};
+
+const refreshAuthToken = async (): Promise<string> => {
+  const refreshToken = getLocalStorage('refreshToken');
+  const userId = getLocalStorage('userId');
+  const userType = getLocalStorage('userType');
+
+  if (!refreshToken) {
+    throw new Error('No refresh token available');
+  }
+
+  const refreshData = `<dsXml>
+    <J_Ui>"ActionName":"TradeWeb","Option":"Refresh"</J_Ui>
+    <Sql/>
+    <X_Filter></X_Filter>
+    <X_Data>
+        <RefreshToken>${refreshToken}</RefreshToken>
+    </X_Data>
+    <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+</dsXml>`;
+
+  console.log('Attempting to refresh token...');
+
+  try {
+    // Create a new axios instance to bypass interceptors for refresh token requests
+    const refreshAxios = axios.create();
+
+    const response = await refreshAxios.post(
+      BASE_URL + OTP_VERIFICATION_URL,
+      refreshData,
+      {
+        headers: {
+          'Content-Type': 'application/xml'
+        },
+        timeout: 30000
+      }
+    );
+
+    console.log('Refresh token API response:', response.status, response.data);
+
+    if (response.data.success && response.data.data.rs0.length > 0) {
+      const tokenData = response.data.data.rs0[0];
+
+      // Update tokens in localStorage using the helper functions
+      storeLocalStorage('auth_token', tokenData.AccessToken);
+      storeLocalStorage('refreshToken', tokenData.RefreshToken);
+      console.log('Tokens refreshed successfully');
+
+      return tokenData.AccessToken;
+    } else {
+      console.error('Refresh token API returned unsuccessful response:', response.data);
+      throw new Error('Failed to refresh token');
+    }
+  } catch (error: any) {
+    console.error('Token refresh failed:', error);
+
+    // If refresh token API itself returns 401, immediately logout the user
+    if (error.response?.status === 401) {
+      console.warn('Refresh token is invalid or expired (401). Logging out user.');
+      logout();
+      throw new Error('Refresh token expired - user logged out');
+    }
+
+    throw error;
+  }
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue the request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(() => {
+          // Update the authorization header with new token
+          const newToken = getAuthToken();
+          if (newToken) {
+            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+          }
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const newToken = await refreshAuthToken();
+        processQueue(null);
+
+        // Update the authorization header with new token
+        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError);
+        // Only logout if refresh fails
+        logout();
+        window.location.href = `${BASE_PATH_FRONT_END}/signin`;
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export const logout = () => {
   // Clear all authentication data
