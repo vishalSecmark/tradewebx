@@ -49,6 +49,8 @@ interface EditableColumn {
 
 interface EditTableRowModalProps {
     isOpen: boolean;
+    pageName?: string;
+    isTabs?: boolean;
     onClose: () => void;
     title: string;
     tableData: RowData[];
@@ -97,6 +99,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     onClose,
     title,
     tableData,
+    pageName,
+    isTabs,
     wPage,
     settings,
     showViewDocument = false,
@@ -123,6 +127,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
     const [processResponseData, setProcessResponseData] = useState<any[]>([]);
     const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+
     //can be use in future
     // const [viewLogHeader, setViewLogHeader] = useState({})
     //end
@@ -146,7 +151,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     })
     // loading state for save/process button
     const [isSaving, setIsSaving] = useState(false);
-
+    
+    const formType = tableData?.length > 0 ? tableData[0].FormType : "entry";
+    
     const showViewTable = settings.ShowView
 
     const showViewDocumentBtn = settings.ShowViewDocument
@@ -205,8 +212,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             console.log('Fetching page data for EntryFormModal:', xmlData);
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            console.log('Page data response:', response.data.data);
 
             const EditTablePageData = response.data.data.rs0; // Form field configuration
             const ChildEntryData = response.data.data.rs1 || []; // Child entry data records
@@ -1525,6 +1530,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             console.log('setEntryEditData called from EditTableRowModal with:', data);
                             setEntryFormData(data);
                         }}
+                        pageName={pageName}
+                        isTabs={formType === "multientry"}
                         refreshFunction={() => {
                             console.log('EntryFormModal refreshFunction called from EditTableRowModal');
                             // Refresh the main table data if needed

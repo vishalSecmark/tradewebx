@@ -1789,6 +1789,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onClose={() => setIsEditTableRowModalOpen(false)}
                 title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
+                pageName={OpenedPageName}
+                isTabs={componentType === "multientry" ? true : false}  
                 wPage={safePageData.getSetting('wPage') || ''}
                 settings={{
                     ...safePageData.getCurrentLevel(currentLevel)?.settings,
