@@ -1,6 +1,7 @@
 import axios from 'axios';
-import { APP_METADATA_KEY, BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL } from './constants';
-import { clearIndexedDB, clearLocalStorage, getLocalStorage, removeLocalStorage, storeLocalStorage } from './helper';
+import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL, ENABLE_FERNET } from './constants';
+import { clearIndexedDB, getLocalStorage, removeLocalStorage, storeLocalStorage, decodeFernetToken } from './helper';
+import { store } from '@/redux/store';
 
 // Create axios instance with default config
 export const api = axios.create({
@@ -77,8 +78,14 @@ const refreshAuthToken = async (): Promise<string> => {
 
     console.log('Refresh token API response:', response.status, response.data);
 
-    if (response.data.success && response.data.data.rs0.length > 0) {
-      const tokenData = response.data.data.rs0[0];
+    // Check both ENABLE_FERNET constant and encPayload from Redux state
+    const shouldDecode = ENABLE_FERNET && store.getState().common.encPayload;
+    const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
+
+    console.log('Refresh token decoded data:', data);
+
+    if (data.success && data.data.rs0.length > 0) {
+      const tokenData = data.data.rs0[0];
 
       // Update tokens in localStorage using the helper functions
       storeLocalStorage('auth_token', tokenData.AccessToken);
@@ -87,7 +94,7 @@ const refreshAuthToken = async (): Promise<string> => {
 
       return tokenData.AccessToken;
     } else {
-      console.error('Refresh token API returned unsuccessful response:', response.data);
+      console.error('Refresh token API returned unsuccessful response:', data);
       throw new Error('Failed to refresh token');
     }
   } catch (error: any) {
