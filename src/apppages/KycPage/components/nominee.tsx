@@ -392,7 +392,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
 
   const handleSaveAndNext = () => {
     if (tableData?.length === 0) {
-      toast.error("please add Nominee data first")
+      setActiveTab("bank")
     } else {
       const transformedData = tableData?.map((item: any) => ({
         ...item,

@@ -314,11 +314,15 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
   };
 
   const handleSaveAndNext = () => {
-    const transformedData = tableData.map((item: any) => ({
-      ...item,
-      ...(item?.DematId && { IsInserted: "false" })
-    }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "segment", setSaving);
+      if(tableData?.length === 0){
+        setActiveTab("segment")
+      }else{
+        const transformedData = tableData.map((item: any) => ({
+          ...item,
+          ...(item?.DematId && { IsInserted: "false" })
+      }));
+        handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "segment", setSaving);
+      }
   };
 
   const handleNext = () => {

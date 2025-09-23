@@ -309,12 +309,17 @@ const KycBank = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   };
 
   const handleSaveAndNext = () => {
-    const transformedData = tableData.map((item: any) => ({
-      ...item,
-      ...(item?.BankID && { IsInserted: "false" })
-    }));
-    handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat", setSaving);
-  };
+    if(tableData?.length === 0){
+      setActiveTab("demat")
+    }else {
+      const transformedData = tableData.map((item: any) => ({
+            ...item,
+            ...(item?.BankID && { IsInserted: "false" })
+          }));
+          handleSaveSinglePageData(Settings.SaveNextAPI, transformedData, setActiveTab, "demat", setSaving);
+        
+          }
+     };
 
   const handleNext = () => {
     setActiveTab("demat")
