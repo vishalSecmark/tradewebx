@@ -56,7 +56,7 @@ export function parseXMLStringToObject(xmlString) {
         const tagValue = match[2].trim();
         
         // Only add to result if the value is not empty
-        if (tagValue !== '') {
+        if (tagValue !== '' && tagName !== "FormType") {
             result[tagName] = tagValue;
         }
     }

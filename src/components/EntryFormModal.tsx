@@ -2318,7 +2318,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     <h2 className="text-xl font-semibold">
                                         {pageName}
                                     </h2>
-                                    {(Object.keys(filtersValueObject).length > 0 && editData && action === "edit" )&& (
+                                    {(Object.keys(filtersValueObject).length > 0 && editData && (action === "edit" || action === "view")) && (
                                         <div className="text-sm text-gray-600 mt-1">
                                             {Object.entries(filtersValueObject).map(([key, value], index) => (
                                                 <span key={key} className="mr-3">
