@@ -291,6 +291,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [masterLoadingDropdowns, setMasterLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [isChildModalOpen, setIsChildModalOpen] = useState(false);
     const [childEntriesTable, setChildEntriesTable] = useState<any[]>([]);
+    const [childEntriesTableBackup, setChildEntriesTableBackup] = useState<any[]>([]);
+
     const [childFormData, setChildFormData] = useState<FormField[]>([]);
     const [childFormValues, setChildFormValues] = useState<Record<string, any>>({});
     const [childDropdownOptions, setChildDropdownOptions] = useState<Record<string, any[]>>({});
@@ -1058,6 +1060,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             setChildEntriesTable(response?.data?.data?.rs1 || []);
+            setChildEntriesTableBackup(response?.data?.data?.rs1 || []);
 
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
@@ -1439,7 +1442,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const jUi = Object.entries(masterEntry.J_Ui)
                 .map(([key, value]) => {
                     if (key === 'Option') {
-                        return `"${key}":"edit"`;
+                        return `"${key}":"delete"`;
                     }
                     if (key === 'ActionName') {
                         return `"${key}":"${pageName}"`;
