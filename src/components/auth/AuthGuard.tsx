@@ -66,19 +66,23 @@ export default function AuthGuard({ children }: AuthGuardProps) {
             const now = new Date();
 
             if (expireDate < now) {
-              // Token has expired, clear all authentication data and redirect to login
-              console.log('Token expired - clearing all authentication data');
+              // Token has expired, but we have refresh token logic in apiService
+              // Let the apiService handle token refresh automatically on next API call
+              console.log('Token expired - will be refreshed automatically on next API call');
 
-              // Clear all authentication data
-              clearAllAuthData();
-
-              toast.error('Session expired. Please login again.');
-              // Next.js basePath config handles the base path automatically
-              const signInUrl = '/signin';
-              router.replace(signInUrl);
-              setIsChecking(false);
-              setIsAuthenticated(false);
-              return;
+              // Don't logout immediately - let the API interceptor handle token refresh
+              // Only logout if refresh token is also missing
+              const refreshToken = getLocalStorage('refreshToken');
+              if (!refreshToken) {
+                console.log('No refresh token available - clearing all authentication data');
+                clearAllAuthData();
+                toast.error('Session expired. Please login again.');
+                const signInUrl = '/signin';
+                router.replace(signInUrl);
+                setIsChecking(false);
+                setIsAuthenticated(false);
+                return;
+              }
             }
           }
 
@@ -135,11 +139,15 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           const now = new Date();
 
           if (expireDate < now) {
-            console.log('Periodic check: Token expired - clearing all authentication data');
-            clearAllAuthData();
-            toast.error('Session expired. Please login again.');
-            // Next.js basePath config handles the base path automatically
-            router.replace('/signin');
+            console.log('Periodic check: Token expired - checking for refresh token');
+            const refreshToken = getLocalStorage('refreshToken');
+            if (!refreshToken) {
+              console.log('No refresh token available - clearing all authentication data');
+              clearAllAuthData();
+              toast.error('Session expired. Please login again.');
+              router.replace('/signin');
+            }
+            // If refresh token exists, let the API interceptor handle token refresh
           }
         }
       }, 5 * 60 * 1000); // 5 minutes
@@ -166,11 +174,15 @@ export default function AuthGuard({ children }: AuthGuardProps) {
           const now = new Date();
 
           if (expireDate < now) {
-            console.log('Visibility change: Token expired - clearing all authentication data');
-            clearAllAuthData();
-            toast.error('Session expired. Please login again.');
-            // Next.js basePath config handles the base path automatically
-            router.replace('/signin');
+            console.log('Visibility change: Token expired - checking for refresh token');
+            const refreshToken = getLocalStorage('refreshToken');
+            if (!refreshToken) {
+              console.log('No refresh token available - clearing all authentication data');
+              clearAllAuthData();
+              toast.error('Session expired. Please login again.');
+              router.replace('/signin');
+            }
+            // If refresh token exists, let the API interceptor handle token refresh
           }
         }
       }
