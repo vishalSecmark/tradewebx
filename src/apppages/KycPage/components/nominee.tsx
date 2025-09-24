@@ -185,19 +185,40 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
   };
 
   const validateMandatoryFields = (formData: any) => {
-    const errors: Record<string, string> = {};
-    let isValid = true;
+  const errors: Record<string, string> = {};
+  let isValid = true;
 
-    formFields.forEach((field) => {
-      if (field.isMandatory === "true" && !formData[field.wKey]) {
+  formFields.forEach((field) => {
+    if (field.isMandatory === "true") {
+      const value = formData[field.wKey];
+      let isEmpty = false;
+      // Handle different field types
+      if (field.type === 'WCheckBox') {
+        // For checkboxes, check if it has a valid value
+        isEmpty = value !== "true" && value !== "false";
+      } 
+      else if (field.type === 'WDropDownBox') {
+        // For dropdowns, empty string is invalid
+        isEmpty = !value || value?.trim() === "";
+      }
+      else if (typeof value === 'string') {
+        // For text fields, trim whitespace
+        isEmpty = !value.trim();
+      }
+      else {
+        // For other types
+        isEmpty = !value;
+      }
+      if (isEmpty) {
         errors[field.wKey] = `${field.label} is required`;
         isValid = false;
       }
-    });
+    }
+  });
 
-    return { isValid, errors };
-  };
-
+  return { isValid, errors };
+};
+             
   const validateGuardianMandatoryFields = (formData: any) => {
     const errors: Record<string, string> = {};
     let isValid = true;

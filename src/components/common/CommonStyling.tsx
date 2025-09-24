@@ -1,9 +1,9 @@
 import { FormField } from "@/types";
 
-export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors: Record<string, string>, field: FormField, isJustUpdated: boolean = false) => ({
+export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors: Record<string, string>, field: FormField, isJustUpdated: boolean = false, fieldWidth?: string) => ({
   control: (base: any, state: any) => ({
     ...base,
-    width: `${field.FieldWidth}px`,
+    width: `${fieldWidth != null ? fieldWidth : field.FieldWidth + 'px'}`,
     borderColor: state.isFocused
       ? '#3b82f6'
       : !isDisabled

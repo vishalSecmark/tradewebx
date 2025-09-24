@@ -97,7 +97,7 @@ const DropdownField: React.FC<{
             }
         };
 
-        const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field, isJustUpdated);
+        const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field, isJustUpdated, "100%");
 
         return (
             <div key={field?.Srno} className="mb-1">
