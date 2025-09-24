@@ -41,8 +41,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { setError as setAuthError, setLoading } from '@/redux/features/authSlice';
 import { BASE_URL, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, ACTION_NAME } from "@/utils/constants";
 import Image from "next/image";
-import { RootState } from "@/redux/store";
+import { RootState, store } from "@/redux/store";
 import { toast } from "react-toastify";
+import { decodeFernetToken } from "@/utils/helper";
 
 export default function ForgotPasswordForm() {
     const router = useRouter();
@@ -85,13 +86,15 @@ export default function ForgotPasswordForm() {
                 },
                 data: xmlData
             });
+            const shouldDecode = store.getState().common.encPayload;
+            const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
 
-            if (response.data.success) {
+            if (data.success) {
                 console.log(clientCode, '1212121');
 
                 setCurrentStep(2);
 
-                toast.success(response.data.data.rs0[0].Message);
+                toast.success(data.data.rs0[0].Message);
                 console.log(clientCode, 'client 221');
             } else {
                 setError(response.data.message || 'Failed to process request');
@@ -138,12 +141,13 @@ export default function ForgotPasswordForm() {
                 },
                 data: xmlData
             });
-
-            if (response.data.success) {
+            const shouldDecode = store.getState().common.encPayload;
+            const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
+            if (data.success) {
                 router.push('/signin');
-                toast.success(response.data.data.rs0.Message);
+                toast.success(data.data.rs0.Message);
             } else {
-                setError(response.data.message || 'Failed to change password');
+                setError(data.message || 'Failed to change password');
             }
         } catch (err) {
             const errorMessage = axios.isAxiosError(err)
