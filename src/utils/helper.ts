@@ -439,6 +439,15 @@ export const storeLocalStorage = (key: string, value: string): void => {
         const currentData = getEncryptedStorageData();
         currentData[key] = value;
         saveEncryptedStorageData(currentData);
+
+        // Debug logging for token storage
+        if (key === 'auth_token') {
+            console.log(`💾 [helper] Stored ${key}:`, value.substring(0, 30) + '...');
+
+            // Immediately verify it was stored correctly
+            const verification = getLocalStorage(key);
+            console.log(`🔍 [helper] Verification of stored ${key}:`, verification ? verification.substring(0, 30) + '...' : 'null');
+        }
     } catch (error) {
         console.error('Error storing data securely:', error);
         throw new Error('Failed to store data securely');
@@ -448,7 +457,14 @@ export const storeLocalStorage = (key: string, value: string): void => {
 export const getLocalStorage = (key: string): string | null => {
     try {
         const currentData = getEncryptedStorageData();
-        return currentData[key] || null;
+        const value = currentData[key] || null;
+
+        // Debug logging for token retrieval
+        if (key === 'auth_token' && value) {
+            console.log(`🔍 [helper] Retrieved ${key}:`, value.substring(0, 30) + '...');
+        }
+
+        return value;
     } catch (error) {
         console.error('Error retrieving data securely:', error);
         return null;

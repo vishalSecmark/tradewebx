@@ -242,6 +242,9 @@ class ApiService {
                         return new Promise((resolve, reject) => {
                             this.failedQueue.push({ resolve, reject });
                         }).then(() => {
+                            // Log token before retrying queued request
+                            const queuedToken = this.getAuthToken();
+                            console.log('🔄 Retrying queued request with token:', queuedToken ? queuedToken.substring(0, 30) + '...' : 'null');
                             return axios(originalRequest);
                         }).catch(err => {
                             return Promise.reject(err);
@@ -253,10 +256,27 @@ class ApiService {
 
                     try {
                         await this.refreshAuthToken();
+
+                        // Wait a moment to ensure token is fully stored in encrypted localStorage
+                        await new Promise(resolve => setTimeout(resolve, 100));
+
+                        // Verify the new token is available and retry until we get the new token
+                        let retryCount = 0;
+                        let newToken = this.getAuthToken();
+
+                        // If we still have the old token, wait a bit more (up to 500ms total)
+                        while (retryCount < 4 && (!newToken || newToken === originalRequest.headers?.['Authorization']?.replace('Bearer ', ''))) {
+                            console.log(`🔄 Waiting for new token to be available... (attempt ${retryCount + 1})`);
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                            newToken = this.getAuthToken();
+                            retryCount++;
+                        }
+
+                        console.log('🔄 About to retry request with token:', newToken ? newToken.substring(0, 30) + '...' : 'null');
+
                         this.processQueue(null);
 
                         // The request interceptor will automatically inject the fresh token
-                        // No need to manually update headers here
                         return axios(originalRequest);
                     } catch (refreshError) {
                         this.processQueue(refreshError);
@@ -298,7 +318,7 @@ class ApiService {
         }
 
         this.isHandlingSessionExpiry = true;
-        console.log('handleRefreshFailure - Clearing all authentication data');
+        console.log('🚨 handleRefreshFailure - Refresh token failed, clearing authentication data');
 
         // Clear all authentication data first
         this.clearAuth();
@@ -316,9 +336,136 @@ class ApiService {
             return;
         }
 
-        // Only show toast if we're not already on the signin page
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/signin')) {
-            toast.error("Session expired. Please login again.");
+        // Show session expired popup and redirect to login
+        console.log('🚨 Triggering session expired popup due to refresh token failure');
+        this.showSessionExpiredPopup();
+    }
+
+    // Show session expired popup with auto redirect
+    private showSessionExpiredPopup(): void {
+        if (typeof window === 'undefined') return;
+
+        console.log('🔔 Showing session expired popup...');
+
+        // Don't show popup if already on signin page
+        if (window.location.pathname.includes('/signin')) {
+            console.log('👤 Already on signin page, redirecting directly');
+            this.redirectToLogin();
+            return;
+        }
+
+        // Prevent multiple popups
+        if (document.getElementById('session-expired-modal')) {
+            console.log('⚠️ Session expired popup already visible');
+            return;
+        }
+
+        // Create and show session expired modal
+        const modalOverlay = document.createElement('div');
+        modalOverlay.id = 'session-expired-modal';
+        modalOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: modalSlideIn 0.3s ease-out;
+        `;
+
+        modalContent.innerHTML = `
+            <div style="margin-bottom: 1.5rem;">
+                <div style="
+                    width: 64px;
+                    height: 64px;
+                    background-color: #FEF2F2;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 1rem;
+                ">
+                    <svg width="32" height="32" fill="#EF4444" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                </div>
+                <h3 style="
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    color: #1F2937;
+                    margin: 0 0 0.5rem;
+                ">Session Expired</h3>
+                <p style="
+                    color: #6B7280;
+                    margin: 0 0 1.5rem;
+                    line-height: 1.5;
+                ">Your session has expired due to inactivity. Please log in again to continue.</p>
+            </div>
+            <button id="session-expired-ok-btn" style="
+                background-color: #3B82F6;
+                color: white;
+                border: none;
+                padding: 0.75rem 2rem;
+                border-radius: 8px;
+                font-weight: 500;
+                cursor: pointer;
+                font-size: 1rem;
+                transition: background-color 0.2s;
+                width: 100%;
+            ">Go to Login</button>
+        `;
+
+        // Add CSS animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes modalSlideIn {
+                from { opacity: 0; transform: translateY(-20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        modalOverlay.appendChild(modalContent);
+        document.body.appendChild(modalOverlay);
+
+        // Handle button click
+        const okButton = document.getElementById('session-expired-ok-btn');
+        if (okButton) {
+            okButton.addEventListener('click', () => {
+                this.redirectToLogin();
+            });
+        }
+
+        // Auto redirect after 10 seconds
+        setTimeout(() => {
+            if (document.getElementById('session-expired-modal')) {
+                this.redirectToLogin();
+            }
+        }, 10000);
+    }
+
+    // Redirect to login page
+    private redirectToLogin(): void {
+        // Remove modal if it exists
+        const modal = document.getElementById('session-expired-modal');
+        if (modal) {
+            modal.remove();
         }
 
         // Use Next.js router for client-side navigation if available
@@ -338,6 +485,7 @@ class ApiService {
     // Get authorization token from localStorage
     private getAuthToken(): string | null {
         const authToken = getLocalStorage('auth_token');
+        console.log('🔑 getAuthToken called, token:', authToken ? authToken.substring(0, 30) + '...' : 'null');
         return authToken;
     }
 
@@ -390,27 +538,53 @@ class ApiService {
                 const tokenData = data.data.rs0[0];
 
                 // Update tokens in localStorage
+                console.log('💾 Storing new access token:', tokenData.AccessToken.substring(0, 30) + '...');
+                console.log('💾 Storing new refresh token:', tokenData.RefreshToken.substring(0, 20) + '...');
+
                 storeLocalStorage('auth_token', tokenData.AccessToken);
                 storeLocalStorage('refreshToken', tokenData.RefreshToken);
-                console.log('✅ Tokens refreshed successfully');
-                console.log('🔑 New access token:', tokenData.AccessToken.substring(0, 20) + '...');
-                console.log('🔄 New refresh token:', tokenData.RefreshToken.substring(0, 20) + '...');
+
+                // Verify tokens were stored correctly
+                const storedAccessToken = getLocalStorage('auth_token');
+                const storedRefreshToken = getLocalStorage('refreshToken');
+
+                console.log('✅ Tokens refreshed and stored successfully');
+                console.log('🔍 Verification - stored access token:', storedAccessToken ? storedAccessToken.substring(0, 30) + '...' : 'null');
+                console.log('🔍 Verification - stored refresh token:', storedRefreshToken ? storedRefreshToken.substring(0, 20) + '...' : 'null');
             } else {
                 console.error('Refresh token API returned unsuccessful response:', data);
                 throw new Error('Failed to refresh token');
             }
         } catch (error: any) {
-            console.error('Token refresh failed:', error);
-            console.log('Error status:', error.response?.status);
-            console.log('Error data:', error.response?.data);
+            console.error('🚨 Token refresh failed:', error);
+            console.log('📊 Error status:', error.response?.status);
+            console.log('📊 Error data:', error.response?.data);
 
-            // If refresh token API itself returns 401, immediately logout the user
-            if (error.response?.status === 401) {
-                console.warn('Refresh token is invalid or expired (401). Logging out user.');
+            // Handle different types of refresh token errors
+            const errorStatus = error.response?.status;
+            const errorMessage = error.response?.data?.message || error.message;
+
+            if (errorStatus === 401) {
+                console.warn('🚨 Refresh token is invalid or expired (401). Showing session expired popup.');
                 this.handleRefreshFailure();
                 throw new Error('Refresh token expired - user logged out');
+            } else if (errorStatus === 403) {
+                console.warn('🚨 Refresh token access forbidden (403). Showing session expired popup.');
+                this.handleRefreshFailure();
+                throw new Error('Refresh token access denied - user logged out');
+            } else if (errorStatus >= 500) {
+                console.error('🚨 Server error during token refresh (5xx). Showing session expired popup.');
+                this.handleRefreshFailure();
+                throw new Error('Server error during token refresh - user logged out');
+            } else if (errorMessage && errorMessage.toLowerCase().includes('token')) {
+                console.warn('🚨 Token-related error during refresh. Showing session expired popup.');
+                this.handleRefreshFailure();
+                throw new Error('Token refresh failed - user logged out');
             }
 
+            // For other errors, still try to handle as session expiry
+            console.warn('🚨 Unknown error during token refresh. Showing session expired popup.');
+            this.handleRefreshFailure();
             throw error;
         }
     }
@@ -545,6 +719,12 @@ class ApiService {
                 console.warn("Database deletion blocked (probably open in another tab)");
             };
         }
+    }
+
+    // Test method to manually trigger session expired popup (for development/testing)
+    testSessionExpiredPopup(): void {
+        console.log('🧪 Testing session expired popup...');
+        this.showSessionExpiredPopup();
     }
 }
 
