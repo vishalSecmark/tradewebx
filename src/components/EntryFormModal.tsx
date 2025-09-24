@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
-import { FaPlus, FaSave } from 'react-icons/fa';
+import { FaPlus, FaSave, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
@@ -292,6 +292,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [isChildModalOpen, setIsChildModalOpen] = useState(false);
     const [childEntriesTable, setChildEntriesTable] = useState<any[]>([]);
     const [childEntriesTableBackup, setChildEntriesTableBackup] = useState<any[]>([]);
+    console.log("check child table records",childEntriesTable)
 
     const [childFormData, setChildFormData] = useState<FormField[]>([]);
     const [childFormValues, setChildFormValues] = useState<Record<string, any>>({});
@@ -1430,83 +1431,109 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     }, [isOpen, pageData, isTabs]);
 
-    const deleteChildRecord = async () => {
-        try {
 
-            const entry = pageData[0].Entry;
-            const masterEntry = entry.MasterEntry;
-            const pageName = pageData[0]?.wPage || "";
+              // Helper function to check if any records are selected for deletion
+             const hasSelectedRecords = () => {
+                 return childEntriesTable.some(record => record.IsDeleted);
+             };
 
-            const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
 
-            const jUi = Object.entries(masterEntry.J_Ui)
-                .map(([key, value]) => {
-                    if (key === 'Option') {
-                        return `"${key}":"delete"`;
+            const deleteChildRecord = async () => {
+                  try {
+                    const entry = pageData[0].Entry;
+                    const masterEntry = entry.MasterEntry;
+                    const pageName = pageData[0]?.wPage || "";
+                    const sql = Object.keys(masterEntry?.sql || {}).length ? masterEntry.sql : "";
+                
+                    const jUi = Object.entries(masterEntry?.J_Ui || {})
+                      .map(([key, value]) => {
+                        if (key === "Option") return `"${key}":"edit"`;
+                        if (key === "ActionName") return `"${key}":"${pageName}"`;
+                        return `"${key}":"${value}"`;
+                      })
+                      .join(",");
+                  
+                    const jApi = Object.entries(masterEntry?.J_Api || {})
+                      .map(([key, value]) => `"${key}":"${value}"`)
+                      .join(",");
+                  
+                    // Escape XML special chars
+                    const escapeXml = (s) =>
+                      String(s).replace(/[&<>'"]/g, (c) =>
+                        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&apos;", '"': "&quot;" }[c])
+                      );
+                  
+                    // Robust XML builder
+                    const createXmlTags = (data) => {
+                      if (data === null || data === undefined) return "";
+                      if (typeof data !== "object") return escapeXml(String(data));
+                    
+                      // If array given directly, treat as list of <item>...</item>
+                      if (Array.isArray(data)) {
+                        return data.map((it) => `<item>${createXmlTags(it)}</item>`).join("");
+                      }
+                  
+                      return Object.entries(data)
+                        .map(([key, value]) => {
+                          // null/undefined -> empty tag
+                          if (value === null || value === undefined) {
+                            return `<${key}></${key}>`;
+                          }
+                      
+                          // Array handling
+                          if (Array.isArray(value)) {
+                            // If the key is 'item' we must NOT wrap the whole array in another <item> tag.
+                            // Instead emit multiple <item>...</item> nodes directly.
+                            if (key === "item") {
+                              return value.map((it) => `<item>${createXmlTags(it)}</item>`).join("");
+                            }
+                            // Otherwise wrap the collection inside the parent tag (<Items> ... <item>...</item> ...</Items>)
+                            return `<${key}>${value.map((it) => `<item>${createXmlTags(it)}</item>`).join("")}</${key}>`;
+                          }
+                      
+                          // Nested object -> recurse
+                          if (typeof value === "object") {
+                            return `<${key}>${createXmlTags(value)}</${key}>`;
+                          }
+                      
+                          // Primitive (including 0, false, empty string)
+                          return `<${key}>${escapeXml(String(value))}</${key}>`;
+                        })
+                        .join("");
+                    };
+                
+                    // Use your table data as-is (preserves its IsDeleted flags)
+                    const items = childEntriesTable;
+                
+                    const xData = createXmlTags({
+                      ...masterFormValues,
+                      Items: { item: items }, // Items contains key 'item' whose value is an array
+                      UserId: "ANUJ",
+                    });
+                
+                    const xmlData = `<dsXml>
+                      <J_Ui>${jUi}</J_Ui>
+                      <Sql>${sql}</Sql>
+                      <X_Filter></X_Filter>
+                      <X_Data>${xData}</X_Data>
+                      <J_Api>${jApi}</J_Api>
+                    </dsXml>`;
+                
+                    const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+                    if (response?.data?.success) {
+                      fetchMasterEntryData(masterFormValues);
+                      setIsConfirmationModalOpen(false);
+                      toast.success("Child Record(s) Deleted");
+                    }else{
+                        const cleanMessage = response?.data?.message?.replace(/<\/?Message>/g, "") || "Something went wrong";
+                        toast.error(cleanMessage.trim());
                     }
-                    if (key === 'ActionName') {
-                        return `"${key}":"${pageName}"`;
-                    }
-                    return `"${key}":"${value}"`
-
-                })
-                .join(',');
-
-            const jApi = Object.entries(masterEntry.J_Api)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
-
-            const createXmlTags = (data) => {
-                const seenTags = new Set(); // Track seen tags to avoid duplicates
-
-                return Object.entries(data).map(([key, value]) => {
-                    if (seenTags.has(key)) {
-                        return ''; // Skip duplicate tags
-                    }
-                    seenTags.add(key);
-
-                    if (Array.isArray(value)) {
-                        return `<${key}>${value.map(item => `<item>${createXmlTags(item)}</item>`).join('')}</${key}>`;
-                    } else if (typeof value === 'object' && value !== null) {
-                        return `<${key}>${createXmlTags(value)}</${key}>`;
-                    } else if (value) {
-                        return `<${key}>${value}</${key}>`;
-                    } else {
-                        return `<${key}></${key}>`; // Keep empty tag if no value
-                    }
-                }).filter(Boolean).join(''); // Remove any empty strings
-            };
-
-
-            const xData = createXmlTags({
-                ...masterFormValues,
-                items: { item: { ...childFormValues, IsDeleted: true } },
-                UserId: "ANUJ"
-            });
-
-            const xmlData = `<dsXml>
-                <J_Ui>${jUi}</J_Ui>
-                <Sql>${sql}</Sql>
-                <X_Filter></X_Filter>
-                <X_Data>${xData}</X_Data>
-                <J_Api>${jApi}</J_Api>
-            </dsXml>`;
-
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            if (response?.data?.success) {
-                fetchMasterEntryData(masterFormValues)
-                setIsConfirmationModalOpen(false);
-                toast.success('Child Record Deleted')
-            }
-
-        } catch (error) {
-            console.error(`Error fetching options for   `);
-        } finally {
-            console.log("check delete record");
-        }
-
-
-    }
+                  } catch (error) {
+                    console.error("Error deleting child records:", error);
+                  } finally {
+                    console.log("check delete record");
+                  }
+                };
 
     useEffect(() => {
         if (action === 'edit' && editData) {
@@ -2834,20 +2861,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             </>
                                                         )}
                                                     </Button>
-                                                    <Button
-                                                        className={`flex items-center ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
-                                                        onClick={() => {
-                                                            handleFormSubmitWhenMasterOnly()
-                                                        }}
-                                                        disabled={isFormInvalid || viewMode || isFormSubmit}
-                                                    >
-                                                        {isFormSubmit ? "Submitting..." : (
-                                                            <>
-                                                                <FaSave /> Save Form
-                                                            </>
-                                                        )}
-
-                                                    </Button>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            className={`flex items-center ${(isFormInvalid || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'} text-white rounded-md`}
+                                                            onClick={() => {
+                                                                handleFormSubmitWhenMasterOnly()
+                                                            }}
+                                                            disabled={isFormInvalid || viewMode || isFormSubmit}
+                                                        >
+                                                            {isFormSubmit ? "Submitting..." : (
+                                                                <>
+                                                                    <FaSave /> Save Form
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                        <Button
+                                                            className={`flex items-center ${(!hasSelectedRecords() || viewMode) ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'} text-white rounded-md`}
+                                                            onClick={()=>setIsConfirmationModalOpen(true)}
+                                                            disabled={!hasSelectedRecords() || viewMode}
+                                                        >
+                                                            <FaTrash className="mr-2" /> Delete Selected
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </>
                                         )}
@@ -2857,6 +2892,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                             <DataGrid
                                               columns={[
                                                 {
+                                                    key: "",
+                                                    name:"",
+                                                    width: 50,
+                                                    renderCell: ({row}) =>(
+                                                        <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                        checked={row.IsDeleted || false}
+                                                        onChange={(e) => {
+                                                              const updatedTable = childEntriesTable.map((item, i) =>
+                                                                i === row._index
+                                                                  ? { ...item, IsDeleted: e.target.checked }
+                                                                  : item
+                                                              );
+                                                              setChildEntriesTable(updatedTable);
+                                                            }}
+                                                        disabled={viewMode}
+                                                      />
+                                                    )
+
+                                                },
+                                                {
                                                   key: "srno",
                                                   name: "Sr. No",
                                                   width: columnWidthMap["Sr. No"] || 80,
@@ -2865,7 +2922,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 {
                                                   key: "actions",
                                                   name: "Actions",
-                                                  width: columnWidthMap["Actions"] || 250,
+                                                  width: columnWidthMap["Actions"] || 200,
                                                   renderCell: ({ row }) => (
                                                     <div className="flex gap-1 justify-center">
                                                       {viewMode && (
@@ -2892,20 +2949,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         disabled={viewMode}
                                                       >
                                                         Edit
-                                                      </button>
-                                                      <button
-                                                        className={`px-3 py-1 rounded-md transition-colors ${
-                                                          viewMode
-                                                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                                            : "bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700"
-                                                        }`}
-                                                        onClick={() => {
-                                                          setChildFormValues(row);
-                                                          setIsConfirmationModalOpen(true);
-                                                        }}
-                                                        disabled={viewMode}
-                                                      >
-                                                        Delete
                                                       </button>
                                                     </div>
                                                   ),
