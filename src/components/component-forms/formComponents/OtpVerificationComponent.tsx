@@ -49,8 +49,8 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
   // Helper function to extract message from XML response
   const extractMessageFromResponse = (responseData: string): string => {
-    const messageMatch = responseData?.match(/<Message>(.*?)<\/Message>/);
-    return messageMatch ? messageMatch[1] : '';
+      const messageMatch = responseData?.match(/<Message>\s*(.*?)\s*<\/Message>/);
+      return messageMatch ? messageMatch[1] : '';
   };
 
   const validateNewValue = (): boolean => {
@@ -118,8 +118,10 @@ const OtpVerificationModal: React.FC<OtpVerificationModalProps> = ({
 
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
       const responseData = response.data?.data?.rs0?.[0]?.Column1;
+      
       if (responseData?.includes("<Flag>S</Flag>")) {
-        toast.success(`OTP sent to ${requiresOldVerification ? `old ${type} ${oldValue}` : ''} ${requiresOldVerification && requiresNewVerification ? 'and ' : ''} ${requiresNewVerification ? `new ${type} ${newValue}` : ''}`);
+        const message = extractMessageFromResponse(responseData);
+        toast.success(message || `OTP sent to ${requiresOldVerification ? `old ${type} ${oldValue}` : ''} ${requiresOldVerification && requiresNewVerification ? 'and ' : ''} ${requiresNewVerification ? `new ${type} ${newValue}` : ''}`);
         setOtpSent(true);
 
         // Determine next step based on requirements

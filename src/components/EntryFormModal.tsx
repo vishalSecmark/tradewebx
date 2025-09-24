@@ -1540,7 +1540,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const filteredData = childEntriesTable.filter((item: any) => item.Id !== childFormValues?.Id);
             setChildEntriesTable(filteredData);
             setIsConfirmationModalOpen(false);
-
         } else {
             deleteChildRecord();
         }
@@ -2749,7 +2748,16 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             },
                                                             ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
                                                                 key: col,
-                                                                name: col
+                                                                name: col,
+                                                                renderCell: ({ row }) => {
+                                                                    console.log("check row",row,col)
+                                                                    return(
+                                                                    <div style={{ 
+                                                                        color: row.isModified || row.isInserted ? 'green' : 'inherit'
+                                                                    }}>
+                                                                        {row[col]}
+                                                                    </div>
+                                                                )}
                                                             }))
                                                         ]}
                                                         rows={(tabTableData[`tab_${activeTabIndex}`] || []).map((row, index) => ({
@@ -2931,7 +2939,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                               ]}
                                               rows={childEntriesTable.map((entry, index) => ({
                                                 ...entry,
-                                                _index: index, // 👈 attach index here
+                                                _index: index,
                                               }))}
                                               className="rdg-light"
                                               rowHeight={40}
