@@ -14,6 +14,9 @@ api.interceptors.request.use(
     const token = getAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 [auth.ts] Token injected in request interceptor:', token.substring(0, 20) + '...');
+    } else {
+      console.warn('⚠️ [auth.ts] No token available for request to:', config.url);
     }
     return config;
   },
@@ -90,7 +93,9 @@ const refreshAuthToken = async (): Promise<string> => {
       // Update tokens in localStorage using the helper functions
       storeLocalStorage('auth_token', tokenData.AccessToken);
       storeLocalStorage('refreshToken', tokenData.RefreshToken);
-      console.log('Tokens refreshed successfully');
+      console.log('✅ [auth.ts] Tokens refreshed successfully');
+      console.log('🔑 [auth.ts] New access token:', tokenData.AccessToken.substring(0, 20) + '...');
+      console.log('🔄 [auth.ts] New refresh token:', tokenData.RefreshToken.substring(0, 20) + '...');
 
       return tokenData.AccessToken;
     } else {
@@ -122,11 +127,7 @@ api.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then(() => {
-          // Update the authorization header with new token
-          const newToken = getAuthToken();
-          if (newToken) {
-            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-          }
+          // The request interceptor will automatically inject the fresh token
           return api(originalRequest);
         }).catch(err => {
           return Promise.reject(err);
@@ -140,8 +141,7 @@ api.interceptors.response.use(
         const newToken = await refreshAuthToken();
         processQueue(null);
 
-        // Update the authorization header with new token
-        originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+        // The request interceptor will automatically inject the fresh token
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError);

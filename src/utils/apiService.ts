@@ -171,7 +171,7 @@ class ApiService {
 
     // Setup axios interceptors for automatic token refresh and security
     private setupInterceptors(): void {
-        // Request interceptor for security
+        // Request interceptor for security and token injection
         axios.interceptors.request.use(
             async (config) => {
                 // Add request ID for tracking
@@ -186,7 +186,21 @@ class ApiService {
                     config.headers['X-Request-Signature'] = signature;
                 }
 
+                // Inject fresh token for every request (except for refresh token requests)
+                const isRefreshTokenRequest = config.url?.includes(OTP_VERIFICATION_URL) &&
+                    config.data?.toString().includes('Option":"Refresh');
 
+                if (!isRefreshTokenRequest) {
+                    const token = this.getAuthToken();
+                    if (token) {
+                        config.headers['Authorization'] = `Bearer ${token}`;
+                        console.log('🔑 Token injected in request interceptor:', token.substring(0, 20) + '...');
+                    } else {
+                        console.warn('⚠️ No token available for request to:', config.url);
+                    }
+                } else {
+                    console.log('🔄 Refresh token request detected, skipping token injection');
+                }
 
                 return config;
             },
@@ -241,12 +255,8 @@ class ApiService {
                         await this.refreshAuthToken();
                         this.processQueue(null);
 
-                        // Update the authorization header with new token
-                        const newToken = this.getAuthToken();
-                        if (newToken && originalRequest.headers) {
-                            originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
-                        }
-
+                        // The request interceptor will automatically inject the fresh token
+                        // No need to manually update headers here
                         return axios(originalRequest);
                     } catch (refreshError) {
                         this.processQueue(refreshError);
@@ -376,15 +386,17 @@ class ApiService {
             console.log('Refresh token API response:', response.status, response.data);
             const shouldDecode = ENABLE_FERNET && store.getState().common.encPayload;
             const data = shouldDecode && typeof response.data.data === 'string' ? decodeFernetToken(response.data.data) : response.data;
-            if (data.data.success && data.data.data.rs0.length > 0) {
-                const tokenData = data.data.data.rs0[0];
+            if (data.success && data.data.rs0.length > 0) {
+                const tokenData = data.data.rs0[0];
 
                 // Update tokens in localStorage
                 storeLocalStorage('auth_token', tokenData.AccessToken);
                 storeLocalStorage('refreshToken', tokenData.RefreshToken);
-                console.log('Tokens refreshed successfully');
+                console.log('✅ Tokens refreshed successfully');
+                console.log('🔑 New access token:', tokenData.AccessToken.substring(0, 20) + '...');
+                console.log('🔄 New refresh token:', tokenData.RefreshToken.substring(0, 20) + '...');
             } else {
-                console.error('Refresh token API returned unsuccessful response:', data.data);
+                console.error('Refresh token API returned unsuccessful response:', data);
                 throw new Error('Failed to refresh token');
             }
         } catch (error: any) {
@@ -430,9 +442,15 @@ class ApiService {
                 method,
                 url,
                 timeout: this.defaultTimeout,
-                headers: this.getDefaultHeaders(config?.headers?.['Content-Type'] || 'application/xml'),
+                headers: {
+                    'Content-Type': config?.headers?.['Content-Type'] || 'application/xml',
+                    ...config?.headers
+                },
                 ...config
             };
+
+            // Don't set Authorization header here - let the interceptor handle it
+            // This ensures fresh tokens are always used
 
             if (data) {
                 requestConfig.data = data;
