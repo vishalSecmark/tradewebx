@@ -375,7 +375,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const isEnabled = field.FieldEnabledTag === 'Y';
         const isRequired = field.isMandatory === "true";
         const isFieldVisible  = field.FieldVisibleTag === "Y";
-        const fieldValue = formValues[field.wKey]?.trim();
+        const fieldValue = (formValues[field.wKey] ?? "").toString().trim();
         const isJustUpdated = field?.fieldJustUpdated?.toLowerCase() === "true" || field?.isChangeColumn?.toLowerCase() === "true";
 
 
