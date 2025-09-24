@@ -23,6 +23,7 @@ export interface ApiResponse<T = any> {
 interface RefreshTokenResponse {
     success: boolean;
     data: {
+        data?: string;
         rs0: Array<{
             AccessToken: string;
             RefreshToken: string;
@@ -373,16 +374,17 @@ class ApiService {
             );
 
             console.log('Refresh token API response:', response.status, response.data);
-
-            if (response.data.success && response.data.data.rs0.length > 0) {
-                const tokenData = response.data.data.rs0[0];
+            const shouldDecode = ENABLE_FERNET && store.getState().common.encPayload;
+            const data = shouldDecode && typeof response.data.data === 'string' ? decodeFernetToken(response.data.data) : response.data;
+            if (data.data.success && data.data.data.rs0.length > 0) {
+                const tokenData = data.data.data.rs0[0];
 
                 // Update tokens in localStorage
                 storeLocalStorage('auth_token', tokenData.AccessToken);
                 storeLocalStorage('refreshToken', tokenData.RefreshToken);
                 console.log('Tokens refreshed successfully');
             } else {
-                console.error('Refresh token API returned unsuccessful response:', response.data);
+                console.error('Refresh token API returned unsuccessful response:', data.data);
                 throw new Error('Failed to refresh token');
             }
         } catch (error: any) {
