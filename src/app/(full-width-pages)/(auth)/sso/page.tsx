@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useDispatch } from 'react-redux'
 import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
-import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL } from "@/utils/constants"
+import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL } from "@/utils/constants"
 import Image from "next/image"
 import { clearIndexedDB, removeLocalStorage, storeLocalStorage } from '@/utils/helper'
 
@@ -18,47 +18,46 @@ const SSOContent = () => {
 
     const handleSSOLogin = useCallback(async () => {
         try {
-            // Extract query parameters - check for both formats
-            const ID = searchParams.get('ID')
-            const PDate = searchParams.get('PDate')
-            const TradeWebUName = searchParams.get('TradeWebUName')
-            const PANNo = searchParams.get('PANNo')
-
+            // Extract all query parameters dynamically
             let requestData: any = null
+            let xDataContent = ""
+            const queryParams: { [key: string]: string } = {}
 
-            // Check which format we have and prepare appropriate request data
-            if (ID && PDate) {
-                // Format 1: ID and PDate parameters
-                requestData = {
-                    ID: ID,
-                    PDate: PDate,
-                    Product: PRODUCT,
-                    key: LOGIN_KEY,
-                    loginAs: "C"
-                }
-                console.log('SSO Login request (ID/PDate format):', requestData)
-            } else if (TradeWebUName && PANNo) {
-                // Format 2: TradeWebUName and PANNo parameters
-                requestData = {
-                    TradeWebUName: TradeWebUName,
-                    PANNo: PANNo,
-                    Product: PRODUCT,
-                    key: LOGIN_KEY,
-                    loginAs: "C"
-                }
-                console.log('SSO Login request (TradeWebUName/PANNo format):', requestData)
-            } else {
-                setError('Missing required parameters. Expected either (ID & PDate) or (TradeWebUName & PANNo)')
+            // Collect all query parameters
+            searchParams.forEach((value, key) => {
+                queryParams[key] = value
+                xDataContent += `<${key}>${value}</${key}>`
+            })
+
+            console.log('SSO Login request with all query params:', queryParams)
+
+            // Check if we have any parameters
+            if (Object.keys(queryParams).length === 0) {
+                setError('No query parameters found')
                 setIsLoading(false)
                 return
             }
 
+            // Construct XML payload
+            const xmlData = `<dsXml>
+                                <J_Ui>"ActionName":"TradeWeb","Option":"LoginSSO"</J_Ui>
+                                <Sql/>
+                                <X_Filter></X_Filter>
+                                <X_Data>
+                                    ${xDataContent}
+                                </X_Data>
+                                <J_Api>"UserId":"", "UserType":"User"</J_Api>
+                            </dsXml>`
+
+            requestData = xmlData
+            console.log('SSO Login XML request:', xmlData)
+
             // Call SSO Login API
             const response = await axios({
                 method: 'post',
-                url: `${BASE_URL}${SSO_URL}`,
+                url: `${BASE_URL}${OTP_VERIFICATION_URL}`,
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/xml',
                 },
                 data: requestData
             })
@@ -140,8 +139,8 @@ const SSOContent = () => {
                         </p>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mb-4 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                             <strong>Supported URL formats:</strong><br />
-                            • ?ID=...&PDate=...<br />
-                            • ?TradeWebUName=...&PANNo=...
+                            • Any query parameters will be sent to the API<br />
+                            • Example: ?param1=value1&param2=value2
                         </div>
                         <button
                             onClick={() => router.push('/signin')}
