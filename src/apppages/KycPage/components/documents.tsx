@@ -362,8 +362,6 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const url = doc.querySelector('Url')?.textContent;
                         if (url) {
                             storeLocalStorage('ekyc_esign_state', JSON.stringify({
-                                kraPdfData,
-                                finalPdfData,
                                 kraPdfGenerated: true,
                                 kraESignEnabled: true,
                                 finalPdfGenerated: false,
