@@ -483,10 +483,9 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
+                    
                         if (url) {
                             storeLocalStorage('ekyc_esign_state', JSON.stringify({
-                                kraPdfData,
-                                finalPdfData,
                                 kraPdfGenerated: true,
                                 kraESignEnabled: true,
                                 finalPdfGenerated: true,
