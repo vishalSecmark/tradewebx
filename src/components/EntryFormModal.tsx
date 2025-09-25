@@ -1507,7 +1507,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 
                     const xData = createXmlTags({
                       ...masterFormValues,
-                      Items: { item: items }, // Items contains key 'item' whose value is an array
+                      items: { item: items }, // Items contains key 'item' whose value is an array
                       UserId: "ANUJ",
                     });
                 
