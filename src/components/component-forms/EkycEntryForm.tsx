@@ -535,12 +535,17 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                         <CustomDatePicker
-                            selected={formValues[field.wKey] ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() : null}
-                            onChange={(date) => {
-                                // Convert the selected date to YYYYMMDD format before saving
+                            selected={
+                                formValues[field.wKey] && 
+                                formValues[field.wKey].trim() && 
+                                moment(formValues[field.wKey], 'YYYYMMDD', true).isValid() 
+                                  ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() 
+                                  : null
+                              }
+                              onChange={(date) => {
                                 const formattedDate = date ? moment(date).format('YYYYMMDD') : null;
                                 handleInputChange(field.wKey, formattedDate);
-                            }}
+                              }}
                             disabled={!isEnabled}
                             className={`
                     w-full px-3 py-1 border rounded-md

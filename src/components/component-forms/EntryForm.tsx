@@ -375,6 +375,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const isEnabled = field.FieldEnabledTag === 'Y';
         const isRequired = field.isMandatory === "true";
         const isFieldVisible  = field.FieldVisibleTag === "Y";
+        // skip this for filed type input box 
         const fieldValue = (formValues[field.wKey] ?? "").toString().trim();
         const isJustUpdated = field?.fieldJustUpdated?.toLowerCase() === "true" || field?.isChangeColumn?.toLowerCase() === "true";
 
@@ -480,7 +481,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                 color: isJustUpdated ? "#22c55e" : colors.textInputText,
                                 width: fieldWidth // Apply width to input directly
                             }}
-                            value={fieldValue || ''}
+                            value={formValues[field.wKey] || ''}
                             onChange={(e) => {
                                 const value = e.target.value;
                                 if (field.FieldType === 'INT' && !/^[0-9]*$/.test(value)) {
