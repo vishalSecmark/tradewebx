@@ -2011,8 +2011,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            console.log("check x filter-------->", xFilterMultiple, editData, masterFormValues, currentTabFormValues)
-
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql></Sql>
@@ -2466,7 +2464,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                                 : 'bg-blue-500 hover:bg-blue-600'
                                                                 } text-white`}
-                                                            onClick={() => setTabsModal(true)}
+                                                            onClick={() => {
+                                                                const noOfRecordsAllowed = Number(tabsData[activeTabIndex]?.Settings?.maxAllowedRecords)
+                                                                const currentRecords = (tabTableData[`tab_${activeTabIndex}`] || [])?.length;
+                                                                if (currentRecords >= noOfRecordsAllowed) {
+                                                                    toast.warning(`Max number of records allowed ${noOfRecordsAllowed}`);
+                                                                }else{
+                                                                    setTabsModal(true)
+                                                                }
+                                                            }}
                                                             disabled={action === "view" && editData}
                                                         >
                                                             Add Entry

@@ -214,8 +214,10 @@ const EntryForm: React.FC<EntryFormProps> = ({
                 }
 
                 if (!fieldValue) {
-                    setFieldErrors(prev => ({ ...prev, [key]: `Please fill the required field: ${key}` }));
-                    setFormValues(prev => ({ ...prev, [field.wKey]: '' }));
+                    if(field.isMandatory === "true"){
+                        setFieldErrors(prev => ({ ...prev, [key]: `Please fill the required field: ${key}` }));
+                        setFormValues(prev => ({ ...prev, [field.wKey]: '' }));
+                    }
                     shouldCallApi = false;
                     errors.push(key);
                 } else {
@@ -232,8 +234,10 @@ const EntryForm: React.FC<EntryFormProps> = ({
             }
 
             if (!fieldValue) {
+              if(field.isMandatory === "true"){
                 setFieldErrors(prev => ({ ...prev, [X_Filter]: `Please fill the required field: ${X_Filter}` }));
                 setFormValues(prev => ({ ...prev, [field.wKey]: '' }));
+              }
                 shouldCallApi = false;
                 errors.push(X_Filter);
             } else {
@@ -242,7 +246,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         }
 
         if (errors.length > 0) {
-            toast.error(`Please fill the required fields: ${errors.join(', ')}`);
+            toast.error(`Please fill the fields: ${errors.join(', ')} to validate`);
         }
 
         if (!shouldCallApi) return;
