@@ -312,12 +312,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
     const [tabsModal, setTabsModal] = useState<boolean>(false);
 
-    // Function to go to previous tab
-    const goToPreviousTab = () => {
-        if (activeTabIndex > 0) {
-            setActiveTabIndex(activeTabIndex - 1);
-        }
-    };
     const [editTabModalData, setEditTabModalData] = useState<boolean>(false);
     const [editTabRowIndex, setEditTabRowIndex] = useState(null);
 
@@ -1627,6 +1621,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             return updatedErrors;
         });
     };
+
+    const resetTabsFieldsError = () =>{
+        const previousTab = tabsData[activeTabIndex];
+        setFieldErrors(prevErrors => {
+            const updatedErrors = { ...prevErrors };
+            previousTab.Data.forEach(field => {
+                if (updatedErrors[field.wKey]) {
+                    delete updatedErrors[field.wKey];
+                }
+            });
+            return updatedErrors;
+        });
+    }
+
+    // Function to go to previous tab
+    const goToPreviousTab = () => {
+        if (activeTabIndex > 0) {
+            resetTabsFieldsError();
+            setActiveTabIndex(activeTabIndex - 1);
+        }
+    };
+    
     const resetParentForm = () => {
         if (isTabs) {
             resetTabsForm();
@@ -1760,8 +1776,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setIsFormSubmit(false)
         }
     };
-
-
 
     const getAllColumns = (data: any[]): string[] => {
         const allColumns = new Set<string>();
@@ -2040,9 +2054,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     };
 
-
-
-
     // Helper to generate unique id for table rows
     const generateUniqueId = () => {
         return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -2117,10 +2128,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setEditTabModalData(true);
         setEditTabRowIndex(idx);
     }
-
-
-
-
 
     const handleAddTabsFormTableRow = () => {
         const currentTab = tabsData[activeTabIndex];
