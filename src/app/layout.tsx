@@ -25,7 +25,7 @@ const appMetadata = (() => {
     return store.getState().common
   }
 })();
-console.log(appMetadata)
+
 
 const outfit = Outfit({
   variable: "--font-outfit-sans",
@@ -47,14 +47,14 @@ export default function RootLayout({
 
   useEffect(() => {
     // Set title from environment variable
-    const appTitle = process.env.NEXT_PUBLIC_APP_TITLE || "TradePlus";
+    const appTitle = process.env.NEXT_PUBLIC_APP_TITLE || appMetadata.companyName;
     document.title = appTitle;
   }, []);
 
   return (
     <html lang="en">
       <head>
-        <title>{process.env.NEXT_PUBLIC_APP_TITLE || "TradePlus"}</title>
+        <title>{process.env.NEXT_PUBLIC_APP_TITLE || appMetadata.companyName}</title>
         {
           appMetadata?.companyLogo && (
             <link rel="icon" type="image/x-icon" href={appMetadata.companyLogo} />
