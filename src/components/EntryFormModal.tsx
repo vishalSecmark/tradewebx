@@ -312,12 +312,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [tabTableData, setTabTableData] = useState<Record<string, any[]>>({});
     const [tabsModal, setTabsModal] = useState<boolean>(false);
 
-    // Function to go to previous tab
-    const goToPreviousTab = () => {
-        if (activeTabIndex > 0) {
-            setActiveTabIndex(activeTabIndex - 1);
-        }
-    };
     const [editTabModalData, setEditTabModalData] = useState<boolean>(false);
     const [editTabRowIndex, setEditTabRowIndex] = useState(null);
 
@@ -1627,6 +1621,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             return updatedErrors;
         });
     };
+
+    const resetTabsFieldsError = () =>{
+        const previousTab = tabsData[activeTabIndex];
+        setFieldErrors(prevErrors => {
+            const updatedErrors = { ...prevErrors };
+            previousTab.Data.forEach(field => {
+                if (updatedErrors[field.wKey]) {
+                    delete updatedErrors[field.wKey];
+                }
+            });
+            return updatedErrors;
+        });
+    }
+
+    // Function to go to previous tab
+    const goToPreviousTab = () => {
+        if (activeTabIndex > 0) {
+            resetTabsFieldsError();
+            setActiveTabIndex(activeTabIndex - 1);
+        }
+    };
+    
     const resetParentForm = () => {
         if (isTabs) {
             resetTabsForm();
@@ -1760,8 +1776,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setIsFormSubmit(false)
         }
     };
-
-
 
     const getAllColumns = (data: any[]): string[] => {
         const allColumns = new Set<string>();
@@ -2011,8 +2025,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 }
             });
 
-            console.log("check x filter-------->", xFilterMultiple, editData, masterFormValues, currentTabFormValues)
-
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql></Sql>
@@ -2041,9 +2053,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
 
     };
-
-
-
 
     // Helper to generate unique id for table rows
     const generateUniqueId = () => {
@@ -2119,10 +2128,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setEditTabModalData(true);
         setEditTabRowIndex(idx);
     }
-
-
-
-
 
     const handleAddTabsFormTableRow = () => {
         const currentTab = tabsData[activeTabIndex];
@@ -2466,7 +2471,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 ? 'bg-gray-400 cursor-not-allowed'
                                                                 : 'bg-blue-500 hover:bg-blue-600'
                                                                 } text-white`}
-                                                            onClick={() => setTabsModal(true)}
+                                                            onClick={() => {
+                                                                const noOfRecordsAllowed = Number(tabsData[activeTabIndex]?.Settings?.maxAllowedRecords)
+                                                                const currentRecords = (tabTableData[`tab_${activeTabIndex}`] || [])?.length;
+                                                                if (currentRecords >= noOfRecordsAllowed) {
+                                                                    toast.warning(`Max number of records allowed ${noOfRecordsAllowed}`);
+                                                                }else{
+                                                                    setTabsModal(true)
+                                                                }
+                                                            }}
                                                             disabled={action === "view" && editData}
                                                         >
                                                             Add Entry
