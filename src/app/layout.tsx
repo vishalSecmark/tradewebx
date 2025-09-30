@@ -47,14 +47,14 @@ export default function RootLayout({
 
   useEffect(() => {
     // Set title from environment variable
-    const appTitle = process.env.NEXT_PUBLIC_APP_TITLE || appMetadata.companyName;
+    const appTitle = process.env.NEXT_PUBLIC_APP_TITLE || appMetadata.companyName || "Trade Plus";
     document.title = appTitle;
   }, []);
 
   return (
     <html lang="en">
       <head>
-        <title>{process.env.NEXT_PUBLIC_APP_TITLE || appMetadata.companyName}</title>
+        <title>{process.env.NEXT_PUBLIC_APP_TITLE || appMetadata.companyName || "Trade Plus"}</title>
         {
           appMetadata?.companyLogo && (
             <link rel="icon" type="image/x-icon" href={appMetadata.companyLogo} />
