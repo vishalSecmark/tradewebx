@@ -492,3 +492,11 @@ export const clearSecureStorage = (): void => {
         throw new Error('Failed to clear secure storage');
     }
 };
+
+
+export function sanitizeValueSpecialChar(value, charactersToReplace = ['&', '!']) {
+    if (typeof value !== 'string') return value;
+    
+    const escapeRegex = new RegExp(`[${charactersToReplace.join('')}]`, 'g');
+    return value.replace(escapeRegex, ' ').trim();
+}

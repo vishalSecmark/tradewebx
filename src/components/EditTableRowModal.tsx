@@ -10,7 +10,7 @@ import CustomDropdown from './form/CustomDropdown';
 import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
-import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn, getLocalStorage, storeLocalStorage } from "@/utils/helper";
+import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn, getLocalStorage, sanitizeValueSpecialChar, storeLocalStorage } from "@/utils/helper";
 import { getFileTypeFromBase64 } from "@/utils/helper";
 import apiService from "@/utils/apiService";
 import AccountClosure from "@/apppages/KycPage/account-closure";
@@ -200,7 +200,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         try {
             // Create X_Filter from all row data
             const xFilterTags = Object.entries(rowData)
-                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .map(([key, value]) => {
+                    const sanatizedVal = sanitizeValueSpecialChar(value)
+                    return `<${key}>${sanatizedVal}</${key}>`
+                })
                 .join('');
 
             const xmlData = `<dsXml>

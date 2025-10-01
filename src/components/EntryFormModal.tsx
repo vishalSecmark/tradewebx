@@ -13,7 +13,7 @@ import { handleValidationForDisabledField } from './component-forms/form-helper'
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
 import { generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
-import { getLocalStorage } from '@/utils/helper';
+import { getLocalStorage, sanitizeValueSpecialChar } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
@@ -386,15 +386,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             let xFilter = '';
             if (masterEntry.X_Filter) {
                 Object.entries(masterEntry.X_Filter).forEach(([key, value]) => {
+                    const senetizedVal = sanitizeValueSpecialChar(value);
                     // If we have edit data and the key exists in it, use that value
                     if (editData && editData[key] !== undefined && editData[key] !== null) {
-                        xFilter += `<${key}>${editData[key]}</${key}>`;
+                        const senetizedEditValue = sanitizeValueSpecialChar(editData[key])
+                        xFilter += `<${key}>${senetizedEditValue}</${key}>`;
                     }
                     // Otherwise use the default value from masterEntry
                     else if (value === '##InstrumentType##' || value === '##IntRefNo##') {
                         xFilter += `<${key}></${key}>`;
                     } else {
-                        xFilter += `<${key}>${value}</${key}>`;
+                        xFilter += `<${key}>${senetizedVal}</${key}>`;
                     }
                 });
             }
