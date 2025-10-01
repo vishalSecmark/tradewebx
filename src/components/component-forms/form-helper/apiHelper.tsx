@@ -3,16 +3,9 @@ import { BASE_URL, PATH_URL } from "@/utils/constants";
 
 export const handleNextValidationFields = async (
   editData,
-  nextIndex,
   currentTab,
   masterFormValues,
-  tabsData,
-  setTabsData,
-  tabFormValues,
-  setTabFormValues,
-  tabTableData,
-  setTabTableData
-) => {
+  ) => {
   console.log("called this", Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length, currentTab?.Settings?.TabChangeAPI);
   if (!Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length) return;
 

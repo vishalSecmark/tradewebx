@@ -1942,7 +1942,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 // Check if there are more tabs to navigate to
                 if (activeTabIndex < tabsData.length - 1) {
                     setActiveTabIndex(nextIndex);
-                    handleNextValidationFields(editData,nextIndex,currentTab,masterFormValues,tabsData,setTabsData,tabFormValues,setTabFormValues,tabTableData,setTabTableData);
+                    handleNextValidationFields(editData,currentTab,masterFormValues);
 
                   } else {
                     setFinalTabSubmitSuccess(true)
