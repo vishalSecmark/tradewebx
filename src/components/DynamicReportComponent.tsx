@@ -628,7 +628,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }, delay);
     };
 
-    const fetchData = async (currentFilters = filters) => {
+    const fetchData = async (currentFilters = filters, cacheRequired = true) => {
         // Validate pageData before proceeding
         if (!pageData || !validationResult?.isValid) {
             console.error('Cannot fetch data: Invalid page configuration');
@@ -646,7 +646,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         const cacheKey = generateCacheKey(currentLevel, currentFilters, primaryKeyFilters);
 
         // Check if we have cached data for this exact combination
-        if (dataCache[cacheKey]) {
+        if (dataCache[cacheKey] && cacheRequired) {
             console.log('Using cached data for:', cacheKey);
             const cachedData = dataCache[cacheKey];
             setApiData(cachedData.data);
@@ -660,7 +660,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
 
         // Check if there's already an ongoing request for this cache key
-        if (ongoingRequestRef.current === cacheKey) {
+        if (ongoingRequestRef.current === cacheKey && cacheRequired) {
             console.log('Request already in progress for:', cacheKey);
             return; // Exit early to prevent duplicate requests
         }
@@ -1996,7 +1996,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     pageName={OpenedPageName}
                     isTabs={componentType === "multientry" ? true : false}
                     setEntryEditData={setEntryFormData}
-                    refreshFunction={() => fetchData()}
+                    refreshFunction={() => {
+                        // added extra parm if want to skip cache check  send second param as false
+                        fetchData(filters,false);
+                    }}
                 />
             )}
         </div>
