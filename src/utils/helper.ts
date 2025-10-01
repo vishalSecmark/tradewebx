@@ -273,6 +273,7 @@ export function displayAndDownloadFile(base64: string, fileDownloadName?: string
     };
 
     const mimeType = mimeMap[fileType] || 'application/octet-stream';
+    
 
     const byteCharacters = atob(base64);
     const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));

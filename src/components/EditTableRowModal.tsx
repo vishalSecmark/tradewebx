@@ -167,6 +167,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const showViewApi = settings.ViewAPI
 
     const editableColumns = settings.EditableColumn || [];
+    
+    
 
     // Get column width configuration from settings
     const getColumnWidth = (columnKey: string): number | undefined => {
@@ -686,12 +688,14 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
 
     const handleSave = async () => {
+        
         setIsSaving(true);
         const xmlData = generateDsXml(localData);
 
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const responseData = response.data?.data?.rs0?.[0];
+            const responseKra = response.data?.data?.rs0
 
             // Check API-level failure
             if (response.data?.success === false) {
@@ -723,6 +727,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 const base64 = RemarkArray.fileContents;
                 const fileDownloadName = RemarkArray.fileDownloadName;
                 displayAndDownloadFile(base64, fileDownloadName);
+            }
+
+            if(responseKra?.fileContents){
+                const base64 = responseKra?.fileContents
+                const fileName = responseKra?.fileDownloadName
+                displayAndDownloadFile(base64,fileName)
             }
 
             toast.success(successMessage);
@@ -1438,7 +1448,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 // disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
                                 // (showViewDocumentBtn && showViewDocumentLabel ? handleProcess :
                                 //end
-                                onClick={handleSave}
+                                onClick={() => handleSave()}
                                 className="px-4 py-2 rounded ml-2 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                             >
                                 {isSaving && (
