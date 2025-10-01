@@ -687,7 +687,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     }
 
 
-    const handleSave = async (rowData) => {
+    const handleSave = async () => {
         
         setIsSaving(true);
         const xmlData = generateDsXml(localData);
@@ -729,7 +729,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 displayAndDownloadFile(base64, fileDownloadName);
             }
 
-            if(rowData.ExportType === "KRA" && responseKra?.fileContents){
+            if(responseKra?.fileContents){
                 const base64 = responseKra?.fileContents
                 const fileName = responseKra?.fileDownloadName
                 displayAndDownloadFile(base64,fileName)
@@ -1448,7 +1448,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                 // disabled={isSaving || ((showViewDocumentBtn && showViewDocumentLabel) && !isProcessButtonEnabled)}
                                 // (showViewDocumentBtn && showViewDocumentLabel ? handleProcess :
                                 //end
-                                onClick={() => handleSave(localData[0])}
+                                onClick={() => handleSave()}
                                 className="px-4 py-2 rounded ml-2 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                             >
                                 {isSaving && (
