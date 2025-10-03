@@ -21,6 +21,7 @@ import { handleNextValidationFields } from './component-forms/form-helper/apiHel
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
+    pageName,
     onClose,
     masterValues,
     formData,
@@ -90,7 +91,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
         <div className={`fixed inset-0 flex items-center justify-center ${childModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">{isEdit ? "Edit " : "Add "} Child Entry Form</h2>
+                    <h2 className="text-xl font-semibold">{pageName}</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700"
@@ -1760,11 +1761,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             if (response?.data?.success) {
                 onChildFormSubmit();
-                toast.success('Form submitted successfully!');
                 setIsFormSubmit(false);
                 resetParentForm();
                 if (response?.data?.message) {
-                    const messageTxtPresent = response?.data?.message
+                    const messageTxtPresent = response?.data?.message.replace(/<\/?Message>/g, '');
                     toast.success(messageTxtPresent)
                 }
             } else {
@@ -1936,7 +1936,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const responseMessageFlag = response?.data?.data?.rs0[0]
-            console.log("check res",response)
             if (response?.data?.success && responseMessageFlag.Flag?.toLowerCase() === "s") {
                 toast.success(responseMessageFlag?.Message || 'Tab form submitted successfully!');
                 setIsFormSubmit(false);
@@ -2038,7 +2037,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const responseMessageFlag = response?.data?.data?.rs0[0]
-            console.log("check response",response);
             if (response?.data?.success && responseMessageFlag.Flag?.toLowerCase() === "s") {
                 toast.success(responseMessageFlag?.Message || "Form Submitted")
                 setIsFormSubmit(false);
@@ -2834,7 +2832,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         >
                                             {isFormSubmit ? "Submitting..." : (
                                                 <>
-                                                    <FaSave /> Save Form
+                                                    <FaSave /> Save
                                                 </>
                                             )}
 
@@ -2886,7 +2884,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         >
                                                             {isFormSubmit ? "Submitting..." : (
                                                                 <>
-                                                                    <FaSave /> Save Form
+                                                                    <FaSave /> Save
                                                                 </>
                                                             )}
                                                         </Button>
@@ -3042,6 +3040,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             {isChildModalOpen && (
                 <ChildEntryModal
                     isOpen={isChildModalOpen}
+                    pageName={pageName}
                     onClose={() => {
                         setIsChildModalOpen(false);
                         setChildDropdownOptions({});

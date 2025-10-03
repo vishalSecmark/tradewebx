@@ -111,6 +111,7 @@ export interface EntryFormProps {
 export interface ChildEntryModalProps {
     isOpen: boolean;
     onClose: () => void;
+    pageName?: string;
     masterValues: Record<string, any>;
     formData: FormField[];
     masterFormData: FormField[];

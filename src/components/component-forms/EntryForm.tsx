@@ -44,8 +44,9 @@ const DropdownField: React.FC<{
         const options = dropdownOptions[field.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
+        const [hasAutoSelected, setHasAutoSelected] = useState(false);
         const isRequired = field.isMandatory === "true";
-
+        const allowedFieldLength = field.FieldSize ? parseInt(field.FieldSize, 10) : 20; 
         const fieldWidth = field.FieldWidth ? `${field.FieldWidth}px` : '100%';
 
         const containerStyle = {
@@ -106,6 +107,34 @@ const DropdownField: React.FC<{
 
         const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field, isJustUpdated);
 
+        // ---->(start) useEffect to show dropdown value selected if it only have 1 option in it <----
+         useEffect(() => {
+            if (options.length === 1 && 
+               (!formValues[field.wKey] || formValues[field.wKey] === '') &&
+               !hasAutoSelected &&
+               !loadingDropdowns[field.wKey]) {
+                
+               const singleOption = options[0];
+                
+               setFormValues(prev => ({ ...prev, [field.wKey]: singleOption.value }));
+               setFieldErrors(prev => ({ ...prev, [field.wKey]: '' }));
+               setHasAutoSelected(true);    
+            }
+        
+              // Reset hasAutoSelected when options change significantly
+              if (options.length !== 1) {
+                  setHasAutoSelected(false);
+              }
+            }, [options, formValues[field.wKey], loadingDropdowns[field.wKey],hasAutoSelected]);
+
+             // Reset hasAutoSelected when the component unmounts or field changes
+             useEffect(() => {
+                 return () => {
+                     setHasAutoSelected(false);
+                 };
+             }, [field.wKey]);
+        // ---->(end) useEffect to show dropdown value selected if it only have 1 option in it <----
+
 
         return (
             <div key={field.Srno} className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
@@ -120,7 +149,14 @@ const DropdownField: React.FC<{
                     value={options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()) || null}
                     onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
                     onInputChange={(inputValue, { action }) => {
-                        if (action === 'input-change') setSearchText(inputValue);
+                        if (action === 'input-change') {
+                            // Prevent typing beyond allowed length for creatable fields
+                            if (field.iscreatable === "true" && inputValue.length > allowedFieldLength) {
+                                setSearchText(inputValue.slice(0, allowedFieldLength));
+                                return inputValue.slice(0, allowedFieldLength);
+                            }
+                            setSearchText(inputValue);
+                        }
                         return inputValue;
                     }}
                     onMenuScrollToBottom={() => onMenuScrollToBottom(field)}
