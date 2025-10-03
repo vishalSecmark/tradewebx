@@ -1786,7 +1786,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {isEditTableRowModalOpen && <EditTableRowModal
                 isOpen={isEditTableRowModalOpen}
-                onClose={() => setIsEditTableRowModalOpen(false)}
+                onClose={() => {
+                    setIsEditTableRowModalOpen(false)
+                    fetchData(filters,false);
+                }}
                 title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
                 pageName={OpenedPageName}

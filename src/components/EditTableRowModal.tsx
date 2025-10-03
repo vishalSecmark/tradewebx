@@ -629,7 +629,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         const itemsXml = data
             .map(item => {
                 const itemFields = Object.entries(item)
-                    .map(([key, value]) => `<${key.trim()}>${value}</${key.trim()}>`)
+                    .map(([key, value]) => {
+                        const sanatizedValue = sanitizeValueSpecialChar(value);
+                        return `<${key.trim()}>${sanatizedValue}</${key.trim()}>`
+                    })
                     .join('');
                 return `<item>${itemFields}</item>`;
             })
@@ -694,7 +697,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         
         setIsSaving(true);
         const xmlData = generateDsXml(localData);
-
+        
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const responseData = response.data?.data?.rs0?.[0];
