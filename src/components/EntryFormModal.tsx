@@ -12,7 +12,7 @@ import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
-import { generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
+import { extractTagsForTabsDisabling, generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
 import { getLocalStorage, sanitizeValueSpecialChar } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
@@ -293,8 +293,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [isChildModalOpen, setIsChildModalOpen] = useState(false);
     const [childEntriesTable, setChildEntriesTable] = useState<any[]>([]);
     const [childEntriesTableBackup, setChildEntriesTableBackup] = useState<any[]>([]);
-    console.log("check child table records",childEntriesTable)
-
+  
     const [childFormData, setChildFormData] = useState<FormField[]>([]);
     const [childFormValues, setChildFormValues] = useState<Record<string, any>>({});
     const [childDropdownOptions, setChildDropdownOptions] = useState<Record<string, any[]>>({});
@@ -327,8 +326,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [finalTabSubmitSuccess, setFinalTabSubmitSuccess] = useState(false);
     const [filtersValueObject,setFiltersValueObject] = useState<Record<string,any>>({});
 
-    console.log("<------------------check data--------------------->", tabTableData)
-    console.log("check tabs data===>", tabsData[activeTabIndex]?.Settings?.isTable, tabFormValues, tabsData, masterFormValues)
+    console.log("check tabs data===>", tabTableData, tabFormValues, tabsData, masterFormValues)
 
     const childEntryPresent = pageData[0]?.Entry?.ChildEntry;
     const isThereChildEntry = !isTabs && (!childEntryPresent || Object.keys(childEntryPresent).length === 0);
@@ -447,6 +445,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     masterFormData.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialMasterValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+                        }else if(field.type === "WCheckBox"){
+                            initialMasterValues[field.wKey] = masterTableData[field.wKey] || "false";
                         } else if (editData) {
                             initialMasterValues[field.wKey] = masterTableData[field.wKey] || editData[field.wKey] || "";
                         } else {
@@ -532,7 +532,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     tab.Data.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialTabFormValues[tabKey][field.wKey] = moment(field.wValue).format('YYYYMMDD');
-                        } else if (tab?.tableData?.length && tab.Settings.isTable === "false") {
+                        }else if(field.type === "WCheckBox" && tab?.tableData?.length && tab.Settings.isTable === "false"){
+                            initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey] || "false";
+                        }else if (tab?.tableData?.length && tab.Settings.isTable === "false") {
                             initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey];
                         } else {
                             initialTabFormValues[tabKey][field.wKey] = "";
@@ -1851,7 +1853,25 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return errors;
     };
 
+  const removeTabsWithReindexing = (apiResponse) => {
+    const tabsToRemoveNames = Object.keys(apiResponse).filter(tabName => apiResponse[tabName] === false);
+    // Filter tabsData and create a mapping of old indices to new indices
+    const updatedTabsData = tabsData.filter(tab => !tabsToRemoveNames.includes(tab.TabName));
+    // Create new objects with reindexed keys
+    const updatedTabFormValue = {};
+    const updatedTabTableData = {};
+    updatedTabsData.forEach((tab, newIndex) => {
+        const oldIndex = tabsData.findIndex(t => t.TabName === tab.TabName);
+        updatedTabFormValue[`tab_${newIndex}`] = tabFormValues[`tab_${oldIndex}`] || {};
+        updatedTabTableData[`tab_${newIndex}`] = tabTableData[`tab_${oldIndex}`] || [];
+    });
+    setTabsData(updatedTabsData);
+    setTabFormValues(updatedTabFormValue);
+    setTabTableData(updatedTabTableData);
+};
+
     const submitTabsFormData = async () => {
+        console.log("check active tab index",activeTabIndex)
         const currentTab = tabsData[activeTabIndex];
         const currentTabKey = `tab_${activeTabIndex}`;
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
@@ -1942,9 +1962,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 const nextIndex = activeTabIndex + 1
                 // Check if there are more tabs to navigate to
                 if (activeTabIndex < tabsData.length - 1) {
-                    setActiveTabIndex(nextIndex);
-                    handleNextValidationFields(editData,currentTab,masterFormValues);
+                    // the below function API is called to disable and remove the particular tab from the form 
+                    const Tabsresponse = await handleNextValidationFields(editData,currentTab,masterFormValues);
+                    const responseString = Object.keys(Tabsresponse?.data?.data || {}).length > 0 ? Tabsresponse?.data?.data?.rs0[0]?.Column1 : null;
 
+                    // const responseString = Tabsresponse?.data?.data?.rs0[0]?.Column1 || "";
+                    
+                    if(Tabsresponse.data.success && responseString && activeTabIndex === 0){
+                        const tags = extractTagsForTabsDisabling(responseString);
+                        removeTabsWithReindexing(tags);
+                        setActiveTabIndex(nextIndex);
+                    }else{
+                        setActiveTabIndex(nextIndex);
+                    }
                   } else {
                     setFinalTabSubmitSuccess(true)
                     // All tabs completed, close modal
@@ -2790,7 +2820,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 key: col,
                                                                 name: col,
                                                                 renderCell: ({ row }) => {
-                                                                    console.log("check row",row,col)
                                                                     return(
                                                                     <div style={{ 
                                                                         color: row.isModified || row.isInserted ? 'green' : 'inherit'

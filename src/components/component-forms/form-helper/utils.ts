@@ -63,3 +63,55 @@ export function parseXMLStringToObject(xmlString) {
     
     return result;
 }
+
+export function extractTagsForTabsDisabling(xmlString: any) {
+  try {
+        // Wrap the content in a root element to make it valid XML
+        const wrappedXml = `<root>${xmlString}</root>`;
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(wrappedXml, "text/xml");
+        
+        // Check for parsing errors
+        const parseError = xmlDoc.getElementsByTagName("parsererror")[0];
+        if (parseError) {
+            console.error("XML parsing error:", parseError.textContent);
+            return {};
+        }
+        
+        // Get the flag value
+        const flagElement = xmlDoc.getElementsByTagName("Flag")[0];
+        const flagValue = flagElement ? flagElement.textContent : "";
+        
+        // If flag is "T", extract all tags except Flag and Message
+        if (flagValue === "T") {
+            const allElements = xmlDoc.getElementsByTagName('*');
+            const result = {};
+            
+            for (let i = 0; i < allElements.length; i++) {
+                const element = allElements[i];
+                const tagName = element.tagName;
+                
+                // Skip root, Flag and Message tags
+                if (tagName !== "root" && tagName !== "Flag" && tagName !== "Message") {
+                    let value :any= element.textContent;
+                    
+                    // Convert string "true"/"false" to boolean
+                    if (value.toLowerCase() === "true") {
+                        value = true;
+                    } else if (value.toLowerCase() === "false") {
+                        value = false;
+                    }
+                    
+                    result[tagName] = value;
+                }
+            }
+            
+            return result;
+        }
+        
+        return {}; // Return empty object if flag is not "T"
+    } catch (error) {
+        console.error("Error parsing XML:", error);
+        return {};
+    }
+}

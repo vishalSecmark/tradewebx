@@ -10,6 +10,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from "@/utils/apiService";
 import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
+import CustomDateTimePicker from "./formComponents/CustomDateTimePicker";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -469,6 +470,47 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     </div>
                 );
 
+           case 'WDateTimePicker':
+                  return (
+                    <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
+                      <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
+                        {field.label}
+                        {isRequired && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                      <CustomDateTimePicker
+                        selected={fieldValue ? moment(fieldValue, 'YYYYMMDD HH:mm:ss').toDate() : null}
+                        onChange={(date: Date | null) => {
+                          if (date) {
+                            // Format the date as "20251006 15:58:16"
+                            const formattedDateTime = moment(date).format('YYYYMMDD HH:mm:ss');
+                            handleInputChange(field.wKey, formattedDateTime);
+                          } else {
+                            handleInputChange(field.wKey, null);
+                          }
+                        }}
+                        disabled={!isEnabled}
+                        className={`
+                          ${!isEnabled
+                            ? 'border-gray-300 bg-[#f2f2f0]'
+                            : fieldErrors[field.wKey]
+                              ? 'border-red-500'
+                              : 'border-gray-700'
+                          }
+                          ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
+                          ${isJustUpdated ? 'text-green-500' : ''}
+                        `}
+                        placeholderText="Select Date & Time"
+                        onBlur={() => handleBlur(field)}
+                        showTimeSelect={true}
+                        timeFormat="HH:mm"
+                        timeIntervals={15}
+                        dateFormat="dd/MM/yyyy HH:mm"
+                      />
+                      {fieldErrors[field.wKey] && (
+                        <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                      )}
+                    </div>
+                  );
             case 'WDateBox':
                 return (
                     <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>

@@ -32,8 +32,6 @@ export const handleNextValidationFields = async (
     
     xFilter = filterEntries.join("");
   }
-
-  console.log("called this", xFilter);
   
   const jUi = Object.entries(J_Ui || {})
     .map(([key, value]) => `"${key}":"${value}"`)
@@ -53,7 +51,7 @@ export const handleNextValidationFields = async (
 
   try {
     const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-    console.log("check my res--->", response);
+    return response;
   } catch (error) {
     console.error("Validation API error:", error);
   }
