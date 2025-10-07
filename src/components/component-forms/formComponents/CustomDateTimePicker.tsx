@@ -32,7 +32,7 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
   onBlur,
   showTimeSelect = true,
   timeFormat = 'HH:mm',
-  timeIntervals = 15,
+  timeIntervals = 5,
   dateFormat = 'dd/MM/yyyy HH:mm',
   minDate,
   maxDate
@@ -219,7 +219,10 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
             <button
               type="button"
               className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                setIsOpen(false)
+                onBlur();
+            }}
             >
               Apply
             </button>

@@ -570,7 +570,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 field.dependsOn.field.forEach(fieldName => {
                                     // Check multiple sources for the parent field value
                                     const parentField = tab.Data.find(f => f.wKey === fieldName);
-                                    const value = editData?.[fieldName] ||
+                                    const value = initialMasterValues[fieldName] || editData?.[fieldName] ||
                                         initialTabFormValues[tabKey][fieldName] ||
                                         parentField?.wValue;
                                     parentValues[fieldName] = value;
@@ -588,7 +588,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 const parentField = tab.Data.find(f => f.wKey === field.dependsOn.field);
                                 parentFieldValue = editData?.[field.dependsOn.field] ||
                                     initialTabFormValues[tabKey][field.dependsOn.field] ||
-                                    parentField?.wValue;
+                                    parentField?.wValue || initialMasterValues?.[field.dependsOn.field] ;
                                 if (parentFieldValue) {
                                     shouldInitialize = true;
                                 }
