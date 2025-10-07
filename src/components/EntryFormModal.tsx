@@ -2075,6 +2075,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 toast.success(responseMessageFlag?.Message || "Form Submitted")
                 setIsFormSubmit(false);
                 resetTabsForm();
+            }else if(response?.data?.success){
+                const message1 = response?.data?.message.replace(/<\/?Message>/g, '');
+                toast.success(message1 || "Form Submitted");
+                setIsFormSubmit(false);
+                resetTabsForm();
             } else {
                 const message1 = response?.data?.message.replace(/<\/?Message>/g, '');
                 const message = message1 || responseMessageFlag?.Message || 'Submission failed';

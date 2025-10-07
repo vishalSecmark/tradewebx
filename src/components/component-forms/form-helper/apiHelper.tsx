@@ -7,6 +7,7 @@ export const handleNextValidationFields = async (
   currentTab,
   masterFormValues,
   ) => {
+    console.log("check tab change api",editData,currentTab,masterFormValues)
   if (!Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length) return;
 
   const { J_Ui, Sql, X_Filter, J_Api } = currentTab?.Settings?.TabChangeAPI;
@@ -20,7 +21,7 @@ export const handleNextValidationFields = async (
       
       if (typeof value === 'string' && value.startsWith("##") && value.endsWith("##")) {
         const formKey = value.slice(2, -2);
-        fieldValue = editData ? sanitizeValueSpecialChar(editData[formKey]) || sanitizeValueSpecialChar(masterFormValues[formKey]) || "" : "";
+        fieldValue = editData ? sanitizeValueSpecialChar(editData[formKey]) || sanitizeValueSpecialChar(masterFormValues[formKey]) || "" : sanitizeValueSpecialChar(masterFormValues[formKey]) || "";
       } else {
         fieldValue = sanitizeValueSpecialChar(value);
       }
