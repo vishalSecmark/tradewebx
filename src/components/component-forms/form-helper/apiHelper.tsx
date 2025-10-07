@@ -1,17 +1,15 @@
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { sanitizeValueSpecialChar } from "@/utils/helper";
 
 export const handleNextValidationFields = async (
   editData,
   currentTab,
   masterFormValues,
   ) => {
-  console.log("called this", Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length, currentTab?.Settings?.TabChangeAPI);
   if (!Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length) return;
 
   const { J_Ui, Sql, X_Filter, J_Api } = currentTab?.Settings?.TabChangeAPI;
-
-  console.log("check", X_Filter);
 
   let xFilter = "";
 
@@ -22,9 +20,9 @@ export const handleNextValidationFields = async (
       
       if (typeof value === 'string' && value.startsWith("##") && value.endsWith("##")) {
         const formKey = value.slice(2, -2);
-        fieldValue = editData ? editData[formKey] || masterFormValues[formKey] || "" : "";
+        fieldValue = editData ? sanitizeValueSpecialChar(editData[formKey]) || sanitizeValueSpecialChar(masterFormValues[formKey]) || "" : "";
       } else {
-        fieldValue = value;
+        fieldValue = sanitizeValueSpecialChar(value);
       }
       
       return `<${key}>${fieldValue}</${key}>`;
