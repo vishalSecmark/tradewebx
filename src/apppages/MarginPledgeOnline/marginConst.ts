@@ -1,5 +1,5 @@
 import apiService from "@/utils/apiService";
-import { BASE_URL, PATH_URL } from "@/utils/constants"
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants"
 import { getLocalStorage } from "@/utils/helper";
 import axios from "axios"
 
@@ -23,7 +23,7 @@ export const rightAlignKeys = ['ScripCode', 'TotalQty', 'ClosingPrice', 'BranchC
 export const dropDownApiCall = async (setDematId) => {
   const xmlDataDropDown = `
   <dsXml>
-    <J_Ui>"ActionName":"Tradeweb", "Option":"GetBenefAccountNo","RequestFrom" :"W"</J_Ui>
+    <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"GetBenefAccountNo","RequestFrom" :"W"</J_Ui>
     <Sql/>
     <X_Filter>
       <ClientCode>${getLocalStorage('userId')}</ClientCode>
@@ -48,7 +48,7 @@ export const tableApiCall = async (selectedDemat, setTableHeaders, setTableRows)
 
   const xmlDataTable = `
 <dsXml>
-	<J_Ui>"ActionName":"Tradeweb", "Option":"GetHolding","RequestFrom" :"W"</J_Ui>
+	<J_Ui>"ActionName":"${ACTION_NAME}", "Option":"GetHolding","RequestFrom" :"W"</J_Ui>
 	<Sql/>
 	<X_Filter>
         <ClientCode>${getLocalStorage('userId')}</ClientCode>

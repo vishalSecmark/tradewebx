@@ -9,7 +9,7 @@ import { toast } from 'react-toastify';
 import { useSaveLoading } from '@/context/SaveLoadingContext';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useLocalStorageListener } from '@/hooks/useLocalStorageListner';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { displayAndDownloadPDF, getLocalStorage, removeLocalStorage, storeLocalStorage } from '@/utils/helper';
 import { getFromDB } from '@/utils/indexDB';
 import apiService from '@/utils/apiService';
@@ -233,7 +233,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const menuCode = getLocalStorage('menuCode') || '27';
 
             const xmlData = `<dsXml>
-                <J_Ui>"ActionName":"TradeWeb","Option":"KRAPDF","RequestFrom":"W"</J_Ui>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"KRAPDF","RequestFrom":"W"</J_Ui>
                 <Sql></Sql>
                 <X_Filter></X_Filter>
                 <X_Filter_Multiple></X_Filter_Multiple>
@@ -272,7 +272,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const clientCode = userId;
 
             const xmlData = `<dsXml>
-                <J_Ui>"ActionName":"TradeWeb","Option":"GenerateRekycPDF","RequestFrom":"W","ReportDisplay":"D"</J_Ui>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"GenerateRekycPDF","RequestFrom":"W","ReportDisplay":"D"</J_Ui>
                 <Sql></Sql>
                 <X_Filter></X_Filter>
                 <X_Filter_Multiple></X_Filter_Multiple>
@@ -401,7 +401,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
             const menuCode = getLocalStorage('menuCode') || '27';
 
             const xmlData = `<dsXml>
-                <J_Ui>"ActionName":"TradeWeb","Option":"FinalPDF","RequestFrom":"W"</J_Ui>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"FinalPDF","RequestFrom":"W"</J_Ui>
                 <Sql></Sql>
                 <X_Filter></X_Filter>
                 <X_Filter_Multiple></X_Filter_Multiple>
@@ -481,7 +481,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(columnData, 'text/html');
                         const url = doc.querySelector('Url')?.textContent;
-                    
+
                         if (url) {
                             storeLocalStorage('ekyc_esign_state', JSON.stringify({
                                 kraPdfGenerated: true,

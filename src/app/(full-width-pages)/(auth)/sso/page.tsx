@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useDispatch } from 'react-redux'
 import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
-import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL } from "@/utils/constants"
+import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME } from "@/utils/constants"
 import Image from "next/image"
 import { clearIndexedDB, removeLocalStorage, storeLocalStorage } from '@/utils/helper'
 
@@ -40,7 +40,7 @@ const SSOContent = () => {
 
             // Construct XML payload
             const xmlData = `<dsXml>
-                                <J_Ui>"ActionName":"TradeWeb","Option":"LoginSSO"</J_Ui>
+                                <J_Ui>"ActionName": "${ACTION_NAME}","Option":"LoginSSO"</J_Ui>
                                 <Sql/>
                                 <X_Filter></X_Filter>
                                 <X_Data>

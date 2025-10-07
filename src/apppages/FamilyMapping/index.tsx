@@ -7,7 +7,7 @@ import { DataGrid } from "react-data-grid";
 import { Modal } from "@/components/ui/modal";
 import axios from "axios";
 import { toast } from "react-toastify";  //  Import toast
-import { BASE_URL, OTP_VERIFICATION_URL, LOGIN_KEY, PRODUCT, LOGIN_AS } from "@/utils/constants";
+import { BASE_URL, OTP_VERIFICATION_URL, LOGIN_KEY, PRODUCT, LOGIN_AS, ACTION_NAME } from "@/utils/constants";
 import CryptoJS from "crypto-js";
 import { useTheme } from "@/context/ThemeContext";
 import { getLocalStorage } from "@/utils/helper";
@@ -82,7 +82,7 @@ export default function Family() {
   const fetchFamilyMapping = async () => {
     try {
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TRADEWEB","Option":"FamilyMapping","RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"FamilyMapping","RequestFrom":"W"</J_Ui>
         <Sql></Sql>
         <X_Filter></X_Filter>
         <X_Filter_Multiple></X_Filter_Multiple>
@@ -151,7 +151,7 @@ export default function Family() {
     setIsLoading(true);
     try {
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Login"</J_Ui>
         <Sql/>
         <X_Data>
           <UserId>${loginData.userId}</UserId>
@@ -205,7 +205,7 @@ export default function Family() {
     setIsLoading(true);
     try {
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"Verify2FA","Level":1,"RequestFrom":"M"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Verify2FA","Level":1,"RequestFrom":"M"</J_Ui>
         <Sql/>
         <X_Data><OTP>${otp}</OTP></X_Data>
         <J_Api>"UserId":"${loginData.userId}", "UserType":"${getLocalStorage('userType')}"</J_Api>

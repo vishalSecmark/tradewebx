@@ -586,7 +586,7 @@ export default function SignInForm() {
     storeLocalStorage('last_login_attempt', Date.now().toString());
 
     const xmlData = `<dsXml>
-    <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
+    <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Login"</J_Ui>
     <Sql/>
     <X_Filter></X_Filter>
     <X_Data>

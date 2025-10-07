@@ -1,7 +1,7 @@
 "use client";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { displayAndDownloadPDF, findPageData, displayAndDownloadFile, getLocalStorage, storeLocalStorage, removeLocalStorage } from "@/utils/helper";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
@@ -163,7 +163,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
       const clientCode = data?.ClientCode || '';
 
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"CLOSUREPDF","RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"CLOSUREPDF","RequestFrom":"W"</J_Ui>
         <Sql></Sql>
         <X_Filter></X_Filter>
         <X_Filter_Multiple><ClientCode>${clientCode}</ClientCode><EntryName>Account closure</EntryName></X_Filter_Multiple>
@@ -199,7 +199,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
       const entryName = 'REKYC';
 
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"GenerateRekycPDF","RequestFrom":"W","ReportDisplay":"D"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"GenerateRekycPDF","RequestFrom":"W","ReportDisplay":"D"</J_Ui>
         <Sql></Sql>
         <X_Filter></X_Filter>
         <X_Filter_Multiple></X_Filter_Multiple>
@@ -354,7 +354,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
       };
 
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"MakerClientClosure","RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"MakerClientClosure","RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Filter/>
         <X_Filter_Multiple><EntryName>Account closure</EntryName></X_Filter_Multiple>
