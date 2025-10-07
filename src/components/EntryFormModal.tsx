@@ -1860,15 +1860,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     // Create new objects with reindexed keys
     const updatedTabFormValue = {};
     const updatedTabTableData = {};
+    const updatedDropdownOptions = {};
     updatedTabsData.forEach((tab, newIndex) => {
         const oldIndex = tabsData.findIndex(t => t.TabName === tab.TabName);
         updatedTabFormValue[`tab_${newIndex}`] = tabFormValues[`tab_${oldIndex}`] || {};
         updatedTabTableData[`tab_${newIndex}`] = tabTableData[`tab_${oldIndex}`] || [];
+        updatedDropdownOptions[`tab_${newIndex}`] = tabDropdownOptions[`tab_${oldIndex}`] || {};
     });
     setTabsData(updatedTabsData);
     setTabFormValues(updatedTabFormValue);
     setTabTableData(updatedTabTableData);
-};
+    setTabDropdownOptions(updatedDropdownOptions);
+    };
+
 
     const submitTabsFormData = async () => {
         console.log("check active tab index",activeTabIndex)
@@ -2072,7 +2076,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 setIsFormSubmit(false);
                 resetTabsForm();
             } else {
-                const message = responseMessageFlag?.Message || 'Submission failed';
+                const message1 = response?.data?.message.replace(/<\/?Message>/g, '');
+                const message = message1 || responseMessageFlag?.Message || 'Submission failed';
                 toast.warning(message);
                 setIsFormSubmit(false);
             }
