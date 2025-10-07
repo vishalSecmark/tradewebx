@@ -1976,6 +1976,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         const tags = extractTagsForTabsDisabling(responseString);
                         removeTabsWithReindexing(tags);
                         setActiveTabIndex(nextIndex);
+                        setMasterFormData(prevData => 
+                          prevData.map(field => {
+                            return {
+                              ...field,
+                              FieldEnabledTag: "N"
+                            };
+                          })
+                        );
                     }else{
                         setActiveTabIndex(nextIndex);
                     }
