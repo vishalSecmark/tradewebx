@@ -593,13 +593,14 @@ export default function SignInForm() {
         <UserId>${userId}</UserId>
         
         <EPassword>${Encryption(password)}</EPassword>
-        <Key>${LOGIN_KEY}</Key>
+        
         <Product>${PRODUCT}</Product>
         <ICPV></ICPV>
         <Feature></Feature>
     </X_Data>
     <J_Api>"UserId":"", "UserType":"User"</J_Api>
 </dsXml>`;
+    // remove Key as requested "<Key>${LOGIN_KEY}</Key>" 
 
     console.log('Login XML Data:', xmlData);
 
