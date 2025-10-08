@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 import Loader from "@/components/Loader";
 import apiService from "@/utils/apiService";
@@ -50,7 +50,7 @@ const TradingBalanceModal = ({ isOpen, onClose, clientCode }: TradingBalanceModa
             const { fromDate, toDate } = getCurrentFinancialYearDates();
 
             const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"Ledger","Level":1,"RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Ledger","Level":1,"RequestFrom":"W"</J_Ui>
         <Sql></Sql>
         <X_Filter><FromDate>${fromDate}</FromDate><ToDate>${toDate}</ToDate><ClientCode>${clientCode}</ClientCode></X_Filter>
         <X_GFilter></X_GFilter>

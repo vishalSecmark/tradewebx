@@ -3,7 +3,7 @@ import { useTheme } from '@/context/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { decimalFormat, dropDownApiCall, rightAlignKeys, tableApiCall } from './marginConst';
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { FaFileExcel } from 'react-icons/fa';
 import { exportTableToExcel } from '@/components/DataTable';
 import apiService from '@/utils/apiService';
@@ -125,7 +125,7 @@ export default function MarginPledgeOnline() {
   const tableAllData = async () => {
     const tableDataPost = `
       <dsXml>
-        <J_Ui>"ActionName":"Tradeweb", "Option":"PostData","RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"PostData","RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Filter>
           <ClientCode>${getLocalStorage('userId')}</ClientCode>

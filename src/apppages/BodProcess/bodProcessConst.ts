@@ -1,37 +1,37 @@
 'use client'
 import apiService from "@/utils/apiService"
-import { BASE_URL, PATH_URL } from "@/utils/constants"
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants"
 
 
-export const  bodProcessGetApiCall = async(setBodProcessApiData,userId,userType) => {
+export const bodProcessGetApiCall = async (setBodProcessApiData, userId, userType) => {
 
 
-    const xml = 
-    `<dsXml>                
-    <J_Ui>"ActionName":"Tradeweb","Option":"GetBODData","RequestFrom":"W"</J_Ui>\n
+    const xml =
+        `<dsXml>                
+    <J_Ui>"ActionName":"${ACTION_NAME}","Option":"GetBODData","RequestFrom":"W"</J_Ui>\n
     <Sql/>
     <X_Filter></X_Filter>
     <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${userType}"</J_Api>
     </dsXml>`
 
-    try{
+    try {
 
-        const response = await apiService.postWithAuth(BASE_URL + PATH_URL,xml)
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml)
         const apiData = response?.data?.data?.rs0
-        if(apiData)  setBodProcessApiData(apiData)
-       
-    }catch(error){
+        if (apiData) setBodProcessApiData(apiData)
+
+    } catch (error) {
         console.error(error)
     }
 }
 
 
-export const  bodProcessIndividualApiCall = async(rowValue,showValidationMessage,setLoading,userId,userType) => {
+export const bodProcessIndividualApiCall = async (rowValue, showValidationMessage, setLoading, userId, userType) => {
     setLoading(true)
 
-    const xmlData = 
-    `<dsXml>
-    <J_Ui>"ActionName":"TradeWeb","Option":"RunBOD","Level":1,"RequestFrom":"W"</J_Ui>
+    const xmlData =
+        `<dsXml>
+    <J_Ui>"ActionName":"${ACTION_NAME}","Option":"RunBOD","Level":1,"RequestFrom":"W"</J_Ui>
     <Sql></Sql>
     <X_Filter>
     <ProcessName>${rowValue}</ProcessName>
@@ -40,18 +40,18 @@ export const  bodProcessIndividualApiCall = async(rowValue,showValidationMessage
     </dsXml>`
 
     try {
-        const response = await apiService.postWithAuth(BASE_URL + PATH_URL,xmlData)
-        console.log(response,'bodProcessIndividualApiCall')
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData)
+        console.log(response, 'bodProcessIndividualApiCall')
         const apiData = response?.data?.data?.rs0[0]
         const errorMessage = apiData?.["Error Message"];
         const flagStatus = apiData?.ErrorFlag
-        if(apiData){
-            showValidationMessage(errorMessage,flagStatus)
+        if (apiData) {
+            showValidationMessage(errorMessage, flagStatus)
             setLoading(false)
         }
-        
 
-        
+
+
     } catch (error) {
         console.error(error)
     }

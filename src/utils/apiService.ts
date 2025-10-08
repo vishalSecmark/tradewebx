@@ -1,5 +1,5 @@
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { BASE_PATH_FRONT_END, BASE_URL, ENABLE_FERNET, OTP_VERIFICATION_URL } from './constants';
+import { ACTION_NAME, BASE_PATH_FRONT_END, BASE_URL, ENABLE_FERNET, OTP_VERIFICATION_URL } from './constants';
 import { toast } from 'react-toastify';
 import CryptoJS from 'crypto-js';
 import { SECURITY_CONFIG, isAllowedHttpHost } from './securityConfig';
@@ -505,7 +505,7 @@ class ApiService {
         }
 
         const refreshData = `<dsXml>
-    <J_Ui>"ActionName":"TradeWeb","Option":"Refresh"</J_Ui>
+    <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Refresh"</J_Ui>
     <Sql/>
     <X_Filter></X_Filter>
     <X_Data>

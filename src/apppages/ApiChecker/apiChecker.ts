@@ -1,5 +1,5 @@
 import apiService from "@/utils/apiService";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
 
@@ -18,7 +18,7 @@ export const editableColumns = [
 export const getApiConfigData = async(setApiConfigData,userId) => {
   const xml = `
   <dsXml>
-  <J_Ui>"ActionName":"TradeWeb","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
+  <J_Ui>"ActionName":"${ACTION_NAME}","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
   <Sql/>
   <X_Filter/>
   <X_Filter_Multiple/>
@@ -68,7 +68,7 @@ const cleanJSONStringLiteral = (str: string) => {
   ) => {
     const viewLogXML = `
       <dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"APISETTINGLOG","RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"APISETTINGLOG","RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Filter/>
         <X_Filter_Multiple><APIName>${viewLogServiceName}</APIName></X_Filter_Multiple>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 import Loader from "@/components/Loader";
 import apiService from "@/utils/apiService";
@@ -31,7 +31,7 @@ const DematHoldingModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematHo
         try {
             setLoading(true);
             const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"DPHolding","Level":1,"RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"DPHolding","Level":1,"RequestFrom":"W"</J_Ui>
         <Sql></Sql>
         <X_Filter><ClientCode>${clientCode}</ClientCode><BenefAccountNo>${dpAccountNo}</BenefAccountNo><ReportType>UPTODATE</ReportType></X_Filter>
         <X_GFilter></X_GFilter>

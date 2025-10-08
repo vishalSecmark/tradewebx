@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 import Loader from "@/components/Loader";
 import apiService from "@/utils/apiService";
@@ -18,16 +18,16 @@ const DematLedgerModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematLed
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<any[]>([]);
     const [rs1Settings, setRs1Settings] = useState<any>(null);
-        const menuItems = useAppSelector(selectAllMenuItems);
-        const pageData = findPageData(menuItems, "Dpledger");
-        const pageSettings = pageData[0].levels[0].settings
-    
+    const menuItems = useAppSelector(selectAllMenuItems);
+    const pageData = findPageData(menuItems, "Dpledger");
+    const pageSettings = pageData[0].levels[0].settings
+
 
     const fetchDematLedger = async () => {
         try {
             setLoading(true);
             const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"TradeWeb","Option":"DPLedger","Level":1,"RequestFrom":"W"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"DPLedger","Level":1,"RequestFrom":"W"</J_Ui>
         <Sql></Sql>
         <X_Filter><ClientCode>${clientCode}</ClientCode><BenefAccountNo>${dpAccountNo}</BenefAccountNo></X_Filter>
         <X_GFilter></X_GFilter>
@@ -37,20 +37,20 @@ const DematLedgerModal = ({ isOpen, onClose, clientCode, dpAccountNo }: DematLed
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
             if (response.data?.data?.rs0) {
-                           const rowData = response.data?.data?.rs0 || [];
-                           const dataWithId = rowData.map((row: any, index: number) => ({
-                               ...row,
-                               _id: index
-                           }));
-           
-                           setData(dataWithId);
-                       } if (response.data.data.rs1?.[0]?.Settings) {
-                           const xmlString = response.data.data.rs1[0].Settings;
-                           const settingsJson = parseSettingsFromXml(xmlString)
-                           setRs1Settings(settingsJson);
-           
-           
-                       } else {
+                const rowData = response.data?.data?.rs0 || [];
+                const dataWithId = rowData.map((row: any, index: number) => ({
+                    ...row,
+                    _id: index
+                }));
+
+                setData(dataWithId);
+            } if (response.data.data.rs1?.[0]?.Settings) {
+                const xmlString = response.data.data.rs1[0].Settings;
+                const settingsJson = parseSettingsFromXml(xmlString)
+                setRs1Settings(settingsJson);
+
+
+            } else {
                 toast.error("Failed to fetch Demat ledger");
             }
         } catch (error) {

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL, ENABLE_FERNET } from './constants';
+import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL, ENABLE_FERNET, ACTION_NAME } from './constants';
 import { clearIndexedDB, getLocalStorage, removeLocalStorage, storeLocalStorage, decodeFernetToken } from './helper';
 import { store } from '@/redux/store';
 
@@ -53,7 +53,7 @@ const refreshAuthToken = async (): Promise<string> => {
   }
 
   const refreshData = `<dsXml>
-    <J_Ui>"ActionName":"TradeWeb","Option":"Refresh"</J_Ui>
+    <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Refresh"</J_Ui>
     <Sql/>
     <X_Filter></X_Filter>
     <X_Data>

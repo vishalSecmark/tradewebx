@@ -1,17 +1,16 @@
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
+import { sanitizeValueSpecialChar } from "@/utils/helper";
 
 export const handleNextValidationFields = async (
   editData,
   currentTab,
   masterFormValues,
   ) => {
-  console.log("called this", Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length, currentTab?.Settings?.TabChangeAPI);
+    console.log("check tab change api",editData,currentTab,masterFormValues)
   if (!Object.keys(currentTab?.Settings?.TabChangeAPI || {}).length) return;
 
   const { J_Ui, Sql, X_Filter, J_Api } = currentTab?.Settings?.TabChangeAPI;
-
-  console.log("check", X_Filter);
 
   let xFilter = "";
 
@@ -22,9 +21,9 @@ export const handleNextValidationFields = async (
       
       if (typeof value === 'string' && value.startsWith("##") && value.endsWith("##")) {
         const formKey = value.slice(2, -2);
-        fieldValue = editData ? editData[formKey] || masterFormValues[formKey] || "" : "";
+        fieldValue = editData ? sanitizeValueSpecialChar(editData[formKey]) || sanitizeValueSpecialChar(masterFormValues[formKey]) || "" : sanitizeValueSpecialChar(masterFormValues[formKey]) || "";
       } else {
-        fieldValue = value;
+        fieldValue = sanitizeValueSpecialChar(value);
       }
       
       return `<${key}>${fieldValue}</${key}>`;
@@ -32,8 +31,6 @@ export const handleNextValidationFields = async (
     
     xFilter = filterEntries.join("");
   }
-
-  console.log("called this", xFilter);
   
   const jUi = Object.entries(J_Ui || {})
     .map(([key, value]) => `"${key}":"${value}"`)
@@ -53,7 +50,7 @@ export const handleNextValidationFields = async (
 
   try {
     const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-    console.log("check my res--->", response);
+    return response;
   } catch (error) {
     console.error("Validation API error:", error);
   }

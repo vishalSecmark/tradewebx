@@ -586,20 +586,21 @@ export default function SignInForm() {
     storeLocalStorage('last_login_attempt', Date.now().toString());
 
     const xmlData = `<dsXml>
-    <J_Ui>"ActionName":"TradeWeb","Option":"Login"</J_Ui>
+    <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Login"</J_Ui>
     <Sql/>
     <X_Filter></X_Filter>
     <X_Data>
         <UserId>${userId}</UserId>
         
         <EPassword>${Encryption(password)}</EPassword>
-        <Key>${LOGIN_KEY}</Key>
+        
         <Product>${PRODUCT}</Product>
         <ICPV></ICPV>
         <Feature></Feature>
     </X_Data>
     <J_Api>"UserId":"", "UserType":"User"</J_Api>
 </dsXml>`;
+    // remove Key as requested "<Key>${LOGIN_KEY}</Key>" 
 
     console.log('Login XML Data:', xmlData);
 
