@@ -1604,6 +1604,10 @@ const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async() => {
             let emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
             const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
             console.log(emailPayloadXmlSend,'emailPayloadXmlSend22');
+            let emailResponseData = emailPayloadXmlSend?.data?.data?.rs0[0]
+            if(emailPayloadXmlSend.success === true){
+                const base64 = emailResponseData?.Base64PDF
+            }
             
         }
         
