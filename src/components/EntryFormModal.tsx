@@ -445,6 +445,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     masterFormData.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialMasterValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
+                        }else if(field.type === 'WDateTimePicker') {
+                            const dateTime = masterTableData[field.wKey] || moment().format('YYYYMMDD HH:mm:ss');
+                            initialMasterValues[field.wKey] = dateTime;
                         }else if(field.type === "WCheckBox"){
                             initialMasterValues[field.wKey] = masterTableData[field.wKey] || "false";
                         } else if (editData) {
@@ -532,10 +535,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     tab.Data.forEach((field: FormField) => {
                         if (field.type === 'WDateBox' && field.wValue) {
                             initialTabFormValues[tabKey][field.wKey] = moment(field.wValue).format('YYYYMMDD');
-                        }else if(field.type === "WCheckBox" && tab?.tableData?.length && tab.Settings.isTable === "false"){
-                            initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey] || "false";
+                        }else if (field.type === 'WDateTimePicker' && field.wValue) {
+                            initialTabFormValues[tabKey][field.wKey] = moment(field.wValue).format('YYYYMMDD HH:mm:ss');
                         }else if (tab?.tableData?.length && tab.Settings.isTable === "false") {
-                            initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey];
+                            const initialValue = tab.tableData[0][field.wKey];
+                            if (field.type === 'WDateTimePicker') {
+                                initialTabFormValues[tabKey][field.wKey] = initialValue || moment().format('YYYYMMDD HH:mm:ss');
+                            }else if(field.type === "WCheckBox"){
+                                initialTabFormValues[tabKey][field.wKey] = initialValue || "false";
+                            }else{
+                                initialTabFormValues[tabKey][field.wKey] = tab.tableData[0][field.wKey];
+                            }
                         } else {
                             initialTabFormValues[tabKey][field.wKey] = "";
                         }
@@ -1142,7 +1152,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             // THEN: Process validations sequentially
             for (const field of formData) {
-                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                if (Object.keys(field?.ValidationAPI || {}).length > 0 && isEditData && !isViewMode) {
                     await handleValidationForDisabledField(
                         field,
                         editData,
@@ -1356,7 +1366,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
             // THEN: Process validations sequentially
             for (const field of response.data?.data?.rs0 || []) {
-                if (Object.keys(field?.ValidationAPI).length > 0 && isEditData && !isViewMode) {
+                if (Object.keys(field?.ValidationAPI|| {}).length > 0 && isEditData && !isViewMode) {
                     await handleValidationForDisabledField(
                         field,
                         editData,
