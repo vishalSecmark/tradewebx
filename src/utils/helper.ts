@@ -1,10 +1,11 @@
 import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeContext";
-import { APP_METADATA_KEY, SECURE_STORAGE_KEY } from "./constants";
+import { ACTION_NAME, APP_METADATA_KEY, BASE_URL, PATH_URL, SECURE_STORAGE_KEY } from "./constants";
 import { toast } from "react-toastify";
 import { log } from "node:console";
 //@ts-ignore
 import { Token, Secret } from 'fernet';
 import CryptoJS from 'crypto-js';
+import apiService from "./apiService";
 
 export const clearLocalStorage = () => {
     // Preserve essential app data
@@ -500,3 +501,35 @@ export function sanitizeValueSpecialChar(value, charactersToReplace = ['&', '!']
     const escapeRegex = new RegExp(`[${charactersToReplace.join('')}]`, 'g');
     return value.replace(escapeRegex, ' ').trim();
 }
+
+
+
+export const sendEmailMultiCheckbox = async (base64Data: string, pdfName: string,filterXml:any,fileTitle:string,userId:string,userType:string) => {
+    const emailXml = `
+        <dsXml>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"EmailSend","RequestFrom":"W"</J_Ui>
+            <Sql></Sql>
+            <X_Filter>
+                ${filterXml}
+                <ReportName>${fileTitle}</ReportName>
+                <FileName>${pdfName}</FileName>
+                <Base64>${base64Data}</Base64>
+            </X_Filter>
+            <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+        </dsXml>`;
+
+    const emailResponse = await apiService.postWithAuth(BASE_URL + PATH_URL, emailXml);
+
+    const result = emailResponse?.data;
+    const columnMsg = result?.data?.rs0?.[0]?.Column1 || '';
+
+    if (result?.success) {
+        if (columnMsg.toLowerCase().includes('mail template not define')) {
+            toast.error('Mail Template Not Defined');
+        } else {
+            toast.success(columnMsg);
+        }
+    } else {
+        toast.error(columnMsg || result?.message);
+    }
+};

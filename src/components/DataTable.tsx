@@ -15,10 +15,13 @@ import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
-import { buildFilterXml, getLocalStorage } from '@/utils/helper';
+import { buildFilterXml, getLocalStorage, sendEmailMultiCheckbox } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
+import { useLocalStorage } from '@/hooks/useLocalListner';
+
+
 
 // Column Filter Component
 const ColumnFilterDropdown: React.FC<{
@@ -489,6 +492,7 @@ interface DataTableProps {
         ButtonType: string;
         EnabledTag: string;
     }>;
+    filtersCheck;
 }
 
 interface DecimalColumn {
@@ -621,7 +625,21 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck}) => {
+
+    // 🆕 ADDITION: Multi-checkbox toggle handler
+  const toggleRowSelection = (row: any, checked: boolean) => {
+    const updated = checked
+      ? [...selectedRows, row]
+      : selectedRows.filter(r => r._id !== row._id);
+
+    setSelectedRows(updated);
+    onRowSelect?.(updated);
+    
+    console.log(onRowSelect,'on row selct');
+    
+  };
+
 
     // Helper function to check if a button is enabled
     const isButtonEnabled = (buttonType: string): boolean => {
@@ -639,7 +657,30 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     const rowHeight = tableStyle === 'small' ? 30 : tableStyle === 'medium' ? 40 : 50;
     const screenSize = useScreenSize();
     const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
+    const [userId] = useLocalStorage('userId', null);
+    const [userType] = useLocalStorage('userType', null);
 
+    console.log(userId,'userId',userType,'userType');
+    
+
+
+    // 🆕 Auto-select all rows on load if multiCheckBox is enabled
+useEffect(() => {
+    if (settings?.multiCheckBox && data?.length > 0) {
+      setSelectedRows(data.map((row, index) => ({
+        ...row,
+        _id: row.id || index
+      })));
+    }
+  }, [settings?.multiCheckBox, data]);
+
+
+  useEffect(() => {
+    console.log("✅ Auto-selected rows:", selectedRows);
+    console.log("filters:", filters);
+
+  }, [selectedRows]);
+  
     // Filter functions
     const handleFilterChange = useCallback((columnKey: string, filter: ColumnFilter | null) => {
         setFilters(prev => {
@@ -868,6 +909,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             return ''; // Default color on error
         }
     };
+      
 
     // Process and format the data
     const formattedData = useMemo(() => {
@@ -995,7 +1037,51 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
+
+    
+
+
+    //this function is used for 
+
+
+
+    const multiCheckBoxColumn = settings?.multiCheckBox
+    ? [{
+      key: "_multiSelect",
+      name: "",
+      width: 35,
+      renderHeaderCell: () => {
+        const allIds = rows.map(r => r._id);
+        const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
+
+        return (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => {
+              const newSelection = e.target.checked ? [...rows] : [];
+              setSelectedRows(newSelection);
+              onRowSelect?.(newSelection);
+            }}
+          />
+        );
+      },
+      renderCell: ({ row }: any) => (
+        <input
+          type="checkbox"
+          checked={selectedRows.some(r => r._id === row._id)}
+          onChange={(e) => toggleRowSelection(row, e.target.checked)}
+        />
+      )
+    }]
+    : [];
+
+    console.log(selectedRows,'selectedRows');
+    
+    
+
         const baseColumns: any = [
+            ...multiCheckBoxColumn,
             ...(settings?.EditableColumn
                 ? [{
                     key: "_select",
@@ -1028,6 +1114,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                     }}
                                 />
                             </div>
+                            
                         );
                     },
                     renderCell: ({ row }) => (
@@ -1054,6 +1141,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             }}
                             style={{ cursor: "pointer" }}
                         />
+
                     )
                 }]
                 : []),
@@ -1096,6 +1184,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         return (
                             <div className="expanded-content" style={{ height: '100%', overflow: 'auto' }}>
                                 <div className="expanded-header">
+                                
                                     <div
                                         className="expand-button"
                                         onClick={() => {
@@ -1173,6 +1262,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                             </button>
                                         </div>
                                     )}
+                                     
                                 </div>
                             </div>
                         );
@@ -1366,6 +1456,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             )
         }
         return baseColumns;
+        
     }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters]);
 
     // Sort function
@@ -1409,6 +1500,120 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         return sortRows(filteredData, sortColumns);
     }, [filteredData, sortColumns]);
 
+// ✅ Add this near your top-level state
+const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
+
+const handleLoopThroughMultiSelectKeyHandler = async () => {
+  const filterXml = buildFilterXml(filtersCheck, userId);
+
+  try {
+    for (const [index, row] of selectedRows.entries()) {
+      const multiSelectXML = `
+        <dsXml>
+          <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
+          <Sql/>
+          <X_Filter>
+              ${filterXml}
+              <ReportType>${row.ReportType || ""}</ReportType>
+              <ReportName>${row.ReportName || ""}</ReportName>
+              <Segment>${row.Segment || ""}</Segment>
+          </X_Filter>
+          <X_GFilter/>
+          <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+        </dsXml>
+      `;
+
+      console.log(`📤 Sending XML ${index + 1}:\n`, multiSelectXML);
+
+      try {
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
+        let emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
+
+        // 🧩 If no payload found → mark failed + deselect
+        if (!emailPayloadXML) {
+          console.warn(`⚠️ No EmailPayload for row ${index + 1} (${row.ReportName})`);
+
+          // Mark as failed
+          setFailedRowIds(prev => [...prev, row._id]);
+
+          // Deselect this row
+          setSelectedRows(prev => prev.filter(r => r._id !== row._id));
+
+          // Continue to next loop
+          continue;
+        }
+
+        const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
+        const match = emailPayloadXML.match(/"Option":"([^"]+)"/);
+        const optionValue = match ? match[1] : null;
+
+        console.log(`✅ Option Value: ${optionValue}`);
+
+        let secondEmailResponse = emailPayloadXmlSend;
+        console.log(secondEmailResponse, "emailPayloadXmlSend");
+
+        if (secondEmailResponse.success === true) {
+          let byProductOfEmail = secondEmailResponse?.data?.data?.rs0?.[0];
+          let pdfName = byProductOfEmail?.PDFName;
+          let base64Data = byProductOfEmail?.Base64PDF;
+          const fileTitle = optionValue;
+
+          sendEmailMultiCheckbox(base64Data, pdfName, filterXml, fileTitle, userId, userType);
+        } else {
+          // Mark failed if second call fails
+          setFailedRowIds(prev => [...prev, row._id]);
+          setSelectedRows(prev => prev.filter(r => r._id !== row._id));
+          toast.error('This record was deselected because the API call failed');
+        }
+
+      } catch (innerErr) {
+        console.error(`❌ Error processing row ${index + 1}:`, innerErr);
+        setFailedRowIds(prev => [...prev, row._id]);
+        setSelectedRows(prev => prev.filter(r => r._id !== row._id));
+      }
+    }
+
+    console.log("🎉 All XMLs processed!");
+  } catch (error) {
+    console.error("❌ Error sending XMLs:", error);
+  }
+};
+
+const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async() => {
+    console.log('zipp');
+    const filterXml = buildFilterXml(filtersCheck, userId);
+    try {
+
+        for (const [index, row] of selectedRows.entries()) {
+            const multiSelectXML = `
+              <dsXml>
+                <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
+                <Sql/>
+                <X_Filter>
+                    ${filterXml}
+                    <ReportType>${row.ReportType || ""}</ReportType>
+                    <ReportName>${row.ReportName || ""}</ReportName>
+                    <Segment>${row.Segment || ""}</Segment>
+                </X_Filter>
+                <X_GFilter/>
+                <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+              </dsXml>
+            `;
+            
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
+            let emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
+            const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
+            console.log(emailPayloadXmlSend,'emailPayloadXmlSend22');
+            
+        }
+        
+    } catch (error) {
+        
+    }
+    
+}
+
+      
     const summmaryRows = useMemo(() => {
         const totals: Record<string, any> = {
             id: 'summary_row',
@@ -1419,6 +1624,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         if (summary?.columnsToShowTotal && Array.isArray(summary.columnsToShowTotal)) {
             summary.columnsToShowTotal.forEach(column => {
                 if (column.key) {
+
                     // Calculate the sum for this column
                     const sum = rows.reduce((total, row) => {
                         const value = row[column.key];
@@ -1463,6 +1669,26 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             ref={tableRef}
             style={{ height: fullHeight ? 'calc(100vh - 170px)' : 'auto', width: '100%' }}
         >
+            {settings.multiCheckBox &&
+            <>
+                  <div className='flex'>
+        <button
+        onClick={handleLoopThroughMultiSelectKeyHandler}
+        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+        >
+        Send Mail
+        </button>
+
+                 
+        <button
+        onClick={handleLoopThroughMultiSelectKeyHandlerDownloadZip}
+        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+        >
+        Download Zip
+        </button>
+        </div>
+            </>}
+   
             <DataGrid
                 columns={columns}
                 rows={rows}
@@ -2031,6 +2257,8 @@ export const exportTableToPdf = async (
         const userType = getLocalStorage('userType') || '';
 
         const filterXml = buildFilterXml(filters, userId);
+        console.log(filterXml,'filterXml email');
+        
 
         const sendEmail = async (base64Data: string, pdfName: string) => {
             const emailXml = `
@@ -2063,6 +2291,8 @@ export const exportTableToPdf = async (
         };
 
         try {
+            console.log(filterXml,'filterXml typst');
+            
             if (showTypes) {
                 const fetchXml = `
                     <dsXml>
@@ -2114,6 +2344,8 @@ export const downloadOption = async (
     const userId = getLocalStorage('userId') || '';
 
     const filterXml = buildFilterXml(filters, userId);
+    console.log(filterXml,'filterXml');
+    
 
     const xmlData1 = ` 
     <dsXml>
