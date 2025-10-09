@@ -490,8 +490,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-    const handleInputBlur = async (rowIndex: number | string, key: string, previousValue: any) => {
-        const field = editableColumns.find(col => col.wKey === key);
+    console.log('Input blur event:',localData)
+    const handleInputBlur = async (rowIndex: number | string, key1: string, previousValue: any, newValue?:any) => {
+        console.log('Input blur event:1', { rowIndex, key1, previousValue },editableColumns,newValue);
+        const field = editableColumns.find(col => col.wKey === key1);
         if (!field?.ValidationAPI?.dsXml) return;
         if (rowIndex === "viewModal") {
             // Skip view modal handling since we removed it
@@ -503,13 +505,18 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         let xFilterMultiple = '';
         let shouldCallApi = true;
         const missingFields: string[] = [];
+        console.log("Input blur event:2",xFilter,X_Filter_Multiple,rowValues);
         if (X_Filter_Multiple) {
             Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
                 let fieldValue: any;
 
                 if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
                     const lookupKey = placeholder.slice(2, -2);
-                    fieldValue = rowValues[lookupKey];
+                    if(lookupKey === key1){
+                        fieldValue = newValue
+                    }else{
+                        fieldValue = rowValues[lookupKey];
+                    }
                 } else {
                     fieldValue = placeholder;
                 }
@@ -577,7 +584,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             const updated = [...prev];
                             updated[rowIndex as number] = {
                                 ...updated[rowIndex as number],
-                                [key]: previousValue
+                                [key1]: previousValue
                             };
                             return updated;
                         });
@@ -1148,8 +1155,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                     [`${rowIndex}_${key}`]: value
                                                                                 }))
                                                                             }
-                                                                            onBlur={() => {
-                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                            onBlur={(e) => {
+                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`],e.target.value);
                                                                                 setPreviousValues(prev => {
                                                                                     const updated = { ...prev };
                                                                                     delete updated[`${rowIndex}_${key}`];
@@ -1181,7 +1188,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                 if (editable.ValidationAPI?.dsXml) {
                                                                                     // Small delay to ensure state is updated
                                                                                     setTimeout(() => {
-                                                                                        handleInputBlur(rowIndex, key, previousValue);
+                                                                                        handleInputBlur(rowIndex, key, previousValue,newValue);
                                                                                     }, 100);
                                                                                 }
                                                                             }}
@@ -1342,8 +1349,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                         [`${rowIndex}_${key}`]: value
                                                                                     }))
                                                                                 }
-                                                                                onBlur={() => {
-                                                                                    handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                                onBlur={(e) => {
+                                                                                    handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`],e.target.value);
                                                                                     setPreviousValues(prev => {
                                                                                         const updated = { ...prev };
                                                                                         delete updated[`${rowIndex}_${key}`];
@@ -1375,7 +1382,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                     if (editable.ValidationAPI?.dsXml) {
                                                                                         // Small delay to ensure state is updated
                                                                                         setTimeout(() => {
-                                                                                            handleInputBlur(rowIndex, key, previousValue);
+                                                                                            handleInputBlur(rowIndex, key, previousValue,newValue);
                                                                                         }, 100);
                                                                                     }
                                                                                 }}
