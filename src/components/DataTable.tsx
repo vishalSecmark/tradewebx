@@ -15,11 +15,14 @@ import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
-import { buildFilterXml, getLocalStorage, sendEmailMultiCheckbox } from '@/utils/helper';
+import { base64ToUint8Array, buildFilterXml, displayAndDownloadFile, getLocalStorage, sendEmailMultiCheckbox } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
 import { useLocalStorage } from '@/hooks/useLocalListner';
+import JSZip from "jszip";
+import { FaSpinner } from 'react-icons/fa';
+import Loader from './Loader';
 
 
 
@@ -467,6 +470,7 @@ const ColumnFilterDropdown: React.FC<{
 
 interface DataTableProps {
     data: any[];
+    filtersCheck?:any;
     settings?: {
         hideEntireColumn?: string;
         leftAlignedColumns?: string;
@@ -492,7 +496,6 @@ interface DataTableProps {
         ButtonType: string;
         EnabledTag: string;
     }>;
-    filtersCheck;
 }
 
 interface DecimalColumn {
@@ -659,9 +662,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
     const [userId] = useLocalStorage('userId', null);
     const [userType] = useLocalStorage('userType', null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    console.log(userId,'userId',userType,'userType');
-    
 
 
     // 🆕 Auto-select all rows on load if multiCheckBox is enabled
@@ -674,12 +676,6 @@ useEffect(() => {
     }
   }, [settings?.multiCheckBox, data]);
 
-
-  useEffect(() => {
-    console.log("✅ Auto-selected rows:", selectedRows);
-    console.log("filters:", filters);
-
-  }, [selectedRows]);
   
     // Filter functions
     const handleFilterChange = useCallback((columnKey: string, filter: ColumnFilter | null) => {
@@ -1504,6 +1500,7 @@ useEffect(() => {
 const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
 
 const handleLoopThroughMultiSelectKeyHandler = async () => {
+    setIsLoading(true)
   const filterXml = buildFilterXml(filtersCheck, userId);
 
   try {
@@ -1523,16 +1520,13 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
         </dsXml>
       `;
 
-      console.log(`📤 Sending XML ${index + 1}:\n`, multiSelectXML);
 
       try {
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
-        let emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
+        const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
 
         // 🧩 If no payload found → mark failed + deselect
         if (!emailPayloadXML) {
-          console.warn(`⚠️ No EmailPayload for row ${index + 1} (${row.ReportName})`);
-
           // Mark as failed
           setFailedRowIds(prev => [...prev, row._id]);
 
@@ -1546,24 +1540,18 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
         const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
         const match = emailPayloadXML.match(/"Option":"([^"]+)"/);
         const optionValue = match ? match[1] : null;
-
-        console.log(`✅ Option Value: ${optionValue}`);
-
-        let secondEmailResponse = emailPayloadXmlSend;
-        console.log(secondEmailResponse, "emailPayloadXmlSend");
+        const secondEmailResponse = emailPayloadXmlSend;
 
         if (secondEmailResponse.success === true) {
-          let byProductOfEmail = secondEmailResponse?.data?.data?.rs0?.[0];
-          let pdfName = byProductOfEmail?.PDFName;
-          let base64Data = byProductOfEmail?.Base64PDF;
+          const byProductOfEmail = secondEmailResponse?.data?.data?.rs0?.[0];
+          const pdfName = byProductOfEmail?.PDFName;
+          const base64Data = byProductOfEmail?.Base64PDF;
           const fileTitle = optionValue;
-
           sendEmailMultiCheckbox(base64Data, pdfName, filterXml, fileTitle, userId, userType);
         } else {
           // Mark failed if second call fails
           setFailedRowIds(prev => [...prev, row._id]);
           setSelectedRows(prev => prev.filter(r => r._id !== row._id));
-          toast.error('This record was deselected because the API call failed');
         }
 
       } catch (innerErr) {
@@ -1573,49 +1561,130 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
       }
     }
 
-    console.log("🎉 All XMLs processed!");
   } catch (error) {
     console.error("❌ Error sending XMLs:", error);
+  }finally{
+    setIsLoading(false)
   }
 };
 
-const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async() => {
-    console.log('zipp');
-    const filterXml = buildFilterXml(filtersCheck, userId);
-    try {
 
-        for (const [index, row] of selectedRows.entries()) {
-            const multiSelectXML = `
-              <dsXml>
-                <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
-                <Sql/>
-                <X_Filter>
-                    ${filterXml}
-                    <ReportType>${row.ReportType || ""}</ReportType>
-                    <ReportName>${row.ReportName || ""}</ReportName>
-                    <Segment>${row.Segment || ""}</Segment>
-                </X_Filter>
-                <X_GFilter/>
-                <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
-              </dsXml>
-            `;
+
+
+const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async () => {
+    setIsLoading(true);
+    const filterXml = buildFilterXml(filtersCheck, userId);
+    const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
+    const zip = new JSZip();
+    const pdfFolder = zip.folder(zipFolderName);
+  
+    // Snapshot the currently selected rows so updates to state don't affect iteration
+    const rowsToProcess = Array.isArray(selectedRows) ? [...selectedRows] : [];
+    const failedRows: { id: string; index: number; reason: string }[] = [];
+    let pdfCount = 0;
+  
+    try {
+      for (const [i, row] of rowsToProcess.entries()) {
+        const index = i + 1;
+        const multiSelectXML = `
+          <dsXml>
+            <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
+            <Sql/>
+            <X_Filter>
+                ${filterXml}
+                <ReportType>${row.ReportType || ""}</ReportType>
+                <ReportName>${row.ReportName || ""}</ReportName>
+                <Segment>${row.Segment || ""}</Segment>
+            </X_Filter>
+            <X_GFilter/>
+            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+          </dsXml>
+        `;
+  
+        try {
+          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
+          const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
+  
+          if (!emailPayloadXML) {
+            console.warn(`⚠️ Row ${index}: No EmailPayload found`);
+            failedRows.push({ id: row._id, index, reason: "No EmailPayload" });
+            continue;
+          }
+  
+          const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
+          const emailResponseData = emailPayloadXmlSend?.data?.data?.rs0?.[0];
+  
+          if (emailPayloadXmlSend.success === true && emailResponseData?.Base64PDF) {
+            const base64 = emailResponseData.Base64PDF;
+            let pdfName = emailResponseData.PDFName || `Report_${index}.pdf`;
             
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
-            let emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
-            const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
-            console.log(emailPayloadXmlSend,'emailPayloadXmlSend22');
-            let emailResponseData = emailPayloadXmlSend?.data?.data?.rs0[0]
-            if(emailPayloadXmlSend.success === true){
-                const base64 = emailResponseData?.Base64PDF
+            // Append index to filename before extension to avoid overwrites
+            const extensionIndex = pdfName.lastIndexOf('.');
+            if (extensionIndex !== -1) {
+              pdfName = pdfName.slice(0, extensionIndex) + `_${index}` + pdfName.slice(extensionIndex);
+            } else {
+              pdfName = pdfName + `_${index}.pdf`;
             }
             
+            const fileContent = base64ToUint8Array(base64);
+            pdfFolder.file(pdfName, fileContent);
+            pdfCount++;
+          } else {
+            console.warn(`⚠️ Row ${index}: Missing Base64PDF`);
+            failedRows.push({ id: row._id, index, reason: "Missing Base64PDF" });
+          }
+        } catch (err) {
+          console.error(`❌ Error for row ${index}:`, err);
+          failedRows.push({ id: row._id, index, reason: (err && err.message) || "API error" });
         }
-        
+      }
+  
+      // If no PDFs were added at all, create a README and still produce the ZIP
+      if (pdfCount === 0) {
+        pdfFolder.file("README.txt", "No PDF files were generated for the selected records.");
+      }
+  
+      // If there were failures, add a README listing them and then deselect them from selectedRows
+      if (failedRows.length > 0) {
+        const failText =
+          `The following selected rows failed during export:\n\n` +
+          failedRows.map(f => `Row ${f.index} (id: ${f.id}) — ${f.reason}`).join("\n");
+  
+        // append the failures README (will exist in zipRoot/zipFolderName)
+        pdfFolder.file("FAILED_ROWS.txt", failText);
+  
+        // Batch-deselect failed rows from the global selectedRows state
+        const failedIds = new Set(failedRows.map(f => f.id));
+        setSelectedRows(prev => (Array.isArray(prev) ? prev.filter(r => !failedIds.has(r._id)) : []));
+      }
+  
+      // Generate ZIP and trigger download
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `${zipFolderName}.zip`);
+  
+      console.log(`✅ ZIP created. PDFs: ${pdfCount}, Failures: ${failedRows.length}`);
+      // Display aggregate toast
+      if (pdfCount > 0 && failedRows.length === 0) {
+        toast.success(`ZIP created with ${pdfCount} PDF(s).`);
+      } else if (pdfCount > 0 && failedRows.length > 0) {
+        toast.warn(`ZIP created with ${pdfCount} PDF(s). ${failedRows.length} failed (see FAILED_ROWS.txt).`);
+      } else if (pdfCount === 0 && failedRows.length > 0) {
+        toast.error(`No PDFs created. ${failedRows.length} failures (see FAILED_ROWS.txt).`);
+      } else {
+        toast.info("ZIP created (no PDFs found).");
+      }
     } catch (error) {
-        
+      console.error("❌ Error during ZIP creation:", error);
+      toast.error("Failed to create ZIP. Please try again.");
     }
-    
-}
+    finally {
+        setIsLoading(false); // Hide loader
+    }
+  };
+
+  
+  
+  
 
       
     const summmaryRows = useMemo(() => {
@@ -1673,10 +1742,18 @@ const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async() => {
             ref={tableRef}
             style={{ height: fullHeight ? 'calc(100vh - 170px)' : 'auto', width: '100%' }}
         >
+            {isLoading && (
+                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+                <Loader />
+                </div>
+            )}
             {settings.multiCheckBox &&
             <>
                   <div className='flex'>
         <button
+         style={{
+            background: colors?.color3 || "#f0f0f0",
+         }}
         onClick={handleLoopThroughMultiSelectKeyHandler}
         className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
         >
@@ -1685,6 +1762,9 @@ const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async() => {
 
                  
         <button
+         style={{
+            background: colors?.color3 || "#f0f0f0",
+         }}
         onClick={handleLoopThroughMultiSelectKeyHandlerDownloadZip}
         className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
         >

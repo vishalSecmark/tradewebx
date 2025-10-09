@@ -366,7 +366,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-    console.log(pageData, 'pageData');
     const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
 
     // Validate pageData whenever it changes
@@ -374,7 +373,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (pageData) {
             const validation = validatePageData(pageData);
             setValidationResult(validation);
-            console.log('Page Data Validation Result:', validation);
         } else {
             setValidationResult({
                 isValid: false,
@@ -389,18 +387,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }, [pageData]);
 
     // Helper functions for button configuration
-    const isMasterButtonEnabled = (buttonType: string): boolean => {
-        console.log(pageData?.[0]?.MasterbuttonConfig,'MasterbuttonConfig');
-        console.log(pageData,'page info');
-
-        
+    const isMasterButtonEnabled = (buttonType: string): boolean => {       
         if (!pageData?.[0]?.MasterbuttonConfig) return true; // Default to enabled if no config
         const buttonConfig = pageData[0].MasterbuttonConfig.find(
             (config: any) => config.ButtonType === buttonType
-        );
-
-        console.log(buttonConfig,'buttonConfig');
-        
+        );        
 
         return buttonConfig?.EnabledTag === "true";
     };
