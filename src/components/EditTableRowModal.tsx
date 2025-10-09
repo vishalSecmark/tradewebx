@@ -655,14 +655,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     const hadleViewLog = async (rowData: any) => {
-        if ((rowData.ExportType === undefined || rowData.ExportType === '')) {
-            setValidationModal({
-                isOpen: true,
-                message: 'Please select a Export Type from the dropdown.',
-                type: 'E'
-            });
-            return;
-        }
+        //needed in future
+        // if ((rowData.ExportType === undefined || rowData.ExportType === '')) {
+        //     setValidationModal({
+        //         isOpen: true,
+        //         message: 'Please select a Export Type from the dropdown.',
+        //         type: 'E'
+        //     });
+        //     return;
+        // }
 
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, dynamicXmlGenratingFn(showViewApi, rowData));
@@ -1038,16 +1039,15 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
 
     const handleDocumentView = async (rowData: any,) => {
-        if ((rowData.RekycDocumentType === undefined || rowData.RekycDocumentType === '')) {
-            setValidationModal({
-                isOpen: true,
-                message: 'Please select a Rekyc Document Type from the dropdown to view the document.',
-                type: 'E'
-            });
-            return;
-        }
-
-
+        //needed in future
+        // if ((rowData.RekycDocumentType === undefined || rowData.RekycDocumentType === '')) {
+        //     setValidationModal({
+        //         isOpen: true,
+        //         message: 'Please select a Rekyc Document Type from the dropdown to view the document.',
+        //         type: 'E'
+        //     });
+        //     return;
+        // }
 
         const J_Ui = Object.entries(showViewDocumentAPI.dsXml.J_Ui)
             .map(([key, value]) => `"${key}":"${value}"`)
