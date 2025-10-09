@@ -1576,7 +1576,7 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
         const zipFileName = `${zipFolderName}.zip`;
   
         // 🧩 Now send this ZIP (Base64) via existing function
-        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, "ZIP_ATTACHMENT", userId, userType);
+        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, "Client_Reports", userId, userType);
   
         toast.success(`ZIP with ${collectedPdfs.length} PDF(s) sent successfully.`);
       } else {
