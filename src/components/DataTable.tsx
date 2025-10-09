@@ -667,14 +667,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
 
     // 🆕 Auto-select all rows on load if multiCheckBox is enabled
-    useEffect(() => {
-       if (settings?.multiCheckBox && data?.length > 0) {
-       setSelectedRows(data.map((row, index) => ({
-          ...row,
-          _id: row.id || index
-       })));
-       }
-    }, [settings?.multiCheckBox, data]);
+useEffect(() => {
+    if (settings?.multiCheckBox && data?.length > 0) {
+      setSelectedRows(data.map((row, index) => ({
+        ...row,
+        _id: row.id || index
+      })));
+    }
+  }, [settings?.multiCheckBox, data]);
 
   
     // Filter functions
@@ -1492,74 +1492,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 // ✅ Add this near your top-level state
 const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
 
-// const handleLoopThroughMultiSelectKeyHandler = async () => {
-//     setIsLoading(true)
-//   const filterXml = buildFilterXml(filtersCheck, userId);
 
-//   try {
-//     for (const [index, row] of selectedRows.entries()) {
-//       const multiSelectXML = `
-//         <dsXml>
-//           <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
-//           <Sql/>
-//           <X_Filter>
-//               ${filterXml}
-//               <ReportType>${row.ReportType || ""}</ReportType>
-//               <ReportName>${row.ReportName || ""}</ReportName>
-//               <Segment>${row.Segment || ""}</Segment>
-//           </X_Filter>
-//           <X_GFilter/>
-//           <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
-//         </dsXml>
-//       `;
-
-
-//       try {
-//         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
-//         const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
-
-//         // 🧩 If no payload found → mark failed + deselect
-//         if (!emailPayloadXML) {
-//           // Mark as failed
-//           setFailedRowIds(prev => [...prev, row._id]);
-
-//           // Deselect this row
-//           setSelectedRows(prev => prev.filter(r => r._id !== row._id));
-
-//           // Continue to next loop
-//           continue;
-//         }
-
-//         const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
-//         const match = emailPayloadXML.match(/"Option":"([^"]+)"/);
-//         const optionValue = match ? match[1] : null;
-//         const secondEmailResponse = emailPayloadXmlSend;
-
-//         if (secondEmailResponse.success === true) {
-//           const byProductOfEmail = secondEmailResponse?.data?.data?.rs0?.[0];
-//           const pdfName = byProductOfEmail?.PDFName;
-//           const base64Data = byProductOfEmail?.Base64PDF;
-//           const fileTitle = optionValue;
-//           sendEmailMultiCheckbox(base64Data, pdfName, filterXml, fileTitle, userId, userType);
-//         } else {
-//           // Mark failed if second call fails
-//           setFailedRowIds(prev => [...prev, row._id]);
-//           setSelectedRows(prev => prev.filter(r => r._id !== row._id));
-//         }
-
-//       } catch (innerErr) {
-//         console.error(`❌ Error processing row ${index + 1}:`, innerErr);
-//         setFailedRowIds(prev => [...prev, row._id]);
-//         setSelectedRows(prev => prev.filter(r => r._id !== row._id));
-//       }
-//     }
-
-//   } catch (error) {
-//     console.error("❌ Error sending XMLs:", error);
-//   }finally{
-//     setIsLoading(false)
-//   }
-// };
 
 
 const handleLoopThroughMultiSelectKeyHandler = async () => {
