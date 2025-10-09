@@ -667,14 +667,14 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
 
     // 🆕 Auto-select all rows on load if multiCheckBox is enabled
-useEffect(() => {
-    if (settings?.multiCheckBox && data?.length > 0) {
-      setSelectedRows(data.map((row, index) => ({
-        ...row,
-        _id: row.id || index
-      })));
-    }
-  }, [settings?.multiCheckBox, data]);
+    useEffect(() => {
+       if (settings?.multiCheckBox && data?.length > 0) {
+       setSelectedRows(data.map((row, index) => ({
+          ...row,
+          _id: row.id || index
+       })));
+       }
+    }, [settings?.multiCheckBox, data]);
 
   
     // Filter functions
@@ -1033,14 +1033,7 @@ useEffect(() => {
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
-
-    
-
-
     //this function is used for 
-
-
-
     const multiCheckBoxColumn = settings?.multiCheckBox
     ? [{
       key: "_multiSelect",
