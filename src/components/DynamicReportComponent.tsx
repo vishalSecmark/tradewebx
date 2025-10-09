@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -366,7 +366,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
 
     const pageData: any = findPageData();
-    console.log(pageData, 'pageData');
     const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
 
     // Validate pageData whenever it changes
@@ -374,7 +373,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         if (pageData) {
             const validation = validatePageData(pageData);
             setValidationResult(validation);
-            console.log('Page Data Validation Result:', validation);
         } else {
             setValidationResult({
                 isValid: false,
@@ -389,11 +387,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }, [pageData]);
 
     // Helper functions for button configuration
-    const isMasterButtonEnabled = (buttonType: string): boolean => {
+    const isMasterButtonEnabled = (buttonType: string): boolean => {       
         if (!pageData?.[0]?.MasterbuttonConfig) return true; // Default to enabled if no config
         const buttonConfig = pageData[0].MasterbuttonConfig.find(
             (config: any) => config.ButtonType === buttonType
-        );
+        );        
+
         return buttonConfig?.EnabledTag === "true";
     };
 
@@ -431,6 +430,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }
 
+    
 
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
@@ -1566,6 +1566,26 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     </div>
                                 </div>
                             )}
+
+                            {isMasterButtonEnabled('ExportEmail') && (
+                                <div className="relative group">
+                                    <button
+                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                        onClick={() => {
+                                            setPdfParams([tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'email']);
+                                            setIsConfirmModalOpen(true);
+                                        }}
+                                        style={{ color: colors.text }}
+                                    >
+                                        <FaRegEnvelope size={20} />
+                                    </button>
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                        Export Email
+                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                    </div>
+                                </div>
+                            )}
+
                             {showTypeList && isMasterButtonEnabled('Download') && (
                                 <div className="relative group">
                                     <button
@@ -1950,6 +1970,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                             showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                             buttonConfig={pageData?.[0]?.buttonConfig}
+                            filtersCheck = {filters}
                         />
                         {Object.keys(additionalTables).length > 0 && (
                             <div>
@@ -1980,6 +2001,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 tableRef={tableRef}
                                                 fullHeight={false}
                                                 buttonConfig={pageData?.[0]?.buttonConfig}
+                                                filtersCheck = {filters}
                                             />
                                         </div>
                                     );
