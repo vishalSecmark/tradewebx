@@ -1512,7 +1512,7 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
     const failedRows: string[] = [];
     const clientCodeMatch = filterXml.match(/<ClientCode>(.*?)<\/ClientCode>/);
     const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
-    const emailSendingCaptionTxt = pageData[0].level;
+    const emailSendingCaptionTxt = pageData?.[0]?.level || '';
 
   
     try {
