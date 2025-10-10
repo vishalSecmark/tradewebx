@@ -1512,6 +1512,8 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
     const failedRows: string[] = [];
     const clientCodeMatch = filterXml.match(/<ClientCode>(.*?)<\/ClientCode>/);
     const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
+    const emailSendingCaptionTxt = pageData[0].level;
+
   
     try {
       for (const [index, row] of selectedRows.entries()) {
@@ -1578,12 +1580,10 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
   
         // Create a proper ZIP file name
         const zipFileName = `${zipFolderName}.zip`;
-
-        console.log(pageData[0].level,'pageData[0].level');
-        
+   
   
         // 🧩 Now send this ZIP (Base64) via existing function
-        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, `${pageData[0].level}`, userId, userType);
+        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, emailSendingCaptionTxt, userId, userType);
   
         toast.success(`ZIP with ${collectedPdfs.length} PDF(s) sent successfully.`);
       } else {
