@@ -1971,6 +1971,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                             buttonConfig={pageData?.[0]?.buttonConfig}
                             filtersCheck = {filters}
+                            pageData={pageData}
                         />
                         {Object.keys(additionalTables).length > 0 && (
                             <div>
@@ -2002,6 +2003,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 fullHeight={false}
                                                 buttonConfig={pageData?.[0]?.buttonConfig}
                                                 filtersCheck = {filters}
+                                                pageData={pageData}
                                             />
                                         </div>
                                     );

@@ -471,6 +471,7 @@ const ColumnFilterDropdown: React.FC<{
 interface DataTableProps {
     data: any[];
     filtersCheck?:any;
+    pageData?:any
     settings?: {
         hideEntireColumn?: string;
         leftAlignedColumns?: string;
@@ -628,7 +629,7 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck}) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck,pageData}) => {
 
     // 🆕 ADDITION: Multi-checkbox toggle handler
   const toggleRowSelection = (row: any, checked: boolean) => {
@@ -642,6 +643,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     console.log(onRowSelect,'on row selct');
     
   };
+
+
+  console.log(pageData,'summary13');
+  
 
 
     // Helper function to check if a button is enabled
@@ -1516,7 +1521,6 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
             <Sql/>
             <X_Filter>
                 ${filterXml}
-                <ReportType>${row.ReportType || ""}</ReportType>
                 <ReportName>${row.ReportName || ""}</ReportName>
                 <Segment>${row.Segment || ""}</Segment>
             </X_Filter>
@@ -1574,9 +1578,12 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
   
         // Create a proper ZIP file name
         const zipFileName = `${zipFolderName}.zip`;
+
+        console.log(pageData[0].level,'pageData[0].level');
+        
   
         // 🧩 Now send this ZIP (Base64) via existing function
-        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, "ClientReports", userId, userType);
+        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, `${pageData[0].level}`, userId, userType);
   
         toast.success(`ZIP with ${collectedPdfs.length} PDF(s) sent successfully.`);
       } else {
@@ -1639,7 +1646,6 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
             <Sql/>
             <X_Filter>
                 ${filterXml}
-                <ReportType>${row.ReportType || ""}</ReportType>
                 <ReportName>${row.ReportName || ""}</ReportName>
                 <Segment>${row.Segment || ""}</Segment>
             </X_Filter>
