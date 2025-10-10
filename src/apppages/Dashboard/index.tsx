@@ -1,7 +1,6 @@
 "use client";
 export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
 import nextDynamic from 'next/dynamic';
 import { ApexOptions } from "apexcharts";
 import Link from 'next/link';
@@ -10,7 +9,6 @@ import { ACTION_NAME, PATH_URL } from '@/utils/constants';
 import { BASE_URL } from '@/utils/constants';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchLastTradingDate, fetchInitializeLogin } from '@/redux/features/common/commonSlice';
-import Select from 'react-select';
 import CommonCustomDropdown from '@/components/form/DropDown/CommonDropDown';
 import apiService from '@/utils/apiService';
 import { encryptData, getLocalStorage } from '@/utils/helper';
@@ -21,8 +19,7 @@ const ReactApexChart = nextDynamic(() => import("react-apexcharts"), { ssr: fals
 
 function Card({ cardData, onRefresh, selectedClient, auth }: any) {
     const { colors } = useTheme();
-    const [showDropdown, setShowDropdown] = useState(false);
-
+   
     if (!cardData.grids && !cardData.loading) {
         return (
             <div style={{ backgroundColor: colors.cardBackground }} className="p-6 rounded-lg shadow-md">

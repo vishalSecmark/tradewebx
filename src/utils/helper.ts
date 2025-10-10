@@ -335,6 +335,15 @@ export const decodeFernetToken = (data: string) => {
     }
 };
 
+export const normalizeEncryptedParam = (param: string | null): string | null => {
+    if(param){
+        const trimmedString = param?.trim();
+        const finalParam = param.replace(/ /g, '+');
+        return finalParam;
+    } else{
+        return null;
+    }
+};
 
 // Encryption key - in production, this should be derived from user session or other secure method
 const getEncryptionKey = (): string => {
@@ -384,7 +393,8 @@ export const decryptData = (encryptedData: string): string | null => {
             throw new Error('Failed to generate encryption key');
         }
 
-        const decrypted = CryptoJS.AES.decrypt(encryptedData, key).toString(CryptoJS.enc.Utf8);
+        const sanatizedData = normalizeEncryptedParam(encryptedData)
+        const decrypted = CryptoJS.AES.decrypt(sanatizedData, key).toString(CryptoJS.enc.Utf8);
 
         if (!decrypted) {
             throw new Error('Failed to decrypt data - invalid key or corrupted data');
