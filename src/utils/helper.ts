@@ -82,7 +82,7 @@ export function handleViewFile(base64Data: string, fieldType: string = 'file') {
 export const buildFilterXml = (filters: Record<string, any>, userId: string): string => {
     if (filters && Object.keys(filters).length > 0) {
         return Object.entries(filters).map(([key, value]) => {
-            if ((key === 'FromDate' || key === 'ToDate') && value) {
+            if ((key === 'FromDate' || key === 'ToDate' || key === 'AsOnDate') && value) {
                 const date = new Date(String(value));
                 if (!isNaN(date.getTime())) {
                     const year = date.getFullYear();
@@ -274,7 +274,7 @@ export function displayAndDownloadFile(base64: string, fileDownloadName?: string
     };
 
     const mimeType = mimeMap[fileType] || 'application/octet-stream';
-    
+
 
     const byteCharacters = atob(base64);
     const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
@@ -497,14 +497,14 @@ export const clearSecureStorage = (): void => {
 
 export function sanitizeValueSpecialChar(value, charactersToReplace = ['&', '!']) {
     if (typeof value !== 'string') return value;
-    
+
     const escapeRegex = new RegExp(`[${charactersToReplace.join('')}]`, 'g');
     return value.replace(escapeRegex, ' ').trim();
 }
 
 
 
-export const sendEmailMultiCheckbox = async (base64Data: string, pdfName: string,filterXml:any,fileTitle:string,userId:string,userType:string) => {
+export const sendEmailMultiCheckbox = async (base64Data: string, pdfName: string, filterXml: any, fileTitle: string, userId: string, userType: string) => {
     const emailXml = `
         <dsXml>
             <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"EmailSend","RequestFrom":"W"</J_Ui>
