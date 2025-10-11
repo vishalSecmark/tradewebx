@@ -6,7 +6,7 @@ import { FaPlus, FaSave, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
-
+import { MdArrowBack, MdOutlineClose } from "react-icons/md";
 import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData, GuardianEntryModalProps } from '@/types';
 import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
@@ -191,12 +191,12 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">{viewAccess ? "Guardian Details" : isEdit ? "Edit Guardian Details" : "Add Guardian Details"}</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        ✕
-                    </button>
+                     <Button
+                         className={`flex items-center text-white`}
+                         onClick={onClose}>
+                          <MdOutlineClose/> Close
+                     </Button>
+                              
                 </div>
                 {isLoading ? (
                     <div className="text-center py-4">Loading...</div>
@@ -2451,12 +2451,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         </div>
                                     )}
                                 </div>
-                                <button
-                                    onClick={() => { resetParentForm() }}
-                                    className="text-gray-500 hover:text-gray-700"
+                              
+                               <Button
+                                className={`flex items-center text-white`}
+                                onClick={() => { resetParentForm() }}
                                 >
-                                    ✕
-                                </button>
+                                 <MdOutlineClose/>     Close
+                                </Button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto px-6 pb-6">
@@ -2525,15 +2526,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 <div className="flex justify-end mb-4 gap-2">
                                                     <div className="flex item-start mr-auto">
                                                         {activeTabIndex > 0 && (
-                                                            <button
-                                                                onClick={goToPreviousTab}
-                                                                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 shrink-0"
-                                                            >
-                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                                </svg>
-                                                                Back
-                                                            </button>
+
+                                                                  <Button
+                                                                    className={`flex items-center text-white`}
+                                                                    onClick={goToPreviousTab}>                        
+                                                                    <MdArrowBack/> Back                   
+                                                                </Button>
+                                                          
                                                         )}
                                                     </div>
                                                     {
@@ -2615,19 +2614,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
                                                         <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                                                            <div className="flex justify-between items-center">
+                                                            <div className="flex justify-between items-center mb-2">
                                                                 <h2 className="text-xl font-semibold">
                                                                     {tabsData[activeTabIndex]?.TabName || "Add Record"}
                                                                 </h2>
-                                                                <button
-                                                                    onClick={() => {
+                                                               
+                                                                 <Button
+                                                                     className={`flex items-center text-white`}
+                                                                       onClick={() => {
                                                                         setTabsModal(false)
                                                                         setIsMinor(false)
                                                                     }}
-                                                                    className="text-gray-500 hover:text-gray-700"
-                                                                >
-                                                                    ✕
-                                                                </button>
+                                                                     >
+                                                                      <MdOutlineClose/>     Close
+                                                                      </Button>
+                              
                                                             </div>
                                                             {!isViewMode ? (
                                                                 <div className='flex justify-end mb-2 gap-2'>

@@ -14,12 +14,14 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string;
   type?: "button" | "submit" | "reset";
   dynamicSelectedThemeApply?: boolean; // New prop to enable dynamic theming
+  borderRadius?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
   children,
   size = "md",
   variant = "primary",
+  borderRadius = "normal",
   startIcon,
   endIcon,
   onClick,
@@ -32,9 +34,14 @@ const Button: React.FC<ButtonProps> = ({
 
   // Size Classes
   const sizeClasses = {
-    sm: "px-4 py-1 text-sm",
-    md: "px-5 py-2 text-sm",
+    sm: "px-3 py-1 text-sm",
+    md: "px-3 py-2 text-sm",
   };
+
+  const bRadius ={
+    normal : "rounded-lg",
+    full : "rounded-full"
+  }
 
   // Variant Classes
   const variantClasses = {
@@ -55,7 +62,7 @@ const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={`inline-flex items-center justify-center font-medium gap-2 rounded-lg transition ${className} ${sizeClasses[size]} ${
+      className={`inline-flex items-center justify-center font-medium gap-2 ${bRadius[borderRadius]} transition ${className} ${sizeClasses[size]} ${
         // Only apply variant classes if dynamic theme is not enabled
         !dynamicSelectedThemeApply ? variantClasses[variant] : ''
       } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
