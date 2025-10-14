@@ -6,10 +6,13 @@ import { useTheme } from '@/context/ThemeContext';
 import { DYNAMIC_DETAILS, IPO_SELECTED, IPO_url, checkStatusFs, configDetails, fetchUPIType, handleBidChange, handleCheckboxChange, handleCutOffBlur, handleDecrement, handleDelete, handleFocus, handleIncrement, handleTermsChange, handleTextBoxChange, onSubmitBtn } from './IpoHelper';
 import axios from 'axios';
 import { useLocalStorage } from '@/hooks/useLocalListner';
-import { ACTION_NAME } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
+import apiService from '@/utils/apiService';
 
 const Ipo = () => {
   const { colors } = useTheme();
+  console.log(colors,'colors');
+  
   const authToken = useSelector((state: RootState) => state.auth.authToken);
   const [ipoData, setIpoData] = useState<any[]>([]);
   const [selectedIpo, setSelectedIpo] = useState<any | null>(null);
@@ -67,7 +70,9 @@ const Ipo = () => {
     `;
 
     try {
-      const response = await axios.post(IPO_url, xmlDataIPO, config);
+      // const response = await axios.post(IPO_url, xmlDataIPO, config);
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlDataIPO)
+
       setIpoData(response.data?.data?.rs0 || []);
     } catch (error) {
       console.error("Error fetching IPO:", error);
@@ -217,7 +222,7 @@ const Ipo = () => {
       </h2>
 
       <table className="w-full border border-gray-300 text-sm">
-        <thead style={{ background: colors?.background2 || '#f0f0f0' }} className="bg-gray-200">
+        <thead style={{ background: colors?.primary || '#f0f0f0' }} className="bg-gray-200">
           <tr>
             <th className="p-2 border">Company Name</th>
             <th className="p-2 border">Category</th>
@@ -231,12 +236,16 @@ const Ipo = () => {
             <th className="p-2 border">Remark</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody
+        style={{
+          backgroundColor: 'white',
+        }} >
           {ipoData.map((item, idx) => (
             <tr
               key={idx}
               className="text-center border cursor-pointer hover:bg-gray-100"
               onClick={() => handleSelectIpo(item)}
+              
             >
               <td className="p-2 border">{item.IPO_Company_Name}</td>
               <td className="p-2 border">{item.IPO_Category}</td>
@@ -257,7 +266,9 @@ const Ipo = () => {
               <strong>DPRemarks:-<strong>${item.DPRemarks}, BankRemarks:-${item.BankRemarks} 
               <ul/>
               </div>`:'Pending'}</td> */}
-              <td className="p-2 border text-left">
+              <td className="p-2 border text-left"   style={{
+                backgroundColor: 'white',
+              }}>
                 {item.StatusFlag === 'Y' ? (
                   <div>
                     <div>
@@ -280,19 +291,19 @@ const Ipo = () => {
         </tbody>
       </table>
 
-      <div style={{ background: colors?.background2 || '#f0f0f0' }} className="mt-4 bg-gray-100 border p-4">
+      <div style={{ background: colors?.primary || '#f0f0f0' }} className="mt-4 bg-gray-100 border p-4">
         <p className="font-bold text-sm text-gray-800">
           Timing: <span className="text-black">10 AM to 5 PM of Week Days (Other than Holidays)</span>
         </p>
-        <p className="text-sm text-gray-700 mt-1">
+        <p className="text-sm text-gray-700 mt-1 text-white">
           The UPI collect request from the bank might be delayed. Accept to apply whenever you receive the collect request on your UPI app (might take up to the end of the day).
         </p>
       </div>
 
       {selectedIpo && (
-        <div className="mt-2 border-2 border-gray-300 p-4 flex h-auto items-start">
+        <div className="mt-2 border-2 border-gray-300 p-4 flex h-auto items-start" style={{ backgroundColor: 'white' }}>
           {/* Left Panel */}
-          <div style={{ background: colors?.background2 || '#f0f0f0' }} className="rounded-lg bg-[#A6C3E5] w-1/3">
+          <div style={{ background: colors?.primary || '#f0f0f0' }} className="rounded-lg bg-[#A6C3E5] w-1/3">
             {dynamicDetails.map((detail, index) => (
               <div key={index} className="m-1 p-1">
                 <label className="font-bold text-sm font-sans">{detail.label}</label>:{" "}

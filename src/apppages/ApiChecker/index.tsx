@@ -52,7 +52,7 @@ const ApiConfiguration = () => {
   useEffect(() => {
     if (userId) {
       setLoading(true);
-      getApiConfigData(setApiConfigData, userId)
+      getApiConfigData(setApiConfigData, userId,setLoading)
         .finally(() => setLoading(false)); // ✅ hide loader when done
     } else {
       console.log("userId or userType is null, skipping API call");
@@ -168,7 +168,7 @@ const ApiConfiguration = () => {
       console.log(response.data?.data?.rs0[0].RowsAffected,'response1');
       if(response.data?.data?.rs0[0].RowsAffected) {
         toast.success("Update Sucessfully")
-        getApiConfigData(setApiConfigData,userId);
+        getApiConfigData(setApiConfigData,userId,setLoading);
         setLoading(false);
       }
     } catch (error) {
