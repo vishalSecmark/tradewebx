@@ -15,7 +15,7 @@ export const editableColumns = [
   "AutoAPIEndTime",
 ]
 
-export const getApiConfigData = async(setApiConfigData,userId) => {
+export const getApiConfigData = async(setApiConfigData,userId,setLoading) => {
   const xml = `
   <dsXml>
   <J_Ui>"ActionName":"${ACTION_NAME}","Option":"GETAPISETTING","RequestFrom":"W"</J_Ui>
@@ -32,6 +32,8 @@ export const getApiConfigData = async(setApiConfigData,userId) => {
         if(response.success === true){
             const data = response?.data?.data?.rs0
             setApiConfigData(data)
+        }else{
+          setLoading(false)
         }
         
         

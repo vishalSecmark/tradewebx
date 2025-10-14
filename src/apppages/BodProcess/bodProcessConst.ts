@@ -3,7 +3,7 @@ import apiService from "@/utils/apiService"
 import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants"
 
 
-export const bodProcessGetApiCall = async (setBodProcessApiData, userId, userType) => {
+export const bodProcessGetApiCall = async (setBodProcessApiData, userId, userType,setLoading) => {
 
 
     const xml =
@@ -19,6 +19,7 @@ export const bodProcessGetApiCall = async (setBodProcessApiData, userId, userTyp
         const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml)
         const apiData = response?.data?.data?.rs0
         if (apiData) setBodProcessApiData(apiData)
+        else setLoading(false)
 
     } catch (error) {
         console.error(error)
