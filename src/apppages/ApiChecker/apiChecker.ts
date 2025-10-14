@@ -39,6 +39,8 @@ export const getApiConfigData = async(setApiConfigData,userId,setLoading) => {
         
     } catch (error) {
         toast.error(error)
+    }finally{
+      setLoading(false)
     }
 }
 

@@ -23,6 +23,8 @@ export const bodProcessGetApiCall = async (setBodProcessApiData, userId, userTyp
 
     } catch (error) {
         console.error(error)
+    }finally{
+        setLoading(false)
     }
 }
 
