@@ -1,12 +1,14 @@
 "use client";
 import { RootState } from "@/redux/store";
-import { BASE_URL } from "@/utils/constants";
+import { BASE_URL, PATH_URL } from "@/utils/constants";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import {  CheckStatusXML, deleteXML, submitXML, xmlDataUPI } from "./IpoXML";
 import { getAuthToken } from "@/utils/auth";
+import apiService from "@/utils/apiService";
+import { toast } from "react-toastify";
 
-export const IPO_url = `${BASE_URL}/tradeWebAPI/api/main/tradeweb`;
+export const IPO_url = `${BASE_URL}/api/main/tradeweb`;
 
 export const configDetails = (authToken) => {
     return {
@@ -50,7 +52,8 @@ export const DYNAMIC_DETAILS = (selectedIpo:any) => {
 export const fetchUPIType = async (setUpiSelect:any,authToken:any) => {
 
     try {
-        const response = await axios.post(IPO_url, xmlDataUPI, configDetails(authToken));
+        // const response = await axios.post(IPO_url, xmlDataUPI, configDetails(authToken));
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlDataUPI)
         console.log(response.data, "UPI TYpe");
 
         if (response.data.data.rs0) {
@@ -113,7 +116,7 @@ export const handleFocus = (bidType:any, bid:any, minimumOrder:any, setBid:any) 
             if (value >= minimumOrder && value % minimumOrder === 0) {
                 // Valid value
             } else {
-                alert(`Enter valid Quantity. It should be multiple of ${minimumOrder}`);
+                toast.error(`Enter valid Quantity. It should be multiple of ${minimumOrder}`);
                 setBid('');
             }
         }
@@ -125,7 +128,7 @@ export const handleFocus = (bidType:any, bid:any, minimumOrder:any, setBid:any) 
                 // Valid value
                 return value
             } else {
-                alert(`Enter valid Quantity. It should be multiple of ${minimumOrder}`);
+                toast.error(`Enter valid Quantity. It should be multiple of ${minimumOrder}`);
                 setBid('');
             }
         }
@@ -136,7 +139,7 @@ export const handleFocus = (bidType:any, bid:any, minimumOrder:any, setBid:any) 
             if (value >= minimumOrder && value % minimumOrder === 0) {
                 // Valid value
             } else {
-                alert(`Enter valid Quantity. It should be multiple of ${minimumOrder}`);
+                toast.error(`Enter valid Quantity. It should be multiple of ${minimumOrder}`);
                 setBid('');
             }
         }
@@ -242,7 +245,7 @@ export const handleCutOffBlur = (bidType:any, cutOff:any, setCutOff:any, priceRa
     } else {
         value = parseInt(value); // Validate if it's a valid number
         if (value < priceRange.split(" - ")[0] || value > priceRange.split(" - ")[1]) {
-            alert(`Please enter a value between ${priceRange.split(" - ")[0]} and ${priceRange.split(" - ")[1]}.`);
+            toast.error(`Please enter a value between ${priceRange.split(" - ")[0]} and ${priceRange.split(" - ")[1]}.`);
             value = null; // Reset to null or you could clear the input
             value = ''
         }
@@ -270,11 +273,12 @@ export const handleTermsChange = (
 const submitApiFetch = async (xmlData,config,clearFn) => {
 
 
-    const response = await axios.post(IPO_url, xmlData, config)
+    // const response = await axios.post(IPO_url, xmlData, config)
+    const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData)
     console.log(response, 'response Submit Api');
-    if (response.status === 200) {
+    if (response.success === true) {
         // clearFn()
-        alert('form submitted')
+        toast.success('form submitted')
         return
     }
 
@@ -310,19 +314,19 @@ export const onSubmitBtn = (userClientCode:any, scripCode:any, ipoCategory:any, 
     if ((selectedUpi === '' || upiId === '')) {
         console.log(upiId);
         
-        alert('UPI ID cannot be blank')
+        toast.error('UPI ID cannot be blank')
         return;
     } if (
         (!bid1 || !cutOff) &&  // Check if bid1 and cutOff are both empty
         (!bid2 || !cutOff2) && // Check if bid2 and cutOff2 are both empty
         (!bid3 || !cutOff3)    // Check if bid3 and cutOff3 are both empty
     ) {
-        alert('Enter Bid Details');
+        toast.error('Enter Bid Details');
         return;
     }
 
     if ((isChecked || isChecked2 || isChecked3) && (calculateAmountPayable() > 200000)) {
-        alert('Bid cannot be at the Cut-off Price for HNI category. Please bid at a fixed price in the issue price range.')
+        toast.error('Bid cannot be at the Cut-off Price for HNI category. Please bid at a fixed price in the issue price range.')
         return
     }
     else {
@@ -341,7 +345,9 @@ export const onSubmitBtn = (userClientCode:any, scripCode:any, ipoCategory:any, 
 
 export const handleDelete = async (data:any,clientCode:any,config:any) => {
     if (window.confirm("Are you sure you want to delete this IPO?")) {
-        const response = await axios.post(IPO_url, deleteXML(clientCode,data.IPO_NSE_Symbol, data.IPO_Category),  config)
+        // const response = await axios.post(IPO_url, deleteXML(clientCode,data.IPO_NSE_Symbol, data.IPO_Category),  config)
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, deleteXML(clientCode,data.IPO_NSE_Symbol, data.IPO_Category))
+
         console.log(response, 'response delete');
 
     }
@@ -349,7 +355,9 @@ export const handleDelete = async (data:any,clientCode:any,config:any) => {
 
 
 export const checkStatusFs = async(data:any,clientCode:any,config:any) => {
-    const response = await axios.post(IPO_url, CheckStatusXML(clientCode,data.IPO_NSE_Symbol, data.IPO_Category),  config)
+    // const response = await axios.post(IPO_url, CheckStatusXML(clientCode,data.IPO_NSE_Symbol, data.IPO_Category),  config)
+    const response = await apiService.postWithAuth(BASE_URL + PATH_URL, CheckStatusXML(clientCode,data.IPO_NSE_Symbol, data.IPO_Category))
+
     console.log(response,'checkStatusFs');
     
     return response

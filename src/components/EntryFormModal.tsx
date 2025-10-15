@@ -6,7 +6,7 @@ import { FaPlus, FaSave, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
-
+import { MdArrowBack, MdOutlineClose } from "react-icons/md";
 import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData, GuardianEntryModalProps } from '@/types';
 import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
@@ -191,12 +191,12 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
             <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">{viewAccess ? "Guardian Details" : isEdit ? "Edit Guardian Details" : "Add Guardian Details"}</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        ✕
-                    </button>
+                     <Button
+                         className={`flex items-center text-white`}
+                         onClick={onClose}>
+                          <MdOutlineClose/> Close
+                     </Button>
+                              
                 </div>
                 {isLoading ? (
                     <div className="text-center py-4">Loading...</div>
@@ -1884,6 +1884,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     };
 
 
+   const handleTabChangeViewMode = async () =>{
+        const currentTab = tabsData[activeTabIndex];
+        if(activeTabIndex === 0){
+        // the below function API is called to disable and remove the particular tab from the form 
+         const Tabsresponse = await handleNextValidationFields(editData,currentTab,masterFormValues);
+         const responseString = Object.keys(Tabsresponse?.data?.data || {}).length > 0 ? Tabsresponse?.data?.data?.rs0[0]?.Column1 : null;
+         // const responseString = Tabsresponse?.data?.data?.rs0[0]?.Column1 || "";
+         if(Tabsresponse.data.success && responseString && activeTabIndex === 0){
+             const tags = extractTagsForTabsDisabling(responseString);
+             removeTabsWithReindexing(tags);
+            }
+        }
+   }
+
+
     const submitTabsFormData = async () => {
         console.log("check active tab index",activeTabIndex)
         const currentTab = tabsData[activeTabIndex];
@@ -2158,6 +2173,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         return minor;
     };
 
+    const checkIfMinorforTable = (dob: string) => {
+        if (!dob) {
+            return false;
+        }
+
+        const birthDate = moment(dob, 'YYYYMMDD');
+        if (!birthDate.isValid()) {
+            return false;
+        }
+
+        const age = moment().diff(birthDate, 'years');
+        const minor = age < 18;
+        return minor;
+    };
+
     // In your component
     const dynamicColumns = getAllColumns(childEntriesTable);
 
@@ -2280,7 +2310,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setTabsModal(false); // Close modal after adding/editing
     }
 
-    const fetchGuardianFormData = async () => {
+    const fetchGuardianFormData = async (guardianDetails) => {
         setGuardianLoading(true);
         const currentTab = tabsData[activeTabIndex];
         const guardianFormFetchAPI = currentTab?.Settings?.ChildEntryAPI;
@@ -2290,12 +2320,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         try {
 
-            const jUi = Object.entries(guardianFormFetchAPI.J_Ui)
-                .map(([key, value]) => `"${key}":"${value}"`)
+            const jUi = Object.entries(guardianFormFetchAPI?.J_Ui)
+                ?.map(([key, value]) => `"${key}":"${value}"`)
                 .join(',');
 
-            const jApi = Object.entries(guardianFormFetchAPI.J_Api)
-                .map(([key, value]) => `"${key}":"${value}"`)
+            const jApi = Object.entries(guardianFormFetchAPI?.J_Api)
+                ?.map(([key, value]) => `"${key}":"${value}"`)
                 .join(',');
 
 
@@ -2335,12 +2365,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 if (field.type === 'WDateBox' && field.wValue) {
                     initialValues[field.wKey] = moment(field.wValue).format('YYYYMMDD');
                 } else {
-                    initialValues[field.wKey] = guardianFormValues[field.wKey] || "";
+                    initialValues[field.wKey] = guardianFormValues[field.wKey] || guardianDetails?.[field.wKey]  || "";
                 }
             });
             setGuardianFormValues(initialValues);
-
-
             await Promise.all(
                 formData?.map(async (field: FormField) => {
                     if (field.type === 'WDropDownBox' && field.wQuery) {
@@ -2356,10 +2384,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
 
     }
-
-    const handleAddNominee = () => {
+  
+    const handleAddNominee = (guardianDetails = {}) => {
         setIsGuardianModalOpen(true)
-        fetchGuardianFormData()
+        fetchGuardianFormData(guardianDetails)
     }
 
     const handleClearTabTableRowEntry = () => {
@@ -2423,12 +2451,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         </div>
                                     )}
                                 </div>
-                                <button
-                                    onClick={() => { resetParentForm() }}
-                                    className="text-gray-500 hover:text-gray-700"
+                              
+                               <Button
+                                className={`flex items-center text-white`}
+                                onClick={() => { resetParentForm() }}
                                 >
-                                    ✕
-                                </button>
+                                 <MdOutlineClose/>     Close
+                                </Button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto px-6 pb-6">
@@ -2471,7 +2500,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         return (
                                                             <button
                                                                 key={index}
-                                                                // onClick={() => setActiveTabIndex(index)}
+                                                                onClick={() => setActiveTabIndex(index)}
                                                                 className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
                                                                     isActive 
                                                                     ? 'text-opacity-100' 
@@ -2497,15 +2526,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 <div className="flex justify-end mb-4 gap-2">
                                                     <div className="flex item-start mr-auto">
                                                         {activeTabIndex > 0 && (
-                                                            <button
-                                                                onClick={goToPreviousTab}
-                                                                className="flex items-center gap-2 text-gray-600 hover:text-blue-600 shrink-0"
-                                                            >
-                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                                </svg>
-                                                                Back
-                                                            </button>
+
+                                                                  <Button
+                                                                    className={`flex items-center text-white`}
+                                                                    onClick={goToPreviousTab}>                        
+                                                                    <MdArrowBack/> Back                   
+                                                                </Button>
+                                                          
                                                         )}
                                                     </div>
                                                     {
@@ -2515,11 +2542,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 
                                                                 <Button
                                                                     className={`flex items-center bg-blue-500 hover:bg-blue-600 text-white`}
-                                                                    onClick={() => setActiveTabIndex((prev) => prev + 1)}>
+                                                                    onClick={() => {
+                                                                        setActiveTabIndex((prev) => prev + 1)
+                                                                        handleTabChangeViewMode();
+                                                                        }}>
                                                                          Next
                                                                  </Button>
                                                                 }
-                                                                 
                                                             </div>
                                                         ) : (
                                                             <div className="flex gap-2">
@@ -2585,16 +2614,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
                                                         <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
-                                                            <div className="flex justify-between items-center">
+                                                            <div className="flex justify-between items-center mb-2">
                                                                 <h2 className="text-xl font-semibold">
                                                                     {tabsData[activeTabIndex]?.TabName || "Add Record"}
                                                                 </h2>
-                                                                <button
-                                                                    onClick={() => setTabsModal(false)}
-                                                                    className="text-gray-500 hover:text-gray-700"
-                                                                >
-                                                                    ✕
-                                                                </button>
+                                                               
+                                                                 <Button
+                                                                     className={`flex items-center text-white`}
+                                                                       onClick={() => {
+                                                                        setTabsModal(false)
+                                                                        setIsMinor(false)
+                                                                    }}
+                                                                     >
+                                                                      <MdOutlineClose/>     Close
+                                                                      </Button>
+                              
                                                             </div>
                                                             {!isViewMode ? (
                                                                 <div className='flex justify-end mb-2 gap-2'>
@@ -2623,7 +2657,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             ) : (
                                                                 <div className='flex justify-end mb-2 gap-2'>
                                                                     {
-                                                                        isMinor && (<Button
+                                                                        (isMinor && tabsData[activeTabIndex]?.TabName === "NomineeDetails") && (<Button
                                                                             className={`flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md`}
                                                                             onClick={handleAddNominee}
                                                                         >
@@ -2632,6 +2666,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                     }
                                                                 </div>
                                                             )}
+                                                            {(isMinor && tabsData[activeTabIndex]?.TabName === "NomineeDetails") && (
+                                                                 <div className="bg-yellow-100 border-l-4 border-orange-500 text-yellow-700 p-4 mb-4">
+                                                                     <p>{isViewMode ? "Click on above view Guardian button to see the Guardian details":
+                                                                     "Click on above add/edit button to change or add the Nominee Guardian."}</p>
+                                                                 </div>)
+                                                            }
                                                             {(() => {
                                                                 const currentTab = tabsData[activeTabIndex];
                                                                 const groupedFormData: GroupedFormData[] = groupFormData(
@@ -2812,38 +2852,75 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                     <div className="overflow-x-auto mt-4">
                                                     <DataGrid
                                                         columns={[
-                                                            {
-                                                                key: 'actions',
-                                                                name: 'Actions',
-                                                                width: 230,
-                                                                renderCell: ({ row } :any) => (
-                                                                    viewMode ? (
-                                                                        <button
-                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                            onClick={() => {
-                                                                                handleTabTableDataEdit(row,  row._index);
-                                                                            }}>
-                                                                            view
-                                                                        </button>
-                                                                    ) : (
-                                                                        <div className="flex gap-2">
-                                                                            <button
-                                                                                className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                onClick={() => {
-                                                                                    handleTabTableDataEdit(row,  row._index);
-                                                                                }}>
-                                                                                Edit
-                                                                            </button>
-                                                                            <button
-                                                                                className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
-                                                                                onClick={() => handleTabTableDataDelete( row._index)}
-                                                                            >
-                                                                                Delete
-                                                                            </button>
-                                                                        </div>
-                                                                    )
-                                                                )
-                                                            },
+                                                           {
+                                                                    key: 'actions',
+                                                                    name: 'Actions',
+                                                                    width: !viewMode ? 300 : 280,
+                                                                    renderCell: ({ row }: any) => {
+                                                                        const isNomineeTab = tabsData[activeTabIndex]?.TabName === "NomineeDetails";
+                                                                        const isMinor = checkIfMinorforTable(row.NomineeDOB);
+                                                                        const hasGuardianDetails = row.guardianDetails && Object.keys(row.guardianDetails).length > 0;
+
+                                                                        const showGuardianButton = isNomineeTab && isMinor;
+                                                                    
+                                                                        return (
+                                                                            viewMode ? (
+                                                                                <div>
+                                                                                    <button
+                                                                                        className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                        onClick={() => {
+                                                                                            handleTabTableDataEdit(row, row._index);
+                                                                                        }}>
+                                                                                        view
+                                                                                    </button>
+                                                                                    {showGuardianButton && hasGuardianDetails && (
+                                                                                        <button
+                                                                                            className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                            onClick={()=>{
+                                                                                                    handleAddNominee(row.guardianDetails)
+                                                                                                }}
+                                                                                        >
+                                                                                             View Guardian Details
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="flex gap-1">
+                                                                                    <button
+                                                                                        className={`mr-1 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
+                                                                                        onClick={() => {
+                                                                                            handleTabTableDataEdit(row, row._index);
+                                                                                        }}>
+                                                                                        Edit
+                                                                                    </button>
+                                                                                    {showGuardianButton && (
+                                                                                        <button
+                                                                                            className={`mr-1 px-3 py-1 rounded-md transition-colors bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700`}
+                                                                                            onClick={()=>{
+                                                                                                if(hasGuardianDetails){
+                                                                                                    handleTabTableDataEdit(row, row._index);
+                                                                                                    setTimeout(()=>{
+                                                                                                        handleAddNominee(row.guardianDetails)
+                                                                                                    },400)
+                                                                                                }else{
+                                                                                                    handleAddNominee();
+                                                                                                }
+                                                                                            }}
+                                                                                        >
+                                                                                            {hasGuardianDetails ? "Edit Guardian Details" : "Add Guardian Details"}
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <button
+                                                                                        className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
+                                                                                        onClick={() => handleTabTableDataDelete(row._index)}
+                                                                                    >
+                                                                                        Delete
+                                                                                    </button>
+                                                                                </div>
+                                                                            )
+                                                                        );
+                                                                    }
+                                                                },
                                                             ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
                                                                 key: col,
                                                                 name: col,

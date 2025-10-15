@@ -5,7 +5,6 @@ import { useTheme } from "../../context/ThemeContext";
 import { useSearchParams } from "next/navigation";
 
 import Image from "next/image";
-import axios from "axios";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "../../utils/constants";
 import apiService from "@/utils/apiService";
 import { decryptData, getLocalStorage } from "@/utils/helper";

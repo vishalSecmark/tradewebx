@@ -35,7 +35,8 @@ const BodProcess = () => {
           setLoading(false); // 🔹 Stop loader after data received
         },
         userId,
-        userType
+        userType,
+        setLoading
       );
 
       console.log(userId, "userId");

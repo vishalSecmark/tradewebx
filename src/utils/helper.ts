@@ -1,10 +1,11 @@
 import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeContext";
-import { APP_METADATA_KEY, SECURE_STORAGE_KEY } from "./constants";
+import { ACTION_NAME, APP_METADATA_KEY, BASE_URL, PATH_URL, SECURE_STORAGE_KEY } from "./constants";
 import { toast } from "react-toastify";
 import { log } from "node:console";
 //@ts-ignore
 import { Token, Secret } from 'fernet';
 import CryptoJS from 'crypto-js';
+import apiService from "./apiService";
 
 export const clearLocalStorage = () => {
     // Preserve essential app data
@@ -81,7 +82,7 @@ export function handleViewFile(base64Data: string, fieldType: string = 'file') {
 export const buildFilterXml = (filters: Record<string, any>, userId: string): string => {
     if (filters && Object.keys(filters).length > 0) {
         return Object.entries(filters).map(([key, value]) => {
-            if ((key === 'FromDate' || key === 'ToDate') && value) {
+            if ((key === 'FromDate' || key === 'ToDate' || key === 'AsOnDate') && value) {
                 const date = new Date(String(value));
                 if (!isNaN(date.getTime())) {
                     const year = date.getFullYear();
@@ -273,7 +274,7 @@ export function displayAndDownloadFile(base64: string, fileDownloadName?: string
     };
 
     const mimeType = mimeMap[fileType] || 'application/octet-stream';
-    
+
 
     const byteCharacters = atob(base64);
     const byteNumbers = Array.from(byteCharacters, char => char.charCodeAt(0));
@@ -334,6 +335,15 @@ export const decodeFernetToken = (data: string) => {
     }
 };
 
+export const normalizeEncryptedParam = (param: string | null): string | null => {
+    if(param){
+        const trimmedString = param?.trim();
+        const finalParam = param.replace(/ /g, '+');
+        return finalParam;
+    } else{
+        return null;
+    }
+};
 
 // Encryption key - in production, this should be derived from user session or other secure method
 const getEncryptionKey = (): string => {
@@ -383,7 +393,8 @@ export const decryptData = (encryptedData: string): string | null => {
             throw new Error('Failed to generate encryption key');
         }
 
-        const decrypted = CryptoJS.AES.decrypt(encryptedData, key).toString(CryptoJS.enc.Utf8);
+        const sanatizedData = normalizeEncryptedParam(encryptedData)
+        const decrypted = CryptoJS.AES.decrypt(sanatizedData, key).toString(CryptoJS.enc.Utf8);
 
         if (!decrypted) {
             throw new Error('Failed to decrypt data - invalid key or corrupted data');
@@ -496,7 +507,39 @@ export const clearSecureStorage = (): void => {
 
 export function sanitizeValueSpecialChar(value, charactersToReplace = ['&', '!']) {
     if (typeof value !== 'string') return value;
-    
+
     const escapeRegex = new RegExp(`[${charactersToReplace.join('')}]`, 'g');
     return value.replace(escapeRegex, ' ').trim();
 }
+
+
+
+export const sendEmailMultiCheckbox = async (base64Data: string, pdfName: string, filterXml: any, fileTitle: string, userId: string, userType: string) => {
+    const emailXml = `
+        <dsXml>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"EmailSend","RequestFrom":"W"</J_Ui>
+            <Sql></Sql>
+            <X_Filter>
+                ${filterXml}
+                <ReportName>${fileTitle}</ReportName>
+                <FileName>${pdfName}</FileName>
+                <Base64>${base64Data}</Base64>
+            </X_Filter>
+            <J_Api>"UserId":"${userId}","UserType":"${userType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+        </dsXml>`;
+
+    const emailResponse = await apiService.postWithAuth(BASE_URL + PATH_URL, emailXml);
+
+    const result = emailResponse?.data;
+    const columnMsg = result?.data?.rs0?.[0]?.Column1 || '';
+
+    if (result?.success) {
+        if (columnMsg.toLowerCase().includes('mail template not define')) {
+            toast.error('Mail Template Not Defined');
+        } else {
+            toast.success(columnMsg);
+        }
+    } else {
+        toast.error(columnMsg || result?.message);
+    }
+};

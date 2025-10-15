@@ -15,10 +15,16 @@ import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
-import { buildFilterXml, getLocalStorage } from '@/utils/helper';
+import { base64ToUint8Array, buildFilterXml, displayAndDownloadFile, getLocalStorage, sendEmailMultiCheckbox } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
+import { useLocalStorage } from '@/hooks/useLocalListner';
+import JSZip from "jszip";
+import { FaSpinner } from 'react-icons/fa';
+import Loader from './Loader';
+
+
 
 // Column Filter Component
 const ColumnFilterDropdown: React.FC<{
@@ -464,6 +470,8 @@ const ColumnFilterDropdown: React.FC<{
 
 interface DataTableProps {
     data: any[];
+    filtersCheck?:any;
+    pageData?:any
     settings?: {
         hideEntireColumn?: string;
         leftAlignedColumns?: string;
@@ -621,7 +629,25 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck,pageData}) => {
+
+    // 🆕 ADDITION: Multi-checkbox toggle handler
+  const toggleRowSelection = (row: any, checked: boolean) => {
+    const updated = checked
+      ? [...selectedRows, row]
+      : selectedRows.filter(r => r._id !== row._id);
+
+    setSelectedRows(updated);
+    onRowSelect?.(updated);
+    
+    console.log(onRowSelect,'on row selct');
+    
+  };
+
+
+  console.log(pageData,'summary13');
+  
+
 
     // Helper function to check if a button is enabled
     const isButtonEnabled = (buttonType: string): boolean => {
@@ -639,7 +665,23 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     const rowHeight = tableStyle === 'small' ? 30 : tableStyle === 'medium' ? 40 : 50;
     const screenSize = useScreenSize();
     const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
+    const [userId] = useLocalStorage('userId', null);
+    const [userType] = useLocalStorage('userType', null);
+    const [isLoading, setIsLoading] = useState(false);
 
+
+
+    // 🆕 Auto-select all rows on load if multiCheckBox is enabled
+useEffect(() => {
+    if (settings?.multiCheckBox && data?.length > 0) {
+      setSelectedRows(data.map((row, index) => ({
+        ...row,
+        _id: row.id || index
+      })));
+    }
+  }, [settings?.multiCheckBox, data]);
+
+  
     // Filter functions
     const handleFilterChange = useCallback((columnKey: string, filter: ColumnFilter | null) => {
         setFilters(prev => {
@@ -868,6 +910,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             return ''; // Default color on error
         }
     };
+      
 
     // Process and format the data
     const formattedData = useMemo(() => {
@@ -995,7 +1038,44 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
+    //this function is used for 
+    const multiCheckBoxColumn = settings?.multiCheckBox
+    ? [{
+      key: "_multiSelect",
+      name: "",
+      width: 35,
+      renderHeaderCell: () => {
+        const allIds = rows.map(r => r._id);
+        const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
+
+        return (
+          <input
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => {
+              const newSelection = e.target.checked ? [...rows] : [];
+              setSelectedRows(newSelection);
+              onRowSelect?.(newSelection);
+            }}
+          />
+        );
+      },
+      renderCell: ({ row }: any) => (
+        <input
+          type="checkbox"
+          checked={selectedRows.some(r => r._id === row._id)}
+          onChange={(e) => toggleRowSelection(row, e.target.checked)}
+        />
+      )
+    }]
+    : [];
+
+    console.log(selectedRows,'selectedRows');
+    
+    
+
         const baseColumns: any = [
+            ...multiCheckBoxColumn,
             ...(settings?.EditableColumn
                 ? [{
                     key: "_select",
@@ -1028,6 +1108,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                     }}
                                 />
                             </div>
+                            
                         );
                     },
                     renderCell: ({ row }) => (
@@ -1054,6 +1135,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             }}
                             style={{ cursor: "pointer" }}
                         />
+
                     )
                 }]
                 : []),
@@ -1096,6 +1178,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         return (
                             <div className="expanded-content" style={{ height: '100%', overflow: 'auto' }}>
                                 <div className="expanded-header">
+                                
                                     <div
                                         className="expand-button"
                                         onClick={() => {
@@ -1173,6 +1256,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                             </button>
                                         </div>
                                     )}
+                                     
                                 </div>
                             </div>
                         );
@@ -1366,6 +1450,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             )
         }
         return baseColumns;
+        
     }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters]);
 
     // Sort function
@@ -1409,6 +1494,258 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         return sortRows(filteredData, sortColumns);
     }, [filteredData, sortColumns]);
 
+// ✅ Add this near your top-level state
+const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
+
+
+
+
+const handleLoopThroughMultiSelectKeyHandler = async () => {
+    setIsLoading(true);
+  
+    const filterXml = buildFilterXml(filtersCheck, userId);
+    const zip = new JSZip();
+    const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
+    const pdfFolder = zip.folder(zipFolderName);
+  
+    const collectedPdfs: { pdfName: string; base64: string }[] = [];
+    const failedRows: string[] = [];
+    const clientCodeMatch = filterXml.match(/<ClientCode>(.*?)<\/ClientCode>/);
+    const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
+    const emailSendingCaptionTxt = pageData?.[0]?.level || '';
+
+  
+    try {
+      for (const [index, row] of selectedRows.entries()) {
+        const multiSelectXML = `
+          <dsXml>
+            <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
+            <Sql/>
+            <X_Filter>
+                ${filterXml}
+                <ReportName>${row.ReportName || ""}</ReportName>
+                <Segment>${row.Segment || ""}</Segment>
+            </X_Filter>
+            <X_GFilter/>
+            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+          </dsXml>
+        `;
+  
+        try {
+          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
+          const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
+  
+          if (!emailPayloadXML) {
+            failedRows.push(row._id);
+            continue;
+          }
+  
+          const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
+          const secondEmailResponse = emailPayloadXmlSend?.data?.data?.rs0?.[0];
+  
+          if (emailPayloadXmlSend.success === true && secondEmailResponse?.Base64PDF) {
+            const base64 = secondEmailResponse.Base64PDF;
+            let pdfName = [clientCode, row.ReportType, row.ReportName, row.Segment].map(v => typeof v === "string" ? v.replace(/\s+/g, "").replace(/[^\w.-]/g, "").trim(): "")
+            .filter(Boolean)
+            .join("_") || `Report_${index}.pdf`;
+
+            if (!pdfName.toLowerCase().endsWith(".pdf")) pdfName += ".pdf";
+
+            const extensionIndex = pdfName.lastIndexOf('.');
+                       if (extensionIndex !== -1) {
+                         pdfName = pdfName.slice(0, extensionIndex) + `_${index}` + pdfName.slice(extensionIndex);
+                       } else {
+                         pdfName = pdfName + `_${index}.pdf`;
+                       }
+  
+            // Add file to JSZip folder
+            const fileContent = base64ToUint8Array(base64);
+            pdfFolder.file(pdfName, fileContent);
+  
+            // Also push to array (for reference/log)
+            collectedPdfs.push({ pdfName, base64 });
+          } else {
+            failedRows.push(row._id);
+          }
+        } catch (innerErr) {
+          console.error(`❌ Error processing row ${index + 1}:`, innerErr);
+          failedRows.push(row._id);
+        }
+      }
+  
+      // After loop: zip all PDFs together
+      if (collectedPdfs.length > 0) {
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const zipBase64 = await blobToBase64(zipBlob);
+  
+        // Create a proper ZIP file name
+        const zipFileName = `${zipFolderName}.zip`;
+   
+  
+        // 🧩 Now send this ZIP (Base64) via existing function
+        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, emailSendingCaptionTxt, userId, userType);
+  
+        toast.success(`ZIP with ${collectedPdfs.length} PDF(s) sent successfully.`);
+      } else {
+        toast.error("No PDFs were generated to send.");
+      }
+  
+      // Handle failures (deselect failed ones)
+      if (failedRows.length > 0) {
+        setSelectedRows(prev => prev.filter(r => !failedRows.includes(r._id)));
+        toast.warn(`${failedRows.length} row(s) failed and were deselected.`);
+      }
+  
+    } catch (error) {
+      console.error("❌ Error during ZIP process:", error);
+      toast.error("Failed to create ZIP or send email.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+  
+  
+
+
+const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async () => {
+    setIsLoading(true);
+    const filterXml = buildFilterXml(filtersCheck, userId);
+    const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
+    const zip = new JSZip();
+    const pdfFolder = zip.folder(zipFolderName);
+
+    console.log(filterXml,'filterXml22');
+
+    // Extract client code from filterXml (e.g., <ClientCode>M000024</ClientCode>)
+const clientCodeMatch = filterXml.match(/<ClientCode>(.*?)<\/ClientCode>/);
+const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
+
+    
+//   return
+    // Snapshot the currently selected rows so updates to state don't affect iteration
+    const rowsToProcess = Array.isArray(selectedRows) ? [...selectedRows] : [];
+    const failedRows: { id: string; index: number; reason: string }[] = [];
+    let pdfCount = 0;
+  
+    try {
+      for (const [i, row] of rowsToProcess.entries()) {
+        const index = i + 1;
+        const multiSelectXML = `
+          <dsXml>
+            <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
+            <Sql/>
+            <X_Filter>
+                ${filterXml}
+                <ReportName>${row.ReportName || ""}</ReportName>
+                <Segment>${row.Segment || ""}</Segment>
+            </X_Filter>
+            <X_GFilter/>
+            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+          </dsXml>
+        `;
+  
+        try {
+          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
+          const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
+  
+          if (!emailPayloadXML) {
+            console.warn(`⚠️ Row ${index}: No EmailPayload found`);
+            failedRows.push({ id: row._id, index, reason: "No EmailPayload" });
+            continue;
+          }
+  
+          const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
+          const emailResponseData = emailPayloadXmlSend?.data?.data?.rs0?.[0];
+  
+          if (emailPayloadXmlSend.success === true && emailResponseData?.Base64PDF) {
+            const base64 = emailResponseData.Base64PDF;
+            // let pdfName = emailResponseData.PDFName || `Report_${index}.pdf`;
+            let pdfName = [clientCode, row.ReportType, row.ReportName, row.Segment].map(v => typeof v === "string" ? v.replace(/\s+/g, "").replace(/[^\w.-]/g, "").trim(): "")
+              .filter(Boolean)
+              .join("_") || `Report_${index}.pdf`;
+
+            // Ensure file ends with .pdf
+            if (!pdfName.toLowerCase().endsWith(".pdf")) pdfName += ".pdf";
+
+            console.log(pdfName,'pdfName');
+            
+            // return
+            
+            // Append index to filename before extension to avoid overwrites
+            const extensionIndex = pdfName.lastIndexOf('.');
+            if (extensionIndex !== -1) {
+              pdfName = pdfName.slice(0, extensionIndex) + `_${index}` + pdfName.slice(extensionIndex);
+            } else {
+              pdfName = pdfName + `_${index}.pdf`;
+            }
+            
+            const fileContent = base64ToUint8Array(base64);
+            pdfFolder.file(pdfName, fileContent);
+            pdfCount++;
+          } else {
+            console.warn(`⚠️ Row ${index}: Missing Base64PDF`);
+            failedRows.push({ id: row._id, index, reason: "Missing Base64PDF" });
+          }
+        } catch (err) {
+          console.error(`❌ Error for row ${index}:`, err);
+          failedRows.push({ id: row._id, index, reason: (err && err.message) || "API error" });
+        }
+      }
+  
+      // If no PDFs were added at all, create a README and still produce the ZIP
+      if (pdfCount === 0) {
+        pdfFolder.file("README.txt", "No PDF files were generated for the selected records.");
+      }
+  
+      // If there were failures, add a README listing them and then deselect them from selectedRows
+      if (failedRows.length > 0) {
+        const failText =
+          `The following selected rows failed during export:\n\n` +
+          failedRows.map(f => `Row ${f.index} (id: ${f.id}) — ${f.reason}`).join("\n");
+  
+        // append the failures README (will exist in zipRoot/zipFolderName)
+        pdfFolder.file("FAILED_ROWS.txt", failText);
+  
+        // Batch-deselect failed rows from the global selectedRows state
+        const failedIds = new Set(failedRows.map(f => f.id));
+        setSelectedRows(prev => (Array.isArray(prev) ? prev.filter(r => !failedIds.has(r._id)) : []));
+      }
+  
+      // Generate ZIP and trigger download
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `${zipFolderName}.zip`);
+  
+      console.log(`✅ ZIP created. PDFs: ${pdfCount}, Failures: ${failedRows.length}`);
+      // Display aggregate toast
+      if (pdfCount > 0 && failedRows.length === 0) {
+        toast.success(`ZIP created with ${pdfCount} PDF(s).`);
+      } else if (pdfCount > 0 && failedRows.length > 0) {
+        toast.warn(`ZIP created with ${pdfCount} PDF(s). ${failedRows.length} failed (see FAILED_ROWS.txt).`);
+      } else if (pdfCount === 0 && failedRows.length > 0) {
+        toast.error(`No PDFs created. ${failedRows.length} failures (see FAILED_ROWS.txt).`);
+      } else {
+        toast.info("ZIP created (no PDFs found).");
+      }
+    } catch (error) {
+      console.error("❌ Error during ZIP creation:", error);
+      toast.error("Failed to create ZIP. Please try again.");
+    }
+    finally {
+        setIsLoading(false); // Hide loader
+    }
+  };
+
+      
     const summmaryRows = useMemo(() => {
         const totals: Record<string, any> = {
             id: 'summary_row',
@@ -1419,6 +1756,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         if (summary?.columnsToShowTotal && Array.isArray(summary.columnsToShowTotal)) {
             summary.columnsToShowTotal.forEach(column => {
                 if (column.key) {
+
                     // Calculate the sum for this column
                     const sum = rows.reduce((total, row) => {
                         const value = row[column.key];
@@ -1463,6 +1801,37 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             ref={tableRef}
             style={{ height: fullHeight ? 'calc(100vh - 170px)' : 'auto', width: '100%' }}
         >
+            {isLoading && (
+                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
+                <Loader />
+                </div>
+            )}
+            {settings.multiCheckBox &&
+            <>
+                  <div className='flex'>
+        <button
+         style={{
+            background: colors?.color3 || "#f0f0f0",
+         }}
+        onClick={handleLoopThroughMultiSelectKeyHandler}
+        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+        >
+        Send Mail
+        </button>
+
+                 
+        <button
+         style={{
+            background: colors?.color3 || "#f0f0f0",
+         }}
+        onClick={handleLoopThroughMultiSelectKeyHandlerDownloadZip}
+        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+        >
+        Download Zip
+        </button>
+        </div>
+            </>}
+   
             <DataGrid
                 columns={columns}
                 rows={rows}
@@ -2031,6 +2400,8 @@ export const exportTableToPdf = async (
         const userType = getLocalStorage('userType') || '';
 
         const filterXml = buildFilterXml(filters, userId);
+        console.log(filterXml,'filterXml email');
+        
 
         const sendEmail = async (base64Data: string, pdfName: string) => {
             const emailXml = `
@@ -2063,6 +2434,8 @@ export const exportTableToPdf = async (
         };
 
         try {
+            console.log(filterXml,'filterXml typst');
+            
             if (showTypes) {
                 const fetchXml = `
                     <dsXml>
@@ -2114,6 +2487,8 @@ export const downloadOption = async (
     const userId = getLocalStorage('userId') || '';
 
     const filterXml = buildFilterXml(filters, userId);
+    console.log(filterXml,'filterXml');
+    
 
     const xmlData1 = ` 
     <dsXml>

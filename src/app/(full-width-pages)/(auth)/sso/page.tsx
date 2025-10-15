@@ -1,18 +1,20 @@
 "use client"
 import React, { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
-import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME } from "@/utils/constants"
+import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME, ENABLE_FERNET } from "@/utils/constants"
 import Image from "next/image"
-import { clearIndexedDB, removeLocalStorage, storeLocalStorage } from '@/utils/helper'
+import { clearIndexedDB, removeLocalStorage, storeLocalStorage, decodeFernetToken } from '@/utils/helper'
+import { RootState } from '@/redux/store'
 
 // SSO Component that uses useSearchParams
 const SSOContent = () => {
     const router = useRouter()
     const searchParams = useSearchParams()
     const dispatch = useDispatch()
+    const encPayload = useSelector((state: RootState) => state.common.encPayload)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
 
@@ -52,6 +54,10 @@ const SSOContent = () => {
             requestData = xmlData
             console.log('SSO Login XML request:', xmlData)
 
+            // Wait for 3 seconds before making the API call
+            console.log('Waiting for 3 seconds before SSO API call...')
+            await new Promise(resolve => setTimeout(resolve, 3000))
+
             // Call SSO Login API
             const response = await axios({
                 method: 'post',
@@ -62,8 +68,20 @@ const SSOContent = () => {
                 data: requestData
             })
 
-            const data = response.data
-            console.log('SSO Login response:', data)
+            console.log('SSO Login raw response:', response.data)
+
+            // Handle encrypted response if needed
+            const shouldDecode = ENABLE_FERNET && encPayload
+            let data = response.data
+
+            // If response is encrypted (data field is a string), decode it
+            if (shouldDecode && typeof data.data === 'string') {
+                console.log('Encrypted response detected, decoding...')
+                data = decodeFernetToken(data.data)
+                console.log('Decrypted SSO Login response:', data)
+            } else {
+                console.log('SSO Login response (unencrypted):', data)
+            }
 
             if (data.status && data.status_code === 200) {
                 // Store auth data in Redux
@@ -114,7 +132,7 @@ const SSOContent = () => {
             dispatch(setAuthError(errorMessage))
             setIsLoading(false)
         }
-    }, [searchParams, dispatch, router])
+    }, [searchParams, dispatch, router, encPayload])
 
     useEffect(() => {
         // Start SSO login process when component mounts
