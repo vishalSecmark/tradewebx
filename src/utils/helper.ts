@@ -543,3 +543,10 @@ export const sendEmailMultiCheckbox = async (base64Data: string, pdfName: string
         toast.error(columnMsg || result?.message);
     }
 };
+
+export function formatTextSplitString(text: string) {
+  return text
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, str => str.toUpperCase())
+    .trim();
+}

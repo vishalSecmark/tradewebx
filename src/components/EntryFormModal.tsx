@@ -13,7 +13,7 @@ import { handleValidationForDisabledField } from './component-forms/form-helper'
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
 import { extractTagsForTabsDisabling, generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
-import { getLocalStorage, sanitizeValueSpecialChar } from '@/utils/helper';
+import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
@@ -2509,11 +2509,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 style={{
                                                                     backgroundColor: isActive ? colors.tabBackground : 'transparent',
                                                                     color: colors.tabText,
-                                                                    borderColor: isActive ? colors.primary : 'transparent',
+                                                                    border: `1px solid ${isActive ? colors.buttonBackground : 'transparent'}`,
                                                                     boxShadow: isActive ? `0 1px 3px ${colors.primary}20` : 'none'
                                                                 }}
                                                             >
-                                                                {tab.TabName}
+                                                                {formatTextSplitString(tab.TabName || "")}
                                                             </button>
                                                         );
                                                     })}
