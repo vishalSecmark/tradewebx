@@ -1,6 +1,5 @@
 import SignInForm from "@/components/auth/SignInForm";
 import Loader from "@/components/Loader";
-import { Metadata } from "next";
 import { Suspense } from "react";
 
 

@@ -4,7 +4,6 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
 import { useTheme } from '@/context/ThemeContext';
 import { DYNAMIC_DETAILS, IPO_SELECTED, IPO_url, checkStatusFs, configDetails, fetchUPIType, handleBidChange, handleCheckboxChange, handleCutOffBlur, handleDecrement, handleDelete, handleFocus, handleIncrement, handleTermsChange, handleTextBoxChange, onSubmitBtn } from './IpoHelper';
-import axios from 'axios';
 import { useLocalStorage } from '@/hooks/useLocalListner';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from '@/utils/apiService';

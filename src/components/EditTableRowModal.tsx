@@ -490,8 +490,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-    const handleInputBlur = async (rowIndex: number | string, key: string, previousValue: any) => {
-        const field = editableColumns.find(col => col.wKey === key);
+    const handleInputBlur = async (rowIndex: number | string, key1: string, previousValue: any, newValue?:any) => {
+        const field = editableColumns.find(col => col.wKey === key1);
         if (!field?.ValidationAPI?.dsXml) return;
         if (rowIndex === "viewModal") {
             // Skip view modal handling since we removed it
@@ -509,7 +509,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
 
                 if (typeof placeholder === 'string' && placeholder.startsWith('##') && placeholder.endsWith('##')) {
                     const lookupKey = placeholder.slice(2, -2);
-                    fieldValue = rowValues[lookupKey];
+                    if(lookupKey === key1){
+                        fieldValue = newValue
+                    }else{
+                        fieldValue = rowValues[lookupKey];
+                    }
                 } else {
                     fieldValue = placeholder;
                 }
@@ -577,7 +581,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                             const updated = [...prev];
                             updated[rowIndex as number] = {
                                 ...updated[rowIndex as number],
-                                [key]: previousValue
+                                [key1]: previousValue
                             };
                             return updated;
                         });
@@ -655,22 +659,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     const hadleViewLog = async (rowData: any) => {
-        //needed in future
-        // if ((rowData.ExportType === undefined || rowData.ExportType === '')) {
-        //     setValidationModal({
-        //         isOpen: true,
-        //         message: 'Please select a Export Type from the dropdown.',
-        //         type: 'E'
-        //     });
-        //     return;
-        // }
-
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, dynamicXmlGenratingFn(showViewApi, rowData));
             const rs0 = response?.data?.data?.rs0 || [];
-
-            console.log(response, 'responseeeee');
-
 
             if (!Array.isArray(rs0) || rs0.length === 0) {
                 toast.error('No logs found.');
@@ -687,10 +678,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         } finally {
             setIsSaving(false);
         }
-        //can be use in future
-        // setViewLogHeader(rowData)
-        // End
-
     }
 
 
@@ -1148,8 +1135,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                     [`${rowIndex}_${key}`]: value
                                                                                 }))
                                                                             }
-                                                                            onBlur={() => {
-                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                            onBlur={(e) => {
+                                                                                handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`],e.target.value);
                                                                                 setPreviousValues(prev => {
                                                                                     const updated = { ...prev };
                                                                                     delete updated[`${rowIndex}_${key}`];
@@ -1181,7 +1168,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                 if (editable.ValidationAPI?.dsXml) {
                                                                                     // Small delay to ensure state is updated
                                                                                     setTimeout(() => {
-                                                                                        handleInputBlur(rowIndex, key, previousValue);
+                                                                                        handleInputBlur(rowIndex, key, previousValue,newValue);
                                                                                     }, 100);
                                                                                 }
                                                                             }}
@@ -1342,8 +1329,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                         [`${rowIndex}_${key}`]: value
                                                                                     }))
                                                                                 }
-                                                                                onBlur={() => {
-                                                                                    handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`]);
+                                                                                onBlur={(e) => {
+                                                                                    handleInputBlur(rowIndex, key, previousValues[`${rowIndex}_${key}`],e.target.value);
                                                                                     setPreviousValues(prev => {
                                                                                         const updated = { ...prev };
                                                                                         delete updated[`${rowIndex}_${key}`];
@@ -1375,7 +1362,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                                                                     if (editable.ValidationAPI?.dsXml) {
                                                                                         // Small delay to ensure state is updated
                                                                                         setTimeout(() => {
-                                                                                            handleInputBlur(rowIndex, key, previousValue);
+                                                                                            handleInputBlur(rowIndex, key, previousValue,newValue);
                                                                                         }, 100);
                                                                                     }
                                                                                 }}

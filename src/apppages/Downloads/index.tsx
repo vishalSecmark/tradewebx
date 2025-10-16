@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useSelector } from 'react-redux';
-import axios from 'axios';
 import moment from 'moment';
 import DataTable from '@/components/DataTable';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';

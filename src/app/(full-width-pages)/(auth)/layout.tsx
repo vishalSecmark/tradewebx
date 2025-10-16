@@ -1,10 +1,6 @@
 'use client'
-import GridShape from "@/components/common/GridShape";
-import ThemeTogglerTwo from "@/components/common/ThemeTogglerTwo";
-import Image from "next/image";
 
 import { ThemeProvider } from "@/context/ThemeContext";
-import Link from "next/link";
 import React, { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/redux/hooks";

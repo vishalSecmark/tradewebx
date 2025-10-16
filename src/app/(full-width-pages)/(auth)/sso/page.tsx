@@ -5,7 +5,6 @@ import { useDispatch, useSelector } from 'react-redux'
 import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
 import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME, ENABLE_FERNET } from "@/utils/constants"
-import Image from "next/image"
 import { clearIndexedDB, removeLocalStorage, storeLocalStorage, decodeFernetToken } from '@/utils/helper'
 import { RootState } from '@/redux/store'
 

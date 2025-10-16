@@ -1,7 +1,6 @@
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { getLocalStorage, storeLocalStorage } from "@/utils/helper";
-import axios from "axios";
 import { toast } from "react-toastify";
 
 export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOptions: any, setMasterLoadingDropdowns: any) => {
