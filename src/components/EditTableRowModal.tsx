@@ -490,9 +490,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     };
 
-    console.log('Input blur event:',localData)
     const handleInputBlur = async (rowIndex: number | string, key1: string, previousValue: any, newValue?:any) => {
-        console.log('Input blur event:1', { rowIndex, key1, previousValue },editableColumns,newValue);
         const field = editableColumns.find(col => col.wKey === key1);
         if (!field?.ValidationAPI?.dsXml) return;
         if (rowIndex === "viewModal") {
@@ -505,7 +503,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         let xFilterMultiple = '';
         let shouldCallApi = true;
         const missingFields: string[] = [];
-        console.log("Input blur event:2",xFilter,X_Filter_Multiple,rowValues);
         if (X_Filter_Multiple) {
             Object.entries(X_Filter_Multiple).forEach(([key, placeholder]) => {
                 let fieldValue: any;
@@ -662,22 +659,9 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     };
 
     const hadleViewLog = async (rowData: any) => {
-        //needed in future
-        // if ((rowData.ExportType === undefined || rowData.ExportType === '')) {
-        //     setValidationModal({
-        //         isOpen: true,
-        //         message: 'Please select a Export Type from the dropdown.',
-        //         type: 'E'
-        //     });
-        //     return;
-        // }
-
         try {
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, dynamicXmlGenratingFn(showViewApi, rowData));
             const rs0 = response?.data?.data?.rs0 || [];
-
-            console.log(response, 'responseeeee');
-
 
             if (!Array.isArray(rs0) || rs0.length === 0) {
                 toast.error('No logs found.');
@@ -694,10 +678,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         } finally {
             setIsSaving(false);
         }
-        //can be use in future
-        // setViewLogHeader(rowData)
-        // End
-
     }
 
 

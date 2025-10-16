@@ -1,7 +1,6 @@
 import { FormField } from "@/types";
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
-import axios from "axios";
 
 export const handleValidationForDisabledField = async (
     field: FormField,

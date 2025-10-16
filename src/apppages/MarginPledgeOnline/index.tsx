@@ -2,10 +2,7 @@
 import { useTheme } from '@/context/ThemeContext';
 import React, { useEffect, useState } from 'react';
 import { decimalFormat, dropDownApiCall, rightAlignKeys, tableApiCall } from './marginConst';
-import axios from 'axios';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
-import { FaFileExcel } from 'react-icons/fa';
-import { exportTableToExcel } from '@/components/DataTable';
 import apiService from '@/utils/apiService';
 import { getLocalStorage } from '@/utils/helper';
 
