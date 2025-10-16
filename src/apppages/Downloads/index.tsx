@@ -102,76 +102,78 @@ const Downloads = () => {
         getDownloads(true);
     }, []);
 
-
-    const downloadAllFn2 = () => {
-        console.log('down all fn ');
-        console.log(downloadAllData, 'downloadAllData');
-        downloadAllData.map(record => handleDownload(record))
-    }
-
-
     const downloadAllFn = async () => {
         if (!downloadAllData.length) {
             console.warn("No records to download.");
             return;
         }
-
+    
         setIsDownloading(true);
         setDownloadProgress(0);
         setDownloadError(null);
-
+    
         const fromDateStr = moment(filterValues.fromDate).format("YYYYMMDD");
         const toDateStr = moment(filterValues.toDate).format("YYYYMMDD");
         const currentTime = moment().format("HHmmss");
         const currentDate = moment().format("YYYYMMDD");
-
-        // ✅ Get doctype (first column name in first record)
+    
+        // Get doctype (first column name in first record)
         const doctype = downloadAllData[0].Doctype.replace("/", "_") || "Doctype";
-
+    
         const zipFolderName = `${doctype}_${fromDateStr}_${toDateStr}_${currentTime}_${currentDate}`;
-
+    
         const zip = new JSZip();
-        const pdfFolder = zip.folder(zipFolderName); // ✅ folder inside zip
-
+        const pdfFolder = zip.folder(zipFolderName); // folder inside zip
+    
         let completed = 0;
-
+    
         try {
-            for (const record of downloadAllData) {
+            for (let i = 0; i < downloadAllData.length; i++) {
+                const record = downloadAllData[i];
                 try {
                     const xmlData = `<dsXml>
-              <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
-              <Sql></Sql>
-              <X_Filter>
-                  <FromDate>${fromDateStr}</FromDate>
-                  <ToDate>${toDateStr}</ToDate>
-                  <RepType></RepType>
-                  <DocumentType></DocumentType>
-                  <DocumentNo>${record["Document No"]}</DocumentNo>
-              </X_Filter>
-              <X_GFilter></X_GFilter>
-              <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
-          </dsXml>`;
-
+          <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
+          <Sql></Sql>
+          <X_Filter>
+              <FromDate>${fromDateStr}</FromDate>
+              <ToDate>${toDateStr}</ToDate>
+              <RepType></RepType>
+              <DocumentType></DocumentType>
+              <DocumentNo>${record["Document No"]}</DocumentNo>
+          </X_Filter>
+          <X_GFilter></X_GFilter>
+          <J_Api>"UserId":"${userData.userId}", "UserType":"${userData.userType}"</J_Api>
+      </dsXml>`;
+    
                     const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
                     const fileData = response.data.data.rs0?.[0];
-
-
+    
                     if (fileData?.Base64) {
                         const base64Data = fileData.Base64;
-                        const fileName = fileData.FileName.split("\\").pop() || "file.pdf";
-                        // ✅ Add to folder with Uint8Array for binary files
+                        let fileName = fileData.FileName.split("\\").pop() || "file.pdf";
+    
+                        // Make file name unique by appending index before the extension
+                        const nameParts = fileName.split(".");
+                        if (nameParts.length > 1) {
+                            const ext = nameParts.pop();
+                            fileName = `${nameParts.join(".")}_${i + 1}.${ext}`;
+                        } else {
+                            fileName = `${fileName}_${i + 1}`;
+                        }
+    
+                        // Add to folder with Uint8Array for binary files
                         const fileContent = base64ToUint8Array(base64Data);
                         pdfFolder.file(fileName, fileContent);
                     }
                 } catch (err) {
                     console.error("Error downloading file:", err);
                 }
-
+    
                 completed++;
                 setDownloadProgress(Math.round((completed / downloadAllData.length) * 100));
             }
-
-            // ✅ Generate zip with folder inside
+    
+            // Generate zip with folder inside
             const zipBlob = await zip.generateAsync({ type: "blob" });
             saveAs(zipBlob, `${zipFolderName}.zip`);
         } catch (err) {
@@ -181,8 +183,7 @@ const Downloads = () => {
             setIsDownloading(false);
         }
     };
-
-
+    
 
 
 

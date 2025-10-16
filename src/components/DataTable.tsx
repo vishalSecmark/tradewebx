@@ -638,14 +638,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
       : selectedRows.filter(r => r._id !== row._id);
 
     setSelectedRows(updated);
-    onRowSelect?.(updated);
-    
-    console.log(onRowSelect,'on row selct');
-    
+    onRowSelect?.(updated);    
   };
 
 
-  console.log(pageData,'summary13');
   
 
 
