@@ -7,30 +7,14 @@ import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
 import { useLocalStorage } from "@/hooks/useLocalListner";
 import Loader from "@/components/Loader";
-
-// ✅ Add these two arrays globally within the component
-const apiCallingTypes = ["POST", "GET"];
-const apiContentTypes = [
-  "application/json",
-  "application/xml",
-  "multipart/form-data",
-  "text/plain"
-];
-const activeFlag = ["Y","N"]
-
-interface LogHeader {
-  VendorName: string;
-  ServiceName: string;
-  // add more fields if API returns them
-}
-
+import { activeFlag, apiCallingTypes, ApiConfigurationRow, apiContentTypes, EditModalState, LogHeader } from "@/types/apiConfigurationTypes";
 
 const ApiConfiguration = () => {
   const { colors } = useTheme();
-  const [apiConfigData, setApiConfigData] = useState<any[]>([]);
+  const [apiConfigData, setApiConfigData] = useState<ApiConfigurationRow[]>([]);
   const [uniqueKeys, setUniqueKeys] = useState<string[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [editableRow, setEditableRow] = useState<any>({});
+  const [editableRow, setEditableRow] = useState<ApiConfigurationRow>({});
   const [viewLogServiceName, setViewLogServiceName] = useState<string>("");
   const [viewLogServiceNameApiData, setViewLogServiceNameApiData] = useState<any>(
     []
@@ -39,7 +23,7 @@ const ApiConfiguration = () => {
   const [selectedText, setSelectedText] = useState<string | null>(null);
 
   // 🔹 New state for long-text edit modal
-  const [editModal, setEditModal] = useState<{ key: string; value: string } | null>(
+  const [editModal, setEditModal] = useState<EditModalState | null>(
     null
   );
 
@@ -177,7 +161,7 @@ const ApiConfiguration = () => {
 
   };
   
-  const handleViewLog = (row: any) => {
+  const handleViewLog = (row: ApiConfigurationRow) => {
     const serviceName = row?.ServiceName;
     setViewLogServiceName(serviceName);
     setViewLogHeader({
@@ -186,10 +170,6 @@ const ApiConfiguration = () => {
     });
   };
 
-  // useEffect(() => {
-  //   console.log(viewLogHeader,'viewLogHeader');
-    
-  // },[viewLogHeader])
 
   const handleCloseViewLog = () => {
     setViewLogServiceName("")
@@ -207,7 +187,7 @@ const ApiConfiguration = () => {
       className="w-full"
     >
 
-{(loading || logLoading) && (
+      {(loading || logLoading) && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
           <Loader />
         </div>

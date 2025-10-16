@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 import { bodProcessGetApiCall, bodProcessIndividualApiCall } from "./bodProcessConst";
 import Loader from "@/components/Loader";
 import { useLocalStorage } from "@/hooks/useLocalListner";
+import { BodProcessRow, ValidationModalState } from "@/types/bodProcessTypes";
 
 const BodProcess = () => {
   const { colors } = useTheme();
 
-  const [bodPrcessApiData, setBodProcessApiData] = useState<Record<string, any>[]>([]);
+  const [bodPrcessApiData, setBodProcessApiData] = useState<BodProcessRow[]>([]);
   const [flattenArray, setFalttenArray] = useState<string[]>([]);
   const [checkedRows, setCheckedRows] = useState<boolean[]>([]);
   const [loading, setLoading] = useState(false);
@@ -15,11 +16,7 @@ const BodProcess = () => {
   const [userType] = useLocalStorage('userType', null);
 
 
-  const [validationModal, setValidationModal] = useState<{
-    isOpen: boolean;
-    message: string;
-    type: 'M' | 'S' | 'E' | 'D';
-  }>({
+  const [validationModal, setValidationModal] = useState<ValidationModalState>({
     isOpen: false,
     message: '',
     type: 'E'
@@ -92,7 +89,7 @@ const BodProcess = () => {
     });
   }
 
-  const runClickHandler = (row: any) => {
+  const runClickHandler = (row: BodProcessRow) => {
     bodProcessIndividualApiCall(row.ProcessName, showValidationMessage, setLoading, userId, userType)
   }
 
