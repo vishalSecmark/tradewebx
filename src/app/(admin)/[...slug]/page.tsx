@@ -16,6 +16,7 @@ import Family from "@/apppages/FamilyMapping";
 import ApiConfiguration from "@/apppages/ApiChecker";
 import BodProcess from "@/apppages/BodProcess";
 import UserAccessMenu from "@/apppages/UserAccessMenu";
+import UploadFile from "@/apppages/UploadFile";
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,
@@ -30,7 +31,8 @@ const staticRoutes: Record<string, React.ReactNode> = {
   familymapping: <Family />,
   apisetting: <ApiConfiguration />,
   bodProcess: <BodProcess />,
-  useraccess: <UserAccessMenu />
+  useraccess: <UserAccessMenu />,
+  uploadFile: <UploadFile />
 };
 
 // Define the type for params explicitly
