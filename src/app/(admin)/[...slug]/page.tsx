@@ -40,6 +40,8 @@ interface PageParams {
 
 export default function DynamicPage({ params }: { params: any | Promise<any> }) {
   // Unwrap params using React.use() if it's a Promise
+  const menuItems = useAppSelector(selectAllMenuItems);
+
   const unwrappedParams = params instanceof Promise ? React.use(params) : params;
   const route = unwrappedParams.slug[0];
   const subRoute = unwrappedParams.slug[1];
@@ -100,7 +102,16 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
     checkStaticRoute(subRoute) ||
     checkStaticRoute(subSubRoute);
 
-  if (staticComponent) {
+    if (staticComponent) {
+      // check if item available in the menu items then only allow to access that route 
+      const existsInMenu = menuItems.some(
+          (item: any) => item.componentName?.toLowerCase() === componentName.toLowerCase()
+        );
+
+    if (!existsInMenu) {
+      return null;
+    }
+
     console.log('Returning static component for:', componentName);
     return staticComponent;
   }
