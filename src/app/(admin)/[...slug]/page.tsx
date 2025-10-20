@@ -7,7 +7,7 @@ import ChangePassword from "@/apppages/ChangePassword";
 import ThemePage from "@/apppages/ThemePage";
 import Downloads from "@/apppages/Downloads";
 import { useAppSelector } from "@/redux/hooks";
-import { selectAllMenuItems } from "@/redux/features/menuSlice";
+import { selectAllMenuItems, selectMenuStatus } from "@/redux/features/menuSlice";
 import KycPage from "@/apppages/KycPage";
 import MarginPledgeOnline from "@/apppages/MarginPledgeOnline";
 import Ipo from "@/apppages/Ipo";
@@ -36,6 +36,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
 
 export default function DynamicPage({ params }: { params: any | Promise<any> }) {
   const menuItems = useAppSelector(selectAllMenuItems);
+  const menuStatus = useAppSelector(selectMenuStatus);
   const unwrappedParams = params instanceof Promise ? React.use(params) : params;
   const route = unwrappedParams.slug[0];
   const subRoute = unwrappedParams.slug[1];
@@ -43,26 +44,20 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
 
   const componentName = subSubRoute || subRoute || route;
 
-  console.log("Route debugging:", { route, subRoute, subSubRoute, componentName });
-  console.log("Available static routes:", Object.keys(staticRoutes));
-  console.log("Static routes object:", staticRoutes);
-
-  // Handle static routes with simplified matching (removed kebab → camel conversion)
-  const checkStaticRoute = (routeToCheck: string) => {
+  // Handle static routes with simplified matching
+  const checkStaticRoute = (routeToCheck: string): { component: React.ReactNode; matchedKey: string } | null => {
     if (!routeToCheck) return null;
 
     // Direct match
     if (routeToCheck in staticRoutes) {
-      console.log("Direct match found for:", routeToCheck);
-      return staticRoutes[routeToCheck];
+      return { component: staticRoutes[routeToCheck], matchedKey: routeToCheck };
     }
 
     // Case-insensitive match
     const lowerRoute = routeToCheck.toLowerCase();
     for (const [key, component] of Object.entries(staticRoutes)) {
       if (key.toLowerCase() === lowerRoute) {
-        console.log("Case-insensitive match found:", key, "for route:", routeToCheck);
-        return component;
+        return { component, matchedKey: key };
       }
     }
 
@@ -73,34 +68,96 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
       .replace(/^-/, "");
 
     if (kebabCaseRoute in staticRoutes) {
-      console.log("Camel-to-kebab match found:", kebabCaseRoute, "for route:", routeToCheck);
-      return staticRoutes[kebabCaseRoute];
+      return { component: staticRoutes[kebabCaseRoute], matchedKey: kebabCaseRoute };
     }
 
     return null;
   };
 
   // Check static routes in order of priority
-  const staticComponent =
+  const staticRouteMatch =
     checkStaticRoute(route) || checkStaticRoute(subRoute) || checkStaticRoute(subSubRoute);
 
-  console.log("check static route", staticComponent, menuItems, route);
+  if (staticRouteMatch) {
+    const staticComponent = staticRouteMatch.component;
+    const matchedRouteKey = staticRouteMatch.matchedKey.toLowerCase();
 
-  if (staticComponent) {
-    // Allow only if item exists in menu
+    // Whitelist: Routes that are always accessible (Dashboard, Logout, ChangePassword)
+    const alwaysAccessibleRoutes = ['dashboard', 'logout', 'changepassword'];
+    const isAlwaysAccessible = alwaysAccessibleRoutes.includes(matchedRouteKey);
+
+    if (isAlwaysAccessible) {
+      return staticComponent;
+    }
+
+    // Wait for menu to load before checking permissions
+    if (menuStatus === 'loading' || menuStatus === 'idle') {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center p-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4 mx-auto"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // For all other static routes, check if they exist in the menu API response
     const existsInMenu = menuItems.some(
-      (item: any) => item.componentName?.toLowerCase() === route.toLowerCase()
+      (item: any) => {
+        // Check main menu items
+        if (item.componentName?.toLowerCase() === matchedRouteKey) {
+          return true;
+        }
+
+        // Check sub-menu items
+        if (item.subItems && Array.isArray(item.subItems)) {
+          return item.subItems.some((subItem: any) => {
+            if (subItem.componentName?.toLowerCase() === matchedRouteKey) {
+              return true;
+            }
+
+            // Check sub-sub-menu items
+            if (subItem.subItems && Array.isArray(subItem.subItems)) {
+              return subItem.subItems.some((subSubItem: any) =>
+                subSubItem.componentName?.toLowerCase() === matchedRouteKey
+              );
+            }
+
+            return false;
+          });
+        }
+
+        return false;
+      }
     );
 
     if (!existsInMenu) {
-      return null;
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+            <div className="mb-4">
+              <svg className="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Access Denied</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              You do not have permission to access this page.
+            </p>
+            <button
+              onClick={() => window.location.href = '/dashboard'}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      );
     }
 
-    console.log("Returning static component for:", componentName);
     return staticComponent;
   }
-
-  console.log("No static route found, using dynamic component for:", componentName);
 
   // For dynamic routes, convert kebab-case to PascalCase if needed
   const formattedComponentName = componentName
@@ -108,26 +165,88 @@ export default function DynamicPage({ params }: { params: any | Promise<any> }) 
       .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1))
       .join("");
 
-  // if route is present in the static route then skip the route for dynamic part
+  // If route is present in the static route then skip the route for dynamic part
   const isStatic = Object.keys(staticRoutes).some(
-      (key) => key.toLowerCase() === formattedComponentName.toLowerCase()
-    );
+    (key) => key.toLowerCase() === formattedComponentName.toLowerCase()
+  );
 
-    if (isStatic) {
-      return null;
-    }
+  if (isStatic) {
+    return null;
+  }
 
-
-  console.log("checkkkkkk", formattedComponentName, componentName);
   return <DynamicComponentRenderer componentName={formattedComponentName} />;
 }
 
 // Client component that determines whether to show report or entry view
 function DynamicComponentRenderer({ componentName }: { componentName: string }) {
   const menuItems = useAppSelector(selectAllMenuItems);
+  const menuStatus = useAppSelector(selectMenuStatus);
 
-  console.log("DynamicComponentRenderer called with:", componentName);
-  console.log("Menu items:", menuItems);
+  // Wait for menu to load before checking permissions
+  if (menuStatus === 'loading' || menuStatus === 'idle') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4 mx-auto"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if the dynamic route exists in the menu API
+  const existsInMenu = menuItems.some((item: any) => {
+    // Check main menu items
+    if (item.componentName?.toLowerCase() === componentName.toLowerCase()) {
+      return true;
+    }
+
+    // Check sub-menu items
+    if (item.subItems && Array.isArray(item.subItems)) {
+      const foundInSubItems = item.subItems.some((subItem: any) => {
+        if (subItem.componentName?.toLowerCase() === componentName.toLowerCase()) {
+          return true;
+        }
+
+        // Check sub-sub-menu items
+        if (subItem.subItems && Array.isArray(subItem.subItems)) {
+          return subItem.subItems.some((subSubItem: any) =>
+            subSubItem.componentName?.toLowerCase() === componentName.toLowerCase()
+          );
+        }
+
+        return false;
+      });
+
+      if (foundInSubItems) return true;
+    }
+
+    return false;
+  });
+
+  if (!existsInMenu) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+          <div className="mb-4">
+            <svg className="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Access Denied</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            You do not have permission to access this page.
+          </p>
+          <button
+            onClick={() => window.location.href = '/dashboard'}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Check if this is actually a static component
   const staticComponentKeys = Object.keys(staticRoutes);
@@ -143,7 +262,6 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
   );
 
   if (isStaticComponent) {
-    console.log("Static component detected in dynamic renderer:", componentName);
     for (const [key, component] of Object.entries(staticRoutes)) {
       if (
         key.toLowerCase() === componentName.toLowerCase() ||
@@ -154,7 +272,6 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
           .toLowerCase()
           .replace(/^-/, "") === componentName.toLowerCase()
       ) {
-        console.log("Returning static component from dynamic renderer:", key);
         return component;
       }
     }
@@ -188,8 +305,6 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
 
   const componentType = findComponentType(menuItems);
 
-  console.log("Component type:", componentType);
-
   const finalComponentType =
     componentType ||
     (componentName.toLowerCase().includes("multientry")
@@ -199,8 +314,6 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
       : componentName.toLowerCase().includes("report")
       ? "report"
       : componentType);
-
-  console.log("Using DynamicReportComponent for:", componentName, "with type:", finalComponentType);
 
   return (
     <DynamicReportComponent componentName={componentName} componentType={finalComponentType} />
