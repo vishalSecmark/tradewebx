@@ -11,6 +11,7 @@ import { BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from "@/utils/apiService";
 import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 import CustomDateTimePicker from "./formComponents/CustomDateTimePicker";
+import CustomDatePicker from "./formComponents/CustomDatePicker";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -518,28 +519,36 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
-                        <DatePicker
-                            selected={fieldValue ? moment(fieldValue, 'YYYYMMDD').toDate() : null}
-                            onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
-                            dateFormat="dd/MM/yyyy"
-                            className={`
-                            w-full px-3 py-1 border rounded-md
-                            focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-                            ${!isEnabled
+                         <CustomDatePicker
+                           selected={
+                               formValues[field.wKey] && 
+                               formValues[field.wKey].trim() && 
+                               moment(formValues[field.wKey], 'YYYYMMDD', true).isValid() 
+                                 ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() 
+                                 : null
+                             }
+                             onChange={(date) => {
+                               const formattedDate = date ? moment(date).format('YYYYMMDD') : null;
+                               handleInputChange(field.wKey, formattedDate);
+                             }}
+                           disabled={!isEnabled}
+                           className={`
+                                 w-full px-3 py-1 border rounded-md
+                                 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                                 ${!isEnabled
                                     ? 'border-gray-300 bg-[#f2f2f0]'
                                     : fieldErrors[field.wKey]
                                         ? 'border-red-500'
                                         : 'border-gray-700'
                                 }
-                            ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
-                            ${isJustUpdated ? 'text-green-500' : ''}
-
-                        `}
-                            wrapperClassName="w-full"
-                            placeholderText="Select Date"
-                            onBlur={() => handleBlur(field)}
-                            disabled={!isEnabled}
-                        />
+                         ${colors.textInputBackground ? `bg-[${colors.textInputBackground}]` : ''}
+                         ${isJustUpdated ? 'text-green-500' : ''}
+                     `}
+                                 onBlur={() => handleBlur(field)}
+                                 placeholder="Select Date"
+                                 id={field.wKey}
+                                 name={field.wKey}
+                             />
                         {fieldErrors[field.wKey] && (
                             <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
                         )}

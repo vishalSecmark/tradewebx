@@ -2103,7 +2103,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            const responseMessageFlag = response?.data?.data?.rs0[0]
+            const responseMessageFlag = response?.data?.data?.rs0?.[0]
+
             if (response?.data?.success && responseMessageFlag.Flag?.toLowerCase() === "s") {
                 toast.success(responseMessageFlag?.Message || "Form Submitted")
                 setIsFormSubmit(false);
