@@ -2505,7 +2505,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         return (
                                                             <button
                                                                 key={index}
-                                                                onClick={() => setActiveTabIndex(index)}
+                                                                onClick={() => {
+                                                                    if(isViewMode){
+                                                                        setActiveTabIndex(index)
+                                                                        handleTabChangeViewMode();
+                                                                    }
+                                                                }}
                                                                 className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
                                                                     isActive 
                                                                     ? 'text-opacity-100' 
