@@ -148,8 +148,16 @@ const DropdownField: React.FC<{
                 <CreatableSelect
                     options={visibleOptions}
                     isClearable
-                    value={options.find((opt: any) => opt.value.toString().trim() === formValues[field.wKey]?.toString().trim()) || null}
-                    onChange={(selected) => handleInputChange(field.wKey, selected?.value?.trim())}
+                    value={options.find((opt: any) => {
+                        const optValue = typeof opt.value === 'string' ? opt.value.trim() : opt.value;
+                        const formValue = typeof formValues[field.wKey] === 'string' ? formValues[field.wKey].trim() : formValues[field.wKey];
+                        return String(optValue) === String(formValue);
+                    }) || null}
+                    onChange={(selected) => {
+                        const value = selected?.value;
+                        const processedValue = typeof value === 'string' ? value.trim() : value;
+                        handleInputChange(field.wKey, processedValue);
+                    }}
                     onInputChange={(inputValue, { action }) => {
                         if (action === 'input-change') {
                             // Prevent typing beyond allowed length for creatable fields
