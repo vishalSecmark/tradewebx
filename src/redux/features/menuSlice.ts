@@ -84,7 +84,10 @@ const convertToNavItems = (data: any): NavItem[] => {
             // Add other mappings as needed
         };
 
-        const basePath = `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+        // Use url field if componentType is URL, otherwise generate path
+        const basePath = item.componentType === 'URL'
+            ? item.url
+            : `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
 
         const navItem: NavItem = {
             id: item.id,
@@ -98,7 +101,11 @@ const convertToNavItems = (data: any): NavItem[] => {
 
         if (item.submenu && item.submenu.length > 0) {
             navItem.subItems = item.submenu.map((subItem: any) => {
-                const subItemPath = `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+                // Use url field if componentType is URL, otherwise generate path
+                const subItemPath = subItem.componentType === 'URL'
+                    ? subItem.url
+                    : `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+
                 const subNavItem: SubMenuItem = {
                     name: subItem.title,
                     path: subItemPath,
@@ -111,15 +118,22 @@ const convertToNavItems = (data: any): NavItem[] => {
 
                 // Handle third level submenu
                 if (subItem.submenu && subItem.submenu.length > 0) {
-                    subNavItem.subItems = subItem.submenu.map((thirdItem: any) => ({
-                        name: thirdItem.title,
-                        path: `${subItemPath}/${thirdItem.componentName.toLowerCase().replace(/\s+/g, '-')}`,
-                        componentName: thirdItem.componentName,
-                        componentType: thirdItem.componentType || null,
-                        pageData: thirdItem.pageData,
-                        pro: false,
-                        new: false
-                    }));
+                    subNavItem.subItems = subItem.submenu.map((thirdItem: any) => {
+                        // Use url field if componentType is URL, otherwise generate path
+                        const thirdItemPath = thirdItem.componentType === 'URL'
+                            ? thirdItem.url
+                            : `${subItemPath}/${thirdItem.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+
+                        return {
+                            name: thirdItem.title,
+                            path: thirdItemPath,
+                            componentName: thirdItem.componentName,
+                            componentType: thirdItem.componentType || null,
+                            pageData: thirdItem.pageData,
+                            pro: false,
+                            new: false
+                        };
+                    });
                     // Remove path from parent if it has subItems
                     delete subNavItem.path;
                 }
