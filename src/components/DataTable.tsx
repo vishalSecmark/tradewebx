@@ -1614,6 +1614,12 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
 
 
 const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async () => {
+
+    if (!Array.isArray(selectedRows) || selectedRows.length === 0) {
+        toast.warn("Please select at least one report to proceed");
+        return;  // Exit early if nothing is selected
+      }
+
     setIsLoading(true);
     const filterXml = buildFilterXml(filtersCheck, userId);
     const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
@@ -1718,8 +1724,12 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
       }
   
       // Generate ZIP and trigger download
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      saveAs(zipBlob, `${zipFolderName}.zip`);
+      if (pdfCount > 0) {
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        saveAs(zipBlob, `${zipFolderName}.zip`);
+      } else {
+        console.warn("No PDFs were generated, so ZIP download is skipped.");
+      }
   
       console.log(`✅ ZIP created. PDFs: ${pdfCount}, Failures: ${failedRows.length}`);
       // Display aggregate toast
@@ -1729,9 +1739,7 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
         toast.warn(`ZIP created with ${pdfCount} PDF(s). ${failedRows.length} failed (see FAILED_ROWS.txt).`);
       } else if (pdfCount === 0 && failedRows.length > 0) {
         toast.error(`No PDFs created. ${failedRows.length} failures (see FAILED_ROWS.txt).`);
-      } else {
-        toast.info("ZIP created (no PDFs found).");
-      }
+      } 
     } catch (error) {
       console.error("❌ Error during ZIP creation:", error);
       toast.error("Failed to create ZIP. Please try again.");
