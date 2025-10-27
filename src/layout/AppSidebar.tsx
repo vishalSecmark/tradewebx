@@ -425,10 +425,12 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {menuStatus === 'loading' && <div className={fontStyles.menuItem}>Loading...</div>}
-              {menuStatus === 'failed' && <div className={fontStyles.menuItem}>Error: {menuError}</div>}
-              {menuStatus === 'succeeded' && (
-                renderMenuItems(menuItems)
+              {menuStatus === 'failed' && (
+                <div className={fontStyles.menuItem} style={{ color: '#ef4444' }}>
+                  Error: {menuError}
+                </div>
               )}
+              {menuStatus === 'succeeded' && renderMenuItems(menuItems)}
             </div>
 
 

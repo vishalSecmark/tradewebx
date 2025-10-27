@@ -134,27 +134,67 @@ const convertToNavItems = (data: any): NavItem[] => {
     });
 };
 
+// SessionStorage key for menu items
+const MENU_STORAGE_KEY = 'tradewebx_menu_items';
+
+// Helper function to save menu to sessionStorage
+const saveMenuToSessionStorage = (menuItems: NavItem[]) => {
+    try {
+        sessionStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuItems));
+    } catch (error) {
+        console.error('Failed to save menu to sessionStorage:', error);
+    }
+};
+
+// Helper function to load menu from sessionStorage
+const loadMenuFromSessionStorage = (): NavItem[] | null => {
+    try {
+        const storedMenu = sessionStorage.getItem(MENU_STORAGE_KEY);
+        return storedMenu ? JSON.parse(storedMenu) : null;
+    } catch (error) {
+        console.error('Failed to load menu from sessionStorage:', error);
+        return null;
+    }
+};
+
 // Create async thunk for fetching menu
 export const fetchMenuItems = createAsyncThunk(
     'menu/fetchMenuItems',
-    async () => {
-        const userData = {
-            UserId: getLocalStorage('userId') || '',
-            UserType: getLocalStorage('userType') || ''
-        };
+    async (_, { rejectWithValue }) => {
+        try {
+            const userData = {
+                UserId: getLocalStorage('userId') || '',
+                UserType: getLocalStorage('userType') || ''
+            };
 
-        const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"MOBILEMENU","RequestFrom" :"W"</J_Ui>
-            <Sql></Sql>
-            <X_Filter>
-                <UserId>${userData.UserId}</UserId>
-            </X_Filter>
-            <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
-        </dsXml>`;
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"MOBILEMENU","RequestFrom" :"W"</J_Ui>
+                <Sql></Sql>
+                <X_Filter>
+                    <UserId>${userData.UserId}</UserId>
+                </X_Filter>
+                <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
+            </dsXml>`;
 
-        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            const menuItems = convertToNavItems(response.data.data.rs0);
 
-        return convertToNavItems(response.data.data.rs0);
+            // Save menu to sessionStorage on successful fetch
+            saveMenuToSessionStorage(menuItems);
+
+            return menuItems;
+        } catch (error: any) {
+            // Try to load menu from sessionStorage as fallback
+            const cachedMenu = loadMenuFromSessionStorage();
+
+            if (cachedMenu && cachedMenu.length > 0) {
+                console.warn('Menu API failed, using cached menu from sessionStorage');
+                return cachedMenu;
+            }
+
+            // If no cached menu exists, reject with error
+            return rejectWithValue(error?.message || 'Failed to fetch menu items');
+        }
     }
 );
 
@@ -163,23 +203,38 @@ const menuSlice = createSlice({
     name: 'menu',
     initialState,
     reducers: {
-        // Add any additional reducers if needed
+        clearMenuCache: (state) => {
+            // Clear sessionStorage and reset state
+            try {
+                sessionStorage.removeItem(MENU_STORAGE_KEY);
+            } catch (error) {
+                console.error('Failed to clear menu cache:', error);
+            }
+            state.items = [];
+            state.status = 'idle';
+            state.error = null;
+        }
     },
     extraReducers: (builder) => {
         builder
             .addCase(fetchMenuItems.pending, (state) => {
                 state.status = 'loading';
+                state.error = null;
             })
             .addCase(fetchMenuItems.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.items = action.payload;
+                state.error = null;
             })
             .addCase(fetchMenuItems.rejected, (state, action) => {
                 state.status = 'failed';
-                state.error = action.error.message || 'Failed to fetch menu items';
+                state.error = action.payload as string || 'Failed to fetch menu items';
             });
     },
 });
+
+// Export actions
+export const { clearMenuCache } = menuSlice.actions;
 
 // Export selectors
 export const selectAllMenuItems = (state: RootState) => state.menu.items;
