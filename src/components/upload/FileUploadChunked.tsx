@@ -43,19 +43,28 @@ interface FileUploadChunkedProps {
 
 const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
   apiEndpoint,
-  chunkSize = 5000,
-  maxFileSize = 100 * 1024 * 1024, // 100MB
+  chunkSize = 10000, // Increased default for large files
+  maxFileSize = 3 * 1024 * 1024 * 1024, // 3GB default
   allowedFileTypes = ['csv', 'txt', 'xls', 'xlsx'],
-  delayBetweenChunks = 100,
+  delayBetweenChunks = 50, // Reduced delay for faster uploads
   maxRetries = 3,
   onUploadComplete,
   onUploadError,
 }) => {
   const { colors } = useTheme();
 
+  // Dynamic chunk size based on file size
+  const getOptimalChunkSize = (fileSize: number): number => {
+    if (fileSize < 10 * 1024 * 1024) return 5000; // < 10MB: 5k records
+    if (fileSize < 100 * 1024 * 1024) return 10000; // < 100MB: 10k records
+    if (fileSize < 500 * 1024 * 1024) return 15000; // < 500MB: 15k records
+    return 20000; // >= 500MB: 20k records for maximum throughput
+  };
+
   // State management
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
+  const [dynamicChunkSize, setDynamicChunkSize] = useState<number>(chunkSize);
   const [progress, setProgress] = useState<UploadProgress>({
     totalRecords: 0,
     processedRecords: 0,
@@ -95,8 +104,12 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       return;
     }
 
+    const metadata = getFileMetadata(file);
+    const optimalChunkSize = getOptimalChunkSize(file.size);
+
     setSelectedFile(file);
-    setFileMetadata(getFileMetadata(file));
+    setFileMetadata(metadata);
+    setDynamicChunkSize(optimalChunkSize);
     setProgress({
       totalRecords: 0,
       processedRecords: 0,
@@ -112,6 +125,11 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     setSummary(null);
     allDataRef.current = [];
     headersRef.current = [];
+
+    // Show info about optimal chunk size for large files
+    if (file.size > 100 * 1024 * 1024) {
+      toast.info(`Large file detected! Using optimized chunk size: ${optimalChunkSize.toLocaleString()} records per chunk`);
+    }
   }, [allowedFileTypes, maxFileSize]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -162,10 +180,10 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       setProgress(prev => ({
         ...prev,
         totalRecords: totalRows,
-        totalChunks: Math.ceil(totalRows / chunkSize),
+        totalChunks: Math.ceil(totalRows / dynamicChunkSize),
         status: 'idle',
       }));
-      toast.success(`Parsed ${totalRows} records successfully`);
+      toast.success(`Parsed ${totalRows.toLocaleString()} records successfully`);
       startUpload();
     };
 
@@ -175,9 +193,9 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     };
 
     if (fileType === 'csv') {
-      parserAbortRef.current = parseCSVStream(file, onData, onComplete, onError, chunkSize);
+      parserAbortRef.current = parseCSVStream(file, onData, onComplete, onError, dynamicChunkSize);
     } else {
-      parserAbortRef.current = parseTXTStream(file, onData, onComplete, onError, chunkSize);
+      parserAbortRef.current = parseTXTStream(file, onData, onComplete, onError, dynamicChunkSize);
     }
   };
 
@@ -199,7 +217,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
         setProgress(prev => ({
           ...prev,
           totalRecords: totalRows,
-          totalChunks: Math.ceil(totalRows / chunkSize),
+          totalChunks: Math.ceil(totalRows / dynamicChunkSize),
         }));
       } else if (type === 'chunk') {
         // Extract headers from first chunk
@@ -212,7 +230,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
           totalRecords: allDataRef.current.length,
         }));
       } else if (type === 'complete') {
-        toast.success(`Parsed ${totalRows} records successfully`);
+        toast.success(`Parsed ${totalRows.toLocaleString()} records successfully`);
         setProgress(prev => ({ ...prev, status: 'idle' }));
         worker.terminate();
         workerRef.current = null;
@@ -236,7 +254,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     worker.postMessage({
       type: 'parse',
       file: file,
-      chunkSize: chunkSize,
+      chunkSize: dynamicChunkSize,
     });
   };
 
@@ -254,7 +272,14 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     processedCountRef.current = 0;
 
     const currentSessionId = sessionId || generateSessionId();
-    const chunks = createChunks(allDataRef.current, chunkSize, currentSessionId);
+
+    // Create chunks from data
+    const chunks = createChunks(allDataRef.current, dynamicChunkSize, currentSessionId);
+
+    // Clear allDataRef to free up memory for large files (data is now in chunks)
+    // We keep a reference count instead
+    const totalRecordsCount = allDataRef.current.length;
+    allDataRef.current = []; // Free memory
 
     const onChunkComplete = (result: ChunkResult) => {
       // Count processed records regardless of success/failure
@@ -376,8 +401,8 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       data: fc.data,
       sessionId,
       totalChunks: progress.totalChunks,
-      startIndex: fc.chunkIndex * chunkSize,
-      endIndex: (fc.chunkIndex + 1) * chunkSize,
+      startIndex: fc.chunkIndex * dynamicChunkSize,
+      endIndex: (fc.chunkIndex + 1) * dynamicChunkSize,
     }));
 
     setProgress(prev => ({ ...prev, status: 'uploading' }));

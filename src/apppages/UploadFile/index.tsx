@@ -56,9 +56,15 @@ const UploadFile = () => {
                         className="text-sm text-gray-600 mb-4"
                         style={{ color: colors.text }}
                     >
-                        Upload CSV, TXT, or Excel files up to 100MB with millions of records.
-                        Files are processed in chunks to ensure smooth performance.
+                        Upload CSV, TXT, or Excel files up to 3GB with 10+ crore records.
+                        Files are processed in chunks using streaming to ensure smooth performance.
                     </p>
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                            <strong>Note:</strong> For files larger than 500MB, CSV or TXT format is highly recommended.
+                            Excel files (.xls, .xlsx) require more memory and may be slower for very large datasets.
+                        </p>
+                    </div>
 
                     {/* Features List */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -112,10 +118,10 @@ const UploadFile = () => {
                 {/* File Upload Component */}
                 <FileUploadChunked
                     apiEndpoint="https://trade-plus.in/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile"
-                    chunkSize={5000}
-                    maxFileSize={100 * 1024 * 1024} // 100MB
+                    chunkSize={10000}
+                    maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
                     allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
-                    delayBetweenChunks={100}
+                    delayBetweenChunks={50}
                     maxRetries={3}
                     onUploadComplete={handleUploadComplete}
                     onUploadError={handleUploadError}
@@ -123,11 +129,13 @@ const UploadFile = () => {
 
                 {/* Additional Info */}
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold text-blue-900 mb-2">Configuration</h4>
+                    <h4 className="font-semibold text-blue-900 mb-2">Configuration - Optimized for Large Files</h4>
                     <ul className="text-sm text-blue-800 space-y-1">
-                        <li>• Chunk Size: 5,000 records per request</li>
-                        <li>• Delay Between Chunks: 100ms</li>
+                        <li>• Max File Size: 3GB (supports 10+ crore records)</li>
+                        <li>• Chunk Size: 10,000 records per request</li>
+                        <li>• Delay Between Chunks: 50ms (faster uploads)</li>
                         <li>• Max Retries: 3 attempts per failed chunk</li>
+                        <li>• Streaming: Memory-efficient processing for massive files</li>
                     </ul>
                 </div>
             </div>

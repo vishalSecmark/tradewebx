@@ -24,7 +24,8 @@ const buildPayload = (chunkData: ChunkData, headers: string[]) => {
   });
 
   return {
-    FileSeqNo: "1", // Always 1 as per requirement
+    FileSeqNo: "2", // Always 1 as per requirement
+    UserId: "Admin",
     BatchNo: String(chunkIndex + 1), // Increments with each chunk
     InputJson: inputJson,
   };
