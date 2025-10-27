@@ -209,6 +209,7 @@ const AppSidebar: React.FC = () => {
       const hasSubItems = item.subItems && item.subItems.length > 0;
       const isOpen = openSubmenus[currentPath];
       const uniqueKey = `${item.name}-${item.path || ''}-${currentPath}`;
+      const isExternalUrl = item.componentType === 'URL';
 
       return (
         <li key={uniqueKey} className="relative">
@@ -249,6 +250,19 @@ const AppSidebar: React.FC = () => {
                 </ul>
               </div>
             </div>
+          ) : isExternalUrl ? (
+            <a
+              href={item.path || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`menu-dropdown-item font-bold ${fontStyles.submenuItem}`}
+              style={{
+                backgroundColor: 'transparent',
+                color: colors.text
+              }}
+            >
+              {item.name}
+            </a>
           ) : (
             <Link
               href={item.path || '#'}
@@ -273,6 +287,7 @@ const AppSidebar: React.FC = () => {
         const currentPath = `${index}`;
         const isOpen = openSubmenus[currentPath];
         const uniqueKey = `${nav.name}-${nav.path || ''}-${currentPath}`;
+        const isExternalUrl = nav.componentType === 'URL';
 
         return (
           <li key={uniqueKey} className="relative">
@@ -326,6 +341,28 @@ const AppSidebar: React.FC = () => {
                   </div>
                 )}
               </div>
+            ) : isExternalUrl && nav.path ? (
+              <a
+                href={nav.path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`menu-item group ${fontStyles.menuItem}`}
+                style={{
+                  backgroundColor: "transparent",
+                  color: colors.text,
+                }}
+              >
+                <span
+                  style={{
+                    color: colors.text,
+                  }}
+                >
+                  {iconMap[nav.icon as keyof typeof iconMap] || iconMap["default-icon"]}
+                </span>
+                {(isExpanded || isHovered || isMobileOpen) && (
+                  <span className="font-bold">{nav.name}</span>
+                )}
+              </a>
             ) : (
               nav.path && (
                 <Link
