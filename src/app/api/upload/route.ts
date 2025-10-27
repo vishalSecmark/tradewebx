@@ -1,43 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Sample API endpoint for handling chunked file uploads
- * This is a mock implementation - replace with your actual API logic
+ * API endpoint for handling chunked file uploads
+ * Proxies requests to the external API: https://trade-plus.in/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sessionId, chunkIndex, totalChunks, data, startIndex, endIndex } = body;
+    const { FileSeqNo, BatchNo, InputJson } = body;
 
     // Validate request
-    if (!sessionId || chunkIndex === undefined || !data) {
+    if (!FileSeqNo || !BatchNo || !InputJson) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: FileSeqNo, BatchNo, or InputJson' },
         { status: 400 }
       );
     }
 
     // Log chunk info (for debugging)
-    console.log(`Processing chunk ${chunkIndex + 1}/${totalChunks} (Session: ${sessionId})`);
-    console.log(`Records in chunk: ${data.length} (Index ${startIndex}-${endIndex})`);
+    console.log(`Processing chunk - FileSeqNo: ${FileSeqNo}, BatchNo: ${BatchNo}`);
+    console.log(`InputJson keys:`, Object.keys(InputJson));
 
-    // Simulate processing delay (remove in production)
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Forward request to external API
+    const apiUrl = 'https://trade-plus.in/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile';
 
-    // TODO: Replace this with your actual data processing logic
-    // Examples:
-    // - Save to database
-    // - Send to external API
-    // - Write to file
-    // - Queue for background processing
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
 
-    // Sample response
+    // Get response data
+    const responseData = await response.json();
+
+    // Check if external API request was successful
+    if (!response.ok) {
+      console.error('External API Error:', response.status, responseData);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'External API error',
+          message: responseData.message || response.statusText,
+          details: responseData,
+        },
+        { status: response.status }
+      );
+    }
+
+    // Return successful response
     return NextResponse.json({
       success: true,
       message: 'Chunk processed successfully',
-      sessionId,
-      chunkIndex,
-      recordsProcessed: data.length,
+      data: responseData,
       timestamp: new Date().toISOString(),
     });
 
@@ -45,6 +61,7 @@ export async function POST(request: NextRequest) {
     console.error('API Error:', error);
     return NextResponse.json(
       {
+        success: false,
         error: 'Internal server error',
         message: error.message
       },

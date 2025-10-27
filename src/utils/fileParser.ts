@@ -264,6 +264,11 @@ export const formatFileSize = (bytes: number): string => {
  * Format time duration
  */
 export const formatDuration = (seconds: number): string => {
+  // Handle invalid values (NaN, Infinity, negative, etc.)
+  if (!isFinite(seconds) || seconds < 0 || isNaN(seconds)) {
+    return 'Calculating...';
+  }
+
   if (seconds < 60) {
     return `${Math.round(seconds)}s`;
   }

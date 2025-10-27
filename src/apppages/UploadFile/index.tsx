@@ -111,7 +111,7 @@ const UploadFile = () => {
 
                 {/* File Upload Component */}
                 <FileUploadChunked
-                    apiEndpoint="/api/upload"
+                    apiEndpoint="https://trade-plus.in/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile"
                     chunkSize={5000}
                     maxFileSize={100 * 1024 * 1024} // 100MB
                     allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
@@ -128,7 +128,6 @@ const UploadFile = () => {
                         <li>• Chunk Size: 5,000 records per request</li>
                         <li>• Delay Between Chunks: 100ms</li>
                         <li>• Max Retries: 3 attempts per failed chunk</li>
-                        <li>• API Endpoint: /api/upload</li>
                     </ul>
                 </div>
             </div>

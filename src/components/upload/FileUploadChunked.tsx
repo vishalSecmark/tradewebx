@@ -79,6 +79,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
   const workerRef = useRef<Worker | null>(null);
   const shouldContinueRef = useRef(true);
   const allDataRef = useRef<any[]>([]);
+  const headersRef = useRef<string[]>([]);
   const startTimeRef = useRef<number>(0);
   const processedCountRef = useRef<number>(0);
 
@@ -110,6 +111,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     setFailedChunks([]);
     setSummary(null);
     allDataRef.current = [];
+    headersRef.current = [];
   }, [allowedFileTypes, maxFileSize]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -142,8 +144,13 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     setProgress(prev => ({ ...prev, status: 'parsing' }));
     setSessionId(generateSessionId());
     allDataRef.current = [];
+    headersRef.current = [];
 
     const onData = (chunk: any[], headers: string[]) => {
+      // Store headers from first chunk
+      if (headersRef.current.length === 0 && headers.length > 0) {
+        headersRef.current = headers;
+      }
       allDataRef.current.push(...chunk);
       setProgress(prev => ({
         ...prev,
@@ -179,6 +186,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     setProgress(prev => ({ ...prev, status: 'parsing' }));
     setSessionId(generateSessionId());
     allDataRef.current = [];
+    headersRef.current = [];
 
     // Create Web Worker
     const worker = new Worker('/workers/excelParser.worker.js');
@@ -194,6 +202,10 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
           totalChunks: Math.ceil(totalRows / chunkSize),
         }));
       } else if (type === 'chunk') {
+        // Extract headers from first chunk
+        if (headersRef.current.length === 0 && data.length > 0) {
+          headersRef.current = Object.keys(data[0]);
+        }
         allDataRef.current.push(...data);
         setProgress(prev => ({
           ...prev,
@@ -245,20 +257,23 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     const chunks = createChunks(allDataRef.current, chunkSize, currentSessionId);
 
     const onChunkComplete = (result: ChunkResult) => {
-      processedCountRef.current += result.recordsProcessed;
+      // Count processed records regardless of success/failure
+      const recordsInChunk = chunks[result.chunkIndex].data.length;
+      processedCountRef.current += recordsInChunk;
 
       const elapsed = (Date.now() - startTimeRef.current) / 1000;
-      const speed = processedCountRef.current / elapsed;
-      const remaining = (progress.totalRecords - processedCountRef.current) / speed;
+      const speed = elapsed > 0 ? processedCountRef.current / elapsed : 0;
+      const remainingRecords = progress.totalRecords - processedCountRef.current;
+      const remaining = speed > 0 ? remainingRecords / speed : 0;
 
       setProgress(prev => ({
         ...prev,
         processedRecords: processedCountRef.current,
         currentChunk: result.chunkIndex + 1,
-        percentage: Math.round((processedCountRef.current / prev.totalRecords) * 100),
+        percentage: prev.totalRecords > 0 ? Math.round((processedCountRef.current / prev.totalRecords) * 100) : 0,
         speed: Math.round(speed),
-        estimatedTimeRemaining: remaining,
-        failedRecords: result.success ? prev.failedRecords : prev.failedRecords + result.recordsProcessed,
+        estimatedTimeRemaining: isFinite(remaining) ? remaining : 0,
+        failedRecords: result.success ? prev.failedRecords : prev.failedRecords + recordsInChunk,
       }));
 
       if (!result.success) {
@@ -275,6 +290,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       const results = await uploadChunksSequentially(
         chunks,
         apiEndpoint,
+        headersRef.current,
         delayBetweenChunks,
         maxRetries,
         undefined,
@@ -369,6 +385,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     const results = await uploadChunksSequentially(
       chunks,
       apiEndpoint,
+      headersRef.current,
       delayBetweenChunks,
       maxRetries
     );
@@ -407,6 +424,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     setFailedChunks([]);
     setSummary(null);
     allDataRef.current = [];
+    headersRef.current = [];
   };
 
   // Cleanup on unmount

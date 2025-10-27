@@ -1,35 +1,71 @@
 import { ChunkData, ChunkResult } from '@/types/upload';
 
 /**
+ * Convert data rows to the required payload format
+ * Headers should be a comma-separated string from the first row keys
+ * Each data row should be converted to a comma-separated string value
+ */
+const buildPayload = (chunkData: ChunkData, headers: string[]) => {
+  const { chunkIndex, data } = chunkData;
+
+  // Build InputJson object
+  const inputJson: any = {
+    Header: headers.join(','),
+  };
+
+  // Convert each data row to comma-separated string
+  data.forEach((row, index) => {
+    const lineNumber = index + 1;
+    const lineValues = headers.map(header => {
+      const value = row[header];
+      return value !== undefined && value !== null ? String(value) : '';
+    });
+    inputJson[`Line${lineNumber}`] = lineValues.join(',');
+  });
+
+  return {
+    FileSeqNo: "1", // Always 1 as per requirement
+    BatchNo: String(chunkIndex + 1), // Increments with each chunk
+    InputJson: inputJson,
+  };
+};
+
+/**
  * Upload a single chunk to the API
  */
 export const uploadChunk = async (
   chunkData: ChunkData,
   apiEndpoint: string,
+  headers: string[] = [],
   onProgress?: (progress: number) => void
 ): Promise<ChunkResult> => {
   try {
+    const payload = buildPayload(chunkData, headers);
+
     const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        sessionId: chunkData.sessionId,
-        chunkIndex: chunkData.chunkIndex,
-        totalChunks: chunkData.totalChunks,
-        data: chunkData.data,
-        startIndex: chunkData.startIndex,
-        endIndex: chunkData.endIndex,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
+    // Get response data
     const result = await response.json();
 
+    // Check if response is not ok (HTTP error)
+    if (!response.ok) {
+      const errorMessage = result.data || result.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    // Check if the API returned status: false (business logic error)
+    if (result.status === false) {
+      const errorMessage = result.data || result.message || 'Unknown API error';
+      throw new Error(errorMessage);
+    }
+
+    // Success case
     return {
       chunkIndex: chunkData.chunkIndex,
       success: true,
@@ -53,6 +89,7 @@ export const uploadChunk = async (
 export const uploadChunkWithRetry = async (
   chunkData: ChunkData,
   apiEndpoint: string,
+  headers: string[] = [],
   maxRetries: number = 3,
   retryDelay: number = 1000
 ): Promise<ChunkResult> => {
@@ -60,7 +97,7 @@ export const uploadChunkWithRetry = async (
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const result = await uploadChunk(chunkData, apiEndpoint);
+      const result = await uploadChunk(chunkData, apiEndpoint, headers);
 
       if (result.success) {
         return {
@@ -101,6 +138,7 @@ export const uploadChunkWithRetry = async (
 export const uploadChunksSequentially = async (
   chunks: ChunkData[],
   apiEndpoint: string,
+  headers: string[] = [],
   delayBetweenChunks: number = 100,
   maxRetries: number = 3,
   onProgress?: (result: ChunkResult, currentIndex: number, total: number) => void,
@@ -116,7 +154,7 @@ export const uploadChunksSequentially = async (
     }
 
     const chunk = chunks[i];
-    const result = await uploadChunkWithRetry(chunk, apiEndpoint, maxRetries);
+    const result = await uploadChunkWithRetry(chunk, apiEndpoint, headers, maxRetries);
 
     results.push(result);
 
@@ -143,6 +181,7 @@ export const uploadChunksSequentially = async (
 export const uploadChunksParallel = async (
   chunks: ChunkData[],
   apiEndpoint: string,
+  headers: string[] = [],
   maxRetries: number = 3,
   concurrency: number = 5,
   onProgress?: (result: ChunkResult, completedCount: number, total: number) => void
@@ -155,7 +194,7 @@ export const uploadChunksParallel = async (
     const batch = chunks.slice(i, i + concurrency);
 
     const batchPromises = batch.map(chunk =>
-      uploadChunkWithRetry(chunk, apiEndpoint, maxRetries)
+      uploadChunkWithRetry(chunk, apiEndpoint, headers, maxRetries)
     );
 
     const batchResults = await Promise.all(batchPromises);
@@ -179,6 +218,7 @@ export const uploadChunksParallel = async (
 export const retryFailedChunks = async (
   failedChunks: ChunkData[],
   apiEndpoint: string,
+  headers: string[] = [],
   maxRetries: number = 3,
   delayBetweenChunks: number = 100,
   onProgress?: (result: ChunkResult, currentIndex: number, total: number) => void
@@ -186,6 +226,7 @@ export const retryFailedChunks = async (
   return uploadChunksSequentially(
     failedChunks,
     apiEndpoint,
+    headers,
     delayBetweenChunks,
     maxRetries,
     onProgress
