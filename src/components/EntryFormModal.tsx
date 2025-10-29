@@ -3045,7 +3045,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         )}
                                     </div>
                                         {(!isThereChildEntry && childEntriesTable?.length > 0) && (
-                                          <div className="overflow-x-auto">
+                                          <div className="overflow-x-auto" style={{width:"fit-content"}}>
                                             <DataGrid
                                               columns={[
                                                 {
@@ -3069,12 +3069,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                       />
                                                     )
 
-                                                },
-                                                {
-                                                  key: "srno",
-                                                  name: "Sr. No",
-                                                  width: columnWidthMap["Sr. No"] || 80,
-                                                  renderCell: ({ row }) => row._index + 1,
                                                 },
                                                 {
                                                   key: "actions",
@@ -3112,7 +3106,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 },
                                                 ...(childEntriesTable.length > 0
                                                   ? Object.keys(childEntriesTable[0])
-                                                      .filter((key) => key !== "SerialNo") // Exclude SerialNo
+                                                      .filter((key) => key !== "SerialNo" && key?.toLowerCase() !== "id") // Exclude SerialNo and id
                                                       .map((key) => ({
                                                         key,
                                                         name: key,
