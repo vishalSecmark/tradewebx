@@ -79,6 +79,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                 // Otherwise it's a new unsaved entry (add Id to track it)
                 const entryToAdd = {
                     ...formValues,
+                    isInserted: true,
                     Id: generateUniqueId()
                 };
                 return [...updatedEntries, entryToAdd];
@@ -1511,12 +1512,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         .join("");
                     };
                 
-                    // Use your table data as-is (preserves its IsDeleted flags)
-                    const items = childEntriesTable;
+                    // Filter out records with isInserted: true - only send records that need server deletion
+                     const itemsForServer = childEntriesTable.filter(item => 
+                         !item.isInserted 
+                     );
                 
                     const xData = createXmlTags({
                       ...masterFormValues,
-                      items: { item: items }, // Items contains key 'item' whose value is an array
+                      items: { item: itemsForServer }, // Items contains key 'item' whose value is an array
                       UserId: "ANUJ",
                     });
                 
@@ -1572,13 +1575,26 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     };
 
     const handleConfirmDelete = () => {
-        if (childFormValues && childFormValues?.Id) {
-            const filteredData = childEntriesTable.filter((item: any) => item.Id !== childFormValues?.Id);
-            setChildEntriesTable(filteredData);
-            setIsConfirmationModalOpen(false);
-        } else {
-            deleteChildRecord();
-        }
+        const recordsToDelete = childEntriesTable.filter((item: any) => item.IsDeleted);
+          
+          if (recordsToDelete.length > 0) {
+              const recordsToDeleteLocally = recordsToDelete.filter(record => record.isInserted);
+              const recordsToDeleteViaAPI = recordsToDelete.filter(record => !record.isInserted);
+        
+              // Delete local records
+              if (recordsToDeleteLocally.length > 0) {
+                  const localIdsToDelete = recordsToDeleteLocally.map(record => record.Id);
+                  const filteredData = childEntriesTable.filter((item: any) => !localIdsToDelete.includes(item.Id));
+                  setChildEntriesTable(filteredData);
+              }
+            
+              if (recordsToDeleteViaAPI.length > 0) {
+                  deleteChildRecord();
+              }
+              setIsConfirmationModalOpen(false);
+          } else {
+              deleteChildRecord();
+          }
     };
 
     const handleCancelDelete = () => {
@@ -3106,7 +3122,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 },
                                                 ...(childEntriesTable.length > 0
                                                   ? Object.keys(childEntriesTable[0])
-                                                      .filter((key) => key !== "SerialNo" && key?.toLowerCase() !== "id") // Exclude SerialNo and id
+                                                      .filter((key) => key !== "SerialNo" && key?.toLowerCase() !== "id" && key !== "IsDeleted" && key !== "isInserted") // Exclude SerialNo and id
                                                       .map((key) => ({
                                                         key,
                                                         name: key,
