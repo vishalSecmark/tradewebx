@@ -397,8 +397,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     const isDisabled = tagFlag === 'false';
 
                     if (tagFlag === 'true' || tagFlag === 'false') {
-                        setFormValues(prev => ({ ...prev, [tagName]: "" }));
-                        console.log("check value---->", isDisabled);
+                        // setFormValues(prev => ({ ...prev, [tagName]: "" }));
                         if (isDisabled) {
                             // handleBlur(field);
                             setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error for disabled fields

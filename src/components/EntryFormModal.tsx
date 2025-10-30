@@ -2759,22 +2759,35 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                     fieldErrors={fieldErrors}
                                                                                     setFieldErrors={setFieldErrors}
                                                                                     masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                                                   setFormData={(updatedFormData: FormField[]) => { 
-                                                                                      const currentTab = tabsData[activeTabIndex];
-                                                                                      const currentTabName = currentTab?.TabName;                                           
-                                                                                      setTabsData((prev: TabData[]) => {
-                                                                                        return prev.map(tab => {
-                                                                                          if (tab.TabName === currentTabName) {
-                                                                                            // Found the matching tab, update its Data array
-                                                                                            return {
-                                                                                              ...tab,
-                                                                                              Data: updatedFormData
-                                                                                            };
-                                                                                          }
-                                                                                          // Return unchanged tab for other tabs
-                                                                                          return tab;
+                                                                                    setFormData={(updatedFormData: FormField[]) => { 
+                                                                                        const currentTab = tabsData[activeTabIndex];
+                                                                                        const currentTabName = currentTab?.TabName                                                                                  ;
+
+                                                                                        setTabsData((prev: TabData[]) => {
+                                                                                            return prev.map(tab => {
+                                                                                                if (tab.TabName === currentTabName) {
+                                                                                                    const currentGroupName = updatedFormData[0]?.CombinedName?.trim() || "";
+
+
+                                                                                                    // Fields to keep from original (other groups)
+                                                                                                    const otherGroupsFields = tab.Data.filter(field => {
+                                                                                                        const fieldGroupName = field.CombinedName?.trim() || "";
+                                                                                                        return fieldGroupName !== currentGroupName;
+                                                                                                    });
+
+                                                                                                    // Combine other groups fields with the updated current group fields
+                                                                                                    const mergedData = [...otherGroupsFields, ...updatedFormData];
+                                                                                                     // Sort by SrNo to maintain original order
+                                                                                                     mergedData.sort((a, b) => (a.Srno || 0) - (b.Srno || 0));
+
+                                                                                                    return {
+                                                                                                        ...tab,
+                                                                                                        Data: mergedData
+                                                                                                    };
+                                                                                                }
+                                                                                                return tab;
+                                                                                            });
                                                                                         });
-                                                                                      });
                                                                                     }}
                                                                                     setValidationModal={setValidationModal}
                                                                                 />
@@ -2849,22 +2862,30 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         setFieldErrors={setFieldErrors}
                                                                         masterValues={masterFormValues}
                                                                         setFormData={(updatedFormData: FormField[]) => { 
-                                                                          const currentTab = tabsData[activeTabIndex];
-                                                                          const currentTabName = currentTab?.TabName;
+                                                                            const currentTab = tabsData[activeTabIndex];
+                                                                            const currentTabName = currentTab?.TabName;
 
-                                                                          setTabsData((prev: TabData[]) => {
-                                                                            return prev.map(tab => {
-                                                                              if (tab.TabName === currentTabName) {
-                                                                                // Found the matching tab, update its Data array
-                                                                                return {
-                                                                                  ...tab,
-                                                                                  Data: updatedFormData
-                                                                                };
-                                                                              }
-                                                                              // Return unchanged tab for other tabs
-                                                                              return tab;
+                                                                            setTabsData((prev: TabData[]) => {
+                                                                                return prev.map(tab => {
+                                                                                    if (tab.TabName === currentTabName) {
+                                                                                        const currentGroupName = updatedFormData[0]?.CombinedName?.trim() || "";
+                                                                                        // Fields to keep from original (other groups)
+                                                                                        const otherGroupsFields = tab.Data.filter(field => {
+                                                                                            const fieldGroupName = field.CombinedName?.trim() || "";
+                                                                                            return fieldGroupName !== currentGroupName;
+                                                                                        });
+
+                                                                                        // Combine other groups fields with the updated current group fields
+                                                                                        const mergedData = [...otherGroupsFields, ...updatedFormData];
+                                                                                        mergedData.sort((a, b) => (a.Srno || 0) - (b.Srno || 0));
+                                                                                        return {
+                                                                                            ...tab,
+                                                                                            Data: mergedData
+                                                                                        };
+                                                                                    }
+                                                                                    return tab;
+                                                                                });
                                                                             });
-                                                                          });
                                                                         }}
                                                                         setValidationModal={setValidationModal}
                                                                     />
