@@ -110,7 +110,7 @@ These properties are defined at the top level of the pageData object.
 
 Filters allow users to narrow down the data displayed in the table. They are defined in a nested array structure.
 
-### Structure
+### Complete Filter Structure
 
 ```json
 "filters": [
@@ -122,11 +122,28 @@ Filters allow users to narrow down the data displayed in the table. They are def
       "label": "string",
       "required": boolean,
       "placeholder": "string",
-      "options": []
+      "options": [],
+      "isMultiple": boolean,
+      "wQuery": {},
+      "wDropDownKey": {},
+      "dependsOn": {},
+      "Srno": number
     }
   ]
 ]
 ```
+
+### Common Filter Properties
+
+All filter types support these common properties:
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `type` | string | Yes | Filter type (WTextBox, WDateRangeBox, WDropDownBox, WDateBox, WNumberBox, WCheckBox) |
+| `wKey` | string \| array | Yes | Field identifier sent to API. Array for WDateRangeBox [fromKey, toKey] |
+| `label` | string | Yes | Display label shown to users |
+| `wValue` | string \| array | No | Default/pre-filled value |
+| `Srno` | number | No | Sort order for field display (lower numbers appear first) |
 
 ### Filter Types
 
@@ -170,40 +187,144 @@ Single-line text input field.
 - `placeholder`: Input placeholder text
 - `required`: Whether field is mandatory
 
-#### 3. WDropdown
-Dropdown select field.
+#### 3. WDropDownBox (also known as WDropdown)
+Dropdown/select field with single or multiple selection support.
 
+**Basic Example (Static Options):**
 ```json
 {
-  "type": "WDropdown",
+  "type": "WDropDownBox",
   "wKey": "Status",
-  "wValue": "",
+  "wValue": "A",
   "label": "Status",
+  "isMultiple": false,
   "options": [
     {"label": "Active", "value": "A"},
-    {"label": "Inactive", "value": "I"}
+    {"label": "Inactive", "value": "I"},
+    {"label": "Suspended", "value": "S"}
   ],
-  "optionSource": "api"
+  "Srno": 3
+}
+```
+
+**Advanced Example (Dynamic Options from API):**
+```json
+{
+  "type": "WDropDownBox",
+  "wKey": "BranchCode",
+  "wValue": "",
+  "label": "Branch",
+  "isMultiple": false,
+  "wQuery": {
+    "J_Ui": {
+      "ActionName": "BranchMaster",
+      "Option": "SELECT"
+    },
+    "Sql": "usp_GetBranches",
+    "X_Filter": "",
+    "J_Api": {
+      "UserType": "admin"
+    }
+  },
+  "wDropDownKey": {
+    "key": "BranchName",
+    "value": "BranchCode"
+  },
+  "Srno": 4
+}
+```
+
+**Multi-Select Example:**
+```json
+{
+  "type": "WDropDownBox",
+  "wKey": "SelectedBranches",
+  "wValue": "",
+  "label": "Select Branches",
+  "isMultiple": true,
+  "options": [
+    {"label": "Mumbai", "value": "MUM"},
+    {"label": "Delhi", "value": "DEL"},
+    {"label": "Bangalore", "value": "BLR"}
+  ],
+  "Srno": 5
+}
+```
+
+**Dependent Dropdown Example:**
+```json
+{
+  "type": "WDropDownBox",
+  "wKey": "City",
+  "wValue": "",
+  "label": "City",
+  "dependsOn": {
+    "field": "State",
+    "wQuery": {
+      "J_Ui": {
+        "ActionName": "CityMaster",
+        "Option": "SELECT"
+      },
+      "Sql": "usp_GetCitiesByState",
+      "X_Filter": "<State>{{State}}</State>",
+      "J_Api": {}
+    }
+  },
+  "wDropDownKey": {
+    "key": "CityName",
+    "value": "CityCode"
+  },
+  "Srno": 6
 }
 ```
 
 **Properties:**
 - `wKey`: Field name sent to API
-- `wValue`: Default selected value
+- `wValue`: Default selected value (can be comma-separated for multi-select)
 - `label`: Display label
-- `options`: Array of {label, value} objects
-- `optionSource`: `"api"` to fetch options from backend, `"static"` for hardcoded options
+- `isMultiple`: (boolean) Enable multiple selection - when `true`:
+  - Users can select multiple options
+  - Selected values are sent as comma-separated string
+  - Displays as multi-select dropdown with checkboxes
+  - Default: `false`
+- `options`: Array of {label, value} objects for static options
+- `wQuery`: API configuration object for dynamic options:
+  - `J_Ui`: UI configuration (ActionName, Option)
+  - `Sql`: Stored procedure name
+  - `X_Filter`: Filter XML template
+  - `X_Filter_Multiple`: (optional) Multiple filter template for dependent fields
+  - `J_Api`: Additional API parameters
+- `wDropDownKey`: Custom field mapping for API response:
+  - `key`: Field name to display as label (default: "DisplayName")
+  - `value`: Field name to use as value (default: "Value")
+- `dependsOn`: Dependency configuration (see Dependent Fields section below)
 
-#### 4. WDatePicker
+**Option Format:**
+```json
+{
+  "label": "Display Text",     // Shown to user
+  "value": "sent_value",        // Sent to API
+  "Value": "alternative_value"  // Alternative value field (optional)
+}
+```
+
+**Caching Behavior:**
+- Dynamic dropdown options are cached for 5 minutes
+- Cache key includes: wKey, wQuery, and parent values (for dependent dropdowns)
+- Max 50 cache entries, automatic cleanup of expired entries
+- Reduces redundant API calls significantly
+
+#### 4. WDateBox (also known as WDatePicker)
 Single date picker.
 
 ```json
 {
-  "type": "WDatePicker",
+  "type": "WDateBox",
   "wKey": "TransactionDate",
   "wValue": "20241031",
   "label": "Transaction Date",
-  "required": true
+  "required": true,
+  "Srno": 7
 }
 ```
 
@@ -212,6 +333,7 @@ Single date picker.
 - `wValue`: Default date in YYYYMMDD format
 - `label`: Display label
 - `required`: Whether field is mandatory
+- `Srno`: Sort order
 
 #### 5. WNumberBox
 Numeric input field.
@@ -224,7 +346,8 @@ Numeric input field.
   "label": "Amount",
   "min": 0,
   "max": 999999,
-  "required": false
+  "required": false,
+  "Srno": 8
 }
 ```
 
@@ -235,6 +358,119 @@ Numeric input field.
 - `min`: Minimum allowed value
 - `max`: Maximum allowed value
 - `required`: Whether field is mandatory
+- `Srno`: Sort order
+
+#### 6. WCheckBox
+Checkbox input field.
+
+```json
+{
+  "type": "WCheckBox",
+  "wKey": "IsActive",
+  "wValue": "true",
+  "label": "Show Active Records Only",
+  "Srno": 9
+}
+```
+
+**Properties:**
+- `wKey`: Field name sent to API
+- `wValue`: Default checked state ("true"/"false" or boolean)
+- `label`: Display label
+- `Srno`: Sort order
+
+**Behavior:**
+- When checked, sends `"true"` or `"1"` to API
+- When unchecked, sends `"false"` or `"0"` to API
+- Can be used for boolean filter conditions
+
+### Dependent Fields (Cascading Dropdowns)
+
+Dependent fields allow you to create cascading relationships between filters where one field's options depend on another field's selected value.
+
+**Structure:**
+```json
+{
+  "type": "WDropDownBox",
+  "wKey": "ChildField",
+  "label": "Child Field",
+  "dependsOn": {
+    "field": "ParentField",
+    "wQuery": {
+      "J_Ui": {
+        "ActionName": "ChildMaster",
+        "Option": "SELECT"
+      },
+      "Sql": "usp_GetChildOptions",
+      "X_Filter": "<ParentField>{{ParentField}}</ParentField>",
+      "X_Filter_Multiple": "<Field1>{{Field1}}</Field1><Field2>{{Field2}}</Field2>",
+      "J_Api": {}
+    }
+  },
+  "wDropDownKey": {
+    "key": "DisplayName",
+    "value": "Value"
+  }
+}
+```
+
+**dependsOn Properties:**
+- `field`: (string | array) Parent field name(s) that this field depends on
+  - Single parent: `"field": "State"`
+  - Multiple parents: `"field": ["Country", "State"]`
+- `wQuery`: API configuration to fetch dependent options
+  - `X_Filter`: Use `{{FieldName}}` placeholders that get replaced with parent values
+  - `X_Filter_Multiple`: For multiple parent dependencies
+
+**Behavior:**
+1. Child field is hidden until parent has a value
+2. When parent changes, child field:
+   - Clears its current value
+   - Makes API call with parent value(s)
+   - Populates with new options
+3. Supports multi-level dependencies (A → B → C)
+4. Cached independently per parent value combination
+
+**Multi-Level Dependency Example:**
+```json
+"filters": [
+  [
+    {
+      "type": "WDropDownBox",
+      "wKey": "Country",
+      "label": "Country",
+      "options": [
+        {"label": "India", "value": "IN"},
+        {"label": "USA", "value": "US"}
+      ]
+    },
+    {
+      "type": "WDropDownBox",
+      "wKey": "State",
+      "label": "State",
+      "dependsOn": {
+        "field": "Country",
+        "wQuery": {
+          "Sql": "usp_GetStates",
+          "X_Filter": "<Country>{{Country}}</Country>"
+        }
+      }
+    },
+    {
+      "type": "WDropDownBox",
+      "wKey": "City",
+      "label": "City",
+      "dependsOn": {
+        "field": ["Country", "State"],
+        "wQuery": {
+          "Sql": "usp_GetCities",
+          "X_Filter_Multiple": "<Country>{{Country}}</Country><State>{{State}}</State>"
+        }
+      }
+    }
+  ]
+]
+```
 
 ### Filter Grouping
 
@@ -243,16 +479,27 @@ Filters in the same inner array are displayed in the same row:
 ```json
 "filters": [
   [
-    // Row 1
+    // Row 1 - These filters appear side-by-side
     {"type": "WTextBox", "wKey": "ClientCode", "label": "Client Code"},
     {"type": "WTextBox", "wKey": "ClientName", "label": "Client Name"}
   ],
   [
-    // Row 2
+    // Row 2 - This filter appears on a new row
     {"type": "WDateRangeBox", "wKey": ["FromDate", "ToDate"], "label": "Date Range"}
+  ],
+  [
+    // Row 3 - These three filters appear together
+    {"type": "WDropDownBox", "wKey": "Status", "label": "Status", "options": []},
+    {"type": "WDropDownBox", "wKey": "Branch", "label": "Branch", "options": []},
+    {"type": "WCheckBox", "wKey": "ShowInactive", "label": "Show Inactive"}
   ]
 ]
 ```
+
+**Responsive Behavior:**
+- Desktop: All filters in a row displayed horizontally
+- Tablet: May wrap to multiple rows based on screen width
+- Mobile: Each filter takes full width (stacked vertically)
 
 ---
 
@@ -445,7 +692,7 @@ Defines column summaries displayed at the bottom of tables.
 
 ## Entry Form Configuration
 
-Defines forms for adding/editing records.
+Defines forms for adding/editing records. Entry forms support additional field types and properties beyond basic filters.
 
 ### Structure
 
@@ -463,6 +710,208 @@ Defines forms for adding/editing records.
   }
 }
 ```
+
+### Entry Form Field Types
+
+Entry forms support all filter types PLUS these additional types:
+
+#### WDateTimePicker
+Date and time picker combined.
+
+```json
+{
+  "type": "WDateTimePicker",
+  "wKey": "AppointmentDateTime",
+  "label": "Appointment Date & Time",
+  "FieldEnabledTag": "Y",
+  "isMandatory": "true",
+  "Srno": 1
+}
+```
+
+#### WDisplayBox
+Read-only display field (non-editable).
+
+```json
+{
+  "type": "WDisplayBox",
+  "wKey": "ClientCode",
+  "label": "Client Code",
+  "wValue": "CLI001",
+  "FieldEnabledTag": "N",
+  "Srno": 2
+}
+```
+
+#### WFile
+File upload field with optional image crop capability.
+
+```json
+{
+  "type": "WFile",
+  "wKey": "ProfilePhoto",
+  "label": "Profile Photo",
+  "FieldEnabledTag": "Y",
+  "isMandatory": "false",
+  "FieldSize": "5",
+  "Srno": 3
+}
+```
+
+**Properties:**
+- `FieldSize`: Max file size in MB
+- Supports image cropping for photo uploads
+- Uploads are converted to base64 for transmission
+
+### Complete Entry Form Field Properties
+
+Entry form fields use a more comprehensive property set:
+
+```json
+{
+  "Srno": 1,
+  "type": "WTextBox",
+  "label": "Client Name",
+  "wKey": "ClientName",
+  "wValue": "",
+  "FieldSize": "100",
+  "FieldType": "VARCHAR",
+  "FieldEnabledTag": "Y",
+  "FieldVisibleTag": "Y",
+  "isMandatory": "true",
+  "FieldWidth": "200",
+  "isBR": "false",
+  "CombinedName": "PersonalInfo",
+  "iscreatable": "false",
+  "fieldJustUpdated": "false",
+  "isChangeColumn": "false",
+  "childDependents": ["City", "Pincode"],
+  "ValidationAPI": {
+    "J_Ui": {"ActionName": "ValidateClient"},
+    "Sql": "usp_ValidateClientName",
+    "X_Filter": "<ClientName>{{ClientName}}</ClientName>"
+  },
+  "wQuery": {},
+  "wDropDownKey": {},
+  "dependsOn": {}
+}
+```
+
+### Entry Form Specific Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Srno` | number | Display order (required) |
+| `FieldSize` | string | Maximum length/size for the field |
+| `FieldType` | string | Database field type (VARCHAR, INT, DECIMAL, DATE, etc.) |
+| `FieldEnabledTag` | string | "Y" = enabled, "N" = disabled/read-only |
+| `FieldVisibleTag` | string | "Y" = visible, "N" = hidden |
+| `isMandatory` | string | "true" = required, "false" = optional |
+| `FieldWidth` | string | Width in pixels (e.g., "200", "300") |
+| `isBR` | string | "true" = insert line break after this field |
+| `CombinedName` | string | Group name for field grouping/collapsing |
+| `iscreatable` | string | "true" = allow creating new dropdown options |
+| `fieldJustUpdated` | string | "true" if field was just updated (internal) |
+| `isChangeColumn` | string | "true" if field tracks changes |
+| `childDependents` | array | List of child field keys that depend on this field |
+| `ValidationAPI` | object | Server-side validation configuration |
+
+### ValidationAPI Configuration
+
+Entry forms support real-time server-side validation:
+
+```json
+"ValidationAPI": {
+  "J_Ui": {
+    "ActionName": "ValidateField",
+    "Option": "VALIDATE"
+  },
+  "Sql": "usp_ValidateFieldValue",
+  "X_Filter": "<FieldName>{{FieldValue}}</FieldName>",
+  "J_Api": {
+    "UserId": "{{userId}}"
+  }
+}
+```
+
+**Validation Response Flags:**
+- `M` - Modal confirmation required (shows confirm dialog)
+- `S` - Success message (shows success notification)
+- `E` - Error message (shows error, prevents submission)
+- `D` - Dynamic disable (disables dependent fields)
+
+**Expected API Response:**
+```json
+{
+  "rs0": [
+    {
+      "Flag": "E",
+      "Message": "Client name already exists"
+    }
+  ]
+}
+```
+
+### Field Grouping (CombinedName)
+
+Fields with the same `CombinedName` are visually grouped together:
+
+```json
+"formFields": [
+  [
+    {
+      "type": "WTextBox",
+      "wKey": "FirstName",
+      "label": "First Name",
+      "CombinedName": "PersonalInfo"
+    },
+    {
+      "type": "WTextBox",
+      "wKey": "LastName",
+      "label": "Last Name",
+      "CombinedName": "PersonalInfo"
+    }
+  ],
+  [
+    {
+      "type": "WTextBox",
+      "wKey": "CompanyName",
+      "label": "Company Name",
+      "CombinedName": "BusinessInfo"
+    },
+    {
+      "type": "WTextBox",
+      "wKey": "GST",
+      "label": "GST Number",
+      "CombinedName": "BusinessInfo"
+    }
+  ]
+]
+```
+
+Groups are rendered with collapsible sections and visual separators.
+
+### Creatable Dropdowns
+
+When `iscreatable: "true"`, users can add new options to dropdowns:
+
+```json
+{
+  "type": "WDropDownBox",
+  "wKey": "Category",
+  "label": "Category",
+  "iscreatable": "true",
+  "wQuery": {
+    "Sql": "usp_GetCategories"
+  }
+}
+```
+
+**Behavior:**
+- Shows "+ Create New" option
+- Opens inline input for new value
+- New value is added to the dropdown
+- Sent to backend for permanent storage on form submit
 
 ### Entry Properties
 
@@ -1116,6 +1565,110 @@ The component will display an error modal with the message.
 
 ---
 
+## Quick Reference: All Properties by Component
+
+### Filter/Form Field Properties Matrix
+
+| Property | WTextBox | WDropDownBox | WDateBox | WDateRangeBox | WNumberBox | WCheckBox | WFile | WDisplayBox | WDateTimePicker |
+|----------|----------|--------------|----------|---------------|------------|-----------|-------|-------------|-----------------|
+| `type` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `wKey` | ✓ | ✓ | ✓ | ✓ (array) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `label` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `wValue` | ✓ | ✓ | ✓ | ✓ (array) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `Srno` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `placeholder` | ✓ | - | - | - | ✓ | - | - | - | - |
+| `required` | ✓ | ✓ | ✓ | ✓ | ✓ | - | - | - | - |
+| `maxLength` | ✓ | - | - | - | - | - | - | - | - |
+| `min` | - | - | - | - | ✓ | - | - | - | - |
+| `max` | - | - | - | - | ✓ | - | - | - | - |
+| `isMultiple` | - | ✓ | - | - | - | - | - | - | - |
+| `options` | - | ✓ | - | - | - | - | - | - | - |
+| `wQuery` | - | ✓ | - | - | - | - | - | - | - |
+| `wDropDownKey` | - | ✓ | - | - | - | - | - | - | - |
+| `dependsOn` | - | ✓ | - | - | - | - | - | - | - |
+| `FieldSize` | Entry | Entry | Entry | Entry | Entry | Entry | ✓ | Entry | Entry |
+| `FieldType` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+| `FieldEnabledTag` | Entry | Entry | Entry | Entry | Entry | Entry | ✓ | ✓ | ✓ |
+| `FieldVisibleTag` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+| `isMandatory` | Entry | Entry | Entry | Entry | Entry | Entry | ✓ | Entry | ✓ |
+| `FieldWidth` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+| `isBR` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+| `CombinedName` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+| `iscreatable` | - | Entry | - | - | - | - | - | - | - |
+| `ValidationAPI` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+| `childDependents` | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry | Entry |
+
+**Legend:**
+- ✓ = Supported in filters and entry forms
+- Entry = Only supported in entry forms
+- \- = Not applicable
+
+### Field Type Quick Reference
+
+| Type | Display Name | Use Case | Filter | Entry Form |
+|------|-------------|----------|--------|------------|
+| `WTextBox` | Text Input | Single-line text | ✓ | ✓ |
+| `WDropDownBox` | Dropdown | Select from options | ✓ | ✓ |
+| `WDateBox` | Date Picker | Single date | ✓ | ✓ |
+| `WDateRangeBox` | Date Range | From-To dates | ✓ | - |
+| `WNumberBox` | Number Input | Numeric values | ✓ | ✓ |
+| `WCheckBox` | Checkbox | Boolean toggle | ✓ | ✓ |
+| `WDateTimePicker` | DateTime Picker | Date with time | - | ✓ |
+| `WFile` | File Upload | Document/image upload | - | ✓ |
+| `WDisplayBox` | Display Only | Read-only text | - | ✓ |
+
+### wQuery Configuration Reference
+
+```typescript
+{
+  "J_Ui": {
+    "ActionName": string,      // Page/action identifier
+    "Option": string           // Operation (SELECT, INSERT, etc.)
+  },
+  "Sql": string,               // Stored procedure name
+  "X_Filter": string,          // Filter XML template with {{placeholders}}
+  "X_Filter_Multiple": string, // Optional: Multiple filter template
+  "J_Api": {                   // Additional API parameters
+    "UserId": string,
+    "UserType": string,
+    // ... custom parameters
+  }
+}
+```
+
+### dependsOn Configuration Reference
+
+```typescript
+{
+  "field": string | string[],  // Parent field(s)
+  "wQuery": {
+    // Same structure as wQuery above
+    // Use {{FieldName}} in X_Filter to reference parent values
+  }
+}
+```
+
+### ValidationAPI Configuration Reference
+
+```typescript
+{
+  "J_Ui": {...},
+  "Sql": string,
+  "X_Filter": string,          // Use {{FieldName}} for field value
+  "J_Api": {...}
+}
+
+// Expected Response:
+{
+  "rs0": [{
+    "Flag": "M" | "S" | "E" | "D",
+    "Message": string
+  }]
+}
+```
+
+---
+
 ## Version History
 
 - **v1.0** - Initial configuration structure
@@ -1124,6 +1677,7 @@ The component will display an error modal with the message.
 - **v1.3** - Added validation framework and error handling
 - **v1.4** - Added caching mechanism for improved performance
 - **v1.5** - Added multi-level navigation support
+- **v1.6** - Comprehensive documentation update with all field types and properties
 
 ---
 
