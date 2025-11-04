@@ -1571,7 +1571,7 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
       }
   
       // After loop: zip all PDFs together
-      if (collectedPdfs.length > 0) {
+      if (collectedPdfs?.length > 0) {
         const zipBlob = await zip.generateAsync({ type: "blob" });
         const zipBase64 = await blobToBase64(zipBlob);
   
@@ -1582,15 +1582,15 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
         // 🧩 Now send this ZIP (Base64) via existing function
         sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, emailSendingCaptionTxt, userId, userType);
   
-        toast.success(`ZIP with ${collectedPdfs.length} PDF(s) sent successfully.`);
+        toast.success(`ZIP with ${collectedPdfs?.length} PDF(s) sent successfully.`);
       } else {
         toast.error("No PDFs were generated to send.");
       }
   
       // Handle failures (deselect failed ones)
-      if (failedRows.length > 0) {
+      if (failedRows?.length > 0) {
         setSelectedRows(prev => prev.filter(r => !failedRows.includes(r._id)));
-        toast.warn(`${failedRows.length} row(s) failed and were deselected.`);
+        toast.warn(`${failedRows?.length} row(s) failed and were deselected.`);
       }
   
     } catch (error) {
@@ -1669,21 +1669,23 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
             }
         }
 
-        if (collectedExcels.length > 0) {
+        // Array.isArray
+        if (collectedExcels?.length > 0) {
             const zipBlob = await zip.generateAsync({ type: "blob" });
             const zipBase64 = await blobToBase64(zipBlob);
             const zipFileName = `${zipFolderName}.zip`;
 
             sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, emailSendingCaptionTxt, userId, userType);
 
-            toast.success(`ZIP with ${collectedExcels.length} Excel file(s) sent successfully.`);
+            toast.success(`ZIP with ${collectedExcels?.length} Excel file(s) sent successfully.`);
         } else {
             toast.error("No Excel files were generated to send.");
         }
 
-        if (failedRows.length > 0) {
+        // if (failedRows.length > 0) {
+        if (Array.isArray(failedRows)) {
             setSelectedRows(prev => prev.filter(r => !failedRows.includes(r._id)));
-            toast.warn(`${failedRows.length} row(s) failed and were deselected.`);
+            toast.warn(`${failedRows?.length} row(s) failed and were deselected.`);
         }
     } catch (error) {
         console.error("❌ Error during ZIP process:", error);
@@ -1709,7 +1711,7 @@ const handleLoopThroughMultiSelectKeyHandler = async () => {
 
 const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async () => {
 
-    if (!Array.isArray(selectedRows) || selectedRows.length === 0) {
+    if (!Array.isArray(selectedRows) || selectedRows?.length === 0) {
         toast.warn("Please select at least one report to proceed");
         return;  // Exit early if nothing is selected
       }
@@ -1804,7 +1806,7 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
       }
   
       // If there were failures, add a README listing them and then deselect them from selectedRows
-      if (failedRows.length > 0) {
+      if (failedRows?.length > 0) {
         const failText =
           `The following selected rows failed during export:\n\n` +
           failedRows.map(f => `Row ${f.index} (id: ${f.id}) — ${f.reason}`).join("\n");
@@ -1825,14 +1827,14 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
         console.warn("No PDFs were generated, so ZIP download is skipped.");
       }
   
-      console.log(`✅ ZIP created. PDFs: ${pdfCount}, Failures: ${failedRows.length}`);
+      console.log(`✅ ZIP created. PDFs: ${pdfCount}, Failures: ${failedRows?.length}`);
       // Display aggregate toast
-      if (pdfCount > 0 && failedRows.length === 0) {
+      if (pdfCount > 0 && failedRows?.length === 0) {
         toast.success(`ZIP created with ${pdfCount} PDF(s).`);
-      } else if (pdfCount > 0 && failedRows.length > 0) {
-        toast.warn(`ZIP created with ${pdfCount} PDF(s). ${failedRows.length} failed (see FAILED_ROWS.txt).`);
-      } else if (pdfCount === 0 && failedRows.length > 0) {
-        toast.error(`No PDFs created. ${failedRows.length} failures (see FAILED_ROWS.txt).`);
+      } else if (pdfCount > 0 && failedRows?.length > 0) {
+        toast.warn(`ZIP created with ${pdfCount} PDF(s). ${failedRows?.length} failed (see FAILED_ROWS.txt).`);
+      } else if (pdfCount === 0 && failedRows?.length > 0) {
+        toast.error(`No PDFs created. ${failedRows?.length} failures (see FAILED_ROWS.txt).`);
       } 
     } catch (error) {
       console.error("❌ Error during ZIP creation:", error);
@@ -1845,7 +1847,7 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
 
 
   const handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel = async () => {
-    if (!Array.isArray(selectedRows) || selectedRows.length === 0) {
+    if (!Array.isArray(selectedRows) || selectedRows?.length === 0) {
         toast.warn("Please select at least one report to proceed");
         return;  // Exit early if nothing selected
     }
@@ -1933,7 +1935,7 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
         }
 
         // If failures happened, add README and deselect failed rows
-        if (failedRows.length > 0) {
+        if (failedRows?.length > 0) {
             const failText =
                 `The following selected rows failed during export:\n\n` +
                 failedRows.map(f => `Row ${f.index} (id: ${f.id}) — ${f.reason}`).join("\n");
@@ -1952,14 +1954,14 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
             console.warn("No Excel files were generated, so ZIP download is skipped.");
         }
 
-        console.log(`✅ ZIP created. Excels: ${excelCount}, Failures: ${failedRows.length}`);
+        console.log(`✅ ZIP created. Excels: ${excelCount}, Failures: ${failedRows?.length}`);
 
-        if (excelCount > 0 && failedRows.length === 0) {
+        if (excelCount > 0 && failedRows?.length === 0) {
             toast.success(`ZIP created with ${excelCount} Excel file(s).`);
-        } else if (excelCount > 0 && failedRows.length > 0) {
-            toast.warn(`ZIP created with ${excelCount} Excel file(s). ${failedRows.length} failed (see FAILED_ROWS.txt).`);
-        } else if (excelCount === 0 && failedRows.length > 0) {
-            toast.error(`No Excel files created. ${failedRows.length} failures (see FAILED_ROWS.txt).`);
+        } else if (excelCount > 0 && failedRows?.length > 0) {
+            toast.warn(`ZIP created with ${excelCount} Excel file(s). ${failedRows?.length} failed (see FAILED_ROWS.txt).`);
+        } else if (excelCount === 0 && failedRows?.length > 0) {
+            toast.error(`No Excel files created. ${failedRows?.length} failures (see FAILED_ROWS.txt).`);
         }
     } catch (error) {
         console.error("❌ Error during ZIP creation:", error);
