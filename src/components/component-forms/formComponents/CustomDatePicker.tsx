@@ -52,9 +52,11 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
      className={`
           w-full pl-10 pr-3 py-1 border rounded-md relative
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          text-[14px]
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
           ${className}
         `}
+        style={{height:"30px"}}
     >
       <DatePicker
         id={id}
@@ -63,7 +65,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         onBlur={onBlur}
         onChange={onChange}
         disabled={disabled}
-        className="focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none"
+        className="focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none text-[14px]"
         placeholderText={placeholder}
         dateFormat="dd/MM/yyyy"
         showYearDropdown
@@ -78,7 +80,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
           prevMonthButtonDisabled,
           nextMonthButtonDisabled,
         }) => (
-          <div className="m-2 flex justify-center gap-2">
+          <div className="m-2 flex justify-center gap-2 text-[14px]">
             <button 
               onClick={decreaseMonth} 
               disabled={prevMonthButtonDisabled}
@@ -89,7 +91,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             <select
               value={moment(date).year()}
               onChange={({ target: { value } }) => changeYear(Number(value))}
-              className="px-1 py-0.5 rounded border border-gray-300"
+              className="px-1 py-0.5 rounded border border-gray-300 text-[14px]"
             >
               {years.map((option) => (
                 <option key={option} value={option}>
@@ -103,7 +105,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               onChange={({ target: { value } }) =>
                 changeMonth(months.indexOf(value))
               }
-              className="px-1 py-0.5 rounded border border-gray-300"
+              className="px-1 py-0.5 rounded border border-gray-300 text-[14px]"
             >
               {months.map((option) => (
                 <option key={option} value={option}>
@@ -123,7 +125,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         )}
       />
       <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-        <FiCalendar className="h-5 w-5" />
+        <FiCalendar className="h-4 w-4" />
       </div>
     </div>
   );

@@ -149,6 +149,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 };
 
 const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
+    colors,
     isOpen,
     onClose,
     masterValues,
@@ -237,7 +238,7 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                                             <div
                                                 key={idx}
                                                 style={{
-                                                    border: group.groupName ? "1px solid #ccc" : "none",
+                                                    border: group.groupName ? `1px solid ${colors.textInputBorder}` : "none",
                                                     borderRadius: "6px",
                                                     padding: group.groupName ? "12px" : "0",
                                                     marginBottom: "16px",
@@ -248,9 +249,10 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                                                         style={{
                                                             marginBottom: "10px",
                                                             fontWeight: "bold",
-                                                            background: "#f7f7f7",
+                                                            background: `${colors.background}`,
                                                             padding: "6px 10px",
                                                             borderRadius: "4px",
+                                                            fontSize:"14px"
                                                         }}
                                                     >
                                                         {group.groupName}
@@ -2507,13 +2509,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                 {/* Other Tabs Navigation and Content - Only show if there are non-Master tabs */}
                                 {tabsData.length > 0 && (
-                                    <div className="border-t pt-6">
-                                        <div className="mb-6 relative">
+                                    <div className="border-t pt-6 relative">
+                                        <div className="mb-6" style={{position: 'sticky', top: '0', zIndex: 100}}>
                                             <div className="overflow-x-auto" style={{ 
                                                 msOverflowStyle: 'none', 
                                                 scrollbarWidth: 'none',
                                                 borderBottom: `1px solid ${colors.textInputBorder}`,
-                                                backgroundColor: colors.background
+                                                backgroundColor: colors.background,
                                             }}>
                                                 <nav className="-mb-px flex items-center min-w-max px-4 gap-1">
                                                     {tabsData.map((tab, index) => {
@@ -2527,7 +2529,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         handleTabChangeViewMode();
                                                                     }
                                                                 }}
-                                                                className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
+                                                                className={`py-2 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
                                                                     isActive 
                                                                     ? 'text-opacity-100' 
                                                                     : 'text-opacity-70 hover:text-opacity-100'
@@ -2710,7 +2712,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                             <div
                                                                                 key={idx}
                                                                                 style={{
-                                                                                    border: group.groupName ? "1px solid #ccc" : "none",
+                                                                                    border: group.groupName ? `1px solid ${colors.textInputBorder}` : "none",
                                                                                     borderRadius: "6px",
                                                                                     padding: group.groupName ? "12px" : "0",
                                                                                     marginBottom: "16px",
@@ -2721,9 +2723,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                         style={{
                                                                                             marginBottom: "10px",
                                                                                             fontWeight: "bold",
-                                                                                            background: "#f7f7f7",
+                                                                                            background: `${colors.background}`,
                                                                                             padding: "6px 10px",
                                                                                             borderRadius: "4px",
+                                                                                            fontSize:"14px"
                                                                                         }}
                                                                                     >
                                                                                         {group.groupName}
@@ -2812,7 +2815,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 <div
                                                                     key={idx}
                                                                     style={{
-                                                                        border: group.groupName ? "1px solid #ccc" : "none",
+                                                                        border: group.groupName ? `1px solid ${colors.textInputBorder}` : "none",
                                                                         borderRadius: "6px",
                                                                         padding: group.groupName ? "12px" : "0",
                                                                         marginBottom: "16px",
@@ -2823,9 +2826,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                             style={{
                                                                                 marginBottom: "10px",
                                                                                 fontWeight: "bold",
-                                                                                background: "#f7f7f7",
+                                                                                background: `${colors.background}`,
                                                                                 padding: "6px 10px",
                                                                                 borderRadius: "4px",
+                                                                                fontSize:"14px"
                                                                             }}
                                                                         >
                                                                             {group.groupName}
@@ -3082,7 +3086,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         )}
                                     </div>
                                         {(!isThereChildEntry && childEntriesTable?.length > 0) && (
-                                          <div className="overflow-x-auto" style={{width:"fit-content"}}>
+                                         <div className="flex flex-col h-[calc(75vh-270px)]">
+                                            <div className="overflow-x-auto overflow-y-auto flex-1">
                                             <DataGrid
                                               columns={[
                                                 {
@@ -3178,8 +3183,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                               style={{
                                                 backgroundColor: "white",
                                                 fontFamily: "inherit",
+                                                width:"fit-content",
+                                                height:"100%"
                                               }}
                                             />
+                                            </div>
                                           </div>
                                         )}
                                 </div>
@@ -3265,6 +3273,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     setFieldErrors={setFieldErrors}
                     onChildFormSubmit={handleGuardianFormSubmit}
                     isEdit={editTabModalData}
+                    colors={colors}
                 />
             )}
         </>

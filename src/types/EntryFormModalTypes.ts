@@ -150,6 +150,7 @@ export interface GroupedFormData {
 }
 
 export interface GuardianEntryModalProps {
+ colors: any;  
  isOpen: boolean;
     onClose: () => void;
     masterValues?: Record<string, any>;
