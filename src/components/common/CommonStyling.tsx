@@ -1,3 +1,5 @@
+import { FormField } from "@/types";
+
 export const getDropdownStyles = (colors: any, isDisabled: boolean, fieldErrors: Record<string, string>, field: FormField, isJustUpdated: boolean = false, fieldWidth?: string) => ({
   control: (base: any, state: any) => ({
     ...base,
