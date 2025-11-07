@@ -12,11 +12,17 @@ import CustomDropdown from './form/CustomDropdown';
 import apiService from '@/utils/apiService';
 
 import { getLocalStorage } from '@/utils/helper';
+import AsyncSearchDropdown from './form/AsyncSearchDropdown';
 
 export interface FormElement {
     type: string;
     label: string;
     wKey: string | string[];
+    dynamicSearch?: {
+    isDynamic: boolean,
+    minSearchLength: number,
+    debounceMs: number
+    }
     options?: Array<{ label: string; value: string, Value: string }>;
     wQuery?: {
         J_Ui: any;
@@ -312,7 +318,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     newValues[dependentItem.wKey as string] = undefined;
 
                     // Also clear dropdown options for dependent fields to ensure they're hidden
-                    if (dependentItem.type === 'WDropDownBox') {
+                    if (dependentItem.type === 'WDropDownBox' || dependentItem.type === "WSearchDropDownBox") {
                         setDropdownOptions(prev => ({
                             ...prev,
                             [dependentItem.wKey as string]: []
@@ -395,8 +401,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
             // Check cache first
             const cachedOptions = getCachedOptions(cacheKey);
-            if (cachedOptions) {
-                console.log('Using cached dropdown options for:', item.wKey);
+            if (cachedOptions && item.type === "WDropDownBox") {
                 setDropdownOptions(prev => ({
                     ...prev,
                     [item.wKey as string]: cachedOptions
@@ -409,7 +414,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 [item.wKey as string]: true
             }));
 
-            console.log('Fetching fresh dropdown options for:', item.wKey);
             let jUi, jApi;
 
             if (typeof item.wQuery?.J_Ui === 'object') {
@@ -437,8 +441,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 <J_Api>${jApi},"UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
-            // console.log('Dropdown request XML:', xmlData);
-
             const response = await apiService.postWithAuth(
                 BASE_URL + PATH_URL,
                 xmlData,
@@ -453,7 +455,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 }));
                 return [];
             }
-
+           
             const keyField = item.wDropDownKey?.key || 'DisplayName';
             const valueField = item.wDropDownKey?.value || 'Value';
 
@@ -488,14 +490,15 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         }
     };
 
-    const fetchDependentOptions = async (item: FormElement, parentValue: string | Record<string, any>) => {
+    const fetchDependentOptions = async (item: FormElement, parentValue: string | Record<string, any>, searchQuery?: string) => {
         try {
             if (!item.dependsOn) return [];
 
             if (
-                (typeof parentValue === 'string' && !parentValue) ||
-                (typeof parentValue === 'object' && Object.values(parentValue).some(val => !val))
-            ) {
+                  !item.dynamicSearch?.isDynamic && 
+                  ((typeof parentValue === 'string' && !parentValue) ||
+                   (typeof parentValue === 'object' && Object.values(parentValue).some(val => !val)))
+                ){
                 console.error(`Parent value for ${item.wKey} is empty or undefined`, parentValue);
 
                 // Clear dropdown options when parent value is invalid
@@ -517,8 +520,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
             // Check cache first
             const cachedOptions = getCachedOptions(cacheKey);
-            if (cachedOptions) {
-                console.log('Using cached dependent options for:', item.wKey);
+            if (cachedOptions && item.type === "WDropDownBox") {
                 setDropdownOptions(prev => ({
                     ...prev,
                     [item.wKey as string]: cachedOptions
@@ -530,10 +532,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 ...prev,
                 [item.wKey as string]: true
             }));
-
-            console.log('Fetching fresh dependent options for:', item.wKey);
-
-            // console.log(`Fetching dependent options for ${item.wKey} based on:`, parentValue);
 
             let jUi, jApi;
 
@@ -584,6 +582,11 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         }
                         xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, formattedValue);
                     });
+
+                    if (searchQuery !== undefined) {
+                        xmlFilterContent = xmlFilterContent.replace(/\$\{SearchQuery\}/g, searchQuery || '');
+                    }
+
                 } else {
                     xmlFilterContent = item.dependsOn.wQuery.X_Filter || '';
                     item.dependsOn.field.forEach(field => {
@@ -661,13 +664,19 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
                 console.error('Unexpected data format:', response.data);
+                if(item.type === "WSearchDropDownBox"){
+                    setDropdownOptions(prev => ({
+                      ...prev,
+                      [item.wKey as string]: []
+                    }));
+                }
                 setLoadingDropdowns(prev => ({
                     ...prev,
                     [item.wKey as string]: false
                 }));
                 return [];
             }
-
+    
             const keyField = item.wDropDownKey?.key || 'DisplayName';
             const valueField = item.wDropDownKey?.value || 'Value';
 
@@ -675,6 +684,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 label: dataItem[keyField],
                 value: dataItem[valueField]
             }));
+            
+
 
             console.log(`Got ${options.length} dependent options for ${item.wKey}:`, options);
 
@@ -887,6 +898,24 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         );
     };
 
+    const renderSearchDropDownBox = (item: FormElement) => {
+        if (item.dynamicSearch?.isDynamic) {
+          return (
+            <AsyncSearchDropdown
+              item={item}
+              value={formValues[item.wKey as string]}
+              onChange={(val) => handleInputChange(item.wKey as string, val)}
+              colors={colors}
+              formData={sortedFormData}
+              formValues={formValues}
+              handleFormChange={handleFormChange}
+              fetchDependentOptions={fetchDependentOptions}
+              isHorizontal={isHorizontal}
+            />
+          );
+        }
+    };
+
     const renderCheckBox = (item: FormElement) => {
         return (
             <div className={`${isHorizontal ? "mb-2" : "mb-4"} flex items-center`}>
@@ -908,7 +937,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderFormElement = (item: FormElement) => {
         // Check if this is a dependent dropdown with no options or unfulfilled dependencies
-        if (item.type === 'WDropDownBox' && item.dependsOn) {
+        if ((item.type === 'WDropDownBox' || item.type === "WSearchDropDownBox") && item.dependsOn) {
             // Check if all dependencies are fulfilled
             const dependenciesFulfilled = Array.isArray(item.dependsOn.field)
                 ? item.dependsOn.field.every(field =>
@@ -933,7 +962,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 : dropdownOptions[item.wKey as string] || [];
 
             // Hide dependent dropdown if it has no options available
-            if (options.length === 0) {
+            if (options.length === 0 && item.type === 'WDropDownBox') {
                 return null;
             }
         }
@@ -947,6 +976,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return renderDateBox(item);
             case 'WDropDownBox':
                 return renderDropDownBox(item);
+            case 'WSearchDropDownBox':
+                return renderSearchDropDownBox(item);
             case 'WCheckBox':
                 return renderCheckBox(item);
             default:
