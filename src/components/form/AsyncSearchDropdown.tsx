@@ -88,18 +88,18 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
   useEffect(() => {
     setOptions([]);
     if (value) {
-      const newValues = { ...formValues, [item.wKey as string]: undefined };
-      handleFormChange(newValues);
-      onChange(undefined);
+      // const newValues = { ...formValues, [item.wKey as string]: undefined };
+      // handleFormChange(newValues);
+      // onChange(undefined);
     }
-    loadOptions(""); // ✅ Load default options when dependency changes
+    loadOptions(""); 
   }, [JSON.stringify(dependencyValues)]);
 
   /**
    * 🚀 Initial fetch on mount
    */
   useEffect(() => {
-    loadOptions(""); // ✅ Load initial options
+    loadOptions("")
   }, []);
 
   /**
@@ -158,7 +158,7 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
         value={selectedOption || null}
         options={options}
         isLoading={isLoading}
-        placeholder="Search..."
+        placeholder={value || "Search..."}
         noOptionsMessage={() =>
           isLoading ? "Loading..." : "No results found"
         }
