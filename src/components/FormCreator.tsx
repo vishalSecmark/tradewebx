@@ -394,101 +394,122 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         handleFormChange(newValues);
     };
 
-    const fetchDropdownOptions = async (item: FormElement) => {
-        try {
+  const fetchDropdownOptions = async (
+    item: FormElement,
+    searchQuery?: string
+    ) => {
+          try {
             // Generate cache key
             const cacheKey = generateCacheKey(item);
-
+        
             // Check cache first
             const cachedOptions = getCachedOptions(cacheKey);
             if (cachedOptions && item.type === "WDropDownBox") {
-                setDropdownOptions(prev => ({
-                    ...prev,
-                    [item.wKey as string]: cachedOptions
-                }));
-                return cachedOptions;
-            }
-
-            setLoadingDropdowns(prev => ({
+              setDropdownOptions(prev => ({
                 ...prev,
-                [item.wKey as string]: true
+                [item.wKey as string]: cachedOptions
+              }));
+              return cachedOptions;
+            }
+        
+            setLoadingDropdowns(prev => ({
+              ...prev,
+              [item.wKey as string]: true
             }));
-
+        
             let jUi, jApi;
-
-            if (typeof item.wQuery?.J_Ui === 'object') {
-                const uiObj = item.wQuery.J_Ui;
-                jUi = Object.keys(uiObj)
-                    .map(key => `"${key}":"${uiObj[key]}"`)
-                    .join(',');
+        
+            // Handle J_Ui
+            if (typeof item.wQuery?.J_Ui === "object") {
+              const uiObj = item.wQuery.J_Ui;
+              jUi = Object.keys(uiObj)
+                .map(key => `"${key}":"${uiObj[key]}"`)
+                .join(",");
             } else {
-                jUi = item.wQuery?.J_Ui;
+              jUi = item.wQuery?.J_Ui;
             }
-
-            if (typeof item.wQuery?.J_Api === 'object') {
-                const apiObj = item.wQuery.J_Api;
-                jApi = Object.keys(apiObj)
-                    .map(key => `"${key}":"${apiObj[key]}"`)
-                    .join(',');
+        
+            // Handle J_Api
+            if (typeof item.wQuery?.J_Api === "object") {
+              const apiObj = item.wQuery.J_Api;
+              jApi = Object.keys(apiObj)
+                .map(key => `"${key}":"${apiObj[key]}"`)
+                .join(",");
             } else {
-                jApi = item.wQuery?.J_Api;
+              jApi = item.wQuery?.J_Api;
             }
-
+        
+            // Build XML filter content based on searchQuery
+            let xmlFilterContent = item.wQuery?.X_Filter || "";
+        
+            // Add SearchQuery logic
+            let xmlFilterMultiple = "";
+            if (item.dynamicSearch?.isDynamic && searchQuery && searchQuery.trim() !== "") {
+              // Include X_Filter_Multiple with SearchQuery tag
+              xmlFilterMultiple = `<X_Filter_Multiple><SearchQuery>${searchQuery}</SearchQuery></X_Filter_Multiple>`;
+            }
+        
+            // Final XML to send
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
-                <Sql>${item.wQuery?.Sql || ''}</Sql>
-                <X_Filter>${item.wQuery?.X_Filter || ''}</X_Filter>
-                <J_Api>${jApi},"UserType":"${getLocalStorage('userType')}"</J_Api>
+                <Sql>${item.wQuery?.Sql || ""}</Sql>
+                ${
+                  xmlFilterMultiple
+                    ? `${xmlFilterMultiple}<X_Filter></X_Filter>`
+                    : `<X_Filter>${xmlFilterContent}</X_Filter>`
+                }
+                <J_Api>${jApi},"UserType":"${getLocalStorage("userType")}"</J_Api>
             </dsXml>`;
-
+            
+            // Make API call
             const response = await apiService.postWithAuth(
-                BASE_URL + PATH_URL,
-                xmlData,
+              BASE_URL + PATH_URL,
+              xmlData
             );
-
+        
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
-                console.error('Unexpected data format:', response.data);
-                setLoadingDropdowns(prev => ({
-                    ...prev,
-                    [item.wKey as string]: false
-                }));
-                return [];
+              console.error("Unexpected data format:", response.data);
+              setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: false
+              }));
+              return [];
             }
-           
-            const keyField = item.wDropDownKey?.key || 'DisplayName';
-            const valueField = item.wDropDownKey?.value || 'Value';
-
+        
+            const keyField = item.wDropDownKey?.key || "DisplayName";
+            const valueField = item.wDropDownKey?.value || "Value";
+        
             const options = rs0Data.map(dataItem => ({
-                label: dataItem[keyField],
-                value: dataItem[valueField]
+              label: dataItem[keyField],
+              value: dataItem[valueField]
             }));
-
+        
             console.log(`Fetched ${options.length} options for ${item.wKey}:`, options);
-
+        
             // Cache the options
             setCachedOptions(cacheKey, options);
-
+        
             setDropdownOptions(prev => ({
-                ...prev,
-                [item.wKey as string]: options
+              ...prev,
+              [item.wKey as string]: options
             }));
-
+        
             setLoadingDropdowns(prev => ({
-                ...prev,
-                [item.wKey as string]: false
+              ...prev,
+              [item.wKey as string]: false
             }));
-
+        
             return options;
-        } catch (error) {
-            console.error('Error fetching dropdown options:', error);
+          } catch (error) {
+            console.error("Error fetching dropdown options:", error);
             setLoadingDropdowns(prev => ({
-                ...prev,
-                [item.wKey as string]: false
+              ...prev,
+              [item.wKey as string]: false
             }));
             return [];
-        }
-    };
+          }
+        };
 
     const fetchDependentOptions = async (item: FormElement, parentValue: string | Record<string, any>, searchQuery?: string) => {
         try {
@@ -899,7 +920,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     const renderSearchDropDownBox = (item: FormElement) => {
-        if (item.dynamicSearch?.isDynamic) {
+        if (item.dynamicSearch?.isDynamic && !item?.wQuery) {
           return (
             <AsyncSearchDropdown
               item={item}
@@ -913,6 +934,21 @@ const FormCreator: React.FC<FormCreatorProps> = ({
               isHorizontal={isHorizontal}
             />
           );
+        }else{
+            return(
+                <AsyncSearchDropdown
+                   item={item}
+                   value={formValues[item.wKey as string]}
+                   onChange={(val) => handleInputChange(item.wKey as string, val)}
+                   colors={colors}
+                   formData={sortedFormData}
+                   formValues={formValues}
+                   handleFormChange={handleFormChange}
+                   fetchDependentOptions={(item,parentValue,searchValue)=>{
+                     return fetchDropdownOptions(item,searchValue);
+                 }}
+                   isHorizontal={isHorizontal}
+                 /> )
         }
     };
 
