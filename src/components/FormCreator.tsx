@@ -606,6 +606,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
                     if (searchQuery !== undefined) {
                         xmlFilterContent = xmlFilterContent.replace(/\$\{SearchQuery\}/g, searchQuery || '');
+                    }else{
+                        xmlFilterContent = xmlFilterContent.replace(/\$\{SearchQuery\}/g, '');
                     }
 
                 } else {

@@ -31,13 +31,15 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
   fetchDependentOptions,
   isHorizontal = false,
 }) => {
+
+  console.log("check the selected value",value)
   const [options, setOptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const minSearchLength = item.dynamicSearch?.minSearchLength || 3;
   const debounceMs = item.dynamicSearch?.debounceMs || 400;
 
-  // Get dependency values (if any)
+  // ✅ Compute dependency values
   const dependencyValues = (() => {
     if (!item.dependsOn) return {};
     if (Array.isArray(item.dependsOn.field)) {
@@ -51,60 +53,74 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
   })();
 
   /**
-   * 🔄 When dependency values change, clear options and selection
+   * ✅ Fetch options (used for initial + search fetch)
+   */
+  const loadOptions = useCallback(
+    async (searchQuery: string = "") => {
+      // Skip if dependency not satisfied
+      if (
+        item.dependsOn &&
+        ((typeof dependencyValues === "string" && !dependencyValues) ||
+          (typeof dependencyValues === "object" &&
+            Object.values(dependencyValues).some((val) => !val)))
+      ) {
+        setOptions([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const opts = await fetchDependentOptions(item, dependencyValues, searchQuery);
+        setOptions(Array.isArray(opts) ? opts : []);
+      } catch (err) {
+        console.error("Error fetching options:", err);
+        setOptions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [item, dependencyValues, fetchDependentOptions]
+  );
+
+  /**
+   * 🔄 Reload options when dependency changes
    */
   useEffect(() => {
-    // If any parent field changed, reset dropdown completely
     setOptions([]);
     if (value) {
       const newValues = { ...formValues, [item.wKey as string]: undefined };
       handleFormChange(newValues);
       onChange(undefined);
     }
+    loadOptions(""); // ✅ Load default options when dependency changes
   }, [JSON.stringify(dependencyValues)]);
 
   /**
-   * 🔍 Debounced async search handler
+   * 🚀 Initial fetch on mount
+   */
+  useEffect(() => {
+    loadOptions(""); // ✅ Load initial options
+  }, []);
+
+  /**
+   * 🔍 Debounced search handler (only fires when query length >= minSearchLength)
    */
   const handleSearch = useCallback(
     debounce(async (query: string) => {
-      if (query.length < minSearchLength) {
-        setOptions([]);
-        if (value) {
-          // clear selection if user deletes search text
-          const newValues = { ...formValues, [item.wKey as string]: undefined };
-          handleFormChange(newValues);
-          onChange(undefined);
-        }
+      const trimmed = query.trim();
+      if (!trimmed) {
+        // ✅ empty string → show default options
+        await loadOptions("");
         return;
       }
 
-      setIsLoading(true);
-      setOptions([]); // clear old options before new fetch
-
-      const opts = await fetchDependentOptions(item, dependencyValues, query);
-
-      if (!opts || opts.length === 0) {
-        // ✅ clear value if backend returned empty
-        const newValues = { ...formValues, [item.wKey as string]: undefined };
-        handleFormChange(newValues);
-        onChange(undefined);
+      if (trimmed.length >= minSearchLength) {
+        // ✅ only fetch if meets minimum length
+        await loadOptions(trimmed);
       }
-
-      setOptions([...opts]); // always new reference
-      setIsLoading(false);
+      // else → do nothing (don’t fetch)
     }, debounceMs),
-    [
-      item,
-      value,
-      dependencyValues,
-      debounceMs,
-      minSearchLength,
-      handleFormChange,
-      onChange,
-      formValues,
-      fetchDependentOptions,
-    ]
+    [loadOptions, minSearchLength, debounceMs]
   );
 
   /**
