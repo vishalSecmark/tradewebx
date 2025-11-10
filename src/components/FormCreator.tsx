@@ -440,7 +440,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             }
         
             // Build XML filter content based on searchQuery
-            let xmlFilterContent = item.wQuery?.X_Filter || "";
+            const xmlFilterContent = item.wQuery?.X_Filter || "";
         
             // Add SearchQuery logic
             let xmlFilterMultiple = "";
