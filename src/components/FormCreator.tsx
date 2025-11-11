@@ -18,6 +18,11 @@ export interface FormElement {
     type: string;
     label: string;
     wKey: string | string[];
+    FromMinDate?: string;
+    FromMaxDate?: string;
+    ToMinDate?: string;
+    ToMaxDate?: string;
+    placeholder?: string;
     dynamicSearch?: {
     isDynamic: boolean,
     minSearchLength: number,
@@ -772,81 +777,108 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         });
     }, [sortedFormData, formValues]);
 
-    const renderDateRangeBox = (item: FormElement) => {
-        const [fromKey, toKey] = item.wKey as string[];
+        const renderDateRangeBox = (item: FormElement) => {
+          const [fromKey, toKey] = item.wKey as string[];
+        
+          // Extract backend date limits (if any)
+          const fromMin = item.FromMinDate ? moment(item.FromMinDate, "YYYYMMDD").toDate() : undefined;
+          const fromMax = item.FromMaxDate ? moment(item.FromMaxDate, "YYYYMMDD").toDate() : undefined;
+          const toMin = item.ToMinDate ? moment(item.ToMinDate, "YYYYMMDD").toDate() : undefined;
+          const toMax = item.ToMaxDate ? moment(item.ToMaxDate, "YYYYMMDD").toDate() : undefined;
 
-        return (
+          console.log("check dates",fromMin,fromMax,toMin,toMax)
+        
+          return (
             <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
-                    {item.label}
-                </label>
-                <div className="flex gap-4">
-                    <div className="flex-1">
-                        <DatePicker
-                            selected={formValues[fromKey]}
-                            onChange={(date: Date) => handleInputChange(fromKey, date)}
-                            dateFormat="dd/MM/yyyy"
-                            className={`w-full px-3 py-2 border rounded-md bg-white`}
-                            wrapperClassName={`w-full`}
-                            placeholderText="From Date"
-                            showYearDropdown
-                            showMonthDropdown
-                            yearDropdownItemNumber={50}
-                            scrollableYearDropdown
-                            dropdownMode="select"
-                        />
-                    </div>
-                    <div className="flex-1">
-                        <DatePicker
-                            selected={formValues[toKey]}
-                            onChange={(date: Date) => handleInputChange(toKey, date)}
-                            dateFormat="dd/MM/yyyy"
-                            className="w-full px-3 py-2 border rounded-md bg-white"
-                            wrapperClassName={`w-full`}
-                            placeholderText="To Date"
-                            showYearDropdown
-                            showMonthDropdown
-                            yearDropdownItemNumber={50}
-                            scrollableYearDropdown
-                            dropdownMode="select"
-                        />
-                    </div>
-                    <div className="relative">
-                        <button
-                            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                            onClick={() => setShowDatePresets(prev => ({
-                                ...prev,
-                                [fromKey]: !prev[fromKey]
-                            }))}
-                        >
-                            <FaCalendarAlt />
-                        </button>
-                        {showDatePresets[fromKey] && (
-                            <div
-                                className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                                style={{ backgroundColor: colors.textInputBackground }}
-                            >
-                                <div className="py-1" role="menu" aria-orientation="vertical">
-                                    {contextMenuItems.map((item) => (
-                                        <button
-                                            key={item.id}
-                                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-100"
-                                            style={{
-                                                color: colors.textInputText
-                                            }}
-                                            onClick={() => handlePresetSelection(item.id, fromKey, toKey)}
-                                        >
-                                            {item.text}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+              <label
+                className={`block text-sm mb-1 ${isHorizontal ? "font-bold" : "font-medium"}`}
+                style={{ color: colors.text }}
+              >
+                {item.label}
+              </label>
+        
+              <div className="flex gap-4">
+                {/* From Date */}
+                <div className="flex-1">
+                  <DatePicker
+                    selected={formValues[fromKey]}
+                    onChange={(date: Date) => handleInputChange(fromKey, date)}
+                    dateFormat="dd/MM/yyyy"
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    wrapperClassName="w-full"
+                    placeholderText="From Date"
+                    showYearDropdown
+                    showMonthDropdown
+                    yearDropdownItemNumber={50}
+                    scrollableYearDropdown
+                    dropdownMode="select"
+                    // Apply backend limits (if any)
+                    minDate={fromMin}
+                    maxDate={fromMax}
+                  />
                 </div>
+        
+                {/* To Date */}
+                <div className="flex-1">
+                  <DatePicker
+                    selected={formValues[toKey]}
+                    onChange={(date: Date) => handleInputChange(toKey, date)}
+                    dateFormat="dd/MM/yyyy"
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    wrapperClassName="w-full"
+                    placeholderText="To Date"
+                    showYearDropdown
+                    showMonthDropdown
+                    yearDropdownItemNumber={50}
+                    scrollableYearDropdown
+                    dropdownMode="select"
+                    // Apply backend limits (if any)
+                    minDate={toMin}
+                    maxDate={toMax}
+                  />
+                </div>
+        
+                {/* Preset Button (unchanged) */}
+                <div className="relative">
+                  <button
+                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                    onClick={() =>
+                      setShowDatePresets((prev) => ({
+                        ...prev,
+                        [fromKey]: !prev[fromKey],
+                      }))
+                    }
+                  >
+                    <FaCalendarAlt />
+                  </button>
+                
+                  {showDatePresets[fromKey] && (
+                    <div
+                      className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                      style={{ backgroundColor: colors.textInputBackground }}
+                    >
+                      <div className="py-1" role="menu" aria-orientation="vertical">
+                        {contextMenuItems.map((menuItem) => (
+                          <button
+                            key={menuItem.id}
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-100"
+                            style={{
+                              color: colors.textInputText,
+                            }}
+                            onClick={() => handlePresetSelection(menuItem.id, fromKey, toKey)}
+                          >
+                            {menuItem.text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-        );
-    };
+          );
+        };
+
 
     const renderTextBox = (item: FormElement) => {
         return (
@@ -871,29 +903,38 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     const renderDateBox = (item: FormElement) => {
-        return (
-            <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
-                    {item.label}
-                </label>
-                <DatePicker
-                    selected={formValues[item.wKey as string]}
-                    onChange={(date: Date) => {
-                        handleInputChange(item.wKey as string, date);
-                    }}
-                    dateFormat="dd/MM/yyyy"
-                    className={`w-full px-3 py-2 border rounded-md bg-white`}
-                    wrapperClassName={`w-full`}
-                    placeholderText="Select Date"
-                    showYearDropdown
-                    showMonthDropdown
-                    yearDropdownItemNumber={50}
-                    scrollableYearDropdown
-                    dropdownMode="select"
-                />
-            </div>
-        );
+      // Extract backend values (if present)
+      const fromMin = item.FromMinDate ? moment(item.FromMinDate, "YYYYMMDD").toDate() : undefined;
+      const fromMax = item.FromMaxDate ? moment(item.FromMaxDate, "YYYYMMDD").toDate() : undefined;
+        
+      return (
+        <div className={isHorizontal ? "mb-2" : "mb-4"}>
+          <label
+            className={`block text-sm mb-1 ${isHorizontal ? "font-bold" : "font-medium"}`}
+            style={{ color: colors.text }}
+          >
+            {item.label}
+          </label>
+    
+          <DatePicker
+            selected={formValues[item.wKey as string]}
+            onChange={(date: Date) => handleInputChange(item.wKey as string, date)}
+            dateFormat="dd/MM/yyyy"
+            className="w-full px-3 py-2 border rounded-md bg-white"
+            wrapperClassName="w-full"
+            placeholderText="Select Date"
+            showYearDropdown
+            showMonthDropdown
+            yearDropdownItemNumber={50}
+            scrollableYearDropdown
+            dropdownMode="select"
+            minDate={fromMin}
+            maxDate={fromMax}
+          />
+        </div>
+      );
     };
+
 
     const renderDropDownBox = (item: FormElement) => {
         const options = item.options
