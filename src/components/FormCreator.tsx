@@ -155,55 +155,98 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         ];
     };
 
-    const handlePresetSelection = (itemId: string, fromKey: string, toKey: string) => {
-        let date1: moment.Moment | null = null;
-        let date2: moment.Moment | null = null;
+      const handlePresetSelection = (
+      presetId: string,
+      fromKey: string,
+      toKey: string,
+      item: FormElement
+    ) => {
+          const today = moment();
 
-        switch (itemId) {
+          // Backend limits (optional)
+          const fromMin = item?.FromMinDate ? moment(item.FromMinDate, "YYYYMMDD") : null;
+          const fromMax = item?.FromMaxDate ? moment(item.FromMaxDate, "YYYYMMDD") : null;
+          const toMin = item?.ToMinDate ? moment(item.ToMinDate, "YYYYMMDD") : null;
+          const toMax = item?.ToMaxDate ? moment(item.ToMaxDate, "YYYYMMDD") : null;
+
+          let startDate: moment.Moment;
+          let endDate: moment.Moment;
+
+          // --- Define Preset Logic ---
+          switch (presetId) {
             case "today":
-                date1 = moment().startOf("day");
-                date2 = moment().endOf("day");
-                break;
+              startDate = today.clone().startOf("day");
+              endDate = today.clone().endOf("day");
+              break;
             case "yesterday":
-                date1 = moment().subtract(1, "day").startOf("day");
-                date2 = moment().subtract(1, "day").endOf("day");
-                break;
+              startDate = today.clone().subtract(1, "day").startOf("day");
+              endDate = today.clone().subtract(1, "day").endOf("day");
+              break;
             case "last7days":
-                date1 = moment().subtract(6, "days").startOf("day");
-                date2 = moment().endOf("day");
-                break;
+              startDate = today.clone().subtract(6, "days").startOf("day");
+              endDate = today.clone().endOf("day");
+              break;
             case "last30days":
-                date1 = moment().subtract(29, "days").startOf("day");
-                date2 = moment().endOf("day");
-                break;
+              startDate = today.clone().subtract(29, "days").startOf("day");
+              endDate = today.clone().endOf("day");
+              break;
             case "thismonth":
-                date1 = moment().startOf("month");
-                date2 = moment().endOf("month");
-                break;
+              startDate = today.clone().startOf("month");
+              endDate = today.clone().endOf("month");
+              break;
             case "lastmonth":
-                date1 = moment().subtract(1, "month").startOf("month");
-                date2 = moment().subtract(1, "month").endOf("month");
-                break;
+              startDate = today.clone().subtract(1, "month").startOf("month");
+              endDate = today.clone().subtract(1, "month").endOf("month");
+              break;
             case "thisfinancialyear":
-                [date1, date2] = getFinancialYear(moment());
-                break;
+              {
+                const fyStart =
+                  today.month() >= 3
+                    ? moment([today.year(), 3, 1])
+                    : moment([today.year() - 1, 3, 1]);
+                startDate = fyStart.clone();
+                endDate = fyStart.clone().add(1, "year").subtract(1, "day");
+              }
+              break;
             case "lastfinancialyear":
-                [date1, date2] = getFinancialYear(moment().subtract(1, "year"));
-                break;
-        }
-
-        if (date1 && date2) {
-            const newValues = { ...formValues };
-            newValues[fromKey] = date1.toDate();
-            newValues[toKey] = date2.toDate();
-            handleFormChange(newValues);
-        }
-
-        setShowDatePresets(prev => ({
+              {
+                const lastFyStart =
+                  today.month() >= 3
+                    ? moment([today.year() - 1, 3, 1])
+                    : moment([today.year() - 2, 3, 1]);
+                startDate = lastFyStart.clone();
+                endDate = lastFyStart.clone().add(1, "year").subtract(1, "day");
+              }
+              break;
+            default:
+              return;
+          }
+      
+          // -- Clamp Dates According to Backend Limits ---
+          if (fromMin && startDate.isBefore(fromMin)) startDate = fromMin.clone();
+          if (fromMax && startDate.isAfter(fromMax)) startDate = fromMax.clone();
+          if (toMin && endDate.isBefore(toMin)) endDate = toMin.clone();
+          if (toMax && endDate.isAfter(toMax)) endDate = toMax.clone();
+      
+          // --- Ensure FromDate ≤ ToDate ---
+          if (startDate.isAfter(endDate)) {
+            const fallback = toMin || fromMax || today;
+            startDate = fallback.clone();
+            endDate = fallback.clone();
+          }
+      
+          // ---  Update Form Values ---
+          const newValues = { ...formValues };
+          newValues[fromKey] = startDate.toDate();
+          newValues[toKey] = endDate.toDate();
+          handleFormChange(newValues);
+      
+          // --- Close Preset Menu ---
+          setShowDatePresets((prev) => ({
             ...prev,
-            [fromKey]: false
-        }));
-    };
+            [fromKey]: false,
+          }));
+        };
 
     useEffect(() => {
         setFormValues(initialValues);
@@ -865,7 +908,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                             style={{
                               color: colors.textInputText,
                             }}
-                            onClick={() => handlePresetSelection(menuItem.id, fromKey, toKey)}
+                            onClick={() => handlePresetSelection(menuItem.id, fromKey, toKey, item)}
                           >
                             {menuItem.text}
                           </button>
