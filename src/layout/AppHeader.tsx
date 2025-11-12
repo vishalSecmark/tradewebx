@@ -14,7 +14,7 @@ const AppHeader: React.FC = () => {
   const { theme, setTheme, availableThemes, colors, fonts } = useTheme();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const { companyLogo, companyName, companyInfo } = useAppSelector((state) => state.common);
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const handleToggle = () => {
     if (window.innerWidth >= 991) {
       toggleSidebar();
@@ -66,9 +66,13 @@ const AppHeader: React.FC = () => {
 
         >
           <button
+            type="button"
             className="items-center justify-center w-10 h-10 rounded-lg z-99999 lg:flex lg:h-11 lg:w-11 lg:border"
             onClick={handleToggle}
-            aria-label="Toggle Sidebar"
+            aria-label="Toggle sidebar navigation"
+            aria-controls="app-sidebar"
+            aria-expanded={isMobileOpen || isExpanded}
+            aria-pressed={isMobileOpen || isExpanded}
             style={{
               color: colors.text,
               borderColor: colors.color3,
@@ -204,6 +208,7 @@ const AppHeader: React.FC = () => {
             </div> */}
             <div className="relative">
               <select
+                id="theme-select"
                 value={theme}
                 onChange={(e) => setTheme(e.target.value as ThemeType)}
                 className="h-11 w-40 appearance-none rounded-lg border px-4 pr-10 text-sm transition-colors focus:outline-none focus:ring-2"
@@ -212,6 +217,7 @@ const AppHeader: React.FC = () => {
                   borderColor: colors.textInputBorder,
                   color: colors.textInputText,
                 }}
+                aria-label="Change theme"
               >
                 {availableThemes.map((themeName) => (
                   <option key={themeName} value={themeName}>

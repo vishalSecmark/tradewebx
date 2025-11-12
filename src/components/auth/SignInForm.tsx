@@ -34,7 +34,7 @@ const EyeCloseIcon = () => (
     />
   </svg>
 );
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useId } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
@@ -786,6 +786,10 @@ export default function SignInForm() {
     }
   }, [searchParams]);
 
+  const usernameFieldId = useId();
+  const passwordFieldId = useId();
+  const errorAlertId = useId();
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto ">
@@ -820,7 +824,12 @@ export default function SignInForm() {
           </div>
 
           {error && (
-            <div className="mb-5 p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg flex items-center">
+            <div
+              id={errorAlertId}
+              className="mb-5 p-4 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg flex items-center"
+              role="alert"
+              aria-live="assertive"
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
@@ -830,34 +839,41 @@ export default function SignInForm() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <Label className="text-gray-700 dark:text-gray-300 font-medium">Username</Label>
+              <Label htmlFor={usernameFieldId} className="text-gray-700 dark:text-gray-300 font-medium">Username</Label>
               <Input
+                id={usernameFieldId}
+                name="username"
                 type="text"
+                autoComplete="username"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 placeholder="Enter your username"
                 className="mt-1 transition-all duration-200 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
-                {...{} as any}
               />
             </div>
 
             <div>
-              <Label className="text-gray-700 dark:text-gray-300 font-medium">Password</Label>
+              <Label htmlFor={passwordFieldId} className="text-gray-700 dark:text-gray-300 font-medium">Password</Label>
               <div className="relative mt-1">
                 <Input
+                  id={passwordFieldId}
+                  name="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   className="transition-all duration-200 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900"
-                  {...{} as any}
                 />
-                <span
+                <button
+                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="absolute z-30 -translate-y-1/2 right-4 top-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
                 >
                   {showPassword ? <EyeIcon /> : <EyeCloseIcon />}
-                </span>
+                </button>
               </div>
             </div>
 

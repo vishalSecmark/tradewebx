@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useId } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -86,6 +86,10 @@ const AppSidebar: React.FC = () => {
   const menuStatus = useAppSelector(selectMenuStatus);
   const menuError = useAppSelector(selectMenuError);
   const { companyLogo, companyName, companyInfo } = useAppSelector((state) => state.common);
+  const navigationId = useId();
+  const menuHeadingId = useId();
+  const shouldShowLabels = isExpanded || isHovered || isMobileOpen;
+  const navigationLabel = companyName ? `${companyName} primary navigation` : "Primary navigation";
 
   // State for managing open submenus
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({});
@@ -210,30 +214,38 @@ const AppSidebar: React.FC = () => {
       const isOpen = openSubmenus[currentPath];
       const uniqueKey = `${item.name}-${item.path || ''}-${currentPath}`;
       const isExternalUrl = item.componentType === 'URL';
+      const submenuId = `submenu-${currentPath}`;
 
       return (
         <li key={uniqueKey} className="relative">
           {hasSubItems ? (
             <div className="w-full">
               <button
+                type="button"
                 onClick={() => handleSubmenuToggle(currentPath)}
                 className={`menu-dropdown-item font-bold ${fontStyles.submenuItem} w-full text-left`}
                 style={{
                   backgroundColor: isActive(item.path || '') ? colors.primary : 'transparent',
                   color: isActive(item.path || '') ? colors.buttonText : colors.text
                 }}
+                aria-expanded={!!isOpen}
+                aria-controls={submenuId}
               >
-                <span className="font-bold">{item.name}</span>
-                <span
-                  className={`ml-auto w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                  style={{
-                    color: isActive(item.path || '') ? colors.buttonText : colors.text,
-                  }}
-                >
-                  {iconMap['chevron-down']}
-                </span>
+                <span className={`font-bold ${shouldShowLabels ? "" : "sr-only"}`}>{item.name}</span>
+                {shouldShowLabels && (
+                  <span
+                    className={`ml-auto w-4 h-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    style={{
+                      color: isActive(item.path || '') ? colors.buttonText : colors.text,
+                    }}
+                    aria-hidden="true"
+                  >
+                    {iconMap['chevron-down']}
+                  </span>
+                )}
               </button>
               <div
+                id={submenuId}
                 ref={(el) => {
                   if (el) {
                     subMenuRefs.current[currentPath] = el;
@@ -244,8 +256,9 @@ const AppSidebar: React.FC = () => {
                   display: isOpen ? 'block' : 'none',
                   paddingLeft: '1rem'
                 }}
+                aria-hidden={!isOpen}
               >
-                <ul className="mt-2 space-y-1 font-bold">
+                <ul className="mt-2 space-y-1 font-bold" role="list">
                   {renderNestedMenu(item.subItems, currentPath)}
                 </ul>
               </div>
@@ -261,7 +274,8 @@ const AppSidebar: React.FC = () => {
                 color: colors.text
               }}
             >
-              {item.name}
+              <span>{item.name}</span>
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
           ) : (
             <Link
@@ -271,6 +285,7 @@ const AppSidebar: React.FC = () => {
                 backgroundColor: isActive(item.path || '') ? colors.primary : 'transparent',
                 color: isActive(item.path || '') ? colors.buttonText : colors.text
               }}
+              aria-current={isActive(item.path || '') ? 'page' : undefined}
             >
               {item.name}
             </Link>
@@ -282,48 +297,55 @@ const AppSidebar: React.FC = () => {
 
   // Render main menu items
   const renderMenuItems = (navItemsFromApi: NavItem[]) => (
-    <ul className="flex flex-col gap-4 font-bold">
+    <ul className="flex flex-col gap-4 font-bold" role="list">
       {navItemsFromApi.map((nav, index) => {
         const currentPath = `${index}`;
         const isOpen = openSubmenus[currentPath];
         const uniqueKey = `${nav.name}-${nav.path || ''}-${currentPath}`;
         const isExternalUrl = nav.componentType === 'URL';
+        const submenuId = `submenu-${currentPath}`;
+        const sanitizedId = uniqueKey.replace(/[^a-zA-Z0-9_-]/g, '');
+        const accessibleId = sanitizedId || `nav-link-${currentPath}`;
 
         return (
           <li key={uniqueKey} className="relative">
             {nav.subItems ? (
               <div className="w-full">
                 <button
+                  type="button"
                   onClick={() => handleSubmenuToggle(currentPath)}
                   className={`menu-item group cursor-pointer ${fontStyles.menuItem} ${!isExpanded && !isHovered ? "lg:justify-center" : "lg:justify-start"}`}
                   style={{
                     backgroundColor: isOpen ? colors.primary : "transparent",
                     color: isOpen ? colors.buttonText : colors.text,
                   }}
+                  aria-expanded={!!isOpen}
+                  aria-controls={submenuId}
                 >
                   <span
+                    aria-hidden="true"
                     style={{
                       color: isOpen ? colors.buttonText : colors.text,
                     }}
                   >
                     {iconMap[nav.icon as keyof typeof iconMap] || iconMap["default-icon"]}
                   </span>
-                  {(isExpanded || isHovered || isMobileOpen) && (
-                    <span className="font-bold">{nav.name}</span>
-                  )}
-                  {(isExpanded || isHovered || isMobileOpen) && (
+                  <span className={`font-bold ${shouldShowLabels ? "" : "sr-only"}`}>{nav.name}</span>
+                  {shouldShowLabels && (
                     <span
                       className={`ml-auto w-5 h-5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                       style={{
                         color: isOpen ? colors.buttonText : colors.text,
                       }}
+                      aria-hidden="true"
                     >
                       {iconMap['chevron-down']}
                     </span>
                   )}
                 </button>
-                {(isExpanded || isHovered || isMobileOpen) && (
+                {shouldShowLabels && (
                   <div
+                    id={submenuId}
                     ref={(el) => {
                       if (el) {
                         subMenuRefs.current[currentPath] = el;
@@ -334,8 +356,9 @@ const AppSidebar: React.FC = () => {
                       display: isOpen ? 'block' : 'none',
                       paddingLeft: '1rem'
                     }}
+                    aria-hidden={!isOpen}
                   >
-                    <ul className="mt-2 space-y-1 font-bold">
+                    <ul className="mt-2 space-y-1 font-bold" role="list">
                       {renderNestedMenu(nav.subItems, currentPath)}
                     </ul>
                   </div>
@@ -351,17 +374,18 @@ const AppSidebar: React.FC = () => {
                   backgroundColor: "transparent",
                   color: colors.text,
                 }}
+                aria-describedby={`${accessibleId}-new-tab`}
               >
                 <span
+                  aria-hidden="true"
                   style={{
                     color: colors.text,
                   }}
                 >
                   {iconMap[nav.icon as keyof typeof iconMap] || iconMap["default-icon"]}
                 </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className="font-bold">{nav.name}</span>
-                )}
+                <span className={`font-bold ${shouldShowLabels ? "" : "sr-only"}`}>{nav.name}</span>
+                <span id={`${accessibleId}-new-tab`} className="sr-only"> (opens in a new tab)</span>
               </a>
             ) : (
               nav.path && (
@@ -372,17 +396,17 @@ const AppSidebar: React.FC = () => {
                     backgroundColor: isActive(nav.path) ? colors.primary : "transparent",
                     color: isActive(nav.path) ? colors.buttonText : colors.text,
                   }}
+                  aria-current={isActive(nav.path) ? 'page' : undefined}
                 >
                   <span
+                    aria-hidden="true"
                     style={{
                       color: isActive(nav.path) ? colors.buttonText : colors.text,
                     }}
                   >
                     {iconMap[nav.icon as keyof typeof iconMap] || iconMap["default-icon"]}
                   </span>
-                  {(isExpanded || isHovered || isMobileOpen) && (
-                    <span className="font-bold">{nav.name}</span>
-                  )}
+                  <span className={`font-bold ${shouldShowLabels ? "" : "sr-only"}`}>{nav.name}</span>
                 </Link>
               )
             )}
@@ -394,6 +418,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
+      id="app-sidebar"
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 h-screen z-50
         ${isExpanded || isMobileOpen
           ? "w-[290px]"
@@ -433,37 +458,50 @@ const AppSidebar: React.FC = () => {
           )}
         </div>
         <div>
-          <Link href="/">
-            {isExpanded || isHovered || isMobileOpen ? (
-              <h1 className={fontStyles.title} style={{ color: colors.text }}>
-                {companyName}
-              </h1>
-            ) : (
-              <></>
-            )}
+          <Link href="/" aria-label={companyName ? `${companyName} home` : "Go to dashboard"}>
+            <h1
+              className={`${fontStyles.title} ${shouldShowLabels ? "" : "sr-only"}`}
+              style={{ color: colors.text }}
+            >
+              {companyName || "Home"}
+            </h1>
           </Link>
         </div>
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
+        <nav
+          className="mb-6"
+          aria-label={navigationLabel}
+          aria-labelledby={menuHeadingId}
+          aria-busy={menuStatus === 'loading'}
+          id={navigationId}
+        >
           <div className="flex flex-col gap-4">
             <div>
               <h2
+                id={menuHeadingId}
                 className={`mb-4 ${fontStyles.menuHeader} flex ${!isExpanded && !isHovered
                   ? "lg:justify-center"
                   : "justify-start"
                   }`}
                 style={{ color: colors.color3 }}
               >
-                {isExpanded || isHovered || isMobileOpen ? (
+                {shouldShowLabels ? (
                   "Menu"
                 ) : (
-                  <span>{iconMap['horizontal-dots']}</span>
+                  <>
+                    <span aria-hidden="true">{iconMap['horizontal-dots']}</span>
+                    <span className="sr-only">Menu</span>
+                  </>
                 )}
               </h2>
-              {menuStatus === 'loading' && <div className={fontStyles.menuItem}>Loading...</div>}
+              {menuStatus === 'loading' && (
+                <div className={fontStyles.menuItem} role="status" aria-live="polite">
+                  Loading menu...
+                </div>
+              )}
               {menuStatus === 'failed' && (
-                <div className={fontStyles.menuItem} style={{ color: '#ef4444' }}>
+                <div className={fontStyles.menuItem} style={{ color: '#ef4444' }} role="alert">
                   Error: {menuError}
                 </div>
               )}
@@ -473,7 +511,7 @@ const AppSidebar: React.FC = () => {
 
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        {shouldShowLabels ? <SidebarWidget /> : null}
       </div>
     </aside>
   );
