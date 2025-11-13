@@ -9,6 +9,7 @@ import { clearIndexedDB, removeLocalStorage, storeLocalStorage, decodeFernetToke
 import { RootState } from '@/redux/store'
 import { fetchMenuItems } from '@/redux/features/menuSlice'
 import { useAppDispatch } from '@/redux/hooks'
+import { clearAllAuthData } from '@/utils/auth'
 
 // SSO Component that uses useSearchParams
 const SSOContent = () => {
@@ -21,6 +22,9 @@ const SSOContent = () => {
 
     const handleSSOLogin = useCallback(async () => {
         try {
+            // Clear any existing auth data so the request starts clean
+            clearAllAuthData();
+
             // Extract all query parameters dynamically
             let requestData: any = null
             let xDataContent = ""
