@@ -12,7 +12,7 @@ import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
-import { extractTagsForTabsDisabling, generateUniqueId, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
+import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
 import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
@@ -745,146 +745,156 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const fetchGuardianDependentOptions = async (field: FormField, parentValue: string, isChild: boolean = false) => {
+   const fetchGuardianDependentOptions = async (field: FormField, parentValue: string | Record<string, string>, isChild: boolean = false) => {
         if (!field.dependsOn) return;
-
-        try {
-            setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
-
-            const jUi = Object.entries(field.dependsOn.wQuery.J_Ui)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
-
-            const jApi = Object.entries(field.dependsOn.wQuery.J_Api)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
-
-            let xFilter = '';
-            if (field.dependsOn.wQuery.X_Filter_Multiple) {
-                if (Array.isArray(field.dependsOn.field)) {
-                    field.dependsOn.field.forEach(fieldName => {
-                        // Check if fieldName is actually a comma-separated string
-                        if (typeof fieldName === 'string' && fieldName.includes(',')) {
-                            // Split the string into individual field names
-                            const fieldNames = fieldName.split(',').map(name => name.trim());
-
-                            // Process each individual field name
-                            fieldNames.forEach(individualField => {
-                                if (!guardianFormValues[individualField] && !masterFormValues[individualField]) {
-                                    toast.error(`Please select the field: ${individualField}`);
+            try {
+                setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
+            
+                const jUi = Object.entries(field.dependsOn.wQuery.J_Ui)
+                    .map(([key, value]) => `"${key}":"${value}"`)
+                    .join(',');
+            
+                const jApi = Object.entries(field.dependsOn.wQuery.J_Api)
+                    .map(([key, value]) => `"${key}":"${value}"`)
+                    .join(',');
+            
+                let xFilter = '';
+                if (field.dependsOn.wQuery.X_Filter_Multiple) {
+                    if (Array.isArray(field.dependsOn.field)) {
+                        field.dependsOn.field.forEach(fieldName => {
+                            // Check if fieldName is actually a comma-separated string
+                            if (typeof fieldName === 'string' && fieldName.includes(',')) {
+                                // Split the string into individual field names
+                                const fieldNames = fieldName.split(',').map(name => name.trim());
+                            
+                                // Process each individual field name
+                                fieldNames.forEach(individualField => {
+                                    if (!guardianFormValues[individualField] && !masterFormValues[individualField]) {
+                                        toast.error(`Please select the field: ${individualField}`);
+                                        return;
+                                    }
+                                    xFilter += `<${individualField}>${guardianFormValues[individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
+                                });
+                            } else {
+                                // Normal case - fieldName is already a single field name
+                                const fieldValue = getFieldValue(fieldName, parentValue);
+                                
+                                if (!guardianFormValues[fieldName] && !masterFormValues[fieldName] && !fieldValue) {
+                                    toast.error(`Please select the field: ${fieldName}`);
                                     return;
                                 }
-                                xFilter += `<${individualField}>${guardianFormValues[individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
-                            });
-                        } else {
-                            // Normal case - fieldName is already a single field name
-                            if (!guardianFormValues[fieldName] && !masterFormValues[fieldName]) {
-                                toast.error(`Please select the field: ${fieldName}`);
-                                return;
+                                xFilter += `<${fieldName}>${guardianFormValues[fieldName] || masterFormValues[fieldName] || fieldValue || ''}</${fieldName}>`;
                             }
-                            xFilter += `<${fieldName}>${guardianFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
-                        }
-                    });
-                } else {
-                    xFilter = `<${field.dependsOn.field}>${parentValue}</${field.dependsOn.field}>`;
+                        });
+                    } else {
+                        // Handle single dependency field
+                        const fieldName = field.dependsOn.field;
+                        const fieldValue = getFieldValue(fieldName, parentValue);
+                        xFilter = `<${fieldName}>${fieldValue}</${fieldName}>`;
+                    }
                 }
+                
+                const xmlData = `<dsXml>
+                    <J_Ui>${jUi}</J_Ui>
+                    <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
+                    <X_Filter></X_Filter>
+                    <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
+                    <J_Api>${jApi}</J_Api>
+                </dsXml>`;
+            
+                const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            
+                const options = response.data?.data?.rs0?.map((item: any) => ({
+                    label: item[field.wDropDownKey?.key || 'DisplayName'],
+                    value: item[field.wDropDownKey?.value || 'Value']
+                }));
+            
+                setGuardianDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
+            
+            } catch (error) {
+                console.error(`Error fetching dependent options for ${field.wKey}:`, error);
+            } finally {
+                setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
             }
-            const xmlData = `<dsXml>
-                <J_Ui>${jUi}</J_Ui>
-                <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
-                <X_Filter></X_Filter>
-                <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
-                <J_Api>${jApi}</J_Api>
-            </dsXml>`;
-
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            const options = response.data?.data?.rs0?.map((item: any) => ({
-                label: item[field.wDropDownKey?.key || 'DisplayName'],
-                value: item[field.wDropDownKey?.value || 'Value']
-            }));
-
-            setGuardianDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
-
-        } catch (error) {
-            console.error(`Error fetching dependent options for ${field.wKey}:`, error);
-        } finally {
-            setGuardianLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
-        }
-    };
+        };
 
 
     // to fetch dependent option for forms without tabs 
-    const fetchDependentOptions = async (field: FormField, parentValue: string, isChild: boolean = false) => {
+    const fetchDependentOptions = async (field: FormField, parentValue: string | Record<string, string>, isChild: boolean = false) => {
         if (!field.dependsOn) return;
 
-        const setLoadingDropdowns = isChild ? setChildLoadingDropdowns : setMasterLoadingDropdowns;
-        const setDropdownOptions = isChild ? setChildDropdownOptions : setMasterDropdownOptions;
+            const setLoadingDropdowns = isChild ? setChildLoadingDropdowns : setMasterLoadingDropdowns;
+            const setDropdownOptions = isChild ? setChildDropdownOptions : setMasterDropdownOptions;
 
-        try {
-            setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
+            try {
+                setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: true }));
+            
+                const jUi = Object.entries(field.dependsOn.wQuery.J_Ui)
+                    .map(([key, value]) => `"${key}":"${value}"`)
+                    .join(',');
+            
+                const jApi = Object.entries(field.dependsOn.wQuery.J_Api)
+                    .map(([key, value]) => `"${key}":"${value}"`)
+                    .join(',');
+            
+                let xFilter = '';
+                if (field.dependsOn.wQuery.X_Filter_Multiple) {
+                    if (Array.isArray(field.dependsOn.field)) {
+                        field.dependsOn.field.forEach(fieldName => {
+                            // Check if fieldName is actually a comma-separated string
+                            if (typeof fieldName === 'string' && fieldName.includes(',')) {
+                                // Split the string into individual field names
+                                const fieldNames = fieldName.split(',').map(name => name.trim());
+                            
+                                // Process each individual field name
+                                fieldNames.forEach(individualField => {
+                                    if (!childFormValues[individualField] && !masterFormValues[individualField]) {
+                                        toast.error(`Please select the field: ${individualField}`);
+                                        return;
+                                    }
+                                    xFilter += `<${individualField}>${childFormValues[individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
+                                });
+                            } else {
+                                // Normal case - fieldName is already a single field name
+                                const fieldValue = getFieldValue(fieldName, parentValue);
 
-            const jUi = Object.entries(field.dependsOn.wQuery.J_Ui)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
-
-            const jApi = Object.entries(field.dependsOn.wQuery.J_Api)
-                .map(([key, value]) => `"${key}":"${value}"`)
-                .join(',');
-
-            let xFilter = '';
-            if (field.dependsOn.wQuery.X_Filter_Multiple) {
-                if (Array.isArray(field.dependsOn.field)) {
-                    field.dependsOn.field.forEach(fieldName => {
-                        // Check if fieldName is actually a comma-separated string
-                        if (typeof fieldName === 'string' && fieldName.includes(',')) {
-                            // Split the string into individual field names
-                            const fieldNames = fieldName.split(',').map(name => name.trim());
-
-                            // Process each individual field name
-                            fieldNames.forEach(individualField => {
-                                if (!childFormValues[individualField] && !masterFormValues[individualField]) {
-                                    toast.error(`Please select the field: ${individualField}`);
+                                if (!childFormValues[fieldName] && !masterFormValues[fieldName] && !fieldValue) {
+                                    toast.error(`Please select the field: ${fieldName}`);
                                     return;
                                 }
-                                xFilter += `<${individualField}>${childFormValues[individualField] || masterFormValues[individualField] || ''}</${individualField}>`;
-                            });
-                        } else {
-                            // Normal case - fieldName is already a single field name
-                            if (!childFormValues[fieldName] && !masterFormValues[fieldName] && !parentValue) {
-                                toast.error(`Please select the field: ${fieldName}`);
-                                return;
+                                xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || fieldValue || ''}</${fieldName}>`;
                             }
-                            xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || parentValue ||''}</${fieldName}>`;
-                        }
-                    });
-                } else {
-                    xFilter = `<${field.dependsOn.field}>${parentValue}</${field.dependsOn.field}>`;
+                        });
+                    } else {
+                        // Handle single dependency field
+                        const fieldName = field.dependsOn.field;
+                        const fieldValue = getFieldValue(fieldName, parentValue);
+                        xFilter = `<${fieldName}>${fieldValue}</${fieldName}>`;
+                    }
                 }
+
+                const xmlData = `<dsXml>
+                    <J_Ui>${jUi}</J_Ui>
+                    <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
+                    <X_Filter></X_Filter>
+                    <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
+                    <J_Api>${jApi}</J_Api>
+                </dsXml>`;
+            
+                const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            
+                const options = response.data?.data?.rs0?.map((item: any) => ({
+                    label: item[field.wDropDownKey?.key || 'DisplayName'],
+                    value: item[field.wDropDownKey?.value || 'Value']
+                }));
+            
+                setDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
+            } catch (error) {
+                console.error(`Error fetching dependent options for ${field.wKey}:`, error);
+            } finally {
+                setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
             }
-            const xmlData = `<dsXml>
-                <J_Ui>${jUi}</J_Ui>
-                <Sql>${field.dependsOn.wQuery.Sql || ''}</Sql>
-                <X_Filter></X_Filter>
-                <X_Filter_Multiple>${xFilter}</X_Filter_Multiple>
-                <J_Api>${jApi}</J_Api>
-            </dsXml>`;
-
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-            const options = response.data?.data?.rs0?.map((item: any) => ({
-                label: item[field.wDropDownKey?.key || 'DisplayName'],
-                value: item[field.wDropDownKey?.value || 'Value']
-            }));
-
-            setDropdownOptions(prev => ({ ...prev, [field.wKey]: options }));
-        } catch (error) {
-            console.error(`Error fetching dependent options for ${field.wKey}:`, error);
-        } finally {
-            setLoadingDropdowns(prev => ({ ...prev, [field.wKey]: false }));
-        }
-    };
-
+        };
     const fetchTabsDependentOptions = async (field: FormField, tabKey: string, tabFormValues: any , masterFormValues : any) => {
         if (!field.dependsOn) return;
         try {
@@ -1519,10 +1529,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                          !item.isInserted 
                      );
                 
+                    const userId = getLocalStorage('userId') || '';
                     const xData = createXmlTags({
                       ...masterFormValues,
                       items: { item: itemsForServer }, // Items contains key 'item' whose value is an array
-                      UserId: "ANUJ",
+                      UserId: userId,
                     });
                 
                     const xmlData = `<dsXml>
@@ -1771,12 +1782,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             .map(([key, value]) => `<${key}>${value}</${key}>`)
             .join('');
 
+        const userId = getLocalStorage('userId') || '';
         const xData = `<X_Data>
         ${masterXml}
         <items>
             ${itemsXml}
         </items>
-        <UserId>ANUJ</UserId>
+        <UserId>${userId}</UserId>
     </X_Data>`;
 
         const xmlData = `<dsXml>

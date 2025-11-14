@@ -115,3 +115,15 @@ export function extractTagsForTabsDisabling(xmlString: any) {
         return {};
     }
 }
+
+
+export const getFieldValue = (fieldName: string, parentValue: string | Record<string, string>): string => {
+    if (typeof parentValue === 'string') {
+        // If parentValue is a string, return it directly for the main field
+        return parentValue;
+    } else if (typeof parentValue === 'object' && parentValue !== null) {
+        // If parentValue is an object, get the value for the specific field
+        return parentValue[fieldName] || '';
+    }
+    return '';
+};
