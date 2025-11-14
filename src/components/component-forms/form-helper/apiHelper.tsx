@@ -21,11 +21,10 @@ export const handleNextValidationFields = async (
       
       if (typeof value === 'string' && value.startsWith("##") && value.endsWith("##")) {
         const formKey = value.slice(2, -2);
-        fieldValue = editData ? sanitizeValueSpecialChar(editData[formKey]) || sanitizeValueSpecialChar(masterFormValues[formKey]) || "" : sanitizeValueSpecialChar(masterFormValues[formKey]) || "";
+        fieldValue = masterFormValues ? sanitizeValueSpecialChar(masterFormValues[formKey]) : editData ? sanitizeValueSpecialChar(editData[formKey])  : "" ;
       } else {
         fieldValue = sanitizeValueSpecialChar(value);
       }
-      
       return `<${key}>${fieldValue}</${key}>`;
     });
     
