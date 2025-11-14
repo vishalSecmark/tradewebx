@@ -48,6 +48,7 @@ import CryptoJS from 'crypto-js';
 import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
 import CaptchaComponent, { CaptchaComponentRef } from './CaptchaComponent';
 import { decodeFernetToken, getLocalStorage, removeLocalStorage, storeLocalStorage } from "@/utils/helper";
+import AccessibleModal from "../a11y/AccessibleModal";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -235,9 +236,19 @@ const MessageModal = ({
   onClose: () => void;
   message: string;
 }) => {
-  if (!isOpen) return null;
-
+      const titleId = useId();
+      const descriptionId = useId();
   return (
+     <AccessibleModal
+            isOpen={isOpen}
+            onDismiss={onClose}
+            labelledBy={titleId}
+            describedBy={descriptionId}
+            role={'alertdialog'}
+            className="bg-white p-6 shadow-theme-lg max-w-md w-full rounded-lg"
+            closeOnOverlayClick={false}
+        >
+       
     <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         <h4 className="text-xl font-semibold mb-4 dark:text-white">
@@ -267,6 +278,7 @@ const MessageModal = ({
         </div>
       </div>
     </div>
+    </AccessibleModal>
   );
 };
 
