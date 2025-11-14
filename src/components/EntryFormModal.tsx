@@ -483,8 +483,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                 field.dependsOn.field.forEach(fieldName => {
                                     // Check multiple sources for the parent field value
                                     const parentField = masterFormData.find(f => f.wKey === fieldName);
-                                    const value = editData?.[fieldName] ||
-                                        initialMasterValues[fieldName] ||
+                                    const value = initialMasterValues[fieldName] || editData?.[fieldName] ||
                                         parentField?.wValue;
                                     parentValues[fieldName] = value;
                                     if (!value) {
