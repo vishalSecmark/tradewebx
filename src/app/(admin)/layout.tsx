@@ -24,6 +24,7 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <div
         className={`transition-all duration-300 ease-in-out ${mainContentWidth} ml-auto`}
+        role="main"
       >
         {/* Header */}
         <AppHeader />

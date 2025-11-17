@@ -1407,47 +1407,93 @@ useEffect(() => {
         ];
         if (isEntryForm) {
             baseColumns.push(
-                {
-                    key: 'actions',
-                    name: 'Actions',
-                    minWidth: 170,
-                    maxWidth: 350,
-                    renderCell: ({ row }: any) => (
-                        isEntryForm && (
-                            <div className="action-buttons">
-                                {isButtonEnabled('View') && (
-                                    <button
-                                        className="view-button"
-                                        style={{}}
-                                        onClick={() => handleAction('view', row)}
-                                    >
-                                        view
-                                    </button>
-                                )}
-                                {isButtonEnabled('Edit') && (
-                                    <button
-                                        className="edit-button"
-                                        style={{}}
-                                        onClick={() => handleAction('edit', row)}
-                                        disabled={row?.isUpdated === "true" ? true : false}
-                                    >
-                                        Edit
-                                    </button>
-                                )}
-                                {isButtonEnabled('Delete') && (
-                                    <button
-                                        className="delete-button"
-                                        style={{}}
-                                        onClick={() => handleAction('delete', row)}
-                                        disabled={row?.isDeleted === "true" ? true : false}
-                                    >
-                                        Delete
-                                    </button>
-                                )}
-                            </div>
-                        )
+        {
+                    key: "actions",
+                    name: "Actions",
+                    width: 220,
+
+                    //  REQUIRED for renderEditCell to show buttons when cell is focused
+                    editable: true,
+                    editorOptions: { editOnClick: true },
+
+                    //  ALWAYS VISIBLE BUTTONS
+                    renderCell: ({ row }) => (
+                        <div className="flex gap-4" 
+                        aria-label="The Actions column, press Enter, then Tab to reach the View button. Press Enter to open the popup, and use Tab to move to the Edit and Delete buttons."
+                        >
+                        <button
+                            tabIndex={-1}      // IMPORTANT: Prevents double-tab
+                            aria-hidden="true" // NVDA won't read this layer
+                            className="view-button"
+                        >
+                            View
+                        </button>
+
+                        <button
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            disabled={row?.isUpdated === "true"}
+                            className="edit-button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            disabled={row?.isDeleted === "true"}
+                        className="delete-button"
+                        >
+                            Delete
+                        </button>
+                        </div>
                     ),
-                }
+
+                    //  FOCUSABLE BUTTONS FOR NVDA + KEYBOARD
+                    renderEditCell: ({ row }) => (
+                        <div className="flex gap-4">
+
+                        {/* VIEW */}
+                        <button
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View details for ${row.Name || "this record"}`}
+                            onClick={() => handleAction("view", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
+                            className="view-button"
+                        >
+                            View
+                        </button>
+
+                        {/* EDIT */}
+                        <button
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Edit details for ${row.Name || "this record"}`}
+                            disabled={row?.isUpdated === "true"}
+                            onClick={() => handleAction("edit", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
+                            className="edit-button"
+                        >
+                            Edit
+                        </button>
+
+                        {/* DELETE */}
+                        <button
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Delete ${row.Name || "this record"}`}
+                            disabled={row?.isDeleted === "true"}
+                            onClick={() => handleAction("delete", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
+                            className="delete-button"
+                        >
+                            Delete
+                        </button>
+
+                        </div>
+                    )
+        }
             )
         }
         return baseColumns;
