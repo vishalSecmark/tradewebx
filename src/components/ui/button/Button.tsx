@@ -15,6 +15,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   type?: "button" | "submit" | "reset";
   dynamicSelectedThemeApply?: boolean; // New prop to enable dynamic theming
   borderRadius?: string;
+  ariaLabel?: string;        // Used for icon-only buttons or custom labeling
+  ariaPressed?: boolean;     // For toggle buttons
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -27,7 +29,9 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   className = "",
   disabled = false,
-  dynamicSelectedThemeApply = true, // Set default to true to always use theme colors
+  dynamicSelectedThemeApply = true,
+  ariaLabel,              
+  ariaPressed,        
   ...props
 }) => {
   const { colors } = useTheme();
@@ -38,10 +42,10 @@ const Button: React.FC<ButtonProps> = ({
     md: "px-3 py-2 text-sm",
   };
 
-  const bRadius ={
-    normal : "rounded-lg",
-    full : "rounded-full"
-  }
+  const bRadius = {
+    normal: "rounded-lg",
+    full: "rounded-full"
+  };
 
   // Variant Classes
   const variantClasses = {
@@ -50,30 +54,47 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   // Dynamic theme styles
-  const dynamicStyles = dynamicSelectedThemeApply ? {
-    backgroundColor: variant === 'primary' ? colors.buttonBackground : 'transparent',
-    color: colors.buttonText,
-    borderColor: variant === 'outline' ? colors.buttonBackground : 'transparent',
-    borderWidth: variant === 'outline' ? '1px' : '0',
-    '&:hover': {
-      backgroundColor: variant === 'primary' ? colors.primary : colors.buttonBackground + '10',
-    }
-  } : undefined;
+  const dynamicStyles = dynamicSelectedThemeApply
+    ? {
+        backgroundColor:
+          variant === 'primary' ? colors.buttonBackground : 'transparent',
+        color: colors.buttonText,
+        borderColor:
+          variant === 'outline' ? colors.buttonBackground : 'transparent',
+        borderWidth: variant === 'outline' ? '1px' : '0',
+      }
+    : undefined;
+
+  // ⭐ WCAG: If button has only icon, label is required
+  const computedAriaLabel =
+    ariaLabel ||
+    (typeof children === "string" ? undefined : props["aria-label"]);
 
   return (
     <button
       className={`inline-flex items-center justify-center font-medium gap-2 ${bRadius[borderRadius]} transition ${className} ${sizeClasses[size]} ${
-        // Only apply variant classes if dynamic theme is not enabled
         !dynamicSelectedThemeApply ? variantClasses[variant] : ''
       } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
       style={dynamicStyles}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       disabled={disabled}
+      aria-label={computedAriaLabel}
+      aria-disabled={disabled}        
+      aria-pressed={ariaPressed}      
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       {...props}
     >
-      {startIcon && <span className="flex items-center">{startIcon}</span>}
+      {startIcon && <span className="flex items-center" aria-hidden="true">{startIcon}</span>}
+
       {children}
-      {endIcon && <span className="flex items-center">{endIcon}</span>}
+
+      {endIcon && <span className="flex items-center" aria-hidden="true">{endIcon}</span>}
     </button>
   );
 };

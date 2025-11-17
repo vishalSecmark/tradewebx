@@ -48,6 +48,7 @@ import CryptoJS from 'crypto-js';
 import { isAllowedHttpHost, SECURITY_CONFIG } from '@/utils/securityConfig';
 import CaptchaComponent, { CaptchaComponentRef } from './CaptchaComponent';
 import { decodeFernetToken, getLocalStorage, removeLocalStorage, storeLocalStorage } from "@/utils/helper";
+import AccessibleModal from "../a11y/AccessibleModal";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -235,12 +236,22 @@ const MessageModal = ({
   onClose: () => void;
   message: string;
 }) => {
-  if (!isOpen) return null;
-
+      const titleId = useId();
+      const descriptionId = useId();
   return (
+     <AccessibleModal
+            isOpen={isOpen}
+            onDismiss={onClose}
+            labelledBy={titleId}
+            describedBy={descriptionId}
+            role={'alertdialog'}
+            className="bg-white p-6 shadow-theme-lg max-w-md w-full rounded-lg"
+            closeOnOverlayClick={false}
+        >
+       
     <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-[500px]" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
-        <h4 className="text-xl font-semibold mb-4 dark:text-white">
+        <h4 id={titleId} className="text-xl font-semibold mb-4 dark:text-white">
           Important Message
         </h4>
 
@@ -251,7 +262,7 @@ const MessageModal = ({
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
               </svg>
               <div>
-                <p className="whitespace-pre-wrap">{message}</p>
+                <p id={descriptionId} className="whitespace-pre-wrap">{message}</p>
               </div>
             </div>
           </div>
@@ -267,6 +278,7 @@ const MessageModal = ({
         </div>
       </div>
     </div>
+    </AccessibleModal>
   );
 };
 

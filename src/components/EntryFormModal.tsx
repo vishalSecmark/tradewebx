@@ -18,6 +18,7 @@ import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
 import { handleNextValidationFields } from './component-forms/form-helper/apiHelper';
+import AccessibleModalEntry from './a11y/AccessibleModalEntry';
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
@@ -2466,8 +2467,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     return (
         <>
             {isOpen && (
-                <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg w-full max-w-[80vw] min-h-[80vh] max-h-[80vh] flex flex-col">
+         <AccessibleModalEntry
+            isOpen={isOpen}
+            onClose={resetParentForm}
+            title={pageName}
+            parentZIndex={parentModalZindex}
+            width="max-w-[80vw]"
+            height="min-h-[80vh] max-h-[80vh]"
+        >
+                    <div className="bg-white rounded-lg w-full flex flex-col h-full">
                         <div className="sticky top-0 bg-white z-10 px-6 pt-6">
                             <div className="flex justify-between items-center mb-1 border-b pb-2">
                                 <div>
@@ -3206,7 +3214,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         )}
                         </div>
                     </div>
-                </div>
+                </AccessibleModalEntry>
             )}
             <ConfirmationModal
                 isOpen={isConfirmationModalOpen}
