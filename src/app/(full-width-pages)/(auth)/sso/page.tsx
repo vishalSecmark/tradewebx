@@ -1,24 +1,30 @@
 "use client"
 import React, { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import axios from 'axios'
 import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
 import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME, ENABLE_FERNET } from "@/utils/constants"
 import { clearIndexedDB, removeLocalStorage, storeLocalStorage, decodeFernetToken } from '@/utils/helper'
 import { RootState } from '@/redux/store'
+import { fetchMenuItems } from '@/redux/features/menuSlice'
+import { useAppDispatch } from '@/redux/hooks'
+import { clearAllAuthData } from '@/utils/auth'
 
 // SSO Component that uses useSearchParams
 const SSOContent = () => {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const dispatch = useDispatch()
+    const dispatch = useAppDispatch()
     const encPayload = useSelector((state: RootState) => state.common.encPayload)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
 
     const handleSSOLogin = useCallback(async () => {
         try {
+            // Clear any existing auth data so the request starts clean
+            clearAllAuthData();
+
             // Extract all query parameters dynamically
             let requestData: any = null
             let xDataContent = ""
@@ -52,11 +58,8 @@ const SSOContent = () => {
 
             requestData = xmlData
             console.log('SSO Login XML request:', xmlData)
-
-            // Wait for 3 seconds before making the API call
-            console.log('Waiting for 3 seconds before SSO API call...')
-            await new Promise(resolve => setTimeout(resolve, 3000))
-
+            // PUT THIS 3 SECONDS IF IT IS NOT WORKING CHAGNE BY SIMRAN SINGH
+            await new Promise(resolve => setTimeout(resolve, 200))
             // Call SSO Login API
             const response = await axios({
                 method: 'post',
@@ -112,6 +115,9 @@ const SSOContent = () => {
                 storeLocalStorage('auth_token', data.token);
 
                 removeLocalStorage('temp_token')
+
+                // Kick off menu fetch so dashboard can render sooner
+                dispatch(fetchMenuItems());
 
                 // Navigate directly to dashboard (no OTP for SSO)
                 router.push('/dashboard')
