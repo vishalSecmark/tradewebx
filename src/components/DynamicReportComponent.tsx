@@ -1276,6 +1276,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         fetchData();
                                     }}
                                     style={{ color: colors.text }}
+                                    aria-label='Refresh Data'
                                 >
                                     <FaSync size={20} />
                                 </button>
@@ -1291,6 +1292,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsEntryModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label='Add New Entry'
                                     >
                                         <FaPlus size={20} />
                                     </button>
@@ -1307,6 +1309,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsFilterModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label='Apply Filters'
                                     >
                                         <FaFilter size={20} />
                                     </button>
@@ -1323,6 +1326,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
                                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                     style={{ color: colors.text }}
+                                    aria-label='Click enter for expanded export buttons'
                                 >
                                     <FaEllipsisV size={20} />
                                 </button>
@@ -1344,6 +1348,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Edit Selected Row"
                                                 >
                                                     <FaEdit size={16} />
                                                     Edit Selected Rows
@@ -1357,6 +1362,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Export to Excel"
                                                 >
                                                     <FaFileExcel size={16} />
                                                     Export to Excel
@@ -1371,6 +1377,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Email Report"
                                                 >
                                                     <FaEnvelope size={16} />
                                                     Email Report
@@ -1384,6 +1391,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Download Options"
                                                 >
                                                     <FaDownload size={16} />
                                                     Download Options
@@ -1399,6 +1407,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                             }}
                                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                             style={{ color: colors.text }}
+                                                            aria-label="Export to CSV"
                                                         >
                                                             <FaFileCsv size={16} />
                                                             Export to CSV
@@ -1412,6 +1421,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                             }}
                                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                             style={{ color: colors.text }}
+                                                            aria-label="Export to PDF"
                                                         >
                                                             <FaFilePdf size={16} />
                                                             Export to PDF
@@ -1427,6 +1437,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label='Search Records'
                                                 >
                                                     <FaSearch size={16} />
                                                     Search Records
@@ -1466,6 +1477,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     onClick={handleSearchClear}
                                                     className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Close Button"
                                                 >
                                                     <FaTimes size={12} />
                                                 </button>
@@ -1489,6 +1501,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsEditTableRowModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label='Edit Selected Rows'
                                     >
                                         <FaEdit size={20} />
                                     </button>
@@ -1509,6 +1522,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             setIsEntryModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
+                                        aria-label="Add New Entry"
                                     >
                                         <FaPlus size={20} />
                                     </button>
@@ -1537,6 +1551,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         }}
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         style={{ color: colors.text }}
+                                        aria-label="Export Excel"
                                     >
                                         <FaFileExcel size={20} />
                                     </button>
@@ -1557,6 +1572,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             setIsConfirmModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
+                                         aria-label="Email Report"
                                     >
                                         <FaEnvelope size={20} />
                                     </button>
@@ -1576,6 +1592,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             setIsConfirmModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
+                                        aria-label="Export Email"
                                     >
                                         <FaRegEnvelope size={20} />
                                     </button>
@@ -1592,6 +1609,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
                                         style={{ color: colors.text }}
+                                        aria-label="Download Options"
                                     >
                                         <FaDownload size={20} />
                                     </button>
@@ -1609,6 +1627,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 className="p-2 rounded hover:bg-gray-100 transition-colors"
                                                 onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
                                                 style={{ color: colors.text }}
+                                                aria-label="Export to CSV"
                                             >
                                                 <FaFileCsv size={20} />
                                             </button>
@@ -1639,6 +1658,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 }}
                                                 className="p-2 rounded transition-colors flex items-center hover:bg-gray-100"
                                                 style={{ color: colors.text }}
+                                                aria-label="Export to PDF"
                                             >
                                                 <FaFilePdf size={20} />
                                             </button>
@@ -1656,6 +1676,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={handleSearchToggle}
                                         style={{ color: colors.text }}
+                                         aria-label="Search Records"
                                     >
                                         <FaSearch size={20} />
                                     </button>
@@ -1711,6 +1732,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             <div className="relative group">
                                 <button
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    aria-label="Refresh Data"
                                     onClick={() => {
                                         // Clear cache for current filter combination when manually refreshing
                                         const cacheKey = generateCacheKey(currentLevel, filters, primaryKeyFilters);
@@ -1736,6 +1758,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsFilterModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label="Apply Filters"
                                     >
                                         <FaFilter size={20} />
                                     </button>
