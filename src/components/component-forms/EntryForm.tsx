@@ -42,6 +42,9 @@ const DropdownField: React.FC<{
     setDropDownOptions,
     isJustUpdated = false
 }) => {
+        const inputId = `dropdown-${field.wKey}`;
+        const errorId = `error-${field.wKey}`;
+
         const options = dropdownOptions[field.wKey] || [];
         const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
         const [searchText, setSearchText] = useState('');
@@ -139,12 +142,22 @@ const DropdownField: React.FC<{
 
         return (
             <div key={field.Srno} className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: "break-all" }}>
+                <label
+                 htmlFor={inputId}
+                 className="block text-sm font-medium mb-1"
+                 style={{ color: colors.text, wordBreak: "break-all" }}
+                 >
                     {field.label}
                     {isRequired && <span className="text-red-500 ml-1">*</span>}
 
                 </label>
                 <CreatableSelect
+                    inputId={inputId}
+                    aria-labelledby={inputId}
+                    aria-required={isRequired ? "true" : undefined}
+                    aria-invalid={fieldErrors[field.wKey] ? "true" : "false"}
+                    aria-describedby={fieldErrors[field.wKey] ? errorId : undefined}
+                    aria-disabled={isDisabled ? "true" : undefined}
                     options={visibleOptions}
                     isClearable
                     value={options.find((opt: any) => {
@@ -203,7 +216,7 @@ const DropdownField: React.FC<{
                     }}
                 />
                 {fieldErrors[field.wKey] && (
-                    <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                    <span id={errorId} className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
                 )}
             </div>
         );
@@ -480,11 +493,16 @@ const EntryForm: React.FC<EntryFormProps> = ({
            case 'WDateTimePicker':
                   return (
                     <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-                      <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
+                      <label htmlFor={`datetime-${field.wKey}`} className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                         {field.label}
                         {isRequired && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       <CustomDateTimePicker
+                        inputId={`datetime-${field.wKey}`}
+                        ariaRequired={isRequired}
+                        ariaInvalid={!!fieldErrors[field.wKey]}
+                        ariaDescribedBy={fieldErrors[field.wKey] ? `error-${field.wKey}` : undefined}
+                        ariaDisabled={!isEnabled}
                         selected={fieldValue ? moment(fieldValue, 'YYYYMMDD HH:mm:ss').toDate() : null}
                         onChange={(date: Date | null) => {
                           if (date) {
@@ -514,18 +532,26 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         dateFormat="dd/MM/yyyy HH:mm"
                       />
                       {fieldErrors[field.wKey] && (
-                        <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                        <span
+                          id={`error-${field.wKey}`} 
+                          role="alert" 
+                         className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
                       )}
                     </div>
                   );
             case 'WDateBox':
                 return (
                     <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
+                        <label htmlFor={`date-${field.wKey}`} className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
                          <CustomDatePicker
+                             inputId={`date-${field.wKey}`}       
+                             aria-required={isRequired}           
+                             aria-invalid={!!fieldErrors[field.wKey]}
+                             aria-describedby={fieldErrors[field.wKey] ? `error-${field.wKey}` : undefined}
+                             aria-disabled={!isEnabled}    
                            selected={
                                formValues[field.wKey] && 
                                formValues[field.wKey].trim() && 
@@ -552,75 +578,145 @@ const EntryForm: React.FC<EntryFormProps> = ({
                      `}
                                  onBlur={() => handleBlur(field)}
                                  placeholder="Select Date"
-                                 id={field.wKey}
+                                 id={`date-${field.wKey}`}
                                  name={field.wKey}
                              />
                         {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+                            <span id={`error-${field.wKey}`} role="alert" className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
                         )}
                     </div>
                 );
 
-            case 'WTextBox':
-                return (
-                    <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-                        <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: 'break-all' }}>
+          case "WTextBox":
+            const inputId = `input-${field.wKey}`;
+            const errorId = `error-${field.wKey}`;
+
+            return (
+                <div
+                    key={`field-${field.Srno}-${field.wKey}-${index}`}
+                    style={field.isBR === "true" ? containerStylesForBr : containerStyle}
+                >
+                    {/* LABEL with correct association */}
+                    <label
+                        htmlFor={inputId}
+                        className="block text-sm font-medium mb-1"
+                        style={{ color: colors.text, wordBreak: "break-all" }}
+                    >
+                        {field.label}
+                        {isRequired && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+            
+                    <input
+                        id={inputId}
+                        type="text"
+                        aria-required={isRequired ? "true" : undefined}
+                        aria-invalid={fieldErrors[field.wKey] ? "true" : "false"}
+                        aria-describedby={fieldErrors[field.wKey] ? errorId : undefined}
+                        aria-disabled={!isEnabled ? "true" : undefined}
+                        className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
+                            !isEnabled
+                                ? "border-gray-300"
+                                : fieldErrors[field.wKey]
+                                ? "border-red-500"
+                                : "border-gray-700 text-[14px]"
+                        }`}
+                        style={{
+                            borderColor: fieldErrors[field.wKey]
+                                ? "red"
+                                : !isEnabled
+                                ? "#d1d5db"
+                                : "#344054",
+                            backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
+                            color: isJustUpdated ? "#22c55e" : colors.textInputText,
+                            height: "30px",
+                            width: fieldWidth,
+                        }}
+                        value={formValues[field.wKey] || ""}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            if (field.FieldType === "INT" && !/^[0-9]*$/.test(value)) return;
+                            if (value.length <= parseInt(field.FieldSize, 10)) {
+                                handleInputChange(field.wKey, value);
+                            }
+                        }}
+                        onBlur={() => handleBlur(field)}
+                        placeholder={field.label}
+                        disabled={!isEnabled}
+                    />
+
+                    {/* ERROR MESSAGE with screen-reader link */}
+                    {fieldErrors[field.wKey] && (
+                        <span
+                            id={errorId}
+                            className="text-red-500 text-sm"
+                            role="alert"
+                        >
+                            {fieldErrors[field.wKey]}
+                        </span>
+                    )}
+                </div>
+            );
+            case 'WCheckBox':
+            const checkboxId = `checkbox-${field.wKey}`;
+            const checkBoxErrorId = `error-${field.wKey}`;
+
+            return (
+                <div
+                    key={`checkbox-${field.Srno}-${field.wKey}`}
+                    style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}
+                >
+                    <label
+                        htmlFor={checkboxId}
+                        className="inline-flex items-center text-sm font-medium"
+                        style={{
+                            color: isJustUpdated ? "#22c55e" : colors.textInputText,
+                            wordBreak: "break-all"
+                        }}
+                    >
+                        <input
+                            id={checkboxId} 
+                            type="checkbox"
+                            className={`
+                                form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded
+                                focus:ring-blue-500 
+                                ${!isEnabled ? 'bg-gray-200' : ''}
+                            `}
+                            checked={fieldValue === "true" || fieldValue === true}
+                            onChange={(e) =>
+                                handleInputChange(field.wKey, String(e.target.checked))
+                            }
+                            onBlur={() => handleBlur(field)}
+                            disabled={!isEnabled}
+                            aria-required={isRequired}
+                            aria-invalid={!!fieldErrors[field.wKey]}
+                            aria-describedby={
+                                fieldErrors[field.wKey] ? checkBoxErrorId : undefined
+                            }
+                            aria-disabled={!isEnabled}
+
+                            style={{
+                                accentColor: isJustUpdated ? "#22c55e" : colors.textInputText
+                            }}
+                        />
+
+                        <span className="ml-2">
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
-                        </label>
-                        <input
-                            type="text"
-                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700 text-[14px]'
-                                }`}
-                            style={{
-                                borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
-                                backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
-                                color: isJustUpdated ? "#22c55e" : colors.textInputText,
-                                height: "30px",
-                                width: fieldWidth // Apply width to input directly
-                            }}
-                            value={formValues[field.wKey] || ''}
-                            onChange={(e) => {
-                                const value = e.target.value;
-                                if (field.FieldType === 'INT' && !/^[0-9]*$/.test(value)) {
-                                    return; // Prevent non-numeric input for INT type
-                                }
-                                if (value.length <= parseInt(field.FieldSize, 10)) {
-                                    handleInputChange(field.wKey, value);
-                                }
-                            }}
-                            onBlur={() => handleBlur(field)}
-                            placeholder={field.label}
-                            disabled={!isEnabled}
-                        />
-                        {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-                        )}
-                    </div>
-                );
-            case 'WCheckBox':
-                return (
-                    <div key={`checkbox-${field.Srno}-${field.wKey}`} style={field.isBR === "true" ? containerStylesForBr : checkBoxStyle}>
-                        <label className="inline-flex items-center text-sm font-medium" style={{ color: isJustUpdated ? "#22c55e" : colors.textInputText, wordBreak: "break-all" }}>
-                            <input
-                                type="checkbox"
-                                className={`form-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 ${!isEnabled ? 'bg-gray-200' : ''}`}
-                                checked={fieldValue === "true" || fieldValue === true}
-                                onChange={e => handleInputChange(field.wKey, String(e.target.checked))}
-                                onBlur={() => handleBlur(field)}
-                                disabled={!isEnabled}
-                                style={{ accentColor: isJustUpdated ? "#22c55e" : colors.textInputText, }}
-                            />
-                            <span className="ml-2">
-                                {field.label}
-                                {isRequired && <span className="text-red-500 ml-1">*</span>}
-                            </span>
-                        </label>
-                        {fieldErrors[field.wKey] && (
-                            <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
-                        )}
-                    </div>
-                );
+                        </span>
+                    </label>
+                        
+                    {fieldErrors[field.wKey] && (
+                        <span
+                            id={checkBoxErrorId}         
+                            role="alert"       
+                            className="text-red-500 text-sm"
+                        >
+                            {fieldErrors[field.wKey]}
+                        </span>
+                    )}
+                </div>
+            );
+
             case 'WDisplayBox':
                 return (
                     <div key={`field-${field.Srno}-${field.wKey}-${index}`} style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
