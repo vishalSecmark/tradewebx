@@ -1035,37 +1035,40 @@ useEffect(() => {
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
-    //this function is used for 
+    //this function is used for multiCheckBoxColumn in income report
     const multiCheckBoxColumn = settings?.multiCheckBox
     ? [{
-      key: "_multiSelect",
-      name: "",
-      width: 35,
-      renderHeaderCell: () => {
-        const allIds = rows.map(r => r._id);
-        const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
-
-        return (
+        key: "_multiSelect",
+        name: "",
+        width: 35,
+        renderHeaderCell: () => {
+          const allIds = rows.map(r => r._id);
+          const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
+  
+          return (
+            <input
+              type="checkbox"
+              checked={allSelected}
+              aria-label="Select all rows"
+              onChange={(e) => {
+                const newSelection = e.target.checked ? [...rows] : [];
+                setSelectedRows(newSelection);
+                onRowSelect?.(newSelection);
+              }}
+            />
+          );
+        },
+        renderCell: ({ row }: any) => (
           <input
             type="checkbox"
-            checked={allSelected}
-            onChange={(e) => {
-              const newSelection = e.target.checked ? [...rows] : [];
-              setSelectedRows(newSelection);
-              onRowSelect?.(newSelection);
-            }}
+            checked={selectedRows.some(r => r._id === row._id)}
+            aria-label={`Select row with ID ${row._id}`}
+            onChange={(e) => toggleRowSelection(row, e.target.checked)}
           />
-        );
-      },
-      renderCell: ({ row }: any) => (
-        <input
-          type="checkbox"
-          checked={selectedRows.some(r => r._id === row._id)}
-          onChange={(e) => toggleRowSelection(row, e.target.checked)}
-        />
-      )
-    }]
+        )
+      }]
     : [];
+  
 
     console.log(selectedRows,'selectedRows');
     

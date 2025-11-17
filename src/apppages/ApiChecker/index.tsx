@@ -254,11 +254,12 @@ const ApiConfiguration = () => {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleEdit(rowIndex)}
-                      className="w-[80px] h-auto border-2 border-orange-500 rounded-[12px] bg-transparent text-orange-500 mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-orange-500 hover:text-white mr-2"
-                    >
-                      EDIT
-                    </button>
+                    onClick={() => handleEdit(rowIndex)}
+                    className="w-[80px] h-auto border-2 border-[#c2410c] rounded-[12px] bg-transparent text-[#c2410c] mt-2.5 cursor-pointer py-2 font-medium font-poppins hover:bg-[#c2410c] hover:text-white mr-2"
+                  >
+                    EDIT
+                  </button>
+                  
                   )}
                   <button
                     onClick={() => handleViewLog(row)}
