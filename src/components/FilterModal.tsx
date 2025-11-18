@@ -52,23 +52,19 @@ const FilterModal: React.FC<FilterModalProps> = ({
 
     // Handle local form changes
     const handleLocalFilterChange = (values: any) => {
-        // console.log('Local filter change in modal:', values);
         setLocalFilterValues(values);
     };
 
     useEffect(() => {
-        console.log("im in before")
     if (!shouldAnnounce) return;  // Only announce after Apply
     
 
     const liveRegion = document.getElementById("nvda_global_message");
     if (!liveRegion) return;
-   console.log("im in after")
     // Clear old text
     liveRegion.textContent = "";
 
     // Speak AFTER state updates
-    console.log("total record", totalRecords)
     setTimeout(() => {
         const message =
             totalRecords > 0
