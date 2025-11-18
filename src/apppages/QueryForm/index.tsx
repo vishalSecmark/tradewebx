@@ -45,13 +45,15 @@ const buildDatabaseXml = () => `
   </dsXml>
 `;
 
-const buildExecuteQueryXml = (query: string) => `
+const buildExecuteQueryXml = (query: string,option:string) => `
   <dsXml>
     <J_Ui>"ActionName":"${ACTION_NAME}","Option":"GetDataQueryForm"</J_Ui>
     <Sql/>
-    <X_Filter>
+    <X_Filter></X_Filter>
+    <X_Filter_Multiple>
       <Query>${query}</Query>
-    </X_Filter>
+      <DataBase>${option}</DataBase>
+    </X_Filter_Multiple>
     <X_GFilter/>
     <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
   </dsXml>
@@ -183,7 +185,9 @@ export default function QueryFormPage() {
     setLoading(true);
 
     try {
-      const xmlData = buildExecuteQueryXml(queryText.trim());
+      console.log("check db",selectedDb)
+      const seletedOption = selectedDb?.value || ""
+      const xmlData = buildExecuteQueryXml(queryText.trim(),seletedOption);
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       const returnedRows = response?.data?.data?.rs0 || [];
