@@ -60,7 +60,7 @@ export default function OTPVerificationForm() {
     }
 
     const xmlData = `<dsXml>
-      <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Verify2FA","Level":1, "RequestFrom":"M"</J_Ui>
+      <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Verify2FA","Level":1, "RequestFrom":"W"</J_Ui>
       <Sql/>
       <X_Data>
           <OTP>${otp}</OTP>

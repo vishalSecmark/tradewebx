@@ -182,7 +182,7 @@ export default function Family() {
     setIsLoading(true);
     try {
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Verify2FA","Level":1,"RequestFrom":"M"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Verify2FA","Level":1,"RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Data><OTP>${otp}</OTP></X_Data>
         <J_Api>"UserId":"${loginData.userId}", "UserType":"${getLocalStorage("userType")}"</J_Api>

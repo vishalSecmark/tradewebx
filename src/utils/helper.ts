@@ -1,5 +1,5 @@
 import { THEME_COLORS_STORAGE_KEY, THEME_STORAGE_KEY } from "@/context/ThemeContext";
-import { ACTION_NAME, APP_METADATA_KEY, BASE_URL, PATH_URL, SECURE_STORAGE_KEY } from "./constants";
+import { APP_METADATA_KEY, SECURE_STORAGE_KEY, SECURITY_LIBRARY, ACTION_NAME, BASE_URL, PATH_URL } from "./constants";
 import { toast } from "react-toastify";
 import { log } from "node:console";
 //@ts-ignore
@@ -308,27 +308,57 @@ export const base64ToUint8Array = (base64: string): Uint8Array => {
 };
 
 
+// Password decryption key for CryptoJS
+const passKey = "TradeWebX1234567";
+
+// CryptoJS Decryption function
+function Decryption(encryptedData: string) {
+    const key = CryptoJS.enc.Utf8.parse(passKey);
+    const iv = CryptoJS.enc.Utf8.parse(passKey);
+    const decrypted = CryptoJS.AES.decrypt(encryptedData, key, {
+        keySize: 128 / 8,
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+    return decrypted.toString(CryptoJS.enc.Utf8);
+}
+
 export const decodeFernetToken = (data: string) => {
     try {
-        // Create a secret (usually generated server-side)
-        const secret = new Secret("wM0zxSButFBLsbqvtBFfu2iJR2aC6FSvB9e20q8aOJA=");
+        // Check security library type and use appropriate decryption method
+        if (SECURITY_LIBRARY === 'cryptojs') {
+            // Use CryptoJS decryption
+            const decodedString = Decryption(data);
+            console.log('Decoded string (CryptoJS):', decodedString);
 
-        // Decode a token (typical frontend use case)
-        const token = new Token({
-            secret: secret,
-            token: data,
-            ttl: 0
-        });
+            // Parse the decoded string as JSON
+            const parsedData = JSON.parse(decodedString);
+            console.log('Parsed JSON (CryptoJS):', parsedData);
 
-        const decodedString = token.decode();
-        console.log('Decoded string:', decodedString);
+            return parsedData;
+        } else if (SECURITY_LIBRARY === 'fernetsdk') {
+            // Use Fernet decryption
+            const secret = new Secret("wM0zxSButFBLsbqvtBFfu2iJR2aC6FSvB9e20q8aOJA=");
 
-        // Parse the decoded string as JSON
-        const parsedData = JSON.parse(decodedString);
-        console.log('Parsed JSON:', parsedData);
+            // Decode a token (typical frontend use case)
+            const token = new Token({
+                secret: secret,
+                token: data,
+                ttl: 0
+            });
 
-        return parsedData;
+            const decodedString = token.decode();
+            console.log('Decoded string (Fernet):', decodedString);
 
+            // Parse the decoded string as JSON
+            const parsedData = JSON.parse(decodedString);
+            console.log('Parsed JSON (Fernet):', parsedData);
+
+            return parsedData;
+        } else {
+            throw new Error(`Unsupported security library: ${SECURITY_LIBRARY}`);
+        }
     } catch (error) {
         console.error('Error decoding/parsing token:', error);
         throw new Error('Failed to decode or parse token');

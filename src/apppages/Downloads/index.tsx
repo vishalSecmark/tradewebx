@@ -48,7 +48,7 @@ const Downloads = () => {
         const toDateStr = moment(filterValuesLocal.toDate).format('YYYYMMDD');
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"W"</J_Ui>
             <Sql></Sql>
             <X_Filter>
                 <FromDate>${fromDateStr}</FromDate>
@@ -132,7 +132,7 @@ const Downloads = () => {
                 const record = downloadAllData[i];
                 try {
                     const xmlData = `<dsXml>
-          <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
+          <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"W"</J_Ui>
           <Sql></Sql>
           <X_Filter>
               <FromDate>${fromDateStr}</FromDate>
@@ -197,7 +197,7 @@ const Downloads = () => {
         const toDateStr = moment(filterValues.toDate).format('YYYYMMDD');
 
         const xmlData = `<dsXml>
-            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"M"</J_Ui>
+            <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Download","Level":1, "RequestFrom":"W"</J_Ui>
             <Sql></Sql>
             <X_Filter>
                 <FromDate>${fromDateStr}</FromDate>
