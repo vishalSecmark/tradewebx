@@ -1707,9 +1707,9 @@ export const exportTableToExcel = async (
         dateFormatMap[normKey] = dateFormatSetting.format;
     }
 
-    const companyName = headerData.CompanyName?.[0] || "Company Name";
-    const reportHeader = headerData.ReportHeader?.[0] || "Report Header";
-    const rightList: string[] = headerData.RightList?.[0] || [];
+    const companyName = headerData?.CompanyName?.[0] || "Company Name";
+    const reportHeader = headerData?.ReportHeader?.[0] || "Report Header";
+    const rightList: string[] = headerData?.RightList?.[0] || [];
     const normalizedRightList = rightList.map(k => k.replace(/\s+/g, ''));
 
     let [fileTitle] = reportHeader.split("From Date");
@@ -1868,8 +1868,8 @@ export const exportTableToCsv = (
     const columnsToShowTotal = levelData.summary?.columnsToShowTotal || [];
 
     // Extract report details
-    const companyName = headerData.CompanyName?.[0] || "Company Name";
-    const reportHeader = headerData.ReportHeader?.[0] || "Report Header";
+    const companyName = headerData?.CompanyName?.[0] || "Company Name";
+    const reportHeader = headerData?.ReportHeader?.[0] || "Report Header";
 
     // Split Report Header before "From Date"
     let [fileTitle] = reportHeader.split("From Date");

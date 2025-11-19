@@ -164,7 +164,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
 
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Theme","Level":1, "RequestFrom":"M"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Theme","Level":1, "RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Filter>
         </X_Filter>
