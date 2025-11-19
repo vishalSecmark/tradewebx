@@ -1,15 +1,21 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Select, { SingleValue } from "react-select";
 import { useTheme } from "@/context/ThemeContext";
-import { getLocalStorage, storeLocalStorage, removeLocalStorage } from "@/utils/helper";
+import { getLocalStorage, storeLocalStorage, removeLocalStorage, findPageData} from "@/utils/helper";
 import apiService from "@/utils/apiService";
-import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
+import { useAppSelector } from "@/redux/hooks";
+import { store } from "@/redux/store";
+import { ACTION_NAME, BASE_URL, PATH_URL,APP_METADATA_KEY } from "@/utils/constants";
 import Loader from "@/components/Loader";
 import { toast } from "react-toastify";
 import {DataGrid,  Column } from "react-data-grid";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FaFileCsv,FaFileExcel, FaFilePdf  } from "react-icons/fa";
+import { selectAllMenuItems } from "@/redux/features/menuSlice";
+import {exportTableToCsv, exportTableToPdf, exportTableToExcel} from "@/components/DataTable";
+
 
 /* ----------------------------- Types ------------------------------ */
 
@@ -65,6 +71,12 @@ export default function QueryFormPage() {
   const { colors } = useTheme();
 
   const AUTH_KEY = "queryFormAuth";
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const menuItems = useAppSelector(selectAllMenuItems);
+  const pageData: any = findPageData(menuItems, "queryform");
+
+  
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => !!getLocalStorage(AUTH_KEY));
 
   const [loading, setLoading] = useState(false);
@@ -176,51 +188,56 @@ export default function QueryFormPage() {
   };
 
   /* ------------------ Execute Query ------------------ */
-  const handleExecute = async () => {
-    if (!selectedDb) return toast.error("Please select a database");
-    if (!queryText.trim()) return toast.error("Query cannot be empty");
-
-    setRows([]);
-    setColumns([]);
-    setLoading(true);
-
-    try {
-      console.log("check db",selectedDb)
-      const seletedOption = selectedDb?.value || ""
-      const xmlData = buildExecuteQueryXml(queryText.trim(),seletedOption);
-      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-
-      const returnedRows = response?.data?.data?.rs0 || [];
-
-      if (!returnedRows.length) {
-        setStatusMessage("No results found.");
-        return;
-      }
-
-      // Generate react-data-grid columns
-      const keys = Array.from(
-        new Set(
-          returnedRows.flatMap((row: KeyValue) => Object.keys(row))
-        )
-      ) as string[];
-
-      const gridColumns: Column<KeyValue>[] = keys.map((key: string) => ({
-        key,
-        name: key,
-        width: 200,
-        resizable: true,
-      }));
-
-
-      setColumns(gridColumns);
-      setRows(returnedRows);
-      setStatusMessage(`Query executed. ${returnedRows.length} row(s).`);
-    } catch {
-      toast.error("Query execution failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+      const handleExecute = async () => {
+        if (!selectedDb) return toast.error("Please select a database");
+        if (!queryText.trim()) return toast.error("Query cannot be empty");
+      
+        setRows([]);
+        setColumns([]);
+        setStatusMessage("");
+      
+        const startTime = performance.now();   // ⏱️ START TIMER
+        setLoading(true);
+      
+        try {
+          const selectedOption = selectedDb?.value || "";
+          const xmlData = buildExecuteQueryXml(queryText.trim(), selectedOption);
+        
+          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+        
+          const endTime = performance.now(); 
+          const timeTaken = ((endTime - startTime) / 1000).toFixed(3); 
+        
+          const returnedRows = response?.data?.data?.rs0 || [];
+        
+          if (!returnedRows.length) {
+            setStatusMessage(`No results found. (Processed in ${timeTaken} s)`);
+            return;
+          }
+        
+          const keys = Array.from(
+            new Set(returnedRows.flatMap((row: KeyValue) => Object.keys(row)))
+          );
+        
+          const gridColumns: Column<KeyValue>[] = keys.map((key: string) => ({
+            key,
+            name: key,
+            width: 200,
+            resizable: true,
+          }));
+        
+          setColumns(gridColumns);
+          setRows(returnedRows);
+          setStatusMessage(
+            `Query executed in ${timeTaken} s. ${returnedRows.length} row(s).`
+          );
+        
+        } catch {
+          toast.error("Query execution failed");
+        } finally {
+          setLoading(false);
+        }
+      };
 
   /* ------------------ Clear ------------------ */
   const handleClear = () => {
@@ -230,6 +247,15 @@ export default function QueryFormPage() {
     setStatusMessage("");
     queryTextRef.current?.focus();
   };
+
+
+  const appMetadata = (() => {
+        try {
+            return JSON.parse(getLocalStorage(APP_METADATA_KEY))
+        } catch (err) {
+            return store.getState().common
+        }
+    })();
 
   /* ------------------ MAIN JSX ------------------ */
 
@@ -413,23 +439,101 @@ export default function QueryFormPage() {
 
             {/* ------------------ RESULTS GRID (react-data-grid) ------------------ */}
             {columns.length > 0 && (
-              <div
-                style={{
-                  height: 400, // makes scrollable grid
-                  marginTop: 20,
-                }}
-              >
-                <DataGrid
-                  columns={columns}
-                  className="rdg-light"
-                  rows={rows}
-                  style={{
-                    height: "100%",
-                    background: colors.cardBackground,
-                  }}
-                />
-              </div>
-            )}
+                <>
+                  {/* Export buttons – Accessible, WCAG compliant */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      gap: 12,
+                    }}
+                  >
+                    {/* CSV */}
+                    <button
+                      onClick={()=>{
+                        toast.success("your reports will be downloded in the background")
+                        exportTableToCsv(tableRef.current, null, rows, pageData)
+                      }}
+                      aria-label="Export table as CSV file"
+                      style={{
+                        padding: "8px 12px",
+                        background: colors.buttonBackground,
+                        color: colors.buttonText,
+                        borderRadius: 6,
+                        border: "1px solid transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        cursor: "pointer"
+                      }}
+                    > 
+                      <FaFileCsv size={20} aria-hidden="true" />
+                    </button>
+                    
+                    {/* Excel */}
+                    <button
+                      onClick={()=>{
+                        toast.success("your reports will be downloded in the background")
+                        exportTableToExcel(tableRef.current,null,rows,pageData,appMetadata)
+                      }}
+                      aria-label="Export table as Excel file"
+                      style={{
+                        padding: "8px 12px",
+                        background: colors.buttonBackground,
+                        color: colors.buttonText,
+                        borderRadius: 6,
+                        border: "1px solid transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        cursor: "pointer"
+                      }}
+                    >
+                      <FaFileExcel size={20} aria-hidden="true" />
+                    </button>
+                    
+                    {/* PDF */}
+                    <button
+                      onClick={()=>{
+                        toast.success("your reports will be downloded in the background")
+                        exportTableToPdf(tableRef.current,null,appMetadata,rows,pageData,null,0,"download")
+                      }}
+                      aria-label="Export table as PDF file"
+                      style={{
+                        padding: "8px 12px",
+                        background: colors.buttonBackground,
+                        color: colors.buttonText,
+                        borderRadius: 6,
+                        border: "1px solid transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        cursor: "pointer"
+                      }}
+                    >
+                      <FaFilePdf size={20} aria-hidden="true" />
+                    </button>
+                  </div>
+                    
+                  <div
+                    style={{
+                      height: 400,
+                      marginTop: 10,
+                    }}
+                    ref={tableRef}
+                  >
+                    <DataGrid
+                      columns={columns}
+                      className="rdg-light"
+                      rows={rows}
+                      style={{
+                        height: "100%",
+                        background: colors.cardBackground,
+                      }}
+                    />
+                  </div>
+                </>
+              )}
           </>
         )}
       </div>
