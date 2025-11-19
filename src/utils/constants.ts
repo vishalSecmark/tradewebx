@@ -14,4 +14,4 @@ export const VERSION = "2.0.0.1"
 export const ENABLE_CAPTCHA = process.env.NEXT_PUBLIC_ENABLE_CAPTCHA !== 'false' // Default to true if not set to 'false'
 export const ENABLE_FERNET = process.env.NEXT_PUBLIC_ENABLE_FERNET || true
 export const SECURE_STORAGE_KEY = 'secure_data' // Single key for all encrypted localStorage data
-export const SECURITY_LIBRARY = 'cryptojs' // Options: 'fernetsdk', 'cryptojs'
+export const SECURITY_LIBRARY = 'fernetsdk' // Options: 'fernetsdk', 'cryptojs'
