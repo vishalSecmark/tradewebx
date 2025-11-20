@@ -171,7 +171,7 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
             onMenuOpen();
           }
         }}
-        onCreateOption={isCreatable ? onCreateOption : undefined}
+        {...(isCreatable ? { onCreateOption } : {}) as any}
         isValidNewOption={isCreatable ? undefined : () => false}
         onBlur={() => {
           setVisibleOptions(options.slice(0, 50));
