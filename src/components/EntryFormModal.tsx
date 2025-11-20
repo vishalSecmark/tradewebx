@@ -2345,14 +2345,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setTabsModal(false); // Close modal after adding/editing
     }
 
-    const fetchGuardianFormData = async (guardianDetails) => {
+    const fetchGuardianFormData = async (guardianDetails,nomineeDetails?: any) => {
         setGuardianLoading(true);
         const currentTab = tabsData[activeTabIndex];
         const guardianFormFetchAPI = currentTab?.Settings?.ChildEntryAPI;
         const currentTabKey = `tab_${activeTabIndex}`;
 
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
-
         try {
 
             const jUi = Object.entries(guardianFormFetchAPI?.J_Ui)
@@ -2370,7 +2369,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 if (key === 'NomSerial') {
                     xFilter += `<${key}>${currentTabFormValues[key] || ""}</${key}>`;
                 } else {
-                    xFilter += `<${key}>${masterFormValues[key] || currentTabFormValues[key] || value}</${key}>`;
+                    xFilter += `<${key}>${masterFormValues[key] || currentTabFormValues[key] || nomineeDetails?.[key] || value}</${key}>`;
                 }
             });
 
@@ -2420,9 +2419,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     }
   
-    const handleAddNominee = (guardianDetails = {}) => {
+    const handleAddNominee = (guardianDetails = {},nomineeDetails?: any) => {
         setIsGuardianModalOpen(true)
-        fetchGuardianFormData(guardianDetails)
+        fetchGuardianFormData(guardianDetails,nomineeDetails)
     }
 
     const handleClearTabTableRowEntry = () => {
@@ -2947,7 +2946,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                         <button
                                                                                             className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
                                                                                             onClick={()=>{
-                                                                                                    handleAddNominee(row.guardianDetails)
+                                                                                                    handleAddNominee(row.guardianDetails,row)
                                                                                                 }}
                                                                                         >
                                                                                              View Guardian Details
