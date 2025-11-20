@@ -327,7 +327,7 @@ function Decryption(encryptedData: string) {
 export const decodeFernetToken = (data: string) => {
     try {
         // Check security library type and use appropriate decryption method
-        if (SECURITY_LIBRARY === 'cryptojs') {
+        if (SECURITY_LIBRARY === 'cryptojssdk') {
             // Use CryptoJS decryption
             const decodedString = Decryption(data);
             console.log('Decoded string (CryptoJS):', decodedString);
