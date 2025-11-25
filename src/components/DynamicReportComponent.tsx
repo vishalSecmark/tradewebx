@@ -1066,7 +1066,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             const searchContainer = document.querySelector('.search-container');
             if (isSearchActive && searchContainer && !searchContainer.contains(event.target as Node)) {
                 setIsSearchActive(false);
-                setSearchTerm('');
+                // setSearchTerm('');
             }
         };
 
