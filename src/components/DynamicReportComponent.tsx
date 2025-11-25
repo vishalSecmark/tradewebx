@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import axios from 'axios';
-import { BASE_URL, PATH_URL } from '@/utils/constants';
+import { BASE_URL, PATH_URL, UPLOAD_FILE_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope } from 'react-icons/fa';
@@ -313,7 +313,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         timestamp: number;
     }>>({});
 
-    console.log("check level stack",levelStack)
+    console.log("check level stack", levelStack)
 
     // Function to generate cache key based on current state
     const generateCacheKey = (level: number, filters: Record<string, any>, primaryFilters: Record<string, any>) => {
@@ -391,11 +391,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }, [pageData]);
 
     // Helper functions for button configuration
-    const isMasterButtonEnabled = (buttonType: string): boolean => {       
+    const isMasterButtonEnabled = (buttonType: string): boolean => {
         if (!pageData?.[0]?.MasterbuttonConfig) return true; // Default to enabled if no config
         const buttonConfig = pageData[0].MasterbuttonConfig.find(
             (config: any) => config.ButtonType === buttonType
-        );        
+        );
 
         return buttonConfig?.EnabledTag === "true";
     };
@@ -434,7 +434,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }
 
-    
+
 
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
@@ -991,7 +991,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             if (response?.data?.success) {
-                fetchData(filters,false);
+                fetchData(filters, false);
                 const rawMessage = response?.data?.message
                 const deleteMsg = rawMessage.replace(/<\/?Message>/g, "");
                 toast.success(deleteMsg)
@@ -1819,12 +1819,12 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 isOpen={isEditTableRowModalOpen}
                 onClose={() => {
                     setIsEditTableRowModalOpen(false)
-                    fetchData(filters,false);
+                    fetchData(filters, false);
                 }}
                 title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
                 pageName={OpenedPageName}
-                isTabs={componentType === "multientry" ? true : false}  
+                isTabs={componentType === "multientry" ? true : false}
                 wPage={safePageData.getSetting('wPage') || ''}
                 settings={{
                     ...safePageData.getCurrentLevel(currentLevel)?.settings,
@@ -1981,7 +1981,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                             showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                             buttonConfig={pageData?.[0]?.buttonConfig}
-                            filtersCheck = {filters}
+                            filtersCheck={filters}
                             pageData={pageData}
                         />
                         {Object.keys(additionalTables).length > 0 && (
@@ -2013,7 +2013,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 tableRef={tableRef}
                                                 fullHeight={false}
                                                 buttonConfig={pageData?.[0]?.buttonConfig}
-                                                filtersCheck = {filters}
+                                                filtersCheck={filters}
                                                 pageData={pageData}
                                             />
                                         </div>
@@ -2036,7 +2036,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     setEntryEditData={setEntryFormData}
                     refreshFunction={() => {
                         // added extra parm if want to skip cache check  send second param as false
-                        fetchData(filters,false);
+                        fetchData(filters, false);
                     }}
                 />
             )}
@@ -2067,9 +2067,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-6 pb-4 border-b" style={{ borderColor: colors.color1 || '#e5e7eb' }}>
-                            <h3 className="font-semibold text-xl" style={{ color: colors.text }}>
-                                {safePageData.getSetting('level') || 'Import File'}
-                            </h3>
+                            <div>
+                                <h3 className="font-semibold text-xl" style={{ color: colors.text }}>
+                                    {safePageData.getSetting('level') || 'Import File'}
+                                </h3>
+                                {selectedImportRecord?.FileName && (
+                                    <p className="text-sm mt-1" style={{ color: colors.text, opacity: 0.7 }}>
+                                        {selectedImportRecord.FileName}
+                                    </p>
+                                )}
+                            </div>
                             <button
                                 onClick={() => {
                                     setIsImportModalOpen(false);
@@ -2084,7 +2091,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
                         {/* File Upload Component */}
                         <FileUploadChunked
-                            apiEndpoint={BASE_URL + PATH_URL}
+                            apiEndpoint={`${BASE_URL}${UPLOAD_FILE_URL}`}
                             chunkSize={10000}
                             maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
                             allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}

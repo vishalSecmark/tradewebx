@@ -4,6 +4,7 @@ import { useTheme } from '@/context/ThemeContext';
 import FileUploadChunked from '@/components/upload/FileUploadChunked';
 import { UploadSummary } from '@/types/upload';
 import { toast } from 'react-toastify';
+import { BASE_URL, UPLOAD_FILE_URL } from '@/utils/constants';
 
 const UploadFile = () => {
     const { colors } = useTheme();
@@ -117,7 +118,7 @@ const UploadFile = () => {
 
                 {/* File Upload Component */}
                 <FileUploadChunked
-                    apiEndpoint="https://trade-plus.in/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile"
+                    apiEndpoint={`${BASE_URL}${UPLOAD_FILE_URL}`}
                     chunkSize={10000}
                     maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
                     allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}

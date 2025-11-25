@@ -1,5 +1,6 @@
 export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 export const PATH_URL = process.env.NEXT_PUBLIC_PATH_URL
+export const UPLOAD_FILE_URL = process.env.NEXT_PUBLIC_UPLOAD_FILE_URL || '/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile'
 export const LOGIN_URL = process.env.NEXT_PUBLIC_LOGIN_URL
 export const PRODUCT = process.env.NEXT_PUBLIC_PRODUCT
 export const OTP_VERIFICATION_URL = process.env.NEXT_PUBLIC_OTP_VERIFICATION_URL

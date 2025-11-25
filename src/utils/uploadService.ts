@@ -24,7 +24,7 @@ const buildPayload = (chunkData: ChunkData, headers: string[], metadata?: any) =
   });
 
   return {
-    FileSeqNo: "2", // Always 1 as per requirement
+    FileSeqNo: String(metadata?.selectedRecord?.FileSerialNo || "2"), // Use FileSerialNo from selected record
     UserId: "Admin",
     BatchNo: String(chunkIndex + 1), // Increments with each chunk
     InputJson: inputJson,

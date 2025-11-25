@@ -1,3 +1,4 @@
+import { BASE_URL } from '@/utils/constants';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     console.log(`InputJson keys:`, Object.keys(InputJson));
 
     // Forward request to external API
-    const apiUrl = 'https://trade-plus.in/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile';
+    const apiUrl = `${BASE_URL}/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile`;
 
     const response = await fetch(apiUrl, {
       method: 'POST',
