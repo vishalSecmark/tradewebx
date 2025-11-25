@@ -77,14 +77,16 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
         className={`
           w-full pl-10 pr-3 py-1 border rounded-md relative
           focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+          text-[14px]
           ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-60' : 'bg-white'}
           ${className}
         `}
+        style={{height:"30px"}}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <input
           type="text"
-          className="w-full focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none bg-transparent placeholder-gray-400 cursor-pointer"
+          className="w-full focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none bg-transparent placeholder-gray-400 cursor-pointer text-[14px]"
           placeholder={placeholderText}
           value={selected ? moment(selected).format('DD/MM/YYYY HH:mm') : ''}
           readOnly
@@ -97,7 +99,7 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
       </div>
 
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg">
+        <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg text-[14px]">
           <div className="flex flex-row">
             {/* Calendar Section */}
             <div className="p-4 border-r border-gray-200">
@@ -146,7 +148,7 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                     <select
                       value={moment(date).year()}
                       onChange={({ target: { value } }) => changeYear(Number(value))}
-                      className="px-2 py-1 rounded border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      className="px-2 py-1 rounded border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-[14px]"
                     >
                       {years.map((option) => (
                         <option key={option} value={option}>
@@ -160,7 +162,7 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
                       onChange={({ target: { value } }) =>
                         changeMonth(months.indexOf(value))
                       }
-                      className="px-2 py-1 rounded border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      className="px-2 py-1 rounded border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-[14px]"
                     >
                       {months.map((option) => (
                         <option key={option} value={option}>
@@ -184,7 +186,7 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
 
             {/* Time Picker Section */}
             <div className="p-4 w-48">
-              <div className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <div className="text-[14px] font-medium text-gray-700 mb-3 flex items-center gap-2">
                 <FiClock className="h-4 w-4" />
                 Select Time
               </div>

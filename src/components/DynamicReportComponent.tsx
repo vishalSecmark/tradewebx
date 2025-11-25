@@ -729,7 +729,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             const endTime = performance.now();
             setApiResponseTime(Math.round(endTime - startTime));
-            const rawData = response.data.data.rs0 || [];
+            const rawData = response?.data?.data?.rs0 || [];
 
             // Check for error flag in the response
             if (rawData.length > 0 && rawData[0].ErrorFlag === 'E' && rawData[0].ErrorMessage) {
@@ -759,8 +759,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             let parsedJsonUpdated = null;
             let parsedRs1Settings = null;
 
-            if (response.data.data.rs1?.[0]?.Settings) {
-                const xmlString = response.data.data.rs1[0].Settings;
+            if (response?.data?.data?.rs1?.[0]?.Settings) {
+                const xmlString = response?.data?.data?.rs1[0].Settings;
                 parsedRs1Settings = parseSettingsFromXml(xmlString);
 
                 parsedJsonData = convertXmlToJson(xmlString);

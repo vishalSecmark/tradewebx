@@ -5,12 +5,12 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { getDropdownStyles } from "../common/CommonStyling";
 import CreatableSelect from 'react-select/creatable';
-import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from "@/utils/apiService";
 import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 import CustomDateTimePicker from "./formComponents/CustomDateTimePicker";
+import CustomDatePicker from "./formComponents/CustomDatePicker";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -147,8 +147,16 @@ const DropdownField: React.FC<{
                 <CreatableSelect
                     options={visibleOptions}
                     isClearable
-                    value={options.find((opt: any) => opt.value.toString() === formValues[field.wKey]?.toString()) || null}
-                    onChange={(selected) => handleInputChange(field.wKey, selected?.value)}
+                    value={options.find((opt: any) => {
+                        const optValue = typeof opt.value === 'string' ? opt.value.trim() : opt.value;
+                        const formValue = typeof formValues[field.wKey] === 'string' ? formValues[field.wKey].trim() : formValues[field.wKey];
+                        return String(optValue) === String(formValue);
+                    }) || null}
+                    onChange={(selected) => {
+                        const value = selected?.value;
+                        const processedValue = typeof value === 'string' ? value.trim() : value;
+                        handleInputChange(field.wKey, processedValue);
+                    }}
                     onInputChange={(inputValue, { action }) => {
                         if (action === 'input-change') {
                             // Prevent typing beyond allowed length for creatable fields
@@ -388,8 +396,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     const isDisabled = tagFlag === 'false';
 
                     if (tagFlag === 'true' || tagFlag === 'false') {
-                        setFormValues(prev => ({ ...prev, [tagName]: "" }));
-                        console.log("check value---->", isDisabled);
+                        // setFormValues(prev => ({ ...prev, [tagName]: "" }));
                         if (isDisabled) {
                             // handleBlur(field);
                             setFieldErrors(prev => ({ ...prev, [tagName]: '' })); // Clear error for disabled fields
@@ -432,7 +439,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
         const checkBoxStyle = {
             width: fieldWidth,
             marginBottom: marginBottom,
-            marginTop: "30px"
+            marginTop: "25px"
         };
 
         const containerStylesForBr = {
@@ -518,28 +525,36 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             {field.label}
                             {isRequired && <span className="text-red-500 ml-1">*</span>}
                         </label>
-                        <DatePicker
-                            selected={fieldValue ? moment(fieldValue, 'YYYYMMDD').toDate() : null}
-                            onChange={(date: Date | null) => handleInputChange(field.wKey, date)}
-                            dateFormat="dd/MM/yyyy"
-                            className={`
-                            w-full px-3 py-1 border rounded-md
-                            focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-                            ${!isEnabled
+                         <CustomDatePicker
+                           selected={
+                               formValues[field.wKey] && 
+                               formValues[field.wKey].trim() && 
+                               moment(formValues[field.wKey], 'YYYYMMDD', true).isValid() 
+                                 ? moment(formValues[field.wKey], 'YYYYMMDD').toDate() 
+                                 : null
+                             }
+                             onChange={(date) => {
+                               const formattedDate = date ? moment(date).format('YYYYMMDD') : null;
+                               handleInputChange(field.wKey, formattedDate);
+                             }}
+                           disabled={!isEnabled}
+                           className={`
+                                 w-full px-3 py-1 border rounded-md
+                                 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
+                                 ${!isEnabled
                                     ? 'border-gray-300 bg-[#f2f2f0]'
                                     : fieldErrors[field.wKey]
                                         ? 'border-red-500'
                                         : 'border-gray-700'
                                 }
-                            ${colors.textInputBackground ? `bg-${colors.textInputBackground}` : ''}
-                            ${isJustUpdated ? 'text-green-500' : ''}
-
-                        `}
-                            wrapperClassName="w-full"
-                            placeholderText="Select Date"
-                            onBlur={() => handleBlur(field)}
-                            disabled={!isEnabled}
-                        />
+                         ${colors.textInputBackground ? `bg-[${colors.textInputBackground}]` : ''}
+                         ${isJustUpdated ? 'text-green-500' : ''}
+                     `}
+                                 onBlur={() => handleBlur(field)}
+                                 placeholder="Select Date"
+                                 id={field.wKey}
+                                 name={field.wKey}
+                             />
                         {fieldErrors[field.wKey] && (
                             <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
                         )}
@@ -555,12 +570,13 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         </label>
                         <input
                             type="text"
-                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700'
+                            className={`w-full px-3 py-1 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${!isEnabled ? 'border-gray-300' : fieldErrors[field.wKey] ? 'border-red-500' : 'border-gray-700 text-[14px]'
                                 }`}
                             style={{
                                 borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : "#344054",
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                 color: isJustUpdated ? "#22c55e" : colors.textInputText,
+                                height: "30px",
                                 width: fieldWidth // Apply width to input directly
                             }}
                             value={formValues[field.wKey] || ''}
@@ -612,11 +628,12 @@ const EntryForm: React.FC<EntryFormProps> = ({
                             {field.label}
                         </label>
                         <div
-                            className="w-full px-3 py-1 border rounded-md"
+                            className="w-full px-3 py-1 border rounded-md text-[14px]"
                             style={{
                                 borderColor: fieldErrors[field.wKey] ? 'red' : !isEnabled ? '#d1d5db' : colors.textInputBorder,
                                 backgroundColor: !isEnabled ? "#f2f2f0" : colors.textInputBackground,
                                 color: isJustUpdated ? "#22c55e" : colors.textInputText,
+                                height: "30px",
                                 width: fieldWidth // Apply width to display box
                             }}
                         >
@@ -646,7 +663,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
     };
 
     return (
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-2">
             {formData.map((field, index) => renderFormField(field, index))}
         </div>
     );

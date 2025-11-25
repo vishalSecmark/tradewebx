@@ -12,11 +12,22 @@ import CustomDropdown from './form/CustomDropdown';
 import apiService from '@/utils/apiService';
 
 import { getLocalStorage } from '@/utils/helper';
+import AsyncSearchDropdown from './form/AsyncSearchDropdown';
 
 export interface FormElement {
     type: string;
     label: string;
     wKey: string | string[];
+    FromMinDate?: string;
+    FromMaxDate?: string;
+    ToMinDate?: string;
+    ToMaxDate?: string;
+    placeholder?: string;
+    dynamicSearch?: {
+    isDynamic: boolean,
+    minSearchLength: number,
+    debounceMs: number
+    }
     options?: Array<{ label: string; value: string, Value: string }>;
     wQuery?: {
         J_Ui: any;
@@ -312,7 +323,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                     newValues[dependentItem.wKey as string] = undefined;
 
                     // Also clear dropdown options for dependent fields to ensure they're hidden
-                    if (dependentItem.type === 'WDropDownBox') {
+                    if (dependentItem.type === 'WDropDownBox' || dependentItem.type === "WSearchDropDownBox") {
                         setDropdownOptions(prev => ({
                             ...prev,
                             [dependentItem.wKey as string]: []
@@ -388,114 +399,132 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         handleFormChange(newValues);
     };
 
-    const fetchDropdownOptions = async (item: FormElement) => {
-        try {
+  const fetchDropdownOptions = async (
+    item: FormElement,
+    searchQuery?: string
+    ) => {
+          try {
             // Generate cache key
             const cacheKey = generateCacheKey(item);
-
+        
             // Check cache first
             const cachedOptions = getCachedOptions(cacheKey);
-            if (cachedOptions) {
-                console.log('Using cached dropdown options for:', item.wKey);
-                setDropdownOptions(prev => ({
-                    ...prev,
-                    [item.wKey as string]: cachedOptions
-                }));
-                return cachedOptions;
-            }
-
-            setLoadingDropdowns(prev => ({
+            if (cachedOptions && item.type === "WDropDownBox") {
+              setDropdownOptions(prev => ({
                 ...prev,
-                [item.wKey as string]: true
+                [item.wKey as string]: cachedOptions
+              }));
+              return cachedOptions;
+            }
+        
+            setLoadingDropdowns(prev => ({
+              ...prev,
+              [item.wKey as string]: true
             }));
-
-            console.log('Fetching fresh dropdown options for:', item.wKey);
+        
             let jUi, jApi;
-
-            if (typeof item.wQuery?.J_Ui === 'object') {
-                const uiObj = item.wQuery.J_Ui;
-                jUi = Object.keys(uiObj)
-                    .map(key => `"${key}":"${uiObj[key]}"`)
-                    .join(',');
+        
+            // Handle J_Ui
+            if (typeof item.wQuery?.J_Ui === "object") {
+              const uiObj = item.wQuery.J_Ui;
+              jUi = Object.keys(uiObj)
+                .map(key => `"${key}":"${uiObj[key]}"`)
+                .join(",");
             } else {
-                jUi = item.wQuery?.J_Ui;
+              jUi = item.wQuery?.J_Ui;
             }
-
-            if (typeof item.wQuery?.J_Api === 'object') {
-                const apiObj = item.wQuery.J_Api;
-                jApi = Object.keys(apiObj)
-                    .map(key => `"${key}":"${apiObj[key]}"`)
-                    .join(',');
+        
+            // Handle J_Api
+            if (typeof item.wQuery?.J_Api === "object") {
+              const apiObj = item.wQuery.J_Api;
+              jApi = Object.keys(apiObj)
+                .map(key => `"${key}":"${apiObj[key]}"`)
+                .join(",");
             } else {
-                jApi = item.wQuery?.J_Api;
+              jApi = item.wQuery?.J_Api;
             }
-
+        
+            // Build XML filter content based on searchQuery
+            const xmlFilterContent = item.wQuery?.X_Filter || "";
+        
+            // Add SearchQuery logic
+            let xmlFilterMultiple = "";
+            if (item.dynamicSearch?.isDynamic && searchQuery && searchQuery.trim() !== "") {
+              // Include X_Filter_Multiple with SearchQuery tag
+              xmlFilterMultiple = `<X_Filter_Multiple><SearchQuery>${searchQuery}</SearchQuery></X_Filter_Multiple>`;
+            }
+        
+            // Final XML to send
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
-                <Sql>${item.wQuery?.Sql || ''}</Sql>
-                <X_Filter>${item.wQuery?.X_Filter || ''}</X_Filter>
-                <J_Api>${jApi},"UserType":"${getLocalStorage('userType')}"</J_Api>
+                <Sql>${item.wQuery?.Sql || ""}</Sql>
+                ${
+                  xmlFilterMultiple
+                    ? `${xmlFilterMultiple}<X_Filter></X_Filter>`
+                    : `<X_Filter>${xmlFilterContent}</X_Filter>`
+                }
+                <J_Api>${jApi},"UserType":"${getLocalStorage("userType")}"</J_Api>
             </dsXml>`;
-
-            // console.log('Dropdown request XML:', xmlData);
-
+            
+            // Make API call
             const response = await apiService.postWithAuth(
-                BASE_URL + PATH_URL,
-                xmlData,
+              BASE_URL + PATH_URL,
+              xmlData
             );
-
+        
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
-                console.error('Unexpected data format:', response.data);
-                setLoadingDropdowns(prev => ({
-                    ...prev,
-                    [item.wKey as string]: false
-                }));
-                return [];
+              console.error("Unexpected data format:", response.data);
+              setLoadingDropdowns(prev => ({
+                ...prev,
+                [item.wKey as string]: false
+              }));
+              return [];
             }
-
-            const keyField = item.wDropDownKey?.key || 'DisplayName';
-            const valueField = item.wDropDownKey?.value || 'Value';
-
+        
+            const keyField = item.wDropDownKey?.key || "DisplayName";
+            const valueField = item.wDropDownKey?.value || "Value";
+        
             const options = rs0Data.map(dataItem => ({
-                label: dataItem[keyField],
-                value: dataItem[valueField]
+              label: dataItem[keyField],
+              value: dataItem[valueField]
             }));
-
+        
             console.log(`Fetched ${options.length} options for ${item.wKey}:`, options);
-
+        
             // Cache the options
             setCachedOptions(cacheKey, options);
-
+        
             setDropdownOptions(prev => ({
-                ...prev,
-                [item.wKey as string]: options
+              ...prev,
+              [item.wKey as string]: options
             }));
-
+        
             setLoadingDropdowns(prev => ({
-                ...prev,
-                [item.wKey as string]: false
+              ...prev,
+              [item.wKey as string]: false
             }));
-
+        
             return options;
-        } catch (error) {
-            console.error('Error fetching dropdown options:', error);
+          } catch (error) {
+            console.error("Error fetching dropdown options:", error);
             setLoadingDropdowns(prev => ({
-                ...prev,
-                [item.wKey as string]: false
+              ...prev,
+              [item.wKey as string]: false
             }));
             return [];
-        }
-    };
+          }
+        };
 
-    const fetchDependentOptions = async (item: FormElement, parentValue: string | Record<string, any>) => {
+    const fetchDependentOptions = async (item: FormElement, parentValue: string | Record<string, any>, searchQuery?: string) => {
         try {
             if (!item.dependsOn) return [];
 
             if (
-                (typeof parentValue === 'string' && !parentValue) ||
-                (typeof parentValue === 'object' && Object.values(parentValue).some(val => !val))
-            ) {
+                  !item.dynamicSearch?.isDynamic && 
+                  ((typeof parentValue === 'string' && !parentValue) ||
+                   (typeof parentValue === 'object' && Object.values(parentValue).some(val => !val)))
+                ){
                 console.error(`Parent value for ${item.wKey} is empty or undefined`, parentValue);
 
                 // Clear dropdown options when parent value is invalid
@@ -517,8 +546,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
             // Check cache first
             const cachedOptions = getCachedOptions(cacheKey);
-            if (cachedOptions) {
-                console.log('Using cached dependent options for:', item.wKey);
+            if (cachedOptions && item.type === "WDropDownBox") {
                 setDropdownOptions(prev => ({
                     ...prev,
                     [item.wKey as string]: cachedOptions
@@ -530,10 +558,6 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 ...prev,
                 [item.wKey as string]: true
             }));
-
-            console.log('Fetching fresh dependent options for:', item.wKey);
-
-            // console.log(`Fetching dependent options for ${item.wKey} based on:`, parentValue);
 
             let jUi, jApi;
 
@@ -584,6 +608,13 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         }
                         xmlFilterContent = xmlFilterContent.replace(`\${${field}}`, formattedValue);
                     });
+
+                    if (searchQuery !== undefined) {
+                        xmlFilterContent = xmlFilterContent.replace(/\$\{SearchQuery\}/g, searchQuery || '');
+                    }else{
+                        xmlFilterContent = xmlFilterContent.replace(/\$\{SearchQuery\}/g, '');
+                    }
+
                 } else {
                     xmlFilterContent = item.dependsOn.wQuery.X_Filter || '';
                     item.dependsOn.field.forEach(field => {
@@ -661,13 +692,19 @@ const FormCreator: React.FC<FormCreatorProps> = ({
             const rs0Data = response.data?.data?.rs0;
             if (!Array.isArray(rs0Data)) {
                 console.error('Unexpected data format:', response.data);
+                if(item.type === "WSearchDropDownBox"){
+                    setDropdownOptions(prev => ({
+                      ...prev,
+                      [item.wKey as string]: []
+                    }));
+                }
                 setLoadingDropdowns(prev => ({
                     ...prev,
                     [item.wKey as string]: false
                 }));
                 return [];
             }
-
+    
             const keyField = item.wDropDownKey?.key || 'DisplayName';
             const valueField = item.wDropDownKey?.value || 'Value';
 
@@ -675,6 +712,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 label: dataItem[keyField],
                 value: dataItem[valueField]
             }));
+            
+
 
             console.log(`Got ${options.length} dependent options for ${item.wKey}:`, options);
 
@@ -738,81 +777,108 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         });
     }, [sortedFormData, formValues]);
 
-    const renderDateRangeBox = (item: FormElement) => {
-        const [fromKey, toKey] = item.wKey as string[];
+        const renderDateRangeBox = (item: FormElement) => {
+          const [fromKey, toKey] = item.wKey as string[];
+        
+          // Extract backend date limits (if any)
+          const fromMin = item.FromMinDate ? moment(item.FromMinDate, "YYYYMMDD").toDate() : undefined;
+          const fromMax = item.FromMaxDate ? moment(item.FromMaxDate, "YYYYMMDD").toDate() : undefined;
+          const toMin = item.ToMinDate ? moment(item.ToMinDate, "YYYYMMDD").toDate() : undefined;
+          const toMax = item.ToMaxDate ? moment(item.ToMaxDate, "YYYYMMDD").toDate() : undefined;
 
-        return (
+          console.log("check dates",fromMin,fromMax,toMin,toMax)
+        
+          return (
             <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
-                    {item.label}
-                </label>
-                <div className="flex gap-4">
-                    <div className="flex-1">
-                        <DatePicker
-                            selected={formValues[fromKey]}
-                            onChange={(date: Date) => handleInputChange(fromKey, date)}
-                            dateFormat="dd/MM/yyyy"
-                            className={`w-full px-3 py-2 border rounded-md bg-white`}
-                            wrapperClassName={`w-full`}
-                            placeholderText="From Date"
-                            showYearDropdown
-                            showMonthDropdown
-                            yearDropdownItemNumber={50}
-                            scrollableYearDropdown
-                            dropdownMode="select"
-                        />
-                    </div>
-                    <div className="flex-1">
-                        <DatePicker
-                            selected={formValues[toKey]}
-                            onChange={(date: Date) => handleInputChange(toKey, date)}
-                            dateFormat="dd/MM/yyyy"
-                            className="w-full px-3 py-2 border rounded-md bg-white"
-                            wrapperClassName={`w-full`}
-                            placeholderText="To Date"
-                            showYearDropdown
-                            showMonthDropdown
-                            yearDropdownItemNumber={50}
-                            scrollableYearDropdown
-                            dropdownMode="select"
-                        />
-                    </div>
-                    <div className="relative">
-                        <button
-                            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                            onClick={() => setShowDatePresets(prev => ({
-                                ...prev,
-                                [fromKey]: !prev[fromKey]
-                            }))}
-                        >
-                            <FaCalendarAlt />
-                        </button>
-                        {showDatePresets[fromKey] && (
-                            <div
-                                className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
-                                style={{ backgroundColor: colors.textInputBackground }}
-                            >
-                                <div className="py-1" role="menu" aria-orientation="vertical">
-                                    {contextMenuItems.map((item) => (
-                                        <button
-                                            key={item.id}
-                                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-100"
-                                            style={{
-                                                color: colors.textInputText
-                                            }}
-                                            onClick={() => handlePresetSelection(item.id, fromKey, toKey)}
-                                        >
-                                            {item.text}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+              <label
+                className={`block text-sm mb-1 ${isHorizontal ? "font-bold" : "font-medium"}`}
+                style={{ color: colors.text }}
+              >
+                {item.label}
+              </label>
+        
+              <div className="flex gap-4">
+                {/* From Date */}
+                <div className="flex-1">
+                  <DatePicker
+                    selected={formValues[fromKey]}
+                    onChange={(date: Date) => handleInputChange(fromKey, date)}
+                    dateFormat="dd/MM/yyyy"
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    wrapperClassName="w-full"
+                    placeholderText="From Date"
+                    showYearDropdown
+                    showMonthDropdown
+                    yearDropdownItemNumber={50}
+                    scrollableYearDropdown
+                    dropdownMode="select"
+                    // Apply backend limits (if any)
+                    minDate={fromMin}
+                    maxDate={fromMax}
+                  />
                 </div>
+        
+                {/* To Date */}
+                <div className="flex-1">
+                  <DatePicker
+                    selected={formValues[toKey]}
+                    onChange={(date: Date) => handleInputChange(toKey, date)}
+                    dateFormat="dd/MM/yyyy"
+                    className="w-full px-3 py-2 border rounded-md bg-white"
+                    wrapperClassName="w-full"
+                    placeholderText="To Date"
+                    showYearDropdown
+                    showMonthDropdown
+                    yearDropdownItemNumber={50}
+                    scrollableYearDropdown
+                    dropdownMode="select"
+                    // Apply backend limits (if any)
+                    minDate={toMin}
+                    maxDate={toMax}
+                  />
+                </div>
+        
+                {/* Preset Button (unchanged) */}
+                <div className="relative">
+                  <button
+                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                    onClick={() =>
+                      setShowDatePresets((prev) => ({
+                        ...prev,
+                        [fromKey]: !prev[fromKey],
+                      }))
+                    }
+                  >
+                    <FaCalendarAlt />
+                  </button>
+                
+                  {showDatePresets[fromKey] && (
+                    <div
+                      className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                      style={{ backgroundColor: colors.textInputBackground }}
+                    >
+                      <div className="py-1" role="menu" aria-orientation="vertical">
+                        {contextMenuItems.map((menuItem) => (
+                          <button
+                            key={menuItem.id}
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-100"
+                            style={{
+                              color: colors.textInputText,
+                            }}
+                            onClick={() => handlePresetSelection(menuItem.id, fromKey, toKey)}
+                          >
+                            {menuItem.text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-        );
-    };
+          );
+        };
+
 
     const renderTextBox = (item: FormElement) => {
         return (
@@ -837,29 +903,38 @@ const FormCreator: React.FC<FormCreatorProps> = ({
     };
 
     const renderDateBox = (item: FormElement) => {
-        return (
-            <div className={isHorizontal ? "mb-2" : "mb-4"}>
-                <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
-                    {item.label}
-                </label>
-                <DatePicker
-                    selected={formValues[item.wKey as string]}
-                    onChange={(date: Date) => {
-                        handleInputChange(item.wKey as string, date);
-                    }}
-                    dateFormat="dd/MM/yyyy"
-                    className={`w-full px-3 py-2 border rounded-md bg-white`}
-                    wrapperClassName={`w-full`}
-                    placeholderText="Select Date"
-                    showYearDropdown
-                    showMonthDropdown
-                    yearDropdownItemNumber={50}
-                    scrollableYearDropdown
-                    dropdownMode="select"
-                />
-            </div>
-        );
+      // Extract backend values (if present)
+      const fromMin = item.FromMinDate ? moment(item.FromMinDate, "YYYYMMDD").toDate() : undefined;
+      const fromMax = item.FromMaxDate ? moment(item.FromMaxDate, "YYYYMMDD").toDate() : undefined;
+        
+      return (
+        <div className={isHorizontal ? "mb-2" : "mb-4"}>
+          <label
+            className={`block text-sm mb-1 ${isHorizontal ? "font-bold" : "font-medium"}`}
+            style={{ color: colors.text }}
+          >
+            {item.label}
+          </label>
+    
+          <DatePicker
+            selected={formValues[item.wKey as string]}
+            onChange={(date: Date) => handleInputChange(item.wKey as string, date)}
+            dateFormat="dd/MM/yyyy"
+            className="w-full px-3 py-2 border rounded-md bg-white"
+            wrapperClassName="w-full"
+            placeholderText="Select Date"
+            showYearDropdown
+            showMonthDropdown
+            yearDropdownItemNumber={50}
+            scrollableYearDropdown
+            dropdownMode="select"
+            minDate={fromMin}
+            maxDate={fromMax}
+          />
+        </div>
+      );
     };
+
 
     const renderDropDownBox = (item: FormElement) => {
         const options = item.options
@@ -887,6 +962,39 @@ const FormCreator: React.FC<FormCreatorProps> = ({
         );
     };
 
+    const renderSearchDropDownBox = (item: FormElement) => {
+        if (item.dynamicSearch?.isDynamic && !item?.wQuery) {
+          return (
+            <AsyncSearchDropdown
+              item={item}
+              value={formValues[item.wKey as string]}
+              onChange={(val) => handleInputChange(item.wKey as string, val)}
+              colors={colors}
+              formData={sortedFormData}
+              formValues={formValues}
+              handleFormChange={handleFormChange}
+              fetchDependentOptions={fetchDependentOptions}
+              isHorizontal={isHorizontal}
+            />
+          );
+        }else{
+            return(
+                <AsyncSearchDropdown
+                   item={item}
+                   value={formValues[item.wKey as string]}
+                   onChange={(val) => handleInputChange(item.wKey as string, val)}
+                   colors={colors}
+                   formData={sortedFormData}
+                   formValues={formValues}
+                   handleFormChange={handleFormChange}
+                   fetchDependentOptions={(item,parentValue,searchValue)=>{
+                     return fetchDropdownOptions(item,searchValue);
+                 }}
+                   isHorizontal={isHorizontal}
+                 /> )
+        }
+    };
+
     const renderCheckBox = (item: FormElement) => {
         return (
             <div className={`${isHorizontal ? "mb-2" : "mb-4"} flex items-center`}>
@@ -908,7 +1016,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
 
     const renderFormElement = (item: FormElement) => {
         // Check if this is a dependent dropdown with no options or unfulfilled dependencies
-        if (item.type === 'WDropDownBox' && item.dependsOn) {
+        if ((item.type === 'WDropDownBox' || item.type === "WSearchDropDownBox") && item.dependsOn) {
             // Check if all dependencies are fulfilled
             const dependenciesFulfilled = Array.isArray(item.dependsOn.field)
                 ? item.dependsOn.field.every(field =>
@@ -933,7 +1041,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 : dropdownOptions[item.wKey as string] || [];
 
             // Hide dependent dropdown if it has no options available
-            if (options.length === 0) {
+            if (options.length === 0 && item.type === 'WDropDownBox') {
                 return null;
             }
         }
@@ -947,6 +1055,8 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                 return renderDateBox(item);
             case 'WDropDownBox':
                 return renderDropDownBox(item);
+            case 'WSearchDropDownBox':
+                return renderSearchDropDownBox(item);
             case 'WCheckBox':
                 return renderCheckBox(item);
             default:

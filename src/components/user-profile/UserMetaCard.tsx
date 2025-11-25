@@ -85,25 +85,74 @@ export default function UserMetaCard() {
       return null;
     }
 
-    const data = sectionData[0]; // Get the first item from the array
-    const fields = Object.keys(data);
+    // If there's only one record, show the old design
+    if (sectionData.length === 1) {
+      const data = sectionData[0];
+      const fields = Object.keys(data);
+
+      return (
+        <div key={sectionName} className="p-5 border rounded-2xl lg:p-6" style={cardStyle}>
+          <h4 className="mb-4 text-lg font-semibold" style={textStyle}>{sectionName}</h4>
+          <div className="space-y-3">
+            {fields.map((field) => {
+              const value = data[field];
+
+              return (
+                <div key={field} className="flex">
+                  <span className="text-sm" style={secondaryTextStyle}>{field} : </span>&nbsp;&nbsp;
+                  <span className="text-sm font-medium text-left" style={textStyle}>
+                    {value || '-'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // If there are multiple records, show a table
+    const fields = Object.keys(sectionData[0]);
 
     return (
       <div key={sectionName} className="p-5 border rounded-2xl lg:p-6" style={cardStyle}>
         <h4 className="mb-4 text-lg font-semibold" style={textStyle}>{sectionName}</h4>
-        <div className="space-y-3">
-          {fields.map((field) => {
-            const value = data[field];
-
-            return (
-              <div key={field} className="flex">
-                <span className="text-sm" style={secondaryTextStyle}>{field} : </span>&nbsp;&nbsp;
-                <span className="text-sm font-medium text-left" style={textStyle}>
-                  {value || '-'}
-                </span>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: `2px solid ${colors.color3}` }}>
+                {fields.map((field) => (
+                  <th
+                    key={field}
+                    className="px-3 py-2 text-left font-semibold whitespace-nowrap"
+                    style={textStyle}
+                  >
+                    {field}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sectionData.map((data, index) => (
+                <tr
+                  key={index}
+                  style={{
+                    borderBottom: index < sectionData.length - 1 ? `1px solid ${colors.color3}` : 'none'
+                  }}
+                >
+                  {fields.map((field) => (
+                    <td
+                      key={field}
+                      className="px-3 py-3 whitespace-nowrap"
+                      style={textStyle}
+                    >
+                      {data[field] || '-'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     );

@@ -79,6 +79,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
                 // Otherwise it's a new unsaved entry (add Id to track it)
                 const entryToAdd = {
                     ...formValues,
+                    isInserted: true,
                     Id: generateUniqueId()
                 };
                 return [...updatedEntries, entryToAdd];
@@ -148,6 +149,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 };
 
 const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
+    colors,
     isOpen,
     onClose,
     masterValues,
@@ -236,7 +238,7 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                                             <div
                                                 key={idx}
                                                 style={{
-                                                    border: group.groupName ? "1px solid #ccc" : "none",
+                                                    border: group.groupName ? `1px solid ${colors.textInputBorder}` : "none",
                                                     borderRadius: "6px",
                                                     padding: group.groupName ? "12px" : "0",
                                                     marginBottom: "16px",
@@ -247,9 +249,10 @@ const GuardianFEntryForm: React.FC<GuardianEntryModalProps> = ({
                                                         style={{
                                                             marginBottom: "10px",
                                                             fontWeight: "bold",
-                                                            background: "#f7f7f7",
+                                                            background: `${colors.background}`,
                                                             padding: "6px 10px",
                                                             borderRadius: "4px",
+                                                            fontSize:"14px"
                                                         }}
                                                     >
                                                         {group.groupName}
@@ -1511,12 +1514,14 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         .join("");
                     };
                 
-                    // Use your table data as-is (preserves its IsDeleted flags)
-                    const items = childEntriesTable;
+                    // Filter out records with isInserted: true - only send records that need server deletion
+                     const itemsForServer = childEntriesTable.filter(item => 
+                         !item.isInserted 
+                     );
                 
                     const xData = createXmlTags({
                       ...masterFormValues,
-                      items: { item: items }, // Items contains key 'item' whose value is an array
+                      items: { item: itemsForServer }, // Items contains key 'item' whose value is an array
                       UserId: "ANUJ",
                     });
                 
@@ -1572,13 +1577,26 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     };
 
     const handleConfirmDelete = () => {
-        if (childFormValues && childFormValues?.Id) {
-            const filteredData = childEntriesTable.filter((item: any) => item.Id !== childFormValues?.Id);
-            setChildEntriesTable(filteredData);
-            setIsConfirmationModalOpen(false);
-        } else {
-            deleteChildRecord();
-        }
+        const recordsToDelete = childEntriesTable.filter((item: any) => item.IsDeleted);
+          
+          if (recordsToDelete.length > 0) {
+              const recordsToDeleteLocally = recordsToDelete.filter(record => record.isInserted);
+              const recordsToDeleteViaAPI = recordsToDelete.filter(record => !record.isInserted);
+        
+              // Delete local records
+              if (recordsToDeleteLocally.length > 0) {
+                  const localIdsToDelete = recordsToDeleteLocally.map(record => record.Id);
+                  const filteredData = childEntriesTable.filter((item: any) => !localIdsToDelete.includes(item.Id));
+                  setChildEntriesTable(filteredData);
+              }
+            
+              if (recordsToDeleteViaAPI.length > 0) {
+                  deleteChildRecord();
+              }
+              setIsConfirmationModalOpen(false);
+          } else {
+              deleteChildRecord();
+          }
     };
 
     const handleCancelDelete = () => {
@@ -2103,12 +2121,17 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            const responseMessageFlag = response?.data?.data?.rs0[0]
+            const responseMessageFlag = response?.data?.data?.rs0?.[0]
+
             if (response?.data?.success && responseMessageFlag.Flag?.toLowerCase() === "s") {
                 toast.success(responseMessageFlag?.Message || "Form Submitted")
                 setIsFormSubmit(false);
                 resetTabsForm();
-            }else if(response?.data?.success){
+            }else if(response?.data?.success && responseMessageFlag?.Flag?.toLowerCase() === "e"){
+                toast.error(responseMessageFlag?.Message || "Submission failed");
+                setIsFormSubmit(false);
+            }
+            else if(response?.data?.success){
                 const message1 = response?.data?.message.replace(/<\/?Message>/g, '');
                 toast.success(message1 || "Form Submitted");
                 setIsFormSubmit(false);
@@ -2433,9 +2456,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         <>
             {isOpen && (
                 <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg w-full max-w-[80vw] min-h-[75vh] max-h-[75vh] flex flex-col">
+                    <div className="bg-white rounded-lg w-full max-w-[80vw] min-h-[80vh] max-h-[80vh] flex flex-col">
                         <div className="sticky top-0 bg-white z-10 px-6 pt-6">
-                            <div className="flex justify-between items-center mb-4 border-b pb-4">
+                            <div className="flex justify-between items-center mb-1 border-b pb-2">
                                 <div>
                                     <h2 className="text-xl font-semibold">
                                         {pageName}
@@ -2467,7 +2490,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                             // Tabs-based form rendering with Master always shown first
                             <>
                                 {/* Master Form - Always visible at top */}
-                                <div className="mb-8">
+                                <div className="mb-1">
                                     <EntryForm
                                         formData={masterFormData}
                                         formValues={masterFormValues}
@@ -2486,13 +2509,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                 {/* Other Tabs Navigation and Content - Only show if there are non-Master tabs */}
                                 {tabsData.length > 0 && (
-                                    <div className="border-t pt-6">
-                                        <div className="mb-6 relative">
+                                    <div className="border-t pt-1 relative">
+                                        <div className="mb-1" style={{position: 'sticky', top: '0', zIndex: 100}}>
                                             <div className="overflow-x-auto" style={{ 
                                                 msOverflowStyle: 'none', 
                                                 scrollbarWidth: 'none',
                                                 borderBottom: `1px solid ${colors.textInputBorder}`,
-                                                backgroundColor: colors.background
+                                                backgroundColor: colors.background,
                                             }}>
                                                 <nav className="-mb-px flex items-center min-w-max px-4 gap-1">
                                                     {tabsData.map((tab, index) => {
@@ -2500,8 +2523,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                         return (
                                                             <button
                                                                 key={index}
-                                                                onClick={() => setActiveTabIndex(index)}
-                                                                className={`py-3 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
+                                                                onClick={() => {
+                                                                    if(isViewMode){
+                                                                        setActiveTabIndex(index)
+                                                                        handleTabChangeViewMode();
+                                                                    }
+                                                                }}
+                                                                className={`py-2 px-6 border-b-2 font-medium text-sm whitespace-nowrap rounded-t-lg transition-all duration-200 ease-in-out ${
                                                                     isActive 
                                                                     ? 'text-opacity-100' 
                                                                     : 'text-opacity-70 hover:text-opacity-100'
@@ -2523,7 +2551,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                         {tabsData.length > 0 && tabsData[activeTabIndex] && (
                                             <>
-                                                <div className="flex justify-end mb-4 gap-2">
+                                                <div className="flex justify-end mb-1 gap-2">
                                                     <div className="flex item-start mr-auto">
                                                         {activeTabIndex > 0 && (
 
@@ -2613,7 +2641,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 </div>
                                                 {tabsModal && (
                                                     <div className={`fixed inset-0 flex items-center justify-center z-400`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                                                        <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[75vh] max-h-[75vh]">
+                                                        <div className="bg-white rounded-lg p-6 w-full max-w-[80vw] overflow-y-auto min-h-[80vh] max-h-[80vh]">
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <h2 className="text-xl font-semibold">
                                                                     {tabsData[activeTabIndex]?.TabName || "Add Record"}
@@ -2684,20 +2712,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                             <div
                                                                                 key={idx}
                                                                                 style={{
-                                                                                    border: group.groupName ? "1px solid #ccc" : "none",
-                                                                                    borderRadius: "6px",
-                                                                                    padding: group.groupName ? "12px" : "0",
-                                                                                    marginBottom: "16px",
+                                                                                    border: group.groupName ? `1px solid ${colors.textInputBorder}` : "none",
+                                                                                    borderRadius: "4px",
+                                                                                    padding: group.groupName ? "8px" : "0",
+                                                                                    marginBottom: "10px",
                                                                                 }}
                                                                             >
                                                                                 {group.groupName && (
                                                                                     <h6
                                                                                         style={{
-                                                                                            marginBottom: "10px",
+                                                                                            marginBottom: "8px",
                                                                                             fontWeight: "bold",
-                                                                                            background: "#f7f7f7",
+                                                                                            background: `${colors.background}`,
                                                                                             padding: "6px 10px",
                                                                                             borderRadius: "4px",
+                                                                                            fontSize:"14px"
                                                                                         }}
                                                                                     >
                                                                                         {group.groupName}
@@ -2733,22 +2762,35 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                     fieldErrors={fieldErrors}
                                                                                     setFieldErrors={setFieldErrors}
                                                                                     masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
-                                                                                   setFormData={(updatedFormData: FormField[]) => { 
-                                                                                      const currentTab = tabsData[activeTabIndex];
-                                                                                      const currentTabName = currentTab?.TabName;                                           
-                                                                                      setTabsData((prev: TabData[]) => {
-                                                                                        return prev.map(tab => {
-                                                                                          if (tab.TabName === currentTabName) {
-                                                                                            // Found the matching tab, update its Data array
-                                                                                            return {
-                                                                                              ...tab,
-                                                                                              Data: updatedFormData
-                                                                                            };
-                                                                                          }
-                                                                                          // Return unchanged tab for other tabs
-                                                                                          return tab;
+                                                                                    setFormData={(updatedFormData: FormField[]) => { 
+                                                                                        const currentTab = tabsData[activeTabIndex];
+                                                                                        const currentTabName = currentTab?.TabName                                                                                  ;
+
+                                                                                        setTabsData((prev: TabData[]) => {
+                                                                                            return prev.map(tab => {
+                                                                                                if (tab.TabName === currentTabName) {
+                                                                                                    const currentGroupName = updatedFormData[0]?.CombinedName?.trim() || "";
+
+
+                                                                                                    // Fields to keep from original (other groups)
+                                                                                                    const otherGroupsFields = tab.Data.filter(field => {
+                                                                                                        const fieldGroupName = field.CombinedName?.trim() || "";
+                                                                                                        return fieldGroupName !== currentGroupName;
+                                                                                                    });
+
+                                                                                                    // Combine other groups fields with the updated current group fields
+                                                                                                    const mergedData = [...otherGroupsFields, ...updatedFormData];
+                                                                                                     // Sort by SrNo to maintain original order
+                                                                                                     mergedData.sort((a, b) => (a.Srno || 0) - (b.Srno || 0));
+
+                                                                                                    return {
+                                                                                                        ...tab,
+                                                                                                        Data: mergedData
+                                                                                                    };
+                                                                                                }
+                                                                                                return tab;
+                                                                                            });
                                                                                         });
-                                                                                      });
                                                                                     }}
                                                                                     setValidationModal={setValidationModal}
                                                                                 />
@@ -2773,20 +2815,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 <div
                                                                     key={idx}
                                                                     style={{
-                                                                        border: group.groupName ? "1px solid #ccc" : "none",
-                                                                        borderRadius: "6px",
-                                                                        padding: group.groupName ? "12px" : "0",
-                                                                        marginBottom: "16px",
+                                                                        border: group.groupName ? `1px solid ${colors.textInputBorder}` : "none",
+                                                                        borderRadius: "4px",
+                                                                        padding: group.groupName ? "8px" : "0",
+                                                                        marginBottom: "10px",
                                                                     }}
                                                                 >
                                                                     {group.groupName && (
                                                                         <h6
                                                                             style={{
-                                                                                marginBottom: "10px",
+                                                                                marginBottom: "8px",
                                                                                 fontWeight: "bold",
-                                                                                background: "#f7f7f7",
+                                                                                background: `${colors.background}`,
                                                                                 padding: "6px 10px",
                                                                                 borderRadius: "4px",
+                                                                                fontSize:"14px"
                                                                             }}
                                                                         >
                                                                             {group.groupName}
@@ -2823,22 +2866,30 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         setFieldErrors={setFieldErrors}
                                                                         masterValues={masterFormValues}
                                                                         setFormData={(updatedFormData: FormField[]) => { 
-                                                                          const currentTab = tabsData[activeTabIndex];
-                                                                          const currentTabName = currentTab?.TabName;
+                                                                            const currentTab = tabsData[activeTabIndex];
+                                                                            const currentTabName = currentTab?.TabName;
 
-                                                                          setTabsData((prev: TabData[]) => {
-                                                                            return prev.map(tab => {
-                                                                              if (tab.TabName === currentTabName) {
-                                                                                // Found the matching tab, update its Data array
-                                                                                return {
-                                                                                  ...tab,
-                                                                                  Data: updatedFormData
-                                                                                };
-                                                                              }
-                                                                              // Return unchanged tab for other tabs
-                                                                              return tab;
+                                                                            setTabsData((prev: TabData[]) => {
+                                                                                return prev.map(tab => {
+                                                                                    if (tab.TabName === currentTabName) {
+                                                                                        const currentGroupName = updatedFormData[0]?.CombinedName?.trim() || "";
+                                                                                        // Fields to keep from original (other groups)
+                                                                                        const otherGroupsFields = tab.Data.filter(field => {
+                                                                                            const fieldGroupName = field.CombinedName?.trim() || "";
+                                                                                            return fieldGroupName !== currentGroupName;
+                                                                                        });
+
+                                                                                        // Combine other groups fields with the updated current group fields
+                                                                                        const mergedData = [...otherGroupsFields, ...updatedFormData];
+                                                                                        mergedData.sort((a, b) => (a.Srno || 0) - (b.Srno || 0));
+                                                                                        return {
+                                                                                            ...tab,
+                                                                                            Data: mergedData
+                                                                                        };
+                                                                                    }
+                                                                                    return tab;
+                                                                                });
                                                                             });
-                                                                          });
                                                                         }}
                                                                         setValidationModal={setValidationModal}
                                                                     />
@@ -2849,7 +2900,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 })()}
 
                                                 {tabsData[activeTabIndex]?.Settings?.isTable === "true" && (
-                                                    <div className="overflow-x-auto mt-4">
+                                                    <div className="overflow-x-auto mt-2">
                                                     <DataGrid
                                                         columns={[
                                                            {
@@ -2987,8 +3038,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     setFormData={setMasterFormData}
                                     setValidationModal={setValidationModal}
                                 />
-                                <div className="mt-8">
-                                    <div className="flex justify-between items-end mb-4">
+                                <div className="mt-1">
+                                    <div className="flex justify-between items-end mb-2">
 
                                         {!isThereChildEntry && (
                                             <>
@@ -3035,7 +3086,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         )}
                                     </div>
                                         {(!isThereChildEntry && childEntriesTable?.length > 0) && (
-                                          <div className="overflow-x-auto">
+                                         <div className="flex flex-col h-[calc(80vh-270px)]">
+                                            <div className="overflow-x-auto overflow-y-auto flex-1">
                                             <DataGrid
                                               columns={[
                                                 {
@@ -3059,12 +3111,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                       />
                                                     )
 
-                                                },
-                                                {
-                                                  key: "srno",
-                                                  name: "Sr. No",
-                                                  width: columnWidthMap["Sr. No"] || 80,
-                                                  renderCell: ({ row }) => row._index + 1,
                                                 },
                                                 {
                                                   key: "actions",
@@ -3102,7 +3148,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 },
                                                 ...(childEntriesTable.length > 0
                                                   ? Object.keys(childEntriesTable[0])
-                                                      .filter((key) => key !== "SerialNo") // Exclude SerialNo
+                                                      .filter((key) => key !== "SerialNo" && key?.toLowerCase() !== "id" && key !== "IsDeleted" && key !== "isInserted") // Exclude SerialNo and id
                                                       .map((key) => ({
                                                         key,
                                                         name: key,
@@ -3137,8 +3183,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                               style={{
                                                 backgroundColor: "white",
                                                 fontFamily: "inherit",
+                                                width:"fit-content",
+                                                height:"100%"
                                               }}
                                             />
+                                            </div>
                                           </div>
                                         )}
                                 </div>
@@ -3224,6 +3273,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     setFieldErrors={setFieldErrors}
                     onChildFormSubmit={handleGuardianFormSubmit}
                     isEdit={editTabModalData}
+                    colors={colors}
                 />
             )}
         </>

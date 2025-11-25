@@ -3,6 +3,8 @@ import { useState } from "react";
 import CryptoJS from 'crypto-js';
 
 import Input from "@/components/form/input/InputField";
+import { IoEye,IoEyeOff } from "react-icons/io5";
+
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import apiService from "@/utils/apiService";
@@ -34,9 +36,21 @@ export default function ChangePassword() {
         newPassword: "",
         confirmPassword: ""
     });
+    const [showPasswords, setShowPasswords] = useState({
+        currentPassword: false,
+        newPassword: false,
+        confirmPassword: false
+    });
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    const togglePasswordVisibility = (field) => {
+        setShowPasswords(prev => ({
+            ...prev,
+            [field]: !prev[field]
+        }));
+    };
 
     const handleChange = (e) => {
         setFormData({
@@ -140,38 +154,68 @@ export default function ChangePassword() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <Label htmlFor="currentPassword">Current Password</Label>
-                        <Input
-                            type="password"
-                            id="currentPassword"
-                            name="currentPassword"
-                            value={formData.currentPassword}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div className="relative">
+                            <Input
+                                type={showPasswords.currentPassword ? "text" : "password"}
+                                id="currentPassword"
+                                name="currentPassword"
+                                value={formData.currentPassword}
+                                onChange={handleChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility('currentPassword')}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                                style={{ color: colors.text }}
+                            >
+                                {showPasswords.currentPassword ?  <IoEye/>:<IoEyeOff/>}
+                            </button>
+                        </div>
                     </div>
 
                     <div>
                         <Label htmlFor="newPassword">New Password</Label>
-                        <Input
-                            type="password"
-                            id="newPassword"
-                            name="newPassword"
-                            value={formData.newPassword}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div className="relative">
+                            <Input
+                                type={showPasswords.newPassword ? "text" : "password"}
+                                id="newPassword"
+                                name="newPassword"
+                                value={formData.newPassword}
+                                onChange={handleChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility('newPassword')}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                                style={{ color: colors.text }}
+                            >
+                                {showPasswords.newPassword ? <IoEye/>:<IoEyeOff/>}
+                            </button>
+                        </div>
                     </div>
 
                     <div>
                         <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                        <Input
-                            type="password"
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            required
-                        />
+                        <div className="relative">
+                            <Input
+                                type={showPasswords.confirmPassword ? "text" : "password"}
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility('confirmPassword')}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                                style={{ color: colors.text }}
+                            >
+                                {showPasswords.confirmPassword ? <IoEye/>:<IoEyeOff/>}
+                            </button>
+                        </div>
                     </div>
 
                     <Button

@@ -23,6 +23,7 @@ import { useLocalStorage } from '@/hooks/useLocalListner';
 import JSZip from "jszip";
 import { FaSpinner } from 'react-icons/fa';
 import Loader from './Loader';
+import { handleLoopThroughMultiSelectKeyHandler, handleLoopThroughMultiSelectKeyHandlerDownloadZip, handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel, handleLoopThroughMultiSelectKeyHandlerExcel } from '@/utils/dataTableHelper';
 
 
 
@@ -1324,6 +1325,7 @@ useEffect(() => {
                 const columnConfig: any = {
                     key,
                     name: key,
+                    
                     sortable: true,
                     resizable: true,
                 };
@@ -1496,252 +1498,6 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
 
 
 
-const handleLoopThroughMultiSelectKeyHandler = async () => {
-    setIsLoading(true);
-  
-    const filterXml = buildFilterXml(filtersCheck, userId);
-    const zip = new JSZip();
-    const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
-    const pdfFolder = zip.folder(zipFolderName);
-  
-    const collectedPdfs: { pdfName: string; base64: string }[] = [];
-    const failedRows: string[] = [];
-    const clientCodeMatch = filterXml.match(/<ClientCode>(.*?)<\/ClientCode>/);
-    const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
-    const emailSendingCaptionTxt = pageData?.[0]?.level || '';
-
-  
-    try {
-      for (const [index, row] of selectedRows.entries()) {
-        const multiSelectXML = `
-          <dsXml>
-            <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
-            <Sql/>
-            <X_Filter>
-                ${filterXml}
-                <ReportName>${row.ReportName || ""}</ReportName>
-                <Segment>${row.Segment || ""}</Segment>
-            </X_Filter>
-            <X_GFilter/>
-            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
-          </dsXml>
-        `;
-  
-        try {
-          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
-          const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
-  
-          if (!emailPayloadXML) {
-            failedRows.push(row._id);
-            continue;
-          }
-  
-          const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
-          const secondEmailResponse = emailPayloadXmlSend?.data?.data?.rs0?.[0];
-  
-          if (emailPayloadXmlSend.success === true && secondEmailResponse?.Base64PDF) {
-            const base64 = secondEmailResponse.Base64PDF;
-            let pdfName = [clientCode, row.ReportType, row.ReportName, row.Segment].map(v => typeof v === "string" ? v.replace(/\s+/g, "").replace(/[^\w.-]/g, "").trim(): "")
-            .filter(Boolean)
-            .join("_") || `Report_${index}.pdf`;
-
-            if (!pdfName.toLowerCase().endsWith(".pdf")) pdfName += ".pdf";
-
-            const extensionIndex = pdfName.lastIndexOf('.');
-                       if (extensionIndex !== -1) {
-                         pdfName = pdfName.slice(0, extensionIndex) + `_${index}` + pdfName.slice(extensionIndex);
-                       } else {
-                         pdfName = pdfName + `_${index}.pdf`;
-                       }
-  
-            // Add file to JSZip folder
-            const fileContent = base64ToUint8Array(base64);
-            pdfFolder.file(pdfName, fileContent);
-  
-            // Also push to array (for reference/log)
-            collectedPdfs.push({ pdfName, base64 });
-          } else {
-            failedRows.push(row._id);
-          }
-        } catch (innerErr) {
-          console.error(`❌ Error processing row ${index + 1}:`, innerErr);
-          failedRows.push(row._id);
-        }
-      }
-  
-      // After loop: zip all PDFs together
-      if (collectedPdfs.length > 0) {
-        const zipBlob = await zip.generateAsync({ type: "blob" });
-        const zipBase64 = await blobToBase64(zipBlob);
-  
-        // Create a proper ZIP file name
-        const zipFileName = `${zipFolderName}.zip`;
-   
-  
-        // 🧩 Now send this ZIP (Base64) via existing function
-        sendEmailMultiCheckbox(zipBase64, zipFileName, filterXml, emailSendingCaptionTxt, userId, userType);
-  
-        toast.success(`ZIP with ${collectedPdfs.length} PDF(s) sent successfully.`);
-      } else {
-        toast.error("No PDFs were generated to send.");
-      }
-  
-      // Handle failures (deselect failed ones)
-      if (failedRows.length > 0) {
-        setSelectedRows(prev => prev.filter(r => !failedRows.includes(r._id)));
-        toast.warn(`${failedRows.length} row(s) failed and were deselected.`);
-      }
-  
-    } catch (error) {
-      console.error("❌ Error during ZIP process:", error);
-      toast.error("Failed to create ZIP or send email.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
-  
-  
-
-
-const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async () => {
-    setIsLoading(true);
-    const filterXml = buildFilterXml(filtersCheck, userId);
-    const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
-    const zip = new JSZip();
-    const pdfFolder = zip.folder(zipFolderName);
-
-    console.log(filterXml,'filterXml22');
-
-    // Extract client code from filterXml (e.g., <ClientCode>M000024</ClientCode>)
-const clientCodeMatch = filterXml.match(/<ClientCode>(.*?)<\/ClientCode>/);
-const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
-
-    
-//   return
-    // Snapshot the currently selected rows so updates to state don't affect iteration
-    const rowsToProcess = Array.isArray(selectedRows) ? [...selectedRows] : [];
-    const failedRows: { id: string; index: number; reason: string }[] = [];
-    let pdfCount = 0;
-  
-    try {
-      for (const [i, row] of rowsToProcess.entries()) {
-        const index = i + 1;
-        const multiSelectXML = `
-          <dsXml>
-            <J_Ui>"ActionName":"TradeWeb","Option":"SENDEMAIL","Level":1,"RequestFrom":"W"</J_Ui>
-            <Sql/>
-            <X_Filter>
-                ${filterXml}
-                <ReportName>${row.ReportName || ""}</ReportName>
-                <Segment>${row.Segment || ""}</Segment>
-            </X_Filter>
-            <X_GFilter/>
-            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
-          </dsXml>
-        `;
-  
-        try {
-          const response = await apiService.postWithAuth(BASE_URL + PATH_URL, multiSelectXML);
-          const emailPayloadXML = response?.data?.data?.rs0?.[0]?.EmailPayload;
-  
-          if (!emailPayloadXML) {
-            console.warn(`⚠️ Row ${index}: No EmailPayload found`);
-            failedRows.push({ id: row._id, index, reason: "No EmailPayload" });
-            continue;
-          }
-  
-          const emailPayloadXmlSend = await apiService.postWithAuth(BASE_URL + PATH_URL, emailPayloadXML);
-          const emailResponseData = emailPayloadXmlSend?.data?.data?.rs0?.[0];
-  
-          if (emailPayloadXmlSend.success === true && emailResponseData?.Base64PDF) {
-            const base64 = emailResponseData.Base64PDF;
-            // let pdfName = emailResponseData.PDFName || `Report_${index}.pdf`;
-            let pdfName = [clientCode, row.ReportType, row.ReportName, row.Segment].map(v => typeof v === "string" ? v.replace(/\s+/g, "").replace(/[^\w.-]/g, "").trim(): "")
-              .filter(Boolean)
-              .join("_") || `Report_${index}.pdf`;
-
-            // Ensure file ends with .pdf
-            if (!pdfName.toLowerCase().endsWith(".pdf")) pdfName += ".pdf";
-
-            console.log(pdfName,'pdfName');
-            
-            // return
-            
-            // Append index to filename before extension to avoid overwrites
-            const extensionIndex = pdfName.lastIndexOf('.');
-            if (extensionIndex !== -1) {
-              pdfName = pdfName.slice(0, extensionIndex) + `_${index}` + pdfName.slice(extensionIndex);
-            } else {
-              pdfName = pdfName + `_${index}.pdf`;
-            }
-            
-            const fileContent = base64ToUint8Array(base64);
-            pdfFolder.file(pdfName, fileContent);
-            pdfCount++;
-          } else {
-            console.warn(`⚠️ Row ${index}: Missing Base64PDF`);
-            failedRows.push({ id: row._id, index, reason: "Missing Base64PDF" });
-          }
-        } catch (err) {
-          console.error(`❌ Error for row ${index}:`, err);
-          failedRows.push({ id: row._id, index, reason: (err && err.message) || "API error" });
-        }
-      }
-  
-      // If no PDFs were added at all, create a README and still produce the ZIP
-      if (pdfCount === 0) {
-        pdfFolder.file("README.txt", "No PDF files were generated for the selected records.");
-      }
-  
-      // If there were failures, add a README listing them and then deselect them from selectedRows
-      if (failedRows.length > 0) {
-        const failText =
-          `The following selected rows failed during export:\n\n` +
-          failedRows.map(f => `Row ${f.index} (id: ${f.id}) — ${f.reason}`).join("\n");
-  
-        // append the failures README (will exist in zipRoot/zipFolderName)
-        pdfFolder.file("FAILED_ROWS.txt", failText);
-  
-        // Batch-deselect failed rows from the global selectedRows state
-        const failedIds = new Set(failedRows.map(f => f.id));
-        setSelectedRows(prev => (Array.isArray(prev) ? prev.filter(r => !failedIds.has(r._id)) : []));
-      }
-  
-      // Generate ZIP and trigger download
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      saveAs(zipBlob, `${zipFolderName}.zip`);
-  
-      console.log(`✅ ZIP created. PDFs: ${pdfCount}, Failures: ${failedRows.length}`);
-      // Display aggregate toast
-      if (pdfCount > 0 && failedRows.length === 0) {
-        toast.success(`ZIP created with ${pdfCount} PDF(s).`);
-      } else if (pdfCount > 0 && failedRows.length > 0) {
-        toast.warn(`ZIP created with ${pdfCount} PDF(s). ${failedRows.length} failed (see FAILED_ROWS.txt).`);
-      } else if (pdfCount === 0 && failedRows.length > 0) {
-        toast.error(`No PDFs created. ${failedRows.length} failures (see FAILED_ROWS.txt).`);
-      } else {
-        toast.info("ZIP created (no PDFs found).");
-      }
-    } catch (error) {
-      console.error("❌ Error during ZIP creation:", error);
-      toast.error("Failed to create ZIP. Please try again.");
-    }
-    finally {
-        setIsLoading(false); // Hide loader
-    }
-  };
-
-      
     const summmaryRows = useMemo(() => {
         const totals: Record<string, any> = {
             id: 'summary_row',
@@ -1809,21 +1565,40 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
          style={{
             background: colors?.color3 || "#f0f0f0",
          }}
-        onClick={handleLoopThroughMultiSelectKeyHandler}
+        onClick={() => handleLoopThroughMultiSelectKeyHandler(setIsLoading,filtersCheck,userId,pageData,selectedRows,userType,sendEmailMultiCheckbox,setSelectedRows)}
         className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
         >
-        Send Mail
+        Send Pdf Mail
         </button>
 
+        <button
+         style={{
+            background: colors?.color3 || "#f0f0f0",
+         }}
+        onClick={() => handleLoopThroughMultiSelectKeyHandlerExcel(setIsLoading,filtersCheck,userId,pageData,selectedRows,userType,sendEmailMultiCheckbox,setSelectedRows)}
+        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+        >
+        Send Excel Mail
+        </button>
                  
         <button
          style={{
             background: colors?.color3 || "#f0f0f0",
          }}
-        onClick={handleLoopThroughMultiSelectKeyHandlerDownloadZip}
+        onClick={() => handleLoopThroughMultiSelectKeyHandlerDownloadZip(selectedRows,setIsLoading,filtersCheck,userId,userType,setSelectedRows)}
         className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
         >
-        Download Zip
+        Download Pdf Zip
+        </button>
+        {/* handleLoopThroughMultiSelectKeyHandlerDownloadExcel */}
+        <button
+         style={{
+            background: colors?.color3 || "#f0f0f0",
+         }}
+        onClick={ () => handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel(selectedRows,setIsLoading,filtersCheck,userId,userType,setSelectedRows)}
+        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+        >
+        Download Excel Zip
         </button>
         </div>
             </>}
