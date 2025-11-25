@@ -5,7 +5,7 @@ import { ChunkData, ChunkResult } from '@/types/upload';
  * Headers should be a comma-separated string from the first row keys
  * Each data row should be converted to a comma-separated string value
  */
-const buildPayload = (chunkData: ChunkData, headers: string[]) => {
+const buildPayload = (chunkData: ChunkData, headers: string[], metadata?: any) => {
   const { chunkIndex, data } = chunkData;
 
   // Build InputJson object
@@ -28,6 +28,8 @@ const buildPayload = (chunkData: ChunkData, headers: string[]) => {
     UserId: "Admin",
     BatchNo: String(chunkIndex + 1), // Increments with each chunk
     InputJson: inputJson,
+    X_Filter: metadata?.filters || {},
+    SelectedRecord: metadata?.selectedRecord || {},
   };
 };
 
@@ -38,10 +40,11 @@ export const uploadChunk = async (
   chunkData: ChunkData,
   apiEndpoint: string,
   headers: string[] = [],
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  metadata?: any
 ): Promise<ChunkResult> => {
   try {
-    const payload = buildPayload(chunkData, headers);
+    const payload = buildPayload(chunkData, headers, metadata);
 
     const response = await fetch(apiEndpoint, {
       method: 'POST',
@@ -92,13 +95,14 @@ export const uploadChunkWithRetry = async (
   apiEndpoint: string,
   headers: string[] = [],
   maxRetries: number = 3,
-  retryDelay: number = 1000
+  retryDelay: number = 1000,
+  metadata?: any
 ): Promise<ChunkResult> => {
   let lastError: string = '';
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const result = await uploadChunk(chunkData, apiEndpoint, headers);
+      const result = await uploadChunk(chunkData, apiEndpoint, headers, undefined, metadata);
 
       if (result.success) {
         return {
@@ -144,7 +148,8 @@ export const uploadChunksSequentially = async (
   maxRetries: number = 3,
   onProgress?: (result: ChunkResult, currentIndex: number, total: number) => void,
   onChunkComplete?: (result: ChunkResult) => void,
-  shouldContinue?: () => boolean
+  shouldContinue?: () => boolean,
+  metadata?: any
 ): Promise<ChunkResult[]> => {
   const results: ChunkResult[] = [];
 
@@ -155,7 +160,7 @@ export const uploadChunksSequentially = async (
     }
 
     const chunk = chunks[i];
-    const result = await uploadChunkWithRetry(chunk, apiEndpoint, headers, maxRetries);
+    const result = await uploadChunkWithRetry(chunk, apiEndpoint, headers, maxRetries, 1000, metadata);
 
     results.push(result);
 

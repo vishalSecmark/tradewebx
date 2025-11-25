@@ -23,6 +23,8 @@ import Loader from './Loader';
 import apiService from '@/utils/apiService';
 import { decryptData, getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
 import { toast } from "react-toastify";
+import FileUploadChunked from './upload/FileUploadChunked';
+import { UploadSummary } from '@/types/upload';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -277,6 +279,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [autoFetch, setAutoFetch] = useState<boolean>(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
     const [isEditTableRowModalOpen, setIsEditTableRowModalOpen] = useState<boolean>(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [selectedImportRecord, setSelectedImportRecord] = useState<any>(null);
 
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [entryAction, setEntryAction] = useState<'edit' | 'delete' | 'view' | null>(null);
@@ -805,6 +809,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
+        // Handle import type - open upload modal
+        if (componentType === 'import') {
+            setSelectedImportRecord(record);
+            setIsImportModalOpen(true);
+            return;
+        }
+
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
             // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
             const primaryKey = pageData[0].levels[currentLevel].primaryHeaderKey ||
@@ -2028,6 +2039,94 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         fetchData(filters,false);
                     }}
                 />
+            )}
+
+            {/* Import Modal for File Upload */}
+            {componentType === 'import' && isImportModalOpen && (
+                <div
+                    className="fixed inset-0 flex items-center justify-center p-4"
+                    style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 9999
+                    }}
+                    onClick={(e) => {
+                        // Close modal when clicking on backdrop
+                        if (e.target === e.currentTarget) {
+                            setIsImportModalOpen(false);
+                            setSelectedImportRecord(null);
+                        }
+                    }}
+                >
+                    <div
+                        className="rounded-xl shadow-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-auto"
+                        style={{
+                            backgroundColor: colors.cardBackground,
+                            border: `1px solid ${colors.color1 || '#e5e7eb'}`
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b" style={{ borderColor: colors.color1 || '#e5e7eb' }}>
+                            <h3 className="font-semibold text-xl" style={{ color: colors.text }}>
+                                {safePageData.getSetting('level') || 'Import File'}
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setIsImportModalOpen(false);
+                                    setSelectedImportRecord(null);
+                                }}
+                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                style={{ color: colors.text }}
+                            >
+                                <FaTimes size={20} />
+                            </button>
+                        </div>
+
+                        {/* File Upload Component */}
+                        <FileUploadChunked
+                            apiEndpoint={BASE_URL + PATH_URL}
+                            chunkSize={10000}
+                            maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
+                            allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
+                            delayBetweenChunks={50}
+                            maxRetries={3}
+                            metadata={{
+                                filters: (() => {
+                                    // Convert date values to YYYYMMDD format
+                                    const formattedFilters: Record<string, any> = {};
+                                    Object.entries(filters).forEach(([key, value]) => {
+                                        if (value && typeof value === 'string') {
+                                            // Try to parse as date
+                                            const date = moment(value, ['YYYY-MM-DD', 'DD-MM-YYYY', 'MM-DD-YYYY', 'YYYYMMDD'], true);
+                                            if (date.isValid()) {
+                                                formattedFilters[key] = date.format('YYYYMMDD');
+                                            } else {
+                                                formattedFilters[key] = value;
+                                            }
+                                        } else {
+                                            formattedFilters[key] = value;
+                                        }
+                                    });
+                                    return formattedFilters;
+                                })(),
+                                selectedRecord: selectedImportRecord,
+                            }}
+                            onUploadComplete={(summary: UploadSummary) => {
+                                console.log('Upload completed:', summary);
+                                toast.success(`Upload completed! ${summary.successfulRecords} records uploaded successfully.`);
+                                // Refresh the data table
+                                fetchData(filters, false);
+                                // Close the modal
+                                setIsImportModalOpen(false);
+                                setSelectedImportRecord(null);
+                            }}
+                            onUploadError={(error: string) => {
+                                console.error('Upload error:', error);
+                                toast.error(`Upload failed: ${error}`);
+                            }}
+                        />
+                    </div>
+                </div>
             )}
         </div>
     );

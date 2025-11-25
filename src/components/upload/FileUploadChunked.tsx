@@ -39,6 +39,11 @@ interface FileUploadChunkedProps {
   maxRetries?: number;
   onUploadComplete?: (summary: UploadSummary) => void;
   onUploadError?: (error: string) => void;
+  metadata?: {
+    filters?: Record<string, any>;
+    selectedRecord?: any;
+    [key: string]: any;
+  };
 }
 
 const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
@@ -50,6 +55,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
   maxRetries = 3,
   onUploadComplete,
   onUploadError,
+  metadata,
 }) => {
   const { colors } = useTheme();
 
@@ -320,7 +326,8 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
         maxRetries,
         undefined,
         onChunkComplete,
-        () => shouldContinueRef.current
+        () => shouldContinueRef.current,
+        metadata
       );
 
       const stats = calculateUploadStats(results);
@@ -412,7 +419,11 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       apiEndpoint,
       headersRef.current,
       delayBetweenChunks,
-      maxRetries
+      maxRetries,
+      undefined,
+      undefined,
+      undefined,
+      metadata
     );
 
     const successfulRetries = results.filter(r => r.success);

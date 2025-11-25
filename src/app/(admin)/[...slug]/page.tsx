@@ -308,13 +308,15 @@ function DynamicComponentRenderer({ componentName }: { componentName: string }) 
 
   const finalComponentType =
     componentType ||
-    (componentName.toLowerCase().includes("multientry")
-      ? "multientry"
-      : componentName.toLowerCase().includes("entry")
-        ? "entry"
-        : componentName.toLowerCase().includes("report")
-          ? "report"
-          : componentType);
+    (componentName.toLowerCase().includes("import")
+      ? "import"
+      : componentName.toLowerCase().includes("multientry")
+        ? "multientry"
+        : componentName.toLowerCase().includes("entry")
+          ? "entry"
+          : componentName.toLowerCase().includes("report")
+            ? "report"
+            : componentType);
 
   return (
     <DynamicReportComponent componentName={componentName} componentType={finalComponentType} />
