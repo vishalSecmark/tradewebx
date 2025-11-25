@@ -24,7 +24,8 @@ import {
   FaFile,
   FaChartPie,
   FaPlug,
-  FaUserCircle
+  FaUserCircle,
+  FaSearch
 } from 'react-icons/fa';
 
 import { PATH_URL } from "@/utils/constants";
@@ -89,7 +90,60 @@ const AppSidebar: React.FC = () => {
 
   // State for managing open submenus
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const filteredMenuItems = React.useMemo(() => {
+    if (!searchQuery) return menuItems;
+
+    const filterRecursive = (items: any[]): any[] => {
+      return items.reduce((acc, item) => {
+        const matchesName = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const hasSubItems = item.subItems && item.subItems.length > 0;
+        
+        let newSubItems: any[] = [];
+        if (hasSubItems) {
+          // If parent matches, show all children. Otherwise, filter children.
+          if (matchesName) {
+            newSubItems = item.subItems;
+          } else {
+            newSubItems = filterRecursive(item.subItems);
+          }
+        }
+
+        if (matchesName || newSubItems.length > 0) {
+          acc.push({
+            ...item,
+            subItems: newSubItems.length > 0 ? newSubItems : (hasSubItems ? [] : undefined)
+          });
+        }
+        return acc;
+      }, []);
+    };
+
+    return filterRecursive(menuItems);
+  }, [menuItems, searchQuery]);
+
+  useEffect(() => {
+    if (searchQuery) {
+      const newOpenSubmenus: Record<string, boolean> = {};
+      
+      const expandAll = (items: any[], parentPath: string = '') => {
+        items.forEach((item, index) => {
+          const currentPath = parentPath ? `${parentPath}-${index}` : `${index}`;
+          if (item.subItems && item.subItems.length > 0) {
+            newOpenSubmenus[currentPath] = true;
+            expandAll(item.subItems, currentPath);
+          }
+        });
+      };
+      
+      expandAll(filteredMenuItems);
+      setOpenSubmenus(newOpenSubmenus);
+    } else {
+      setOpenSubmenus({});
+    }
+  }, [searchQuery, filteredMenuItems]);
 
   // Font styling class for consistent typography
   const fontStyles = {
@@ -448,26 +502,28 @@ const AppSidebar: React.FC = () => {
         <nav className="mb-6">
           <div className="flex flex-col gap-4">
             <div>
-              <h2
-                className={`mb-4 ${fontStyles.menuHeader} flex ${!isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "justify-start"
-                  }`}
-                style={{ color: colors.color3 }}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <span>{iconMap['horizontal-dots']}</span>
+              <div className={`mb-2 px-2 ${(isExpanded || isHovered || isMobileOpen) ? "block" : "hidden"}`}>
+                {(isExpanded || isHovered || isMobileOpen) && (
+                   <div className="relative flex items-center bg-opacity-20 bg-white rounded-md px-2 py-1">
+                    <input
+                      type="text"
+                      placeholder="Search Menu..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-transparent text-sm focus:outline-none placeholder-gray-400"
+                      style={{ color: colors.text }}
+                    />
+                    <FaSearch className="ml-2" size={12} style={{ color: colors.text }} />
+                  </div>
                 )}
-              </h2>
+              </div>
               {menuStatus === 'loading' && <div className={fontStyles.menuItem}>Loading...</div>}
               {menuStatus === 'failed' && (
                 <div className={fontStyles.menuItem} style={{ color: '#ef4444' }}>
                   Error: {menuError}
                 </div>
               )}
-              {menuStatus === 'succeeded' && renderMenuItems(menuItems)}
+              {menuStatus === 'succeeded' && renderMenuItems(filteredMenuItems)}
             </div>
 
 

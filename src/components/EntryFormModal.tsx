@@ -1685,7 +1685,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setActiveTabIndex(activeTabIndex - 1);
         }
     };
-    
+
     const resetParentForm = () => {
         if (isTabs) {
             resetTabsForm();
@@ -1703,6 +1703,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             refreshFunction?.();
         }
     }
+
+    const specialCharValueReplacer = (value: any) => {
+        if (typeof value === 'string') {
+            return value.replace(/</g, '~').replace(/>/g, '!');
+        }
+        return value;
+    };
 
     const submitFormData = async () => {
         setFormSubmitConfirmation(false);
@@ -1772,13 +1779,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const itemsXml = finalItems.map(item => {
             const itemTags = Object.entries(item)
-                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .map(([key, value]) => `<${key}>${specialCharValueReplacer(value)}</${key}>`)
                 .join('');
             return `<item>${itemTags}</item>`;
         }).join('');
 
         const masterXml = Object.entries(masterValues)
-            .map(([key, value]) => `<${key}>${value}</${key}>`)
+            .map(([key, value]) => `<${key}>${specialCharValueReplacer(value)}</${key}>`)
             .join('');
 
         const userId = getLocalStorage('userId') || '';
