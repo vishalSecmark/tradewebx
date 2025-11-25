@@ -5,17 +5,18 @@ import path from 'path';
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { url, method, requestData, error, timestamp } = body;
+        const { url, method, requestData, error, timestamp, statusCode } = body;
 
         const logEntry = `
---------------------------------------------------------------------------------
-Timestamp: ${new Date(timestamp).toISOString()}
-URL: ${url}
-Method: ${method}
-Request Data: ${JSON.stringify(requestData, null, 2)}
-Error: ${JSON.stringify(error, null, 2)}
---------------------------------------------------------------------------------
-`;
+                --------------------------------------------------------------------------------
+                Timestamp: ${new Date(timestamp).toISOString()}
+                URL: ${url}
+                Method: ${method}
+                Status Code: ${statusCode}
+                Request Data: ${JSON.stringify(requestData, null, 2)}
+                Server Response Error: ${JSON.stringify(error, null, 2)}
+                --------------------------------------------------------------------------------
+                `;
 
         const logDir = path.join(process.cwd(), 'logs');
         const logFile = path.join(logDir, 'api-errors.log');

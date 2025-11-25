@@ -748,6 +748,7 @@ class ApiService {
                 url,
                 method,
                 requestData: data,
+                statusCode: error.response?.status || 'UNKNOWN',
                 error: error.response?.data || error.message || error,
                 timestamp: Date.now()
             };
