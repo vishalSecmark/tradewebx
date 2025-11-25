@@ -236,6 +236,16 @@ class ApiService {
             async (error: AxiosError) => {
                 const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
+                // Log the error
+                if (originalRequest && originalRequest.url) {
+                     this.logError(
+                        originalRequest.url,
+                        originalRequest.method?.toUpperCase() || 'UNKNOWN',
+                        originalRequest.data,
+                        error
+                    );
+                }
+
                 if (error.response?.status === 401 && !originalRequest._retry) {
                     if (this.isRefreshing) {
                         // If already refreshing, queue the request
@@ -726,6 +736,34 @@ class ApiService {
         console.log('🧪 Testing session expired popup...');
         this.showSessionExpiredPopup();
     }
+
+    // Log failed API requests
+    private async logError(url: string, method: string, data: any, error: any): Promise<void> {
+        try {
+            // Avoid logging calls to the logger itself to prevent infinite loops
+            const logUrl = `${BASE_PATH_FRONT_END}/api/log-error`;
+            if (url.includes(logUrl)) return;
+
+            const logData = {
+                url,
+                method,
+                requestData: data,
+                error: error.response?.data || error.message || error,
+                timestamp: Date.now()
+            };
+
+            // Use fetch to avoid circular dependency or interceptor issues with axios instance
+            await fetch(logUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(logData)
+            });
+        } catch (loggingError) {
+            console.error('Failed to send error log to server:', loggingError);
+        }
+    }
 }
 
 // Create and export singleton instance
@@ -737,4 +775,4 @@ export const setupApiRouter = (router: any): void => {
     apiService.setRouter(router);
 };
 
-export default apiService; 
+export default apiService;
