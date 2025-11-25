@@ -27,6 +27,7 @@ import {
   uploadChunksSequentially,
   calculateUploadStats,
   createChunks,
+  uploadChunkWithRetry,
 } from '@/utils/uploadService';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -59,12 +60,13 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  // Dynamic chunk size based on file size
+  // Dynamic chunk size based on file size - MAX 5000 for memory safety
   const getOptimalChunkSize = (fileSize: number): number => {
-    if (fileSize < 10 * 1024 * 1024) return 5000; // < 10MB: 5k records
-    if (fileSize < 100 * 1024 * 1024) return 10000; // < 100MB: 10k records
-    if (fileSize < 500 * 1024 * 1024) return 15000; // < 500MB: 15k records
-    return 20000; // >= 500MB: 20k records for maximum throughput
+    // For very large files, use smaller chunks to avoid memory issues
+    if (fileSize < 10 * 1024 * 1024) return 2000; // < 10MB: 2k records
+    if (fileSize < 50 * 1024 * 1024) return 3000; // < 50MB: 3k records
+    if (fileSize < 100 * 1024 * 1024) return 4000; // < 100MB: 4k records
+    return 5000; // >= 100MB: 5k records MAX for memory safety
   };
 
   // State management
@@ -97,6 +99,9 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
   const headersRef = useRef<string[]>([]);
   const startTimeRef = useRef<number>(0);
   const processedCountRef = useRef<number>(0);
+  const completedChunksRef = useRef<number>(0);
+  const totalChunksRef = useRef<number>(0);
+  const uploadedRecordsRef = useRef<number>(0);
 
   // Dropzone configuration
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -163,34 +168,84 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     }
   };
 
-  // Parse CSV/TXT files
+  // Parse CSV/TXT files with SEQUENTIAL streaming upload
   const parseTextFile = (file: File, fileType: string) => {
     setProgress(prev => ({ ...prev, status: 'parsing' }));
-    setSessionId(generateSessionId());
+    const currentSessionId = generateSessionId();
+    setSessionId(currentSessionId);
     allDataRef.current = [];
     headersRef.current = [];
 
-    const onData = (chunk: any[], headers: string[]) => {
+    let chunkIndex = 0;
+    let uploadBuffer: any[] = [];
+    let totalParsedRecords = 0;
+    shouldContinueRef.current = true;
+    setIsPaused(false);
+    startTimeRef.current = Date.now();
+    processedCountRef.current = 0;
+    completedChunksRef.current = 0;
+    uploadedRecordsRef.current = 0;
+
+    const onData = async (chunk: any[], headers: string[]) => {
       // Store headers from first chunk
       if (headersRef.current.length === 0 && headers.length > 0) {
         headersRef.current = headers;
       }
-      allDataRef.current.push(...chunk);
+
+      // Add to upload buffer instead of storing all data
+      uploadBuffer.push(...chunk);
+      totalParsedRecords += chunk.length;
+
+      // Update parsing progress
       setProgress(prev => ({
         ...prev,
-        totalRecords: allDataRef.current.length,
+        totalRecords: totalParsedRecords,
+        status: 'parsing',
       }));
+
+      // When buffer reaches chunk size, upload SEQUENTIALLY (wait for completion)
+      if (uploadBuffer.length >= dynamicChunkSize) {
+        const dataToUpload = uploadBuffer.splice(0, dynamicChunkSize);
+
+        // WAIT for upload to complete before continuing
+        await uploadChunkSequential(dataToUpload, chunkIndex, currentSessionId, totalParsedRecords);
+        chunkIndex++;
+
+        // Clear memory and force garbage collection hint
+        dataToUpload.length = 0;
+
+        // Add delay to allow GC
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     };
 
-    const onComplete = (totalRows: number) => {
+    const onComplete = async (totalRows: number) => {
+      // Upload any remaining data in buffer
+      if (uploadBuffer.length > 0) {
+        await uploadChunkSequential(uploadBuffer, chunkIndex, currentSessionId, totalRows);
+        chunkIndex++;
+      }
+
+      // Clear buffer
+      uploadBuffer.length = 0;
+      uploadBuffer = [];
+
+      // Set final total chunks
+      totalChunksRef.current = chunkIndex;
+
       setProgress(prev => ({
         ...prev,
         totalRecords: totalRows,
-        totalChunks: Math.ceil(totalRows / dynamicChunkSize),
-        status: 'idle',
+        totalChunks: chunkIndex,
+        status: 'completed',
       }));
-      toast.success(`Parsed ${totalRows.toLocaleString()} records successfully`);
-      startUpload();
+
+      // Check if all uploads are complete
+      if (completedChunksRef.current === chunkIndex) {
+        handleUploadCompletion(currentSessionId, totalRows);
+      }
+
+      toast.success(`Upload completed! ${totalRows.toLocaleString()} records processed.`);
     };
 
     const onError = (error: Error) => {
@@ -202,6 +257,97 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       parserAbortRef.current = parseCSVStream(file, onData, onComplete, onError, dynamicChunkSize);
     } else {
       parserAbortRef.current = parseTXTStream(file, onData, onComplete, onError, dynamicChunkSize);
+    }
+  };
+
+  // Upload chunk sequentially with proper waiting and memory management
+  const uploadChunkSequential = async (data: any[], index: number, sessionId: string, totalRecords: number) => {
+    if (!shouldContinueRef.current) return;
+
+    const chunkData: ChunkData = {
+      chunkIndex: index,
+      data: data,
+      sessionId: sessionId,
+      totalChunks: Math.ceil(totalRecords / dynamicChunkSize),
+      startIndex: index * dynamicChunkSize,
+      endIndex: (index + 1) * dynamicChunkSize,
+    };
+
+    try {
+      const result = await uploadChunkWithRetry(
+        chunkData,
+        apiEndpoint,
+        headersRef.current,
+        maxRetries,
+        1000,
+        metadata
+      );
+
+      // Update completed chunk count
+      completedChunksRef.current += 1;
+
+      // Update progress
+      const recordsInChunk = data.length;
+      uploadedRecordsRef.current += recordsInChunk;
+      processedCountRef.current += recordsInChunk;
+
+      const elapsed = (Date.now() - startTimeRef.current) / 1000;
+      const speed = elapsed > 0 ? processedCountRef.current / elapsed : 0;
+      const remainingRecords = totalRecords - processedCountRef.current;
+      const remaining = speed > 0 ? remainingRecords / speed : 0;
+
+      setProgress(prev => ({
+        ...prev,
+        processedRecords: processedCountRef.current,
+        currentChunk: index + 1,
+        percentage: totalRecords > 0 ? Math.round((processedCountRef.current / totalRecords) * 100) : 0,
+        speed: Math.round(speed),
+        estimatedTimeRemaining: isFinite(remaining) ? remaining : 0,
+        failedRecords: result.success ? prev.failedRecords : prev.failedRecords + recordsInChunk,
+        status: 'uploading',
+      }));
+
+      if (!result.success) {
+        setFailedChunks(prev => [...prev, {
+          chunkIndex: index,
+          data: data,
+          error: result.error || 'Unknown error',
+          retryCount: result.retryCount,
+        }]);
+      }
+
+      // Add delay between chunks to allow garbage collection
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+    } catch (error: any) {
+      console.error(`Error uploading chunk ${index}:`, error);
+      completedChunksRef.current += 1; // Still count as completed (failed)
+
+      setFailedChunks(prev => [...prev, {
+        chunkIndex: index,
+        data: data,
+        error: error.message || 'Unknown error',
+        retryCount: 0,
+      }]);
+    }
+  };
+
+  // Handle upload completion - called when ALL chunks are done
+  const handleUploadCompletion = (sessionId: string, totalRecords: number) => {
+    const elapsed = (Date.now() - startTimeRef.current) / 1000;
+
+    setProgress(prev => ({ ...prev, status: 'completed' }));
+
+    if (onUploadComplete) {
+      onUploadComplete({
+        totalRecords: totalRecords,
+        successfulRecords: uploadedRecordsRef.current - failedChunks.length,
+        failedRecords: failedChunks.length,
+        totalChunks: totalChunksRef.current,
+        failedChunks: failedChunks.length,
+        timeTaken: elapsed,
+        sessionId: sessionId,
+      });
     }
   };
 
@@ -433,13 +579,27 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
     setProgress(prev => ({ ...prev, status: 'completed' }));
   };
 
-  // Download failed chunks
+  // Download failed chunks with error information
   const handleDownloadFailed = () => {
     if (failedChunks.length === 0) return;
 
-    const failedData = failedChunks.flatMap(fc => fc.data);
-    downloadAsCSV(failedData, `failed_chunks_${sessionId}.csv`);
-    toast.success('Failed chunks downloaded');
+    // Combine all failed chunk data and add error information
+    const failedDataWithErrors = failedChunks.flatMap(fc =>
+      fc.data.map((record, index) => ({
+        ...record,
+        '_ErrorReason': fc.error || 'Unknown error',
+        '_ChunkIndex': fc.chunkIndex,
+        '_RetryCount': fc.retryCount,
+        '_RecordIndexInChunk': index + 1
+      }))
+    );
+
+    // Create filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const fileName = `failed_records_${timestamp}_${failedDataWithErrors.length}_records.csv`;
+
+    downloadAsCSV(failedDataWithErrors, fileName);
+    toast.success(`Downloaded ${failedDataWithErrors.length} failed records to ${fileName}`);
   };
 
   // Reset
@@ -540,7 +700,8 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
               </>
             )}
 
-            {(progress.status === 'uploading' || progress.status === 'paused') && (
+            {/* Pause and Cancel buttons hidden as per user request */}
+            {/* {(progress.status === 'uploading' || progress.status === 'paused') && (
               <>
                 <button
                   onClick={handlePauseResume}
@@ -556,21 +717,25 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
                   <FaTimes /> Cancel
                 </button>
               </>
-            )}
+            )} */}
 
-            {progress.status === 'completed' && failedChunks.length > 0 && (
+            {/* Show download failed button when there are failed chunks */}
+            {(progress.status === 'completed' || progress.status === 'uploading') && failedChunks.length > 0 && (
               <>
-                <button
-                  onClick={handleRetryFailed}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
-                >
-                  <FaRedo /> Retry Failed
-                </button>
+                {progress.status === 'completed' && (
+                  <button
+                    onClick={handleRetryFailed}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
+                  >
+                    <FaRedo /> Retry Failed
+                  </button>
+                )}
                 <button
                   onClick={handleDownloadFailed}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  title="Download records that failed to upload"
                 >
-                  <FaDownload /> Download Failed
+                  <FaDownload /> Download Failed Records ({failedChunks.length} chunks)
                 </button>
               </>
             )}
@@ -678,6 +843,37 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
               </p>
             </div>
           </div>
+
+          {/* Failed Records Warning in Summary */}
+          {failedChunks.length > 0 && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-semibold text-red-900 mb-2">
+                    ⚠️ Failed Records Detected
+                  </h4>
+                  <p className="text-sm text-red-800 mb-3">
+                    {failedChunks.flatMap(fc => fc.data).length} records across {failedChunks.length} chunk(s) failed to upload.
+                    You can download these records for review and retry later.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDownloadFailed}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                    >
+                      <FaDownload /> Download Failed Records
+                    </button>
+                    <button
+                      onClick={handleRetryFailed}
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                    >
+                      <FaRedo /> Retry Failed Chunks
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -2092,10 +2092,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         {/* File Upload Component */}
                         <FileUploadChunked
                             apiEndpoint={`${BASE_URL}${UPLOAD_FILE_URL}`}
-                            chunkSize={10000}
+                            chunkSize={5000}
                             maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
                             allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
-                            delayBetweenChunks={50}
+                            delayBetweenChunks={150}
                             maxRetries={3}
                             metadata={{
                                 filters: (() => {
@@ -2120,12 +2120,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             }}
                             onUploadComplete={(summary: UploadSummary) => {
                                 console.log('Upload completed:', summary);
-                                toast.success(`Upload completed! ${summary.successfulRecords} records uploaded successfully.`);
+                                toast.success(`Upload completed! ${summary.successfulRecords} records uploaded successfully. You can now close this window.`);
                                 // Refresh the data table
                                 fetchData(filters, false);
-                                // Close the modal
-                                setIsImportModalOpen(false);
-                                setSelectedImportRecord(null);
+                                // DO NOT close modal automatically - let user close it manually
                             }}
                             onUploadError={(error: string) => {
                                 console.error('Upload error:', error);

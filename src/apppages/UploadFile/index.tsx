@@ -119,10 +119,10 @@ const UploadFile = () => {
                 {/* File Upload Component */}
                 <FileUploadChunked
                     apiEndpoint={`${BASE_URL}${UPLOAD_FILE_URL}`}
-                    chunkSize={10000}
+                    chunkSize={5000}
                     maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
                     allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
-                    delayBetweenChunks={50}
+                    delayBetweenChunks={150}
                     maxRetries={3}
                     onUploadComplete={handleUploadComplete}
                     onUploadError={handleUploadError}
@@ -133,10 +133,11 @@ const UploadFile = () => {
                     <h4 className="font-semibold text-blue-900 mb-2">Configuration - Optimized for Large Files</h4>
                     <ul className="text-sm text-blue-800 space-y-1">
                         <li>• Max File Size: 3GB (supports 10+ crore records)</li>
-                        <li>• Chunk Size: 10,000 records per request</li>
-                        <li>• Delay Between Chunks: 50ms (faster uploads)</li>
+                        <li>• Chunk Size: 5,000 records per request (memory optimized)</li>
+                        <li>• Delay Between Chunks: 150ms (allows memory cleanup)</li>
                         <li>• Max Retries: 3 attempts per failed chunk</li>
-                        <li>• Streaming: Memory-efficient processing for massive files</li>
+                        <li>• Sequential Processing: Uploads one chunk at a time for stability</li>
+                        <li>• Memory Management: Aggressive cleanup between chunks</li>
                     </ul>
                 </div>
             </div>
