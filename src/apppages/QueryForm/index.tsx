@@ -16,7 +16,6 @@ import { FaFileCsv,FaFileExcel, FaFilePdf  } from "react-icons/fa";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import {exportTableToCsv, exportTableToPdf, exportTableToExcel} from "@/components/DataTable";
 
-
 /* ----------------------------- Types ------------------------------ */
 
 type KeyValue = Record<string, any>;
@@ -69,7 +68,7 @@ const buildExecuteQueryXml = (query: string,option:string) => `
 
 export default function QueryFormPage() {
   const { colors } = useTheme();
-
+  
   const AUTH_KEY = "queryFormAuth";
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -248,6 +247,13 @@ export default function QueryFormPage() {
     queryTextRef.current?.focus();
   };
 
+  /* ------------------ clear auth on route change ------------------ */
+  useEffect(() => {
+  return () => {
+    console.log("Route changed");
+    handleLogout()
+  };
+}, []);
 
   const appMetadata = (() => {
         try {
