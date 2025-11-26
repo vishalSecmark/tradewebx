@@ -1,8 +1,0 @@
-
---------------------------------------------------------------------------------
-Timestamp: 2025-11-25T11:06:02.930Z
-URL: https://trade-plus.in/TPLUSNARIMAN/api/main/tradeweb
-Method: POST
-Request Data: "<dsXml>\n            <J_Ui>\"ActionName\":\"TradeWeb\", \"Option\":\"Download\",\"Level\":1, \"RequestFrom\":\"W\"</J_Ui>\n            <Sql></Sql>\n            <X_Filter>\n                <FromDate>20251025</FromDate>\n                <ToDate>20251125</ToDate>\n                <RepType></RepType>\n                <DocumentType></DocumentType>\n                <DocumentNo></DocumentNo>\n                <Segment>Equity/Derivative</Segment>\n                <ClientCode></ClientCode>\n            </X_Filter>\n            <X_GFilter></X_GFilter>\n            <J_Api>\"UserId\":\"admin\", \"UserType\":\"branch\"</J_Api>\n        </dsXml>"
-Error: "Network Error"
---------------------------------------------------------------------------------
