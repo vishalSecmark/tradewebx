@@ -9,9 +9,10 @@ export const LOGIN_AS_OPTIONS = process.env.NEXT_PUBLIC_LOGIN_AS_OPTIONS
 export const LOGIN_KEY = process.env.NEXT_PUBLIC_LOGIN_KEY
 export const LOGIN_AS = process.env.NEXT_PUBLIC_LOGIN_AS
 export const BASE_PATH_FRONT_END = process.env.NEXT_PUBLIC_BASE_PATH || ''
+export const NEXT_PUBLIC_FULL_URL = process.env.NEXT_PUBLIC_BASE_URL + process.env.NEXT_PUBLIC_BASE_PATH || ''
 export const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL || '/TradeWebAPI/api/Main/Login_SSO'
 export const VERSION = "2.0.0.1"
 export const ENABLE_CAPTCHA = process.env.NEXT_PUBLIC_ENABLE_CAPTCHA !== 'false' // Default to true if not set to 'false'
 export const ENABLE_FERNET = process.env.NEXT_PUBLIC_ENABLE_FERNET || true
 export const SECURE_STORAGE_KEY = 'secure_data' // Single key for all encrypted localStorage data
-export const SECURITY_LIBRARY : 'fernetsdk' | 'cryptojssdk' = 'fernetsdk' // Options: 'fernetsdk', 'cryptojssdk'
+export const SECURITY_LIBRARY: 'fernetsdk' | 'cryptojssdk' = 'fernetsdk' // Options: 'fernetsdk', 'cryptojssdk'

@@ -39,7 +39,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuthData, setError as setAuthError, setLoading } from '@/redux/features/authSlice';
-import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME, ENABLE_CAPTCHA, ENABLE_FERNET } from "@/utils/constants";
+import { BASE_URL, LOGIN_AS, PRODUCT, LOGIN_KEY, LOGIN_URL, BASE_PATH_FRONT_END, OTP_VERIFICATION_URL, VERSION, ACTION_NAME, ENABLE_CAPTCHA, ENABLE_FERNET, NEXT_PUBLIC_FULL_URL } from "@/utils/constants";
 import Image from "next/image";
 import { RootState } from "@/redux/store";
 import { clearAuthStorage } from '@/utils/auth';
@@ -898,7 +898,7 @@ export default function SignInForm() {
         <div className="flex items-center gap-2 bg-white/80 dark:bg-gray-800/80 px-3 py-1.5 rounded-full shadow-sm">
           <span className="text-gray-500 dark:text-gray-400" style={{ fontSize: '11px' }}>Powered By:</span>
           <a href="https://www.secmark.in" target="_blank" rel="noopener noreferrer" className="transition hover:opacity-80">
-            <Image src="/images/secmarklogo.png" alt="Tradesoft" width={90} height={90} />
+            <Image src={`${NEXT_PUBLIC_FULL_URL}/images/secmarklogo.png`} alt="Tradesoft" width={90} height={90} />
           </a>
         </div>
       </div>
