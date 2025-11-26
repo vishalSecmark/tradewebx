@@ -33,7 +33,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   apisetting: <ApiConfiguration />,
   bodProcess: <BodProcess />,
   useraccess: <UserAccessMenu />,
-  uploadFile: <UploadFile />
+  uploadFile: <UploadFile />,
   queryform: <QueryFormPage />
 };
 
