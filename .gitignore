@@ -4,6 +4,7 @@
 /.idea
 /node_modules
 /.pnp
+/logs
 .pnp.js
 .pnp*
 .yarn*
