@@ -9,7 +9,7 @@ import { ACTION_NAME, PATH_URL } from '@/utils/constants';
 import { BASE_URL } from '@/utils/constants';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { fetchLastTradingDate, fetchInitializeLogin } from '@/redux/features/common/commonSlice';
-import CommonCustomDropdown from '@/components/form/DropDown/CommonDropDown';
+import AsyncSearchDropdown from  '@/components/form/DropDown/AsyncSearchDropdown';
 import apiService from '@/utils/apiService';
 import { encryptData, getLocalStorage } from '@/utils/helper';
 
@@ -367,212 +367,37 @@ function Dashboard() {
     const dispatch = useAppDispatch();
     const lastTradingDate = useAppSelector(state => state.common.lastTradingDate);
     const companyLogo = useAppSelector(state => state.common.companyLogo);
-    const [userDashData, setUserDashData] = useState([]);
     const auth = useAppSelector(state => state.auth);
     const [selectedClient, setSelectedClient] = useState<{ value: string; label: string } | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [dropdownChanged, setDropdownChanged] = useState(false);
-    const [isRefreshingData, setIsRefreshingData] = useState(false);
+   
+  
+          const asyncFetchClients = useCallback(async (searchQuery: string) => {
+              const userId = getLocalStorage("userId");
+              const userType = getLocalStorage("userType");
 
-    // Utility function to get session key for current user
-    const getSessionKey = () => {
-        const userId = getLocalStorage('userId');
-        return `dashboard_session_${userId}`;
-    };
+              const xmlData = `
+                <dsXml>
+                  <J_Ui>"ActionName":"Common","Option":"Search","RequestFrom":"W"</J_Ui>
+                  <Sql/>
+                  <X_Filter_Multiple>
+                    <SearchQuery>${searchQuery || ""}</SearchQuery>
+                  </X_Filter_Multiple>
+                  <X_Filter></X_Filter>
+                  <J_Api>
+                    "UserId":"${userId}",
+                    "UserType":"${userType}"
+                  </J_Api>
+                </dsXml>`;
 
-    // Utility function to check if session data is valid
-    const isSessionDataValid = () => {
-        const sessionKey = getSessionKey();
-        const sessionData = sessionStorage.getItem(sessionKey);
-        if (sessionData) {
-            try {
-                const parsed = JSON.parse(sessionData);
-                // Check if session data is less than 24 hours old
-                const isRecent = Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000;
-                return isRecent && parsed.fetched;
-            } catch (e) {
-                return false;
-            }
-        }
-        return false;
-    };
+              const res = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
-    console.log(auth.userType, 'auth');
-    console.log('🔧 Environment variables check:');
-    console.log('BASE_URL:', BASE_URL);
-    console.log('PATH_URL:', PATH_URL);
-    console.log('Full URL would be:', `${BASE_URL}${PATH_URL}`);
-
-    console.log("user data", userDashData);
-    const getUserDashboardData = async () => {
-        try {
-            const userId = getLocalStorage('userId');
-            const userType = getLocalStorage('userType') || '';
-
-            console.log('🔍 getUserDashboardData called with:', { userId, userType });
-
-            // Check if we already have data in sessionStorage for this session
-            const sessionKey = getSessionKey();
-            const cachedOptions = sessionStorage.getItem('userDashboardOptions');
-            const sessionData = sessionStorage.getItem(sessionKey);
-
-            console.log('🔍 Session check - cachedOptions exists:', !!cachedOptions);
-            console.log('🔍 Session check - sessionData exists:', !!sessionData);
-            console.log('🔍 Session check - isSessionDataValid:', isSessionDataValid());
-
-            if (cachedOptions && isSessionDataValid()) {
-                console.log('📦 Found cached dropdown options and session data, using cache for immediate display');
-                console.log('📦 Cached data length:', cachedOptions.length);
-                try {
-                    const parsedOptions = JSON.parse(cachedOptions);
-                    const parsedSessionData = JSON.parse(sessionData);
-                    console.log('📦 Parsed options is array:', Array.isArray(parsedOptions));
-                    console.log('📦 Parsed options length:', parsedOptions?.length);
-                    if (Array.isArray(parsedOptions) && parsedOptions.length > 0) {
-                        console.log('✅ Valid cached data found, showing cached data immediately');
-                        setUserDashData(parsedOptions);
-
-                        // Handle client selection with cached options
-                        const savedClient = sessionStorage.getItem('selectedDashboardClient');
-                        if (savedClient) {
-                            try {
-                                const parsedClient = JSON.parse(savedClient);
-                                // Verify the saved client exists in the current options
-                                const clientExists = parsedOptions.some(item => item.Value === parsedClient.value);
-                                if (clientExists) {
-                                    setSelectedClient(parsedClient);
-                                } else {
-                                    setSelectedClient({
-                                        value: parsedOptions[0].Value,
-                                        label: parsedOptions[0].DisplayName
-                                    });
-                                }
-                            } catch (e) {
-                                setSelectedClient({
-                                    value: parsedOptions[0].Value,
-                                    label: parsedOptions[0].DisplayName
-                                });
-                            }
-                        } else {
-                            setSelectedClient({
-                                value: parsedOptions[0].Value,
-                                label: parsedOptions[0].DisplayName
-                            });
-                        }
-
-                        // Return early if we have valid session data - no need to fetch again
-                        console.log('✅ Using cached session data, skipping API call');
-                        return;
-                    }
-                } catch (e) {
-                    console.error('Error parsing cached dropdown options:', e);
-                    // Continue to fetch fresh data if parsing fails
-                }
-            }
-
-            // Fetch fresh dropdown options only if not cached
-            const xmlData1 = `
-            <dsXml>
-                <J_Ui>"ActionName":"Common","Option":"Search","RequestFrom":"W"</J_Ui>
-                <Sql/>
-                <X_Filter></X_Filter>
-                <J_Api>"UserId":"${userId}","AccYear":24,"MyDbPrefix":"SVVS","MenuCode":7,"ModuleID":0,"MyDb":null,"DenyRights":null,"UserType":"${getLocalStorage('userType')}"</J_Api>
-            </dsXml>`;
-
-            console.log('🌐 Making API call for fresh dropdown data...');
-            console.log('📤 Request URL:', BASE_URL + PATH_URL);
-            console.log('📤 Full URL:', `${BASE_URL}${PATH_URL}`);
-            console.log('📤 Request payload:', xmlData1);
-
-            // Set refreshing state for background update
-            setIsRefreshingData(true);
-
-            // Log curl equivalent for debugging
-            console.log('🔧 CURL equivalent:');
-            console.log(`curl -X POST "${BASE_URL}${PATH_URL}" \\`);
-            console.log(`  -H "Content-Type: application/xml" \\`);
-            console.log(`  -H "Authorization: Bearer ${getLocalStorage('token')}" \\`);
-            console.log(`  -d '${xmlData1.replace(/'/g, "'\\''")}'`);
-
-            const startTime = Date.now();
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData1);
-            const endTime = Date.now();
-
-            console.log('📥 API Response received in', endTime - startTime, 'ms');
-            console.log('📥 Full response:', response);
-
-            const result = response?.data?.data?.rs0;
-
-            console.log('📊 Parsed result:', result);
-            console.log('📊 Result type:', typeof result);
-            console.log('📊 Is array:', Array.isArray(result));
-            console.log('📊 Length:', result?.length);
-
-            if (result && Array.isArray(result) && result.length > 0) {
-                console.log('✅ Fresh dropdown data received, updating sessionStorage cache and state');
-                setUserDashData(result);
-
-                // Update the sessionStorage cache with fresh data
-                sessionStorage.setItem('userDashboardOptions', JSON.stringify(result));
-                sessionStorage.setItem(sessionKey, JSON.stringify({ fetched: true, timestamp: Date.now() }));
-
-                // Only update selected client if we didn't have cached data or if the current selection is invalid
-                if (!cachedOptions) {
-                    // Check for saved client in sessionStorage
-                    const savedClient = sessionStorage.getItem('selectedDashboardClient');
-                    if (savedClient) {
-                        try {
-                            const parsedClient = JSON.parse(savedClient);
-                            // Verify the saved client exists in the current options
-                            const clientExists = result.some(item => item.Value === parsedClient.value);
-                            if (clientExists) {
-                                setSelectedClient(parsedClient);
-                            } else {
-                                // If saved client no longer exists, use the first one
-                                setSelectedClient({
-                                    value: result[0].Value,
-                                    label: result[0].DisplayName
-                                });
-                            }
-                        } catch (e) {
-                            // If parsing fails, use the first client
-                            setSelectedClient({
-                                value: result[0].Value,
-                                label: result[0].DisplayName
-                            });
-                        }
-                    } else {
-                        // If no saved client, use the first one
-                        setSelectedClient({
-                            value: result[0].Value,
-                            label: result[0].DisplayName
-                        });
-                    }
-                } else {
-                    // If we had cached data, verify current selection is still valid
-                    if (selectedClient) {
-                        const clientExists = result.some(item => item.Value === selectedClient.value);
-                        if (!clientExists) {
-                            // Current selection is no longer valid, update to first available
-                            setSelectedClient({
-                                value: result[0].Value,
-                                label: result[0].DisplayName
-                            });
-                        }
-                    }
-                }
-            } else {
-                console.warn('No fresh dashboard data received or data format incorrect');
-                // Don't clear existing data if fresh data fails, keep using cached data
-            }
-        } catch (error) {
-            console.error('Error fetching fresh dropdown data:', error);
-            // Don't clear existing data if fresh data fails, keep using cached data
-        } finally {
-            // Clear refreshing state
-            setIsRefreshingData(false);
-        }
-    };
+              return (res?.data?.data?.rs0 || []).map((item: any) => ({
+                value: item.Value,
+                label: item.DisplayName,
+              }));
+            }, []);
 
     const getDashboardData = async () => {
         console.log('🔍 getDashboardData called with:', {
@@ -618,13 +443,7 @@ function Dashboard() {
                 <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
             </dsXml>`;
 
-            console.log('🌐 Making API call for dashboard data...');
-            console.log('📤 Request URL:', BASE_URL + PATH_URL);
-            console.log('📤 Full URL:', `${BASE_URL}${PATH_URL}`);
-            console.log('📤 Request payload:', xmlData);
-
             // Log curl equivalent for debugging
-            console.log('🔧 CURL equivalent:');
             console.log(`curl -X POST "${BASE_URL}${PATH_URL}" \\`);
             console.log(`  -H "Content-Type: application/xml" \\`);
             console.log(`  -H "Authorization: Bearer ${getLocalStorage('token')}" \\`);
@@ -695,7 +514,6 @@ function Dashboard() {
 
         if (auth.userType === 'branch' || auth.userType === 'user') {
             console.log('✅ Calling getUserDashboardData()');
-            getUserDashboardData();
         } else {
             console.log('❌ getUserDashboardData() NOT called - userType condition not met');
             // For non-branch users, set initial load to true and get data
@@ -743,13 +561,16 @@ function Dashboard() {
         }
     }, [selectedClient]);
 
-    // Handler for dropdown change
-    const handleClientChange = (value) => {
-        if (value?.value !== selectedClient?.value) {
-            setDropdownChanged(true);
-            setSelectedClient(value);
-        }
-    };
+        const handleClientChange = useCallback(
+          (v: { value: string; label: string } | null) => {
+            if (v?.value !== selectedClient?.value) {
+              setDropdownChanged(true);
+              setSelectedClient(v);
+            }
+          },
+          [selectedClient]
+        );
+
 
     // Create a dedicated refresh function that can be passed to Card components
     const handleRefresh = useCallback(() => {
@@ -764,32 +585,6 @@ function Dashboard() {
         setError(false);
         getDashboardData();
     }, [selectedClient]);
-
-    // Debug function to clear cache and force fresh API call
-    const clearCacheAndRefresh = useCallback(() => {
-        console.log('🧹 Clearing sessionStorage cache and forcing fresh API call...');
-        sessionStorage.removeItem('userDashboardOptions');
-        sessionStorage.removeItem('selectedDashboardClient');
-        // Clear all dashboard data cache
-        const keys = Object.keys(sessionStorage);
-        keys.forEach(key => {
-            if (key.startsWith('dashboardData_') || key.startsWith('dashboard_session_')) {
-                sessionStorage.removeItem(key);
-            }
-        });
-        setUserDashData([]);
-        setSelectedClient(null);
-        setIsInitialLoad(true);
-        setDropdownChanged(true);
-        setError(false);
-        setIsRefreshingData(true);
-
-        // Force fresh API call
-        if (auth.userType === 'branch' || auth.userType === 'user') {
-            console.log('🔄 Calling getUserDashboardData() after cache clear');
-            getUserDashboardData();
-        }
-    }, [auth.userType]);
 
     // Function to clear session data on logout
     const clearSessionData = useCallback(() => {
@@ -868,32 +663,13 @@ function Dashboard() {
                     <div className="flex gap-3 items-end">
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
-                                <CommonCustomDropdown
-                                    options={userDashData.map(item => ({
-                                        value: item.Value,
-                                        label: item.DisplayName
-                                    }))}
-                                    value={selectedClient}
-                                    onChange={handleClientChange}
-                                    placeholder="Select client..."
-                                    resetOnOpen={false}
-                                    colors={{
-                                        text: colors.text,
-                                        primary: colors.primary,
-                                        buttonText: colors.buttonText,
-                                        color3: colors.color3,
-                                        cardBackground: colors.cardBackground,
-                                    }}
+                               <AsyncSearchDropdown
+                                  value={selectedClient}
+                                  onChange={handleClientChange}
+                                  loadOptions={asyncFetchClients}
+                                  placeholder="Search client…"
+                                  colors={colors}
                                 />
-                                {isRefreshingData && (
-                                    <div className="flex items-center gap-1 text-xs opacity-70">
-                                        <div
-                                            className="animate-spin rounded-full h-3 w-3 border-b-2"
-                                            style={{ borderColor: colors.primary }}
-                                        ></div>
-                                        <span style={{ color: colors.text }}>Updating...</span>
-                                    </div>
-                                )}
                             </div>
                         </div>
 

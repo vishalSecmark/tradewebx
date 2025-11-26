@@ -382,6 +382,7 @@ export const clearAuthStorage = () => {
   removeLocalStorage('ekyc_viewMode');
   removeLocalStorage("ekyc_viewMode_for_checker");
   removeLocalStorage('ekyc_checker');
+  removeLocalStorage("queryFormAuth");
   clearIndexedDB();
 };
 
@@ -412,6 +413,8 @@ export const clearAllAuthData = () => {
     removeLocalStorage('auth_token_integrity');
     removeLocalStorage('login_attempts');
     removeLocalStorage('KRAredirectedField');
+    removeLocalStorage("queryFormAuth");
+
     // Clear IndexedDB
     clearIndexedDB();
 
