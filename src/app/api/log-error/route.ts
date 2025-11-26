@@ -6,10 +6,14 @@ export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const { url, method, requestData, error, timestamp, statusCode } = body;
-
+        const serverTimestamp = new Date().toLocaleString('en-IN', {
+           timeZone: 'Asia/Kolkata',
+           hour12: false,
+         });
+     
         const logEntry = `
                 --------------------------------------------------------------------------------
-                Timestamp: ${new Date(timestamp).toISOString()}
+                Timestamp: ${serverTimestamp}
                 URL: ${url}
                 Method: ${method}
                 Status Code: ${statusCode}

@@ -191,8 +191,8 @@ export const fetchMenuItems = createAsyncThunk(
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            const menuItems = convertToNavItems(response.data.data.rs0);
-
+            const responseItem = response?.data?.data?.rs0 || [];
+            const menuItems = convertToNavItems(responseItem);
             // Save menu to sessionStorage on successful fetch
             saveMenuToSessionStorage(menuItems);
 
