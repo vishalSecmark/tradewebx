@@ -258,7 +258,7 @@ const AppSidebar: React.FC = () => {
 
   // Render nested menu items
   const renderNestedMenu = (items: any[], parentPath: string = '') => {
-    return items.map((item, index) => {
+    return items?.map((item, index) => {
       const currentPath = parentPath ? `${parentPath}-${index}` : `${index}`;
       const hasSubItems = item.subItems && item.subItems.length > 0;
       const isOpen = openSubmenus[currentPath];
@@ -337,7 +337,7 @@ const AppSidebar: React.FC = () => {
   // Render main menu items
   const renderMenuItems = (navItemsFromApi: NavItem[]) => (
     <ul className="flex flex-col gap-4 font-bold">
-      {navItemsFromApi.map((nav, index) => {
+      {navItemsFromApi?.map((nav, index) => {
         const currentPath = `${index}`;
         const isOpen = openSubmenus[currentPath];
         const uniqueKey = `${nav.name}-${nav.path || ''}-${currentPath}`;
