@@ -192,6 +192,11 @@ export const fetchMenuItems = createAsyncThunk(
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             const responseItem = response?.data?.data?.rs0 || [];
+            
+            if (!responseItem || responseItem.length === 0) {
+                throw new Error(`Empty menu response: ${JSON.stringify(response?.data)}`);
+            }
+
             const menuItems = convertToNavItems(responseItem);
             // Save menu to sessionStorage on successful fetch
             saveMenuToSessionStorage(menuItems);
