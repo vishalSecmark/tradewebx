@@ -9,7 +9,7 @@ const getBaseURL = (): string => {
     return process.env.NEXT_PUBLIC_BASE_URL || '';
 }
 
-export const BASE_URL = getBaseURL()
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
 export const PATH_URL = process.env.NEXT_PUBLIC_PATH_URL
 export const LOGIN_URL = process.env.NEXT_PUBLIC_LOGIN_URL
 export const PRODUCT = process.env.NEXT_PUBLIC_PRODUCT
