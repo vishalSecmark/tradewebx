@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
                 `;
 
         const logDir = path.join(process.cwd(), 'logs');
-        const logFile = path.join(logDir, 'api-errors.log');
+        const logFile = path.join(logDir, 'side-menu.log');
 
         // Ensure logs directory exists
         if (!fs.existsSync(logDir)) {

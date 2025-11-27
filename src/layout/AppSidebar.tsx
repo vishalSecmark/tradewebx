@@ -262,7 +262,7 @@ const AppSidebar: React.FC = () => {
 
   // Render nested menu items
   const renderNestedMenu = (items: any[], parentPath: string = '') => {
-    return items.map((item, index) => {
+    return items?.map((item, index) => {
       const currentPath = parentPath ? `${parentPath}-${index}` : `${index}`;
       const hasSubItems = item.subItems && item.subItems.length > 0;
       const isOpen = openSubmenus[currentPath];
