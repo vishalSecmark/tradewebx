@@ -143,6 +143,7 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
   return (
     <div className="w-full max-w-md">
       <SelectComponent
+        aria-label={placeholder || "Select option"}
         options={visibleOptions}
         value={value}
         onChange={handleInputChange}
@@ -170,7 +171,7 @@ const CommonCustomDropdown: React.FC<CustomDropdownProps> = ({
             onMenuOpen();
           }
         }}
-        onCreateOption={isCreatable ? onCreateOption : undefined}
+        {...(isCreatable ? { onCreateOption } : {}) as any}
         isValidNewOption={isCreatable ? undefined : () => false}
         onBlur={() => {
           setVisibleOptions(options.slice(0, 50));

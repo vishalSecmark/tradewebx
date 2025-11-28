@@ -17,7 +17,8 @@ interface InputProps {
   success?: boolean;
   error?: boolean;
   hint?: string;
-  value?: any;
+  value?: string | number | readonly string[];
+  autoComplete?: string;
   dynamicSelectedThemeApply?: boolean;
 }
 
@@ -37,6 +38,8 @@ const Input: FC<InputProps> = ({
   success = false,
   error = false,
   hint,
+  value,
+  autoComplete,
   dynamicSelectedThemeApply = false
 }) => {
   const { colors } = useTheme();
@@ -71,7 +74,6 @@ const Input: FC<InputProps> = ({
         id={id}
         name={name}
         placeholder={placeholder}
-        defaultValue={defaultValue}
         onChange={onChange}
         onPaste={onPaste}
         min={min}
@@ -80,7 +82,12 @@ const Input: FC<InputProps> = ({
         disabled={disabled}
         className={inputClasses}
         style={dynamicStyles} // This applies the dynamic colors
-        autoComplete="off"
+        autoComplete={autoComplete}
+        {...(value !== undefined
+          ? { value }
+          : defaultValue !== undefined
+            ? { defaultValue }
+            : {})}
       />
 
       {hint && (

@@ -31,7 +31,7 @@ export default function UserMetaCard() {
     };
 
     const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"UserProfile","Level":1, "RequestFrom":"M"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"UserProfile","Level":1, "RequestFrom":"W"</J_Ui>
         <Sql></Sql>
         <X_Filter></X_Filter>
         <X_Filter_Multiple>${urlUserId ? `<ClientCode>${urlUserId}</ClientCode>` : ''}</X_Filter_Multiple>

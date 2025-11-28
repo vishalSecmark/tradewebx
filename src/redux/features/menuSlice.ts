@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import type { RootState } from '../store';
-import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
+import { ACTION_NAME, BASE_URL, PATH_URL, BASE_PATH_FRONT_END } from '@/utils/constants';
 import apiService from '@/utils/apiService';
 import { getLocalStorage } from '@/utils/helper';
 
@@ -76,7 +76,7 @@ const initialState: MenuState = {
 
 // Update the convertToNavItems function
 const convertToNavItems = (data: any): NavItem[] => {
-    return data.map((item: any) => {
+    return data?.map((item: any) => {
         const routeMapping: Record<string, string> = {
             'Dashboard': 'dashboard',
             'Reports': 'reports',
@@ -191,13 +191,46 @@ export const fetchMenuItems = createAsyncThunk(
             </dsXml>`;
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            const menuItems = convertToNavItems(response.data.data.rs0);
+            const responseItem = response?.data?.data?.rs0 || [];
+            
+            if (!responseItem || responseItem.length === 0) {
+                throw new Error(`Empty menu response: ${JSON.stringify(response?.data)}`);
+            }
 
+            const menuItems = convertToNavItems(responseItem);
             // Save menu to sessionStorage on successful fetch
             saveMenuToSessionStorage(menuItems);
 
             return menuItems;
         } catch (error: any) {
+            // Log error to side-menu log file
+            try {
+                const logUrl = `${BASE_PATH_FRONT_END}/api/side-menu`;
+                const logData = {
+                    url: BASE_URL + PATH_URL,
+                    method: 'POST',
+                    requestData: {
+                        UserId: getLocalStorage('userId') || '',
+                        UserType: getLocalStorage('userType') || '',
+                        ActionName: ACTION_NAME,
+                        Option: "MOBILEMENU"
+                    },
+                    statusCode: error.response?.status || 'UNKNOWN',
+                    error: error.response?.data || error.message || error,
+                    timestamp: Date.now()
+                };
+
+                fetch(logUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(logData)
+                }).catch(err => console.error('Failed to log side menu error:', err));
+            } catch (loggingError) {
+                console.error('Error in side menu error logging:', loggingError);
+            }
+
             // Try to load menu from sessionStorage as fallback
             const cachedMenu = loadMenuFromSessionStorage();
 

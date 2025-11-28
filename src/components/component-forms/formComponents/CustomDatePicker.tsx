@@ -13,6 +13,11 @@ interface CustomDatePickerProps {
   id?: string;
   name?: string;
   onBlur?: () => void;
+  inputId?: string;
+  ariaRequired?: boolean;
+  ariaInvalid?: boolean;
+  ariaDisabled?: boolean;
+  ariaDescribedBy?: string;
 }
 
 const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
@@ -23,7 +28,12 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   placeholder = 'Select Date',
   id,
   name,
-  onBlur
+  onBlur,
+  inputId,
+  ariaRequired,
+  ariaInvalid,
+  ariaDisabled,
+  ariaDescribedBy,
 }) => {
   // Generate years array using moment
   const years = [];
@@ -59,8 +69,12 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         style={{height:"30px"}}
     >
       <DatePicker
-        id={id}
+        id={inputId ?? id}        
         name={name}
+        aria-required={ariaRequired}   
+        aria-invalid={ariaInvalid}     
+        aria-disabled={ariaDisabled}   
+        aria-describedby={ariaDescribedBy} 
         selected={selected}
         onBlur={onBlur}
         onChange={onChange}

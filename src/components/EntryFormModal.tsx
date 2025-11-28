@@ -18,6 +18,7 @@ import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
 import { handleNextValidationFields } from './component-forms/form-helper/apiHelper';
+import AccessibleModalEntry from './a11y/AccessibleModalEntry';
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     isOpen,
@@ -1685,7 +1686,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             setActiveTabIndex(activeTabIndex - 1);
         }
     };
-    
+
     const resetParentForm = () => {
         if (isTabs) {
             resetTabsForm();
@@ -1703,6 +1704,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             refreshFunction?.();
         }
     }
+
+    const specialCharValueReplacer = (value: any) => {
+        if (typeof value === 'string') {
+            return value.replace(/</g, '~').replace(/>/g, '!');
+        }
+        return value;
+    };
 
     const submitFormData = async () => {
         setFormSubmitConfirmation(false);
@@ -1772,13 +1780,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const itemsXml = finalItems.map(item => {
             const itemTags = Object.entries(item)
-                .map(([key, value]) => `<${key}>${value}</${key}>`)
+                .map(([key, value]) => `<${key}>${specialCharValueReplacer(value)}</${key}>`)
                 .join('');
             return `<item>${itemTags}</item>`;
         }).join('');
 
         const masterXml = Object.entries(masterValues)
-            .map(([key, value]) => `<${key}>${value}</${key}>`)
+            .map(([key, value]) => `<${key}>${specialCharValueReplacer(value)}</${key}>`)
             .join('');
 
         const userId = getLocalStorage('userId') || '';
@@ -2344,14 +2352,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setTabsModal(false); // Close modal after adding/editing
     }
 
-    const fetchGuardianFormData = async (guardianDetails) => {
+    const fetchGuardianFormData = async (guardianDetails,nomineeDetails?: any) => {
         setGuardianLoading(true);
         const currentTab = tabsData[activeTabIndex];
         const guardianFormFetchAPI = currentTab?.Settings?.ChildEntryAPI;
         const currentTabKey = `tab_${activeTabIndex}`;
 
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
-
         try {
 
             const jUi = Object.entries(guardianFormFetchAPI?.J_Ui)
@@ -2369,7 +2376,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 if (key === 'NomSerial') {
                     xFilter += `<${key}>${currentTabFormValues[key] || ""}</${key}>`;
                 } else {
-                    xFilter += `<${key}>${masterFormValues[key] || currentTabFormValues[key] || value}</${key}>`;
+                    xFilter += `<${key}>${masterFormValues[key] || currentTabFormValues[key] || nomineeDetails?.[key] || value}</${key}>`;
                 }
             });
 
@@ -2419,9 +2426,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     }
   
-    const handleAddNominee = (guardianDetails = {}) => {
+    const handleAddNominee = (guardianDetails = {},nomineeDetails?: any) => {
         setIsGuardianModalOpen(true)
-        fetchGuardianFormData(guardianDetails)
+        fetchGuardianFormData(guardianDetails,nomineeDetails)
     }
 
     const handleClearTabTableRowEntry = () => {
@@ -2466,8 +2473,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     return (
         <>
             {isOpen && (
-                <div className={`fixed inset-0 flex items-center justify-center ${parentModalZindex}`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                    <div className="bg-white rounded-lg w-full max-w-[80vw] min-h-[80vh] max-h-[80vh] flex flex-col">
+         <AccessibleModalEntry
+            isOpen={isOpen}
+            onClose={resetParentForm}
+            title={pageName}
+            parentZIndex={parentModalZindex}
+            width="max-w-[80vw]"
+            height="min-h-[80vh] max-h-[80vh]"
+        >
+                    <div className="bg-white rounded-lg w-full flex flex-col h-full">
                         <div className="sticky top-0 bg-white z-10 px-6 pt-6">
                             <div className="flex justify-between items-center mb-1 border-b pb-2">
                                 <div>
@@ -2939,7 +2953,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                         <button
                                                                                             className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
                                                                                             onClick={()=>{
-                                                                                                    handleAddNominee(row.guardianDetails)
+                                                                                                    handleAddNominee(row.guardianDetails,row)
                                                                                                 }}
                                                                                         >
                                                                                              View Guardian Details
@@ -3206,7 +3220,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                         )}
                         </div>
                     </div>
-                </div>
+                </AccessibleModalEntry>
             )}
             <ConfirmationModal
                 isOpen={isConfirmationModalOpen}

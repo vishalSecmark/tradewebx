@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   poweredByHeader: false, // Disable X-Powered-By header
 
+  // Image configuration for standalone builds with basePath
+  images: {
+    unoptimized: true, // Disable image optimization to serve images directly
+  },
+
   // Security headers configuration
   async headers() {
     // Generate CSP policy that allows both HTTP and HTTPS

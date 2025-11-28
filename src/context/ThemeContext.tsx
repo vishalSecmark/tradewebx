@@ -56,7 +56,7 @@ const initialThemes: Record<ThemeType, ThemeColors> = {
     color2: '#e3f0ff',
     color3: '#f0f0f0',
     textInputBackground: "#fffef9",
-    textInputBorder: "#87bdfa",
+    textInputBorder: "#3178c6",
     textInputText: "#121212",
     buttonBackground: "#87bdfa",
     buttonText: "#121212",
@@ -164,7 +164,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
 
       const xmlData = `<dsXml>
-        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Theme","Level":1, "RequestFrom":"M"</J_Ui>
+        <J_Ui>"ActionName":"${ACTION_NAME}", "Option":"Theme","Level":1, "RequestFrom":"W"</J_Ui>
         <Sql/>
         <X_Filter>
         </X_Filter>

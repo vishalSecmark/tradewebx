@@ -20,9 +20,15 @@ const CaptchaComponent = forwardRef<CaptchaComponentRef, CaptchaComponentProps>(
         const [isValid, setIsValid] = useState(false);
         const [captchaId, setCaptchaId] = useState("");
         const [isRefreshing, setIsRefreshing] = useState(false);
+        const [isAudioSupported, setIsAudioSupported] = useState(false);
+        const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
         const generateCaptcha = () => {
             console.log('Generating new CAPTCHA...');
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            setIsAudioPlaying(false);
             // Simple addition only for better user experience
             const num1 = Math.floor(Math.random() * 10) + 1; // Numbers 1-10
             const num2 = Math.floor(Math.random() * 10) + 1; // Numbers 1-10
@@ -51,6 +57,18 @@ const CaptchaComponent = forwardRef<CaptchaComponentRef, CaptchaComponentProps>(
 
         useEffect(() => {
             generateCaptcha();
+        }, []);
+
+        useEffect(() => {
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                setIsAudioSupported(true);
+            }
+
+            return () => {
+                if (typeof window !== 'undefined' && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
+            };
         }, []);
 
         const handleUserAnswerChange = (value: string) => {
@@ -90,6 +108,26 @@ const CaptchaComponent = forwardRef<CaptchaComponentRef, CaptchaComponentProps>(
                 MozUserSelect: 'none' as const,
                 msUserSelect: 'none' as const,
             };
+        };
+
+        const formatQuestionForAudio = (question: string) => {
+            if (!question) return "";
+            return `${question.replace('+', ' plus ')} equals what? Enter the answer as a number.`;
+        };
+
+        const handlePlayAudio = () => {
+            if (!isAudioSupported || !captchaQuestion || typeof window === 'undefined' || !window.speechSynthesis) {
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(formatQuestionForAudio(captchaQuestion));
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+            utterance.onstart = () => setIsAudioPlaying(true);
+            utterance.onend = () => setIsAudioPlaying(false);
+            utterance.onerror = () => setIsAudioPlaying(false);
+            window.speechSynthesis.speak(utterance);
         };
 
         return (
@@ -153,20 +191,40 @@ const CaptchaComponent = forwardRef<CaptchaComponentRef, CaptchaComponentProps>(
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleRefresh}
-                        disabled={isRefreshing}
-                        className={`p-2 transition-colors bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 ${isRefreshing
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                            }`}
-                        title="Refresh CAPTCHA"
-                    >
-                        <svg className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    </button>
+                    <div className="flex flex-col gap-2">
+                        <button
+                            type="button"
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className={`p-2 transition-colors bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 ${isRefreshing
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                            title="Refresh CAPTCHA"
+                            aria-label="Refresh CAPTCHA"
+                        >
+                            <svg className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                        {isAudioSupported && (
+                            <button
+                                type="button"
+                                onClick={handlePlayAudio}
+                                disabled={isAudioPlaying}
+                                className={`p-2 transition-colors bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600 ${isAudioPlaying
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    }`}
+                                title="Play audio CAPTCHA"
+                                aria-label="Play audio CAPTCHA"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 8.75C19 10 19 14 15.75 15.25M12 5.75v12.5l-4-4H5a1 1 0 01-1-1v-2.5a1 1 0 011-1h3l4-4z" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div>

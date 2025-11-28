@@ -16,7 +16,7 @@ import Family from "@/apppages/FamilyMapping";
 import ApiConfiguration from "@/apppages/ApiChecker";
 import BodProcess from "@/apppages/BodProcess";
 import UserAccessMenu from "@/apppages/UserAccessMenu";
-
+import QueryFormPage from "@/apppages/QueryForm";
 // Define static route components
 const staticRoutes: Record<string, React.ReactNode> = {
   dashboard: <Dashboard />,
@@ -32,6 +32,7 @@ const staticRoutes: Record<string, React.ReactNode> = {
   apisetting: <ApiConfiguration />,
   bodProcess: <BodProcess />,
   useraccess: <UserAccessMenu />,
+  queryform: <QueryFormPage/>
 };
 
 export default function DynamicPage({ params }: { params: any | Promise<any> }) {
