@@ -38,7 +38,7 @@ const colorLabelMap: Record<string, string> = {
 };
 
 const ThemePage = () => {
-  const { theme, setTheme, availableThemes, colors, updateTheme } = useTheme();
+  const { theme, setTheme, availableThemes, colors, updateTheme, allThemes } = useTheme();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [applyMessage, setApplyMessage] = useState<string>("");
@@ -207,14 +207,7 @@ const ThemePage = () => {
                 width: "30px",
                 height: "30px",
                 borderRadius: "50%",
-                background:
-                  themeOption === "dark"
-                    ? "#334155"
-                    : themeOption === "light"
-                      ? "#d2e7ff"
-                      : themeOption === "lightDark"
-                        ? "#242424"
-                        : "#E3F2FD",
+                background: allThemes[themeOption]?.buttonBackground || "#fff",
               }}
             />
             <span
