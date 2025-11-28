@@ -156,6 +156,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Add fetchThemes function
   const fetchThemes = async () => {
     try {
+      const authToken = getLocalStorage('auth_token');
+      if (!authToken) {
+        console.warn('Skipping theme fetch: auth token not ready yet');
+        return;
+      }
+
+      // Skip if token is expired to avoid 401s with stale sessions
+      const tokenExpireTime = getLocalStorage('tokenExpireTime');
+      if (tokenExpireTime && new Date(tokenExpireTime) < new Date()) {
+        console.warn('Skipping theme fetch: auth token expired');
+        return;
+      }
+
       const userData = {
         // UserId: localStorage.getItem('userId'),
         // UserType: localStorage.getItem('userType')
