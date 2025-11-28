@@ -1061,6 +1061,7 @@ const handleTableAction = (action: string, record: any) => {
 
     return;
   }
+  
 
   // DELETE → Open delete modal
   if (action === "delete") {
