@@ -63,6 +63,7 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
     };
 }, [isOpen]);
 
+
     const isChildInvalid = Object.values(fieldErrors).some(error => error);
     const handleFormSubmit = () => {
         const masterErrors = validateForm(masterFormData, masterValues);
