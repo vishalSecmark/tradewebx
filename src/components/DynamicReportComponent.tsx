@@ -297,6 +297,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
     const [showValidationDetails, setShowValidationDetails] = useState(false);
+    const [announceMsg, setAnnounceMsg] = useState("");
+
+    useEffect(() => {
+    if (!announceMsg) return;
+
+    let region = document.getElementById("nvdaLiveRegion");
+    if (!region) {
+        region = document.createElement("div");
+        region.id = "nvdaLiveRegion";
+        region.setAttribute("role", "status");
+        region.setAttribute("aria-live", "assertive");
+        region.setAttribute("aria-atomic", "true");
+        region.style.position = "absolute";
+        region.style.left = "-9999px";
+        document.body.appendChild(region);
+    }
+
+    region.textContent = announceMsg;
+    }, [announceMsg]);
 
     // Add comprehensive cache for different filter combinations and levels
     const [dataCache, setDataCache] = useState<Record<string, {
@@ -745,6 +764,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }));
             setApiData(dataWithId);
 
+                // NVDA ANNOUNCEMENT (correct place)
+                if (dataWithId.length >= 0) {
+                    const msg = dataWithId.length > 0
+                        ? `Total records available are ${dataWithId.length}.`
+                        : "No data available.";
+
+                    setAnnounceMsg(msg);
+                }
+
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
             Object.entries(response.data.data).forEach(([key, value]) => {
@@ -800,9 +828,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             ongoingRequestRef.current = null; // Clear ongoing request reference
         }
     };
-
-
-
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {

@@ -1603,6 +1603,27 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
         return [totals];
     }, [rows, summary?.columnsToShowTotal, settings?.valueBasedTextColor]);
 
+    function announce(message: string) {
+    const old = document.getElementById("nvdaLiveRegion");
+    if (old) old.remove();
+
+    const region = document.createElement("div");
+    region.id = "nvdaLiveRegion";
+    region.setAttribute("role", "status");
+    region.setAttribute("aria-live", "assertive");
+    region.setAttribute("aria-atomic", "true");
+    region.style.position = "absolute";
+    region.style.left = "-9999px";
+    region.style.height = "1px";
+    region.style.overflow = "hidden";
+
+    document.body.appendChild(region);
+
+    setTimeout(() => {
+        region.textContent = message;
+    }, 20);
+}
+
     return (
         <div
             ref={tableRef}
@@ -1657,7 +1678,7 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
         </button>
         </div>
             </>}
-   
+                                                                                                
             <DataGrid
                 columns={columns}
                 rows={rows}
@@ -1676,6 +1697,26 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
                     if (onRowClick && !props.column.key.startsWith('_') && !isEntryForm) {
                         const { _id, _expanded, ...rowData } = rows[props.rowIdx];
                         onRowClick(rowData);
+                    }
+                }}
+                  
+                /** NVDA + KEYBOARD USERS */
+                onCellKeyDown={(props: any, event: any) => {
+                    if (
+                        (event.key === "Enter" || event.key === " ") &&
+                        onRowClick &&
+                        !props.column.key.startsWith("_") &&
+                        !isEntryForm
+                    ) {
+                        event.preventDefault();
+
+                        const { _id, _expanded, ...rowData } = rows[props.rowIdx];
+
+                        //  ONLY trigger row click. NO ANNOUNCE here.
+                        onRowClick(rowData);
+
+                        //  Announce only a simple action, not row count
+                        announce("Details opening...");
                     }
                 }}
             />
