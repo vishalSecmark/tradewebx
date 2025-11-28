@@ -1,12 +1,10 @@
 "use client"
 import React, { useEffect, useState, useCallback, Suspense, useLayoutEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useSelector } from 'react-redux'
 import axios from 'axios'
 import { logout, setAuthData, setError as setAuthError, setFinalAuthData } from '@/redux/features/authSlice'
-import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME, ENABLE_FERNET } from "@/utils/constants"
+import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME } from "@/utils/constants"
 import { clearIndexedDB, removeLocalStorage, storeLocalStorage, decodeFernetToken } from '@/utils/helper'
-import { RootState } from '@/redux/store'
 import { fetchMenuItems } from '@/redux/features/menuSlice'
 import { fetchInitializeLogin } from '@/redux/features/common/commonSlice'
 import { useAppDispatch } from '@/redux/hooks'
@@ -16,7 +14,6 @@ const SSOContent = () => {
     const router = useRouter()
     const searchParams = useSearchParams()
     const dispatch = useAppDispatch()
-    const encPayload = useSelector((state: RootState) => state.common.encPayload)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
     const hasAttemptedLogin = useRef(false)
@@ -85,14 +82,19 @@ const SSOContent = () => {
             console.log('SSO Login raw response:', response.data)
 
             // Handle encrypted response if needed
-            const shouldDecode = ENABLE_FERNET && encPayload
             let data = response.data
 
-            // If response is encrypted (data field is a string), decode it
-            if (shouldDecode && typeof data.data === 'string') {
-                console.log('Encrypted response detected, decoding...')
-                data = decodeFernetToken(data.data)
-                console.log('Decrypted SSO Login response:', data)
+            // For SSO, we don't know in advance if data is encrypted
+            // Check if response.data.data is a string - if so, it's encrypted and needs decryption
+            if (typeof data.data === 'string') {
+                console.log('Encrypted response detected (data is string), decoding...')
+                try {
+                    data = decodeFernetToken(data.data)
+                    console.log('Decrypted SSO Login response:', data)
+                } catch (error) {
+                    console.error('Failed to decrypt SSO response:', error)
+                    throw new Error('Failed to decrypt encrypted response')
+                }
             } else {
                 console.log('SSO Login response (unencrypted):', data)
             }
@@ -165,7 +167,7 @@ const SSOContent = () => {
             setIsLoading(false)
             hasAttemptedLogin.current = false; // Reset so user can retry
         }
-    }, [searchParams, dispatch, router, encPayload])
+    }, [searchParams, dispatch, router])
 
     useEffect(() => {
         // Start SSO login process when component mounts
