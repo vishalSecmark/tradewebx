@@ -1020,15 +1020,58 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     // function to handle table actions
-    const handleTableAction = (action: string, record: any) => {
-        setEntryFormData(record);
-        setEntryAction(action as 'edit' | 'delete' | 'view');
-        if (action === "edit" || action === "view") {
-            setIsEntryModalOpen(true);
-        } else {
-            setIsConfirmationModalOpen(true);
-        }
-    }
+    // const handleTableAction = (action: string, record: any) => {
+    //     setEntryFormData(record);
+    //     setEntryAction(action as 'edit' | 'delete' | 'view');
+    //     if (action === "edit" || action === "view") {
+    //         setIsEntryModalOpen(true);
+    //     } else {
+    //         setIsConfirmationModalOpen(true);
+    //     }
+    // }
+
+const handleTableAction = (action: string, record: any) => {
+  setEntryFormData(record);
+  setEntryAction(action as "edit" | "delete" | "view");
+
+  const alertBox = document.getElementById("sr-alert");
+
+  // Announce Edit + View + Delete
+  if (alertBox) {
+    const readableAction =
+      action === "edit"
+        ? "Edit"
+        : action === "view"
+        ? "View"
+        : "Delete";
+
+    alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
+  }
+
+  // EDIT + VIEW → Open entry modal
+
+  if (action === "edit" || action === "view") {
+    setIsEntryModalOpen(true);
+
+    // Focus the modal heading AFTER modal is visible
+    setTimeout(() => {
+      const modalHeading = document.getElementById("entry-modal-heading");
+      modalHeading?.focus();
+    }, 50);
+
+    return;
+  }
+
+  // DELETE → Open delete modal
+  if (action === "delete") {
+    setIsConfirmationModalOpen(true);
+
+    setTimeout(() => {
+      const deleteHeading = document.getElementById("delete-modal-heading");
+      deleteHeading?.focus();
+    }, 50);
+  }
+};
 
     const handleConfirmDelete = () => {
         deleteMasterRecord();

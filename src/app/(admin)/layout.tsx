@@ -17,6 +17,13 @@ export default function AdminLayout({
 
   const mainContentWidth = isMobileOpen ? "w-full" : isExpanded || isHovered ? "lg:w-[calc(100%-290px)]" : "lg:w-[calc(100%-90px)]"
   return (
+    <>
+    <div
+      id="sr-alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className="sr-only"
+    ></div>
     <div className="min-h-screen">
       {/* Sidebar and Backdrop */}
       <AppSidebar />
@@ -34,5 +41,6 @@ export default function AdminLayout({
         >{children}</div>
       </div>
     </div>
+    </>
   );
 }
