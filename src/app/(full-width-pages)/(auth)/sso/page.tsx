@@ -1,15 +1,15 @@
 "use client"
-import React, { useEffect, useState, useCallback, Suspense } from 'react'
+import React, { useEffect, useState, useCallback, Suspense, useLayoutEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSelector } from 'react-redux'
 import axios from 'axios'
-import { setAuthData, setError as setAuthError } from '@/redux/features/authSlice'
+import { logout, setAuthData, setError as setAuthError, setFinalAuthData } from '@/redux/features/authSlice'
 import { BASE_URL, PRODUCT, LOGIN_KEY, LOGIN_AS, SSO_URL, OTP_VERIFICATION_URL, ACTION_NAME, ENABLE_FERNET } from "@/utils/constants"
 import { clearIndexedDB, removeLocalStorage, storeLocalStorage, decodeFernetToken } from '@/utils/helper'
 import { RootState } from '@/redux/store'
 import { fetchMenuItems } from '@/redux/features/menuSlice'
+import { fetchInitializeLogin } from '@/redux/features/common/commonSlice'
 import { useAppDispatch } from '@/redux/hooks'
-import { clearAllAuthData } from '@/utils/auth'
 
 // SSO Component that uses useSearchParams
 const SSOContent = () => {
@@ -19,12 +19,23 @@ const SSOContent = () => {
     const encPayload = useSelector((state: RootState) => state.common.encPayload)
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState("")
+    const hasAttemptedLogin = useRef(false)
+
+    // Reset any stale session immediately so other effects don't fire with old tokens
+    useLayoutEffect(() => {
+        dispatch(logout())
+    }, [dispatch])
 
     const handleSSOLogin = useCallback(async () => {
-        try {
-            // Clear any existing auth data so the request starts clean
-            clearAllAuthData();
+        // Prevent duplicate API calls
+        if (hasAttemptedLogin.current) {
+            console.log('SSO Login already in progress or completed, skipping duplicate call');
+            return;
+        }
 
+        hasAttemptedLogin.current = true;
+
+        try {
             // Extract all query parameters dynamically
             let requestData: any = null
             let xDataContent = ""
@@ -42,6 +53,7 @@ const SSOContent = () => {
             if (Object.keys(queryParams).length === 0) {
                 setError('No query parameters found')
                 setIsLoading(false)
+                hasAttemptedLogin.current = false; // Reset so user can retry
                 return
             }
 
@@ -86,18 +98,6 @@ const SSOContent = () => {
             }
 
             if (data.status && data.status_code === 200) {
-                // Store auth data in Redux
-                dispatch(setAuthData({
-                    userId: data.data[0].ClientCode,
-                    token: data.token,
-                    refreshToken: data.refreshToken,
-                    tokenExpireTime: data.tokenExpireTime,
-                    clientCode: data.data[0].ClientCode,
-                    clientName: data.data[0].ClientName,
-                    userType: data.data[0].UserType,
-                    loginType: "SSO", // Set as SSO login type
-                }))
-
                 // Store auth data in localStorage
                 storeLocalStorage('userId', data.data[0].ClientCode)
                 storeLocalStorage('temp_token', data.token)
@@ -116,6 +116,32 @@ const SSOContent = () => {
 
                 removeLocalStorage('temp_token')
 
+                // Update Redux auth state after tokens are in place
+                dispatch(setAuthData({
+                    userId: data.data[0].ClientCode,
+                    token: data.token,
+                    refreshToken: data.refreshToken,
+                    tokenExpireTime: data.tokenExpireTime,
+                    clientCode: data.data[0].ClientCode,
+                    clientName: data.data[0].ClientName,
+                    userType: data.data[0].UserType,
+                    loginType: "SSO", // Set as SSO login type
+                }))
+                dispatch(setFinalAuthData({
+                    token: data.token,
+                    refreshToken: data.refreshToken,
+                    tokenExpireTime: data.tokenExpireTime,
+                    clientCode: data.data[0].ClientCode,
+                    clientName: data.data[0].ClientName,
+                    userType: data.data[0].UserType,
+                }))
+
+                // Wait 1 second before making other API calls to ensure token is fully set
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Fetch company initialization data (that was skipped for SSO page)
+                dispatch(fetchInitializeLogin());
+
                 // Kick off menu fetch so dashboard can render sooner
                 dispatch(fetchMenuItems());
 
@@ -126,6 +152,7 @@ const SSOContent = () => {
                 setError(errorMessage)
                 dispatch(setAuthError(errorMessage))
                 setIsLoading(false)
+                hasAttemptedLogin.current = false; // Reset so user can retry
             }
         } catch (err) {
             console.error('SSO Login error:', err)
@@ -136,6 +163,7 @@ const SSOContent = () => {
             setError(errorMessage)
             dispatch(setAuthError(errorMessage))
             setIsLoading(false)
+            hasAttemptedLogin.current = false; // Reset so user can retry
         }
     }, [searchParams, dispatch, router, encPayload])
 

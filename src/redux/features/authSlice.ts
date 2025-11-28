@@ -1,5 +1,4 @@
-import { APP_METADATA_KEY } from '@/utils/constants';
-import { clearIndexedDB, clearLocalStorage, getLocalStorage } from '@/utils/helper';
+import { clearIndexedDB, clearLocalStorage, getLocalStorage, removeLocalStorage } from '@/utils/helper';
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface AuthState {
@@ -37,14 +36,38 @@ const loadInitialState = (): AuthState => {
     if (typeof window === 'undefined') return defaultInitialState;
 
     const authToken = getLocalStorage('auth_token');
+    const tokenExpireTime = getLocalStorage('tokenExpireTime');
+    const isExpired = tokenExpireTime ? new Date(tokenExpireTime) < new Date() : false;
+
+    // If token is missing or expired, start clean to avoid kicking off protected calls with stale data
+    if (!authToken || isExpired) {
+        removeLocalStorage('auth_token');
+        removeLocalStorage('refreshToken');
+        removeLocalStorage('tokenExpireTime');
+
+        return {
+            ...defaultInitialState,
+            userId: null,
+            tempToken: null,
+            authToken: null,
+            refreshToken: null,
+            tokenExpireTime: null,
+            clientCode: null,
+            clientName: null,
+            userType: null,
+            loginType: null,
+            error: null,
+            loading: false,
+        };
+    }
 
     return {
-        isAuthenticated: !!authToken,
+        isAuthenticated: !!authToken && !isExpired,
         userId: getLocalStorage('userId'),
         tempToken: getLocalStorage('temp_token'),
         authToken: authToken,
         refreshToken: getLocalStorage('refreshToken'),
-        tokenExpireTime: getLocalStorage('tokenExpireTime'),
+        tokenExpireTime: tokenExpireTime,
         clientCode: getLocalStorage('clientCode'),
         clientName: getLocalStorage('clientName'),
         userType: getLocalStorage('userType'),

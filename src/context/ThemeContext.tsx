@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 // import axios from 'axios';
 import { ACTION_NAME, PATH_URL } from '@/utils/constants';
 import { BASE_URL } from '@/utils/constants';
@@ -152,10 +152,32 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [themes, setThemes] = useState<Record<ThemeType, ThemeColors>>(initialThemes);
   const [fonts, setFonts] = useState<FontSettings>(defaultFonts);
   const [isLoading, setIsLoading] = useState(true);
+  const themeFetchInFlight = useRef(false);
+  const [hasFetchedTheme, setHasFetchedTheme] = useState(false);
   const { userId: UserId, userType: UserType, isAuthenticated } = useSelector((state: RootState) => state.auth)
   // Add fetchThemes function
   const fetchThemes = async () => {
     try {
+      const authToken = getLocalStorage('auth_token');
+      if (!authToken) {
+        console.warn('Skipping theme fetch: auth token not ready yet');
+        return;
+      }
+
+      // Skip if token is expired to avoid 401s with stale sessions
+      const tokenExpireTime = getLocalStorage('tokenExpireTime');
+      if (tokenExpireTime && new Date(tokenExpireTime) < new Date()) {
+        console.warn('Skipping theme fetch: auth token expired');
+        return;
+      }
+
+      // Avoid duplicate calls when auth state changes rapidly
+      if (hasFetchedTheme || themeFetchInFlight.current) {
+        return;
+      }
+
+      themeFetchInFlight.current = true;
+
       const userData = {
         // UserId: localStorage.getItem('userId'),
         // UserType: localStorage.getItem('userType')
@@ -195,6 +217,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           ...prevThemes,
           ...parsedThemeSettings
         }));
+        setHasFetchedTheme(true);
 
         // Save to localStorage
         const localSavedThemeColors = getLocalStorage(THEME_COLORS_STORAGE_KEY);
@@ -216,6 +239,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         setThemes(initialThemes);
       }
+    } finally {
+      themeFetchInFlight.current = false;
     }
   };
 
@@ -295,9 +320,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   useEffect(() => {
+    // Skip theme fetch if we're on SSO page (pathname check)
+    if (typeof window !== 'undefined' && window.location.pathname.includes('/sso')) {
+      console.log('SSO page detected - skipping theme fetch to prevent premature API calls');
+      return;
+    }
+
     // Fetch theme if user is authenticated successfully
     if (UserId && UserType && isAuthenticated) {
       fetchThemes();
+    } else {
+      // Reset fetch flags when user logs out or before login completes
+      setHasFetchedTheme(false);
+      themeFetchInFlight.current = false;
     }
   }, [UserId, UserType, isAuthenticated])
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
