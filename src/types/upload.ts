@@ -87,3 +87,40 @@ export interface ExcelParserConfig {
   chunkSize: number;
   sheetName?: string;
 }
+
+// Multi-file upload queue types
+export type FileUploadStatus = 'pending' | 'uploading' | 'success' | 'failed' | 'no_match' | 'paused';
+
+export interface FileQueueItem {
+  id: string;
+  file: File;
+  fileName: string;
+  fileSize: number;
+  matchedRecord: any | null; // From API list
+  status: FileUploadStatus;
+  progress: number; // 0-100
+  error?: string;
+  uploadedRecords: number;
+  totalRecords: number;
+  startTime?: number;
+  endTime?: number;
+  sessionId?: string;
+  failedChunks?: FailedChunk[];
+}
+
+export interface BackgroundUploadQueue {
+  items: FileQueueItem[];
+  currentUploadId: string | null;
+  isPaused: boolean;
+  lastUpdated: number;
+}
+
+export interface UploadQueueStats {
+  total: number;
+  pending: number;
+  uploading: number;
+  success: number;
+  failed: number;
+  noMatch: number;
+  paused: number;
+}

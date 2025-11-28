@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import axios from 'axios';
-import { BASE_URL, PATH_URL, UPLOAD_FILE_URL } from '@/utils/constants';
+import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
 import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope } from 'react-icons/fa';
@@ -23,8 +23,7 @@ import Loader from './Loader';
 import apiService from '@/utils/apiService';
 import { decryptData, getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
 import { toast } from "react-toastify";
-import FileUploadChunked from './upload/FileUploadChunked';
-import { UploadSummary } from '@/types/upload';
+import MultiFileUploadQueue from './upload/MultiFileUploadQueue';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -279,8 +278,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [autoFetch, setAutoFetch] = useState<boolean>(true);
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
     const [isEditTableRowModalOpen, setIsEditTableRowModalOpen] = useState<boolean>(false);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [selectedImportRecord, setSelectedImportRecord] = useState<any>(null);
 
     const [entryFormData, setEntryFormData] = useState<any>(null);
     const [entryAction, setEntryAction] = useState<'edit' | 'delete' | 'view' | null>(null);
@@ -809,10 +806,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
-        // Handle import type - open upload modal
+        // Handle import type - do nothing, upload interface is shown directly on page
         if (componentType === 'import') {
-            setSelectedImportRecord(record);
-            setIsImportModalOpen(true);
             return;
         }
 
@@ -1895,7 +1890,41 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Data Display */}
             {!isLoading && (
-                (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
+                componentType === 'import' ? (
+                    // Show batch upload interface directly for import type
+                    <div className="p-6 border rounded-lg" style={{
+                        backgroundColor: colors.cardBackground,
+                        borderColor: '#e5e7eb'
+                    }}>
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-semibold mb-2" style={{ color: colors.text }}>
+                                {safePageData.getSetting('level') || 'Batch File Upload'}
+                            </h2>
+                            <p className="text-sm mb-4" style={{ color: colors.text, opacity: 0.7 }}>
+                                Upload multiple files simultaneously. Files will be automatically matched with records by filename.
+                            </p>
+                            {apiData && apiData.length > 0 && (
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                                    <p className="text-sm text-green-800">
+                                        <strong>Available File Records:</strong> {apiData.length} record(s) loaded from API.
+                                        Files will be matched against these records by filename.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <MultiFileUploadQueue
+                            apiRecords={apiData || []}
+                            maxFileSize={3 * 1024 * 1024 * 1024}
+                            allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
+                            onQueueUpdate={(stats) => {
+                                console.log('Queue stats:', stats);
+                                if (stats.success > 0) {
+                                    fetchData(filters, false);
+                                }
+                            }}
+                        />
+                    </div>
+                ) : (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
                     <div className="flex items-center justify-center py-8 border rounded-lg" style={{
                         backgroundColor: colors.cardBackground,
                         borderColor: '#e5e7eb'
@@ -2041,98 +2070,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 />
             )}
 
-            {/* Import Modal for File Upload */}
-            {componentType === 'import' && isImportModalOpen && (
-                <div
-                    className="fixed inset-0 flex items-center justify-center p-4"
-                    style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                        backdropFilter: 'blur(4px)',
-                        zIndex: 9999
-                    }}
-                    onClick={(e) => {
-                        // Close modal when clicking on backdrop
-                        if (e.target === e.currentTarget) {
-                            setIsImportModalOpen(false);
-                            setSelectedImportRecord(null);
-                        }
-                    }}
-                >
-                    <div
-                        className="rounded-xl shadow-2xl p-6 max-w-5xl w-full max-h-[90vh] overflow-auto"
-                        style={{
-                            backgroundColor: colors.cardBackground,
-                            border: `1px solid ${colors.color1 || '#e5e7eb'}`
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b" style={{ borderColor: colors.color1 || '#e5e7eb' }}>
-                            <div>
-                                <h3 className="font-semibold text-xl" style={{ color: colors.text }}>
-                                    {safePageData.getSetting('level') || 'Import File'}
-                                </h3>
-                                {selectedImportRecord?.FileName && (
-                                    <p className="text-sm mt-1" style={{ color: colors.text, opacity: 0.7 }}>
-                                        {selectedImportRecord.FileName}
-                                    </p>
-                                )}
-                            </div>
-                            <button
-                                onClick={() => {
-                                    setIsImportModalOpen(false);
-                                    setSelectedImportRecord(null);
-                                }}
-                                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                                style={{ color: colors.text }}
-                            >
-                                <FaTimes size={20} />
-                            </button>
-                        </div>
-
-                        {/* File Upload Component */}
-                        <FileUploadChunked
-                            apiEndpoint={`${BASE_URL}${UPLOAD_FILE_URL}`}
-                            chunkSize={5000}
-                            maxFileSize={3 * 1024 * 1024 * 1024} // 3GB
-                            allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
-                            delayBetweenChunks={150}
-                            maxRetries={3}
-                            metadata={{
-                                filters: (() => {
-                                    // Convert date values to YYYYMMDD format
-                                    const formattedFilters: Record<string, any> = {};
-                                    Object.entries(filters).forEach(([key, value]) => {
-                                        if (value && typeof value === 'string') {
-                                            // Try to parse as date
-                                            const date = moment(value, ['YYYY-MM-DD', 'DD-MM-YYYY', 'MM-DD-YYYY', 'YYYYMMDD'], true);
-                                            if (date.isValid()) {
-                                                formattedFilters[key] = date.format('YYYYMMDD');
-                                            } else {
-                                                formattedFilters[key] = value;
-                                            }
-                                        } else {
-                                            formattedFilters[key] = value;
-                                        }
-                                    });
-                                    return formattedFilters;
-                                })(),
-                                selectedRecord: selectedImportRecord,
-                            }}
-                            onUploadComplete={(summary: UploadSummary) => {
-                                console.log('Upload completed:', summary);
-                                toast.success(`Upload completed! ${summary.successfulRecords} records uploaded successfully. You can now close this window.`);
-                                // Refresh the data table
-                                fetchData(filters, false);
-                                // DO NOT close modal automatically - let user close it manually
-                            }}
-                            onUploadError={(error: string) => {
-                                console.error('Upload error:', error);
-                                toast.error(`Upload failed: ${error}`);
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
