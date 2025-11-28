@@ -297,6 +297,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
     const [showValidationDetails, setShowValidationDetails] = useState(false);
+    const [announceMsg, setAnnounceMsg] = useState("");
+
+    useEffect(() => {
+    if (!announceMsg) return;
+
+    let region = document.getElementById("nvdaLiveRegion");
+    if (!region) {
+        region = document.createElement("div");
+        region.id = "nvdaLiveRegion";
+        region.setAttribute("role", "status");
+        region.setAttribute("aria-live", "assertive");
+        region.setAttribute("aria-atomic", "true");
+        region.style.position = "absolute";
+        region.style.left = "-9999px";
+        document.body.appendChild(region);
+    }
+
+    region.textContent = announceMsg;
+    }, [announceMsg]);
 
     // Add comprehensive cache for different filter combinations and levels
     const [dataCache, setDataCache] = useState<Record<string, {
@@ -745,6 +764,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }));
             setApiData(dataWithId);
 
+                // NVDA ANNOUNCEMENT (correct place)
+                if (dataWithId.length >= 0) {
+                    const msg = dataWithId.length > 0
+                        ? `Total records available are ${dataWithId.length}.`
+                        : "No data available.";
+
+                    setAnnounceMsg(msg);
+                }
+
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
             Object.entries(response.data.data).forEach(([key, value]) => {
@@ -800,9 +828,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             ongoingRequestRef.current = null; // Clear ongoing request reference
         }
     };
-
-
-
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
@@ -995,15 +1020,59 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     // function to handle table actions
-    const handleTableAction = (action: string, record: any) => {
-        setEntryFormData(record);
-        setEntryAction(action as 'edit' | 'delete' | 'view');
-        if (action === "edit" || action === "view") {
-            setIsEntryModalOpen(true);
-        } else {
-            setIsConfirmationModalOpen(true);
-        }
-    }
+    // const handleTableAction = (action: string, record: any) => {
+    //     setEntryFormData(record);
+    //     setEntryAction(action as 'edit' | 'delete' | 'view');
+    //     if (action === "edit" || action === "view") {
+    //         setIsEntryModalOpen(true);
+    //     } else {
+    //         setIsConfirmationModalOpen(true);
+    //     }
+    // }
+
+const handleTableAction = (action: string, record: any) => {
+  setEntryFormData(record);
+  setEntryAction(action as "edit" | "delete" | "view");
+
+  const alertBox = document.getElementById("sr-alert");
+
+  // Announce Edit + View + Delete
+  if (alertBox) {
+    const readableAction =
+      action === "edit"
+        ? "Edit"
+        : action === "view"
+        ? "View"
+        : "Delete";
+
+    alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
+  }
+
+  // EDIT + VIEW → Open entry modal
+
+  if (action === "edit" || action === "view") {
+    setIsEntryModalOpen(true);
+
+    // Focus the modal heading AFTER modal is visible
+    setTimeout(() => {
+      const modalHeading = document.getElementById("entry-modal-heading");
+      modalHeading?.focus();
+    }, 50);
+
+    return;
+  }
+  
+
+  // DELETE → Open delete modal
+  if (action === "delete") {
+    setIsConfirmationModalOpen(true);
+
+    setTimeout(() => {
+      const deleteHeading = document.getElementById("delete-modal-heading");
+      deleteHeading?.focus();
+    }, 50);
+  }
+};
 
     const handleConfirmDelete = () => {
         deleteMasterRecord();
@@ -1791,6 +1860,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onSortChange={setSortConfig}
                 isSortingAllowed={safePageData.getCurrentLevel(currentLevel)?.isShortAble !== "false"}
                 onApply={() => { }}
+                totalRecords={apiData?.length}   // <-- REQUIRED
             />
             <ConfirmationModal
                 isOpen={isConfirmationModalOpen}
