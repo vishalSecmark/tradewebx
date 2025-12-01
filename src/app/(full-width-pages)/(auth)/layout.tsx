@@ -6,18 +6,27 @@ import { useSelector } from "react-redux";
 import { useAppDispatch } from "@/redux/hooks";
 import { fetchInitializeLogin } from "@/redux/features/common/commonSlice";
 import { RootState } from "@/redux/store";
+import { usePathname } from "next/navigation";
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const dispatch = useAppDispatch();
+  const pathname = usePathname();
   const { companyInfo, status, error } = useSelector((state: RootState) => state.common);
 
   useEffect(() => {
+    // Skip initialization API call for SSO page - it will handle its own authentication
+    if (pathname?.startsWith('/sso')) {
+      console.log('SSO page detected - skipping fetchInitializeLogin to prevent premature API calls');
+      return;
+    }
+
     // Dispatch the fetchInitializeLogin action to get company data
     dispatch(fetchInitializeLogin());
-  }, [dispatch]);
+  }, [dispatch, pathname]);
 
   // You can use this to log the company info when it's loaded
   useEffect(() => {
