@@ -47,22 +47,22 @@ const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
 }) => {
 
     const modalRef = React.useRef<HTMLDivElement>(null);
-    if (!isOpen) return null;
 
     useEffect(() => {
-    let timer: any;
+        let timer: any;
 
-    if (modalRef.current) {
-        timer = setTimeout(() => {
-            modalRef.current?.focus();
-        }, 50);
-    }
+        if (modalRef.current) {
+            timer = setTimeout(() => {
+                modalRef.current?.focus();
+            }, 50);
+        }
 
-    return () => {
-        clearTimeout(timer); // Clean timeout when modal closes or re-renders
-    };
-}, [isOpen]);
+        return () => {
+            clearTimeout(timer); // Clean timeout when modal closes or re-renders
+        };
+    }, [isOpen]);
 
+    if (!isOpen) return null;
 
     const isChildInvalid = Object.values(fieldErrors).some(error => error);
     const handleFormSubmit = () => {
