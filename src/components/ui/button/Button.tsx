@@ -83,8 +83,11 @@ const Button: React.FC<ButtonProps> = ({
       aria-pressed={ariaPressed}      
       onKeyDown={(e) => {
         if (disabled) return;
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === " ") {
           e.preventDefault();
+          onClick?.();
+        }
+          if (e.key === "Enter") {
           onClick?.();
         }
       }}
