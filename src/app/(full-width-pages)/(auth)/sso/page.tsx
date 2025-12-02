@@ -139,7 +139,7 @@ const SSOContent = () => {
                 }))
 
                 // Wait 1 second before making other API calls to ensure token is fully set
-                await new Promise(resolve => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
                 // Fetch company initialization data (that was skipped for SSO page)
                 dispatch(fetchInitializeLogin());
