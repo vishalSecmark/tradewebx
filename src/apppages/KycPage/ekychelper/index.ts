@@ -1,6 +1,6 @@
 import apiService from "@/utils/apiService";
 import { BASE_URL, PATH_URL } from "@/utils/constants";
-import { getLocalStorage, storeLocalStorage } from "@/utils/helper";
+import { getLocalStorage, storeLocalStorage, escapeXmlChars } from "@/utils/helper";
 import { toast } from "react-toastify";
 
 export const fetchEkycDropdownOptions = async (field: any, setMasterDropdownOptions: any, setMasterLoadingDropdowns: any) => {
@@ -74,7 +74,7 @@ export const handleSaveSinglePageData = async (
         <J_Ui>${jUi}</J_Ui>
         <Sql>${settings.Sql || ''}</Sql>
         <X_Filter></X_Filter>
-        <X_DataJson>${jsonString}</X_DataJson>
+        <X_DataJson>${escapeXmlChars(jsonString)}</X_DataJson>
         <X_Filter_Multiple>${XFilterMultiple || ''}</X_Filter_Multiple>
         <J_Api>${jApi}</J_Api>
         </dsXml>`;
@@ -139,7 +139,7 @@ export const SubmitEkycForm = async (settings: any, data: any, setSaving?: (load
                 <J_Ui>${jUi}</J_Ui>
                 <Sql></Sql>
                 <X_Filter></X_Filter>
-                <X_DataJson>${jsonString}</X_DataJson>
+                <X_DataJson>${escapeXmlChars(jsonString)}</X_DataJson>
                 <X_Filter_Multiple>${XFilterMultiple}</X_Filter_Multiple>
                 <J_Api>${jApi}</J_Api>
             </dsXml>`;

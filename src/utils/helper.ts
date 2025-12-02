@@ -574,6 +574,16 @@ export const sendEmailMultiCheckbox = async (base64Data: string, pdfName: string
     }
 };
 
+export const escapeXmlChars = (value: string): string => {
+    if (!value) return "";
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/'/g, "&apos;")
+        .replace(/"/g, "&quot;");
+};
+
 export function formatTextSplitString(text: string) {
   return text
     .replace(/([A-Z])/g, ' $1')
