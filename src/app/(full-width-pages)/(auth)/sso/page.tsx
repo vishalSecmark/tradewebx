@@ -138,15 +138,15 @@ const SSOContent = () => {
                     userType: data.data[0].UserType,
                 }))
 
-                // Wait 1 second before making other API calls to ensure token is fully set
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Wait for critical initialization to complete before navigating
+                // This ensures SSO remains standalone and dashboard doesn't load prematurely
+                console.log('Fetching company initialization data...')
+                await dispatch(fetchInitializeLogin()).unwrap();
 
-                // Fetch company initialization data (that was skipped for SSO page)
-                dispatch(fetchInitializeLogin());
+                console.log('Fetching menu items...')
+                await dispatch(fetchMenuItems()).unwrap();
 
-                // Kick off menu fetch so dashboard can render sooner
-                dispatch(fetchMenuItems());
-
+                console.log('SSO authentication complete, navigating to dashboard')
                 // Navigate directly to dashboard (no OTP for SSO)
                 router.push('/dashboard')
             } else {
