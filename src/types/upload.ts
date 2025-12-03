@@ -89,7 +89,7 @@ export interface ExcelParserConfig {
 }
 
 // Multi-file upload queue types
-export type FileUploadStatus = 'pending' | 'uploading' | 'success' | 'failed' | 'no_match' | 'paused';
+export type FileUploadStatus = 'pending' | 'uploading' | 'success' | 'failed' | 'no_match' | 'paused' | 'disabled';
 
 export interface FileQueueItem {
   id: string;
@@ -123,4 +123,5 @@ export interface UploadQueueStats {
   failed: number;
   noMatch: number;
   paused: number;
+  disabled: number;
 }

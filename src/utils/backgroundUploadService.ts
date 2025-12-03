@@ -25,6 +25,8 @@ class BackgroundUploadManager {
   private isProcessing: boolean = false;
   private currentFileAbortRef: { abort: () => void } | null = null;
   private listeners: Set<() => void> = new Set();
+  private consecutiveChunkErrors: number = 0;
+  private readonly MAX_CONSECUTIVE_ERRORS = 10;
 
   constructor() {
     this.queue = this.loadQueue();
@@ -50,8 +52,14 @@ class BackgroundUploadManager {
         const parsed = JSON.parse(stored);
         // Convert file data back to File objects (files are lost on reload, mark as failed)
         parsed.items = parsed.items.map((item: any) => {
-          if (item.status === 'uploading') {
-            return { ...item, status: 'pending' as const };
+          // If item was uploading and file is lost (not in memory), mark as failed
+          if (item.status === 'uploading' || (item.status === 'pending' && !item.file)) {
+            return {
+              ...item,
+              status: 'failed' as const,
+              error: item.error || 'File lost after page reload. Please re-upload the file.',
+              file: null
+            };
           }
           return item;
         });
@@ -121,13 +129,41 @@ class BackgroundUploadManager {
   /**
    * Add files to queue with filename matching
    */
-  addFiles(files: File[], apiRecords: any[]): void {
+  addFiles(files: File[], apiRecords: any[], allRecords?: any[]): void {
     const newItems: FileQueueItem[] = files.map(file => {
       const fileName = file.name;
-      const matchedRecord = apiRecords.find(record =>
-        record.FileName === fileName ||
-        record.FileName === fileName.replace(/\.[^/.]+$/, '') // Match without extension
-      );
+      const fileNameLower = fileName.toLowerCase();
+      const fileNameWithoutExtLower = fileName.replace(/\.[^/.]+$/, '').toLowerCase();
+
+      // Check if matched in enabled records
+      const matchedRecord = apiRecords.find(record => {
+        const recordFileName = record.FileName || '';
+        const recordFileNameLower = recordFileName.toLowerCase();
+
+        // Match with or without extension, case-insensitive
+        return recordFileNameLower === fileNameLower ||
+               recordFileNameLower === fileNameWithoutExtLower ||
+               recordFileNameLower.replace(/\.[^/.]+$/, '') === fileNameWithoutExtLower;
+      });
+
+      // If not matched in enabled records, check if it exists in all records (disabled)
+      let status: FileQueueItem['status'] = 'no_match';
+      if (matchedRecord) {
+        status = 'pending';
+      } else if (allRecords) {
+        const disabledMatch = allRecords.find(record => {
+          const recordFileName = record.FileName || '';
+          const recordFileNameLower = recordFileName.toLowerCase();
+
+          return recordFileNameLower === fileNameLower ||
+                 recordFileNameLower === fileNameWithoutExtLower ||
+                 recordFileNameLower.replace(/\.[^/.]+$/, '') === fileNameWithoutExtLower;
+        });
+
+        if (disabledMatch) {
+          status = 'disabled';
+        }
+      }
 
       return {
         id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -135,7 +171,7 @@ class BackgroundUploadManager {
         fileName,
         fileSize: file.size,
         matchedRecord: matchedRecord || null,
-        status: matchedRecord ? 'pending' : 'no_match',
+        status,
         progress: 0,
         uploadedRecords: 0,
         totalRecords: 0,
@@ -168,6 +204,7 @@ class BackgroundUploadManager {
       failed: items.filter(i => i.status === 'failed').length,
       noMatch: items.filter(i => i.status === 'no_match').length,
       paused: items.filter(i => i.status === 'paused').length,
+      disabled: items.filter(i => i.status === 'disabled').length,
     };
   }
 
@@ -207,6 +244,9 @@ class BackgroundUploadManager {
     }
 
     try {
+      // Reset consecutive error counter for new file
+      this.consecutiveChunkErrors = 0;
+
       item.status = 'uploading';
       item.startTime = Date.now();
       item.sessionId = generateSessionId();
@@ -226,9 +266,17 @@ class BackgroundUploadManager {
         throw new Error('Unsupported file type');
       }
 
-      item.status = 'success';
-      item.endTime = Date.now();
-      item.progress = 100;
+      // Check if there are failed chunks
+      if (item.failedChunks && item.failedChunks.length > 0) {
+        const totalFailedRecords = item.failedChunks.reduce((sum, fc) => sum + fc.data.length, 0);
+        item.status = 'failed';
+        item.error = `Upload completed with errors: ${item.failedChunks.length} chunk(s) failed (${totalFailedRecords} records)`;
+        item.endTime = Date.now();
+      } else {
+        item.status = 'success';
+        item.endTime = Date.now();
+        item.progress = 100;
+      }
     } catch (error: any) {
       item.status = 'failed';
       item.error = error.message || 'Unknown error';
@@ -361,11 +409,16 @@ class BackgroundUploadManager {
     );
 
     if (result.success) {
+      // Reset consecutive error counter on success
+      this.consecutiveChunkErrors = 0;
       item.uploadedRecords += data.length;
       item.progress = item.totalRecords > 0
         ? Math.round((item.uploadedRecords / item.totalRecords) * 100)
         : 0;
     } else {
+      // Increment consecutive error counter
+      this.consecutiveChunkErrors++;
+
       if (!item.failedChunks) item.failedChunks = [];
       item.failedChunks.push({
         chunkIndex,
@@ -373,6 +426,16 @@ class BackgroundUploadManager {
         error: result.error || 'Unknown error',
         retryCount: result.retryCount,
       });
+
+      // If we hit max consecutive errors, abort the upload
+      if (this.consecutiveChunkErrors >= this.MAX_CONSECUTIVE_ERRORS) {
+        const errorMsg = `Upload stopped: ${this.MAX_CONSECUTIVE_ERRORS} consecutive chunk failures detected. Please check the data format or API configuration.`;
+        item.status = 'failed';
+        item.error = errorMsg;
+        this.consecutiveChunkErrors = 0; // Reset for next file
+        this.saveQueue();
+        throw new Error(errorMsg);
+      }
     }
 
     this.saveQueue();

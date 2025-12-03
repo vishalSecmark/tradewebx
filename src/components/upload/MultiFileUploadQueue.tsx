@@ -24,6 +24,7 @@ import { formatFileSize, formatDuration, downloadAsCSV } from '@/utils/fileParse
 
 interface MultiFileUploadQueueProps {
   apiRecords: any[];
+  allRecords?: any[]; // All records including disabled ones
   maxFileSize?: number;
   allowedFileTypes?: string[];
   onQueueUpdate?: (stats: UploadQueueStats) => void;
@@ -31,6 +32,7 @@ interface MultiFileUploadQueueProps {
 
 const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
   apiRecords,
+  allRecords,
   maxFileSize = 3 * 1024 * 1024 * 1024, // 3GB
   allowedFileTypes = ['csv', 'txt', 'xls', 'xlsx'],
   onQueueUpdate,
@@ -47,19 +49,33 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
     failed: 0,
     noMatch: 0,
     paused: 0,
+    disabled: 0,
   });
   const [isPaused, setIsPaused] = useState(false);
+  const lastUpdateRef = React.useRef<string>('');
 
-  // Update queue state
+  // Update queue state (only if changed to prevent flashing)
   const updateQueueState = useCallback(() => {
     const queue = uploadManager.getQueue();
     const newStats = uploadManager.getStats();
-    setQueueItems(queue.items);
-    setStats(newStats);
-    setIsPaused(queue.isPaused);
 
-    if (onQueueUpdate) {
-      onQueueUpdate(newStats);
+    // Create a hash to detect actual changes
+    const queueHash = JSON.stringify({
+      items: queue.items.map(i => ({ id: i.id, status: i.status, progress: i.progress, error: i.error })),
+      stats: newStats,
+      isPaused: queue.isPaused
+    });
+
+    // Only update if something actually changed
+    if (queueHash !== lastUpdateRef.current) {
+      lastUpdateRef.current = queueHash;
+      setQueueItems(queue.items);
+      setStats(newStats);
+      setIsPaused(queue.isPaused);
+
+      if (onQueueUpdate) {
+        onQueueUpdate(newStats);
+      }
     }
   }, [uploadManager, onQueueUpdate]);
 
@@ -68,8 +84,8 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
     updateQueueState();
     const unsubscribe = uploadManager.addListener(updateQueueState);
 
-    // Poll for updates every second (in case of cross-tab changes)
-    const interval = setInterval(updateQueueState, 1000);
+    // Poll for updates every 2 seconds (reduced from 1 second to prevent flashing)
+    const interval = setInterval(updateQueueState, 2000);
 
     return () => {
       unsubscribe();
@@ -109,10 +125,10 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
     }
 
     if (validFiles.length > 0) {
-      uploadManager.addFiles(validFiles, apiRecords);
+      uploadManager.addFiles(validFiles, apiRecords, allRecords || apiRecords);
       toast.success(`Added ${validFiles.length} file(s) to queue`);
     }
-  }, [uploadManager, apiRecords, allowedFileTypes, maxFileSize]);
+  }, [uploadManager, apiRecords, allRecords, allowedFileTypes, maxFileSize]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -136,7 +152,9 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
       case 'failed':
         return { icon: <FaTimesCircle />, color: 'text-red-600', bg: 'bg-red-100', label: 'Failed' };
       case 'no_match':
-        return { icon: <FaExclamationCircle />, color: 'text-yellow-600', bg: 'bg-yellow-100', label: 'No Match' };
+        return { icon: <FaExclamationCircle />, color: 'text-red-600', bg: 'bg-red-100', label: 'Not Matched' };
+      case 'disabled':
+        return { icon: <FaExclamationCircle />, color: 'text-orange-600', bg: 'bg-orange-100', label: 'Record Disabled' };
       case 'paused':
         return { icon: <FaPause />, color: 'text-orange-600', bg: 'bg-orange-100', label: 'Paused' };
       default:
@@ -224,7 +242,7 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
       </div>
 
       {/* Queue Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <div className="p-3 rounded-lg border" style={{ backgroundColor: colors.cardBackground }}>
           <p className="text-xs text-gray-500 mb-1">Total</p>
           <p className="text-2xl font-bold" style={{ color: colors.text }}>{stats.total}</p>
@@ -245,13 +263,17 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
           <p className="text-xs text-red-600 mb-1">Failed</p>
           <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
         </div>
-        <div className="p-3 rounded-lg border bg-yellow-50">
-          <p className="text-xs text-yellow-600 mb-1">No Match</p>
-          <p className="text-2xl font-bold text-yellow-600">{stats.noMatch}</p>
+        <div className="p-3 rounded-lg border bg-red-50">
+          <p className="text-xs text-red-600 mb-1">Not Matched</p>
+          <p className="text-2xl font-bold text-red-600">{stats.noMatch}</p>
         </div>
         <div className="p-3 rounded-lg border bg-orange-50">
-          <p className="text-xs text-orange-600 mb-1">Paused</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.paused}</p>
+          <p className="text-xs text-orange-600 mb-1">Disabled</p>
+          <p className="text-2xl font-bold text-orange-600">{stats.disabled}</p>
+        </div>
+        <div className="p-3 rounded-lg border bg-purple-50">
+          <p className="text-xs text-purple-600 mb-1">Paused</p>
+          <p className="text-2xl font-bold text-purple-600">{stats.paused}</p>
         </div>
       </div>
 
