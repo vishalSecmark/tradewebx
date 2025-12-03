@@ -121,7 +121,7 @@ const UploadFile = () => {
                                     Real-time Status Tracking
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                    Monitor each file's status, progress, and any errors in real-time
+                                    Monitor each file&apos;s status, progress, and any errors in real-time
                                 </p>
                             </div>
                         </div>

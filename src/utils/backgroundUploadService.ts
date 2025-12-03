@@ -296,6 +296,7 @@ class BackgroundUploadManager {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       let chunkIndex = 0;
+      // eslint-disable-next-line prefer-const
       let uploadBuffer: any[] = [];
       let headers: string[] = [];
       let totalParsedRecords = 0;
