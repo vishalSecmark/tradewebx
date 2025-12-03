@@ -13,7 +13,7 @@ import { handleValidationForDisabledField } from './component-forms/form-helper'
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
 import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
-import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar } from '@/utils/helper';
+import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, escapeXmlChars } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
@@ -1983,7 +1983,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 : [];
         }
 
-        const xDataJson = JSON.stringify(allData);
+        const xDataJson = escapeXmlChars(JSON.stringify(allData));
 
         setIsFormSubmit(true);
         try {
@@ -2091,7 +2091,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         })
 
 
-        const xDataJson = JSON.stringify(allData);
+        const xDataJson = escapeXmlChars(JSON.stringify(allData));
 
         setIsFormSubmit(true);
         try {
@@ -3103,7 +3103,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         )}
                                     </div>
                                         {(!isThereChildEntry && childEntriesTable?.length > 0) && (
-                                         <div className="flex flex-col h-[calc(80vh-270px)]">
+                                         <div className="flex flex-col">
                                             <div className="overflow-x-auto overflow-y-auto flex-1">
                                             <DataGrid
                                               columns={[
@@ -3169,7 +3169,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                       .map((key) => ({
                                                         key,
                                                         name: key,
-                                                        width: columnWidthMap[key] || 150,
+                                                        width: columnWidthMap[key] || "auto",
                                                         renderCell: ({ row }) => {
                                                           const value =
                                                             row[key] == null || row[key] === "" ? "-" : String(row[key]);
@@ -3200,7 +3200,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                               style={{
                                                 backgroundColor: "white",
                                                 fontFamily: "inherit",
-                                                width:"fit-content",
+                                                // width:"fit-content",
                                                 height:"100%"
                                               }}
                                             />

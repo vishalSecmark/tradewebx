@@ -132,6 +132,7 @@ interface ThemeContextType {
   updateTheme: (themeData: Record<ThemeType, ThemeColors>) => void;
   updateFonts: (fontData: FontSettings) => void;
   availableThemes: ThemeType[];
+  allThemes: Record<ThemeType, ThemeColors>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -317,6 +318,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     updateTheme,
     updateFonts,
     availableThemes: Object.keys(themes) as ThemeType[],
+    allThemes: themes,
   };
 
   useEffect(() => {
@@ -353,6 +355,7 @@ export const useTheme = () => {
         updateTheme: () => { },
         updateFonts: () => { },
         availableThemes: Object.keys(initialThemes) as ThemeType[],
+        allThemes: initialThemes,
       };
     }
     // Only throw if we're on the client and outside a ThemeProvider
