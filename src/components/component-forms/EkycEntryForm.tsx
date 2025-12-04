@@ -100,8 +100,8 @@ const DropdownField: React.FC<{
         const dropdownStyles = getDropdownStyles(colors, isDisabled, fieldErrors, field, isJustUpdated, "100%");
 
         return (
-            <div key={field?.Srno} className="mb-1">
-                <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+            <div id={`select-${field?.wKey}-label`}  key={field?.Srno} className="mb-1">
+                <label  className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                     {field?.label}
                     {isRequired && <span className="text-red-500 ml-1">*</span>}
                 </label>
@@ -124,6 +124,7 @@ const DropdownField: React.FC<{
                             : "Select..."
                     }
                     className="react-select-container"
+                    aria-labelledby={`select-${field?.wKey}-label`}
                     classNamePrefix="react-select"
                     isLoading={loadingDropdowns[field?.wKey]}
                     filterOption={() => true}
@@ -728,7 +729,8 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             key={`fileInput-${field.Srno}-${field.wKey}`}
                             className={marginBottom}
                         >
-                            <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+                            <label
+                                className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                                 {field.label}
                                 {isRequired && <span className="text-red-500 ml-1">*</span>}
                             </label>

@@ -63,7 +63,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             sortable: false,
             renderCell: ({ row }: any) => (
               <span style={{
-                color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit'
+                color: row?.IsInserted === "true" || row?.IsModified === "true" ? '#006400' : 'inherit'
               }}>
                 {row[field.wKey] ? moment(row[field.wKey], 'YYYYMMDD').format('DD/MM/YYYY') : ''}
               </span>
@@ -78,7 +78,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
           sortable: false,
           renderCell: ({ row }: any) => (
             <span style={{
-              color: row?.IsInserted === "true" || row?.IsModified === "true" ? 'green' : 'inherit'
+              color: row?.IsInserted === "true" || row?.IsModified === "true" ? '#006400' : 'inherit'
             }}>
               {row[field.wKey]}
             </span>
@@ -436,6 +436,8 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             backgroundColor: colors.background,
             border: `1px solid ${colors.buttonBackground}`,
           }}
+          type="button"
+          aria-label="Back to personal tab"
           onClick={() => setActiveTab("personal")}
         >
           <IoArrowBack size={20} />
