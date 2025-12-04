@@ -212,12 +212,22 @@ export const fetchMenuItems = createAsyncThunk(
                 <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
             </dsXml>`;
 
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            const responseItem = response?.data?.data?.rs0 || [];
-            
-            if (!responseItem || responseItem.length === 0) {
-                throw new Error(`Empty menu response: ${JSON.stringify(response?.data)}`);
-            }
+            const fetchWithRetry = async (retryCount: number): Promise<any> => {
+                const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+                console.log("check menu response", response)
+                const responseItem = response?.data?.data?.rs0 || [];
+
+                if (!responseItem || responseItem.length === 0) {
+                    if (retryCount > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        return fetchWithRetry(retryCount - 1);
+                    }
+                    throw new Error(`Empty menu response: ${JSON.stringify(response)}`);
+                }
+                return responseItem;
+            };
+
+            const responseItem = await fetchWithRetry(3);
 
             const menuItems = convertToNavItems(responseItem);
             // Save menu to sessionStorage on successful fetch
@@ -263,6 +273,15 @@ export const fetchMenuItems = createAsyncThunk(
 
             // If no cached menu exists, reject with error
             return rejectWithValue(error?.message || 'Failed to fetch menu items');
+        }
+    },
+    {
+        condition: (_, { getState }) => {
+            const state = getState() as RootState;
+            const status = state.menu.status;
+            if (status === 'loading' || status === 'succeeded') {
+                return false;
+            }
         }
     }
 );
@@ -310,4 +329,4 @@ export const selectAllMenuItems = (state: RootState) => state.menu.items;
 export const selectMenuStatus = (state: RootState) => state.menu.status;
 export const selectMenuError = (state: RootState) => state.menu.error;
 
-export default menuSlice.reducer; 
+export default menuSlice.reducer;
