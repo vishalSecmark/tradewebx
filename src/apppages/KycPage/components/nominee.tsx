@@ -99,7 +99,7 @@ const Nominee = ({ formFields, tableData, setFieldData, setActiveTab, Settings }
             style={{
               backgroundColor: colors.background,
               border: `1px solid ${colors.buttonBackground}`,
-              color: props?.row?.IsInserted === "true" || props?.row?.IsModified === "true" ? 'green' : 'inherit'
+              color: props?.row?.IsInserted === "true" || props?.row?.IsModified === "true" ? '#006400' : 'inherit'
             }}
           >
             {viewMode ? "View" : "Edit"}
