@@ -7,6 +7,7 @@ import { useAppDispatch } from "@/redux/hooks";
 import { fetchInitializeLogin } from "@/redux/features/common/commonSlice";
 import { RootState } from "@/redux/store";
 import { usePathname } from "next/navigation";
+import { toast } from "react-toastify";
 
 export default function AuthLayout({
   children,
@@ -25,7 +26,13 @@ export default function AuthLayout({
     }
 
     // Dispatch the fetchInitializeLogin action to get company data
-    dispatch(fetchInitializeLogin());
+    dispatch(fetchInitializeLogin())
+    .unwrap()
+    .catch((err: any) => {
+      console.error("Init Login Failed:", err);
+      toast.error("Failed to load please retry after sometime or try refreshing the page.");
+    });
+  
   }, [dispatch, pathname]);
 
   // You can use this to log the company info when it's loaded
