@@ -109,7 +109,7 @@ const convertToNavItems = (data: any): NavItem[] => {
         const basePath =
             item.componentType === "URL"
                 ? item.url
-                : `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, "-")}`;
+                : `/${routeMapping[item.componentName] || (item.componentName || "").toLowerCase().replace(/\s+/g, "-")}`;
 
         const navItem: NavItem = {
             id: item.id,
@@ -126,7 +126,7 @@ const convertToNavItems = (data: any): NavItem[] => {
                 const subPath =
                     subItem.componentType === "URL"
                         ? subItem.url
-                        : `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, "-")}`;
+                        : `${basePath}/${(subItem.componentName || "").toLowerCase().replace(/\s+/g, "-")}`;
 
                 const subNavItem: SubMenuItem = {
                     name: subItem.title,
@@ -143,7 +143,7 @@ const convertToNavItems = (data: any): NavItem[] => {
                         const thirdPath =
                             third.componentType === "URL"
                                 ? third.url
-                                : `${subPath}/${third.componentName.toLowerCase().replace(/\s+/g, "-")}`;
+                                : `${subPath}/${(third.componentName || "").toLowerCase().replace(/\s+/g, "-")}`;
 
                         return {
                             name: third.title,
