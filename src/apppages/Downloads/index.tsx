@@ -103,7 +103,7 @@ const Downloads = () => {
     };
 
     useEffect(() => {
-        if(pageData?.autoFetch) setFilterModalVisible(true)
+        if(pageData?.autoFetch === 'false') setFilterModalVisible(true)
         else getDownloads(true)
     },[])
 
