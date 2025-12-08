@@ -88,7 +88,7 @@ const parseTextFileStream = (
   let buffer: any[] = [];
   let totalRows = 0;
   let aborted = false;
-  let pendingRows: any[][] = [];
+  const pendingRows: any[][] = [];
   let headerResolved = false;
 
   const flushBuffer = () => {
