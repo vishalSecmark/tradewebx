@@ -168,6 +168,7 @@ export default function ChangePassword() {
                                 onClick={() => togglePasswordVisibility('currentPassword')}
                                 className="absolute right-3 top-1/2 transform -translate-y-1/2"
                                 style={{ color: colors.text }}
+                                aria-label={showPasswords.currentPassword ? "Hide password" : "Show password"}
                             >
                                 {showPasswords.currentPassword ?  <IoEye/>:<IoEyeOff/>}
                             </button>
@@ -190,6 +191,7 @@ export default function ChangePassword() {
                                 onClick={() => togglePasswordVisibility('newPassword')}
                                 className="absolute right-3 top-1/2 transform -translate-y-1/2"
                                 style={{ color: colors.text }}
+                                aria-label={showPasswords.newPassword ? "Hide password" : "Show password"}
                             >
                                 {showPasswords.newPassword ? <IoEye/>:<IoEyeOff/>}
                             </button>
@@ -212,6 +214,7 @@ export default function ChangePassword() {
                                 onClick={() => togglePasswordVisibility('confirmPassword')}
                                 className="absolute right-3 top-1/2 transform -translate-y-1/2"
                                 style={{ color: colors.text }}
+                                aria-label={showPasswords.confirmPassword ? "Hide password" : "Show password"}
                             >
                                 {showPasswords.confirmPassword ? <IoEye/>:<IoEyeOff/>}
                             </button>
