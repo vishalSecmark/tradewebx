@@ -13,7 +13,7 @@ import { handleValidationForDisabledField } from './component-forms/form-helper'
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
 import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
-import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, escapeXmlChars } from '@/utils/helper';
+import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, escapeXmlChars, sanitizePayload } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
@@ -1983,7 +1983,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 : [];
         }
 
-        const xDataJson = escapeXmlChars(JSON.stringify(allData));
+        const xDataJson = JSON.stringify(sanitizePayload(allData));
 
         setIsFormSubmit(true);
         try {
@@ -2091,7 +2091,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         })
 
 
-        const xDataJson = escapeXmlChars(JSON.stringify(allData));
+        const xDataJson = JSON.stringify(sanitizePayload(allData));
 
         setIsFormSubmit(true);
         try {
