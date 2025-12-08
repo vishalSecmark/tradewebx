@@ -25,6 +25,7 @@ import { formatFileSize, formatDuration, downloadAsCSV } from '@/utils/fileParse
 interface MultiFileUploadQueueProps {
   apiRecords: any[];
   allRecords?: any[]; // All records including disabled ones
+  filters?: Record<string, any>;
   maxFileSize?: number;
   allowedFileTypes?: string[];
   onQueueUpdate?: (stats: UploadQueueStats) => void;
@@ -33,6 +34,7 @@ interface MultiFileUploadQueueProps {
 const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
   apiRecords,
   allRecords,
+  filters = {},
   maxFileSize = 3 * 1024 * 1024 * 1024, // 3GB
   allowedFileTypes = ['csv', 'txt', 'xls', 'xlsx'],
   onQueueUpdate,
@@ -125,10 +127,10 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
     }
 
     if (validFiles.length > 0) {
-      uploadManager.addFiles(validFiles, apiRecords, allRecords || apiRecords);
+      uploadManager.addFiles(validFiles, apiRecords, allRecords || apiRecords, filters);
       toast.success(`Added ${validFiles.length} file(s) to queue`);
     }
-  }, [uploadManager, apiRecords, allRecords, allowedFileTypes, maxFileSize]);
+  }, [uploadManager, apiRecords, allRecords, filters, allowedFileTypes, maxFileSize]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

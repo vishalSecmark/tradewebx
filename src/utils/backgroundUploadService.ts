@@ -129,7 +129,7 @@ class BackgroundUploadManager {
   /**
    * Add files to queue with filename matching
    */
-  addFiles(files: File[], apiRecords: any[], allRecords?: any[]): void {
+  addFiles(files: File[], apiRecords: any[], allRecords?: any[], filters: Record<string, any> = {}): void {
     const newItems: FileQueueItem[] = files.map(file => {
       const fileName = file.name;
       const fileNameLower = fileName.toLowerCase();
@@ -175,6 +175,7 @@ class BackgroundUploadManager {
         progress: 0,
         uploadedRecords: 0,
         totalRecords: 0,
+        filters,
       };
     });
 
@@ -395,7 +396,7 @@ class BackgroundUploadManager {
 
     const metadata = {
       selectedRecord: item.matchedRecord,
-      filters: {},
+      filters: item.filters || {},
     };
 
     const apiEndpoint = `${process.env.NEXT_PUBLIC_BASE_URL || ''}${process.env.NEXT_PUBLIC_UPLOAD_FILE_URL || '/TPLUSNARIMAN/api/ThirdPartyService/ImportLargeFile'}`;

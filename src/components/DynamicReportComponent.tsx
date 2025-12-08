@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import axios from 'axios';
@@ -371,6 +371,37 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const pageData: any = findPageData();
     const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
+    const uploadFilters = useMemo(() => {
+        const payload: Record<string, any> = {};
+
+        if (clientCode) {
+            payload.ClientCode = clientCode;
+        }
+
+        const hasFiltersConfigured = pageData?.[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0;
+
+        if (hasFiltersConfigured && areFiltersInitialized) {
+            Object.entries(filters || {}).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+
+                if (value instanceof Date || moment.isMoment(value)) {
+                    payload[key] = moment(value).format('YYYYMMDD');
+                } else {
+                    payload[key] = value;
+                }
+            });
+        }
+
+        if (currentLevel > 0 && Object.keys(primaryKeyFilters).length > 0) {
+            Object.entries(primaryKeyFilters).forEach(([key, value]) => {
+                payload[key] = value;
+            });
+        }
+
+        return payload;
+    }, [clientCode, pageData, filters, areFiltersInitialized, currentLevel, primaryKeyFilters]);
 
     // Validate pageData whenever it changes
     useEffect(() => {
@@ -1995,6 +2026,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     return enabledFileRecords.has(recordId);
                                 })}
                                 allRecords={apiData || []}
+                                filters={uploadFilters}
                                 maxFileSize={3 * 1024 * 1024 * 1024}
                                 allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
                                 onQueueUpdate={(stats) => {

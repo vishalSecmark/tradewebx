@@ -97,6 +97,7 @@ export interface FileQueueItem {
   fileName: string;
   fileSize: number;
   matchedRecord: any | null; // From API list
+  filters?: Record<string, any>;
   status: FileUploadStatus;
   progress: number; // 0-100
   error?: string;
