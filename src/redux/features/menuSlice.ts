@@ -74,68 +74,89 @@ const initialState: MenuState = {
     error: null
 };
 
+const removeEmptySubmenus = (items: any[]): any[] => {
+    return items
+        .map(item => {
+            // recursively clean children first
+            if (Array.isArray(item.submenu)) {
+                item.submenu = removeEmptySubmenus(item.submenu);
+            }
+
+            // If submenu exists and is empty → remove this item
+            if (Array.isArray(item.submenu) && item.submenu.length === 0) {
+                return null;
+            }
+
+            return item;
+        })
+        .filter(Boolean); // remove null items
+};
+
+
 // Update the convertToNavItems function
+
 const convertToNavItems = (data: any): NavItem[] => {
-    return data?.map((item: any) => {
+    //  this is the implementation to remove the parent item if the child submenu is empty array 
+    const cleanedData = removeEmptySubmenus(data);
+
+    return cleanedData?.reduce((acc: NavItem[], item: any) => {
         const routeMapping: Record<string, string> = {
-            'Dashboard': 'dashboard',
-            'Reports': 'reports',
-            'Logout': 'logout',
-            // Add other mappings as needed
+            Dashboard: "dashboard",
+            Reports: "reports",
+            Logout: "logout",
         };
 
-        // Use url field if componentType is URL, otherwise generate path
-        const basePath = item.componentType === 'URL'
-            ? item.url
-            : `/${routeMapping[item.componentName] || item.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+        const basePath =
+            item.componentType === "URL"
+                ? item.url
+                : `/${routeMapping[item.componentName] || (item.componentName || "").toLowerCase().replace(/\s+/g, "-")}`;
 
         const navItem: NavItem = {
             id: item.id,
-            icon: item.icon || 'default-icon',
+            icon: item.icon || "default-icon",
             name: item.title,
             componentName: item.componentName,
             componentType: item.componentType || null,
             path: basePath,
-            pageData: item.pageData
+            pageData: item.pageData,
         };
 
         if (item.submenu && item.submenu.length > 0) {
             navItem.subItems = item.submenu.map((subItem: any) => {
-                // Use url field if componentType is URL, otherwise generate path
-                const subItemPath = subItem.componentType === 'URL'
-                    ? subItem.url
-                    : `${basePath}/${subItem.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+                const subPath =
+                    subItem.componentType === "URL"
+                        ? subItem.url
+                        : `${basePath}/${(subItem.componentName || "").toLowerCase().replace(/\s+/g, "-")}`;
 
                 const subNavItem: SubMenuItem = {
                     name: subItem.title,
-                    path: subItemPath,
+                    path: subPath,
                     componentName: subItem.componentName,
                     componentType: subItem.componentType || null,
                     pageData: subItem.pageData,
                     pro: false,
-                    new: false
+                    new: false,
                 };
 
-                // Handle third level submenu
                 if (subItem.submenu && subItem.submenu.length > 0) {
-                    subNavItem.subItems = subItem.submenu.map((thirdItem: any) => {
-                        // Use url field if componentType is URL, otherwise generate path
-                        const thirdItemPath = thirdItem.componentType === 'URL'
-                            ? thirdItem.url
-                            : `${subItemPath}/${thirdItem.componentName.toLowerCase().replace(/\s+/g, '-')}`;
+                    subNavItem.subItems = subItem.submenu.map((third: any) => {
+                        const thirdPath =
+                            third.componentType === "URL"
+                                ? third.url
+                                : `${subPath}/${(third.componentName || "").toLowerCase().replace(/\s+/g, "-")}`;
 
                         return {
-                            name: thirdItem.title,
-                            path: thirdItemPath,
-                            componentName: thirdItem.componentName,
-                            componentType: thirdItem.componentType || null,
-                            pageData: thirdItem.pageData,
+                            name: third.title,
+                            path: thirdPath,
+                            componentName: third.componentName,
+                            componentType: third.componentType || null,
+                            pageData: third.pageData,
                             pro: false,
-                            new: false
+                            new: false,
                         };
                     });
                     // Remove path from parent if it has subItems
-                    delete subNavItem.path;
+                    delete subNavItem.path; // parent with submenu can't navigate
                 }
 
                 return subNavItem;
@@ -144,8 +165,9 @@ const convertToNavItems = (data: any): NavItem[] => {
             delete navItem.path;
         }
 
-        return navItem;
-    });
+        acc.push(navItem);
+        return acc;
+    }, []);
 };
 
 // SessionStorage key for menu items
@@ -190,12 +212,22 @@ export const fetchMenuItems = createAsyncThunk(
                 <J_Api>"UserId":"${userData.UserId}","UserType":"${userData.UserType}","AccYear":24,"MyDbPrefix":"SVVS","MemberCode":"undefined","SecretKey":"undefined"</J_Api>
             </dsXml>`;
 
-            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-            const responseItem = response?.data?.data?.rs0 || [];
-            
-            if (!responseItem || responseItem.length === 0) {
-                throw new Error(`Empty menu response: ${JSON.stringify(response?.data)}`);
-            }
+            const fetchWithRetry = async (retryCount: number): Promise<any> => {
+                const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+                console.log("check menu response", response)
+                const responseItem = response?.data?.data?.rs0 || [];
+
+                if (!responseItem || responseItem.length === 0) {
+                    if (retryCount > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        return fetchWithRetry(retryCount - 1);
+                    }
+                    throw new Error(`Empty menu response: ${JSON.stringify(response)}`);
+                }
+                return responseItem;
+            };
+
+            const responseItem = await fetchWithRetry(3);
 
             const menuItems = convertToNavItems(responseItem);
             // Save menu to sessionStorage on successful fetch
@@ -241,6 +273,15 @@ export const fetchMenuItems = createAsyncThunk(
 
             // If no cached menu exists, reject with error
             return rejectWithValue(error?.message || 'Failed to fetch menu items');
+        }
+    },
+    {
+        condition: (_, { getState }) => {
+            const state = getState() as RootState;
+            const status = state.menu.status;
+            if (status === 'loading' || status === 'succeeded') {
+                return false;
+            }
         }
     }
 );
@@ -288,4 +329,4 @@ export const selectAllMenuItems = (state: RootState) => state.menu.items;
 export const selectMenuStatus = (state: RootState) => state.menu.status;
 export const selectMenuError = (state: RootState) => state.menu.error;
 
-export default menuSlice.reducer; 
+export default menuSlice.reducer;

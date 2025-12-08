@@ -11,16 +11,18 @@ import { FaFileArchive, FaFilter, FaSync } from 'react-icons/fa';
 import apiService from '@/utils/apiService';
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { base64ToUint8Array, displayAndDownloadFile } from '@/utils/helper';
+import { base64ToUint8Array, displayAndDownloadFile, findPageData } from '@/utils/helper';
 import TooltipButton from '@/components/common/TooltipButton';
 import Loader from '@/components/Loader';
+import { useAppSelector } from '@/redux/hooks';
+import { selectAllMenuItems } from '@/redux/features/menuSlice';
 
 const Downloads = () => {
     const [downloads, setDownloads] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isFilterModalVisible, setFilterModalVisible] = useState(false);
     const [filterValues, setFilterValues] = useState({
-        fromDate: moment().subtract(1, 'month').format('YYYY-MM-DD'),
+        fromDate: moment().subtract(1, 'day').format('YYYY-MM-DD'),
         toDate: moment().format('YYYY-MM-DD'),
         segment: 'Equity/Derivative',
         DocumentType: ''
@@ -35,6 +37,8 @@ const Downloads = () => {
 
     const { colors, fonts } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
+    const menuItems = useAppSelector(selectAllMenuItems);
+    const pageData: any = findPageData(menuItems, "Downloads");
     // console.log('userData', userData);
     const getDownloads = async (isReload = false, values?: any) => {
         if (isReload) {
@@ -99,8 +103,9 @@ const Downloads = () => {
     };
 
     useEffect(() => {
-        getDownloads(true);
-    }, []);
+        if(pageData?.autoFetch === 'false') setFilterModalVisible(true)
+        else getDownloads(true)
+    },[])
 
     const downloadAllFn = async () => {
         if (!downloadAllData.length) {

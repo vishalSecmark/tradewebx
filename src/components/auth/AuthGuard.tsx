@@ -46,6 +46,15 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
         // If user is authenticated and trying to access auth pages
         if (authToken && isAuthPage) {
+          // SSO page handles its own navigation after completing initialization
+          // Don't redirect from SSO page to prevent interrupting its flow
+          if (pathname?.startsWith('/sso')) {
+            console.log('SSO page detected with token - allowing SSO to complete its own navigation');
+            setIsChecking(false);
+            setIsAuthenticated(true);
+            return;
+          }
+
           // Next.js basePath config handles the base path automatically
           const dashboardUrl = '/dashboard';
           // Only redirect if we're not already on the dashboard

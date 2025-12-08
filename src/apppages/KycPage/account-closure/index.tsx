@@ -2,7 +2,7 @@
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import { useAppSelector } from "@/redux/hooks";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
-import { displayAndDownloadPDF, findPageData, displayAndDownloadFile, getLocalStorage, storeLocalStorage, removeLocalStorage } from "@/utils/helper";
+import { displayAndDownloadPDF, findPageData, displayAndDownloadFile, getLocalStorage, storeLocalStorage, removeLocalStorage, escapeXmlChars } from "@/utils/helper";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useTheme } from "@/context/ThemeContext";
@@ -358,7 +358,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
         <Sql/>
         <X_Filter/>
         <X_Filter_Multiple><EntryName>Account closure</EntryName></X_Filter_Multiple>
-        <X_DataJson>${JSON.stringify(payload)}</X_DataJson>
+        <X_DataJson>${escapeXmlChars(JSON.stringify(payload))}</X_DataJson>
         <J_Api>"UserId":"${userId}"</J_Api>
       </dsXml>`;
 
