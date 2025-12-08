@@ -584,6 +584,23 @@ export const escapeXmlChars = (value: string): string => {
         .replace(/"/g, "&quot;");
 };
 
+export const sanitizePayload = (data: any): any => {
+    if (typeof data === 'string') {
+        return escapeXmlChars(data);
+    } else if (Array.isArray(data)) {
+        return data.map(item => sanitizePayload(item));
+    } else if (typeof data === 'object' && data !== null) {
+        const sanitizedObject: any = {};
+        for (const key in data) {
+            if (Object.prototype.hasOwnProperty.call(data, key)) {
+                sanitizedObject[key] = sanitizePayload(data[key]);
+            }
+        }
+        return sanitizedObject;
+    }
+    return data;
+};
+
 export function formatTextSplitString(text: string) {
   return text
     .replace(/([A-Z])/g, ' $1')
