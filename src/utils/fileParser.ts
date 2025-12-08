@@ -2,6 +2,179 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { ParsedData, FileMetadata } from '@/types/upload';
 
+const isNumericLike = (value: any): boolean => {
+  const str = value === null || value === undefined ? '' : String(value).trim();
+  if (str === '') return false;
+  return !isNaN(Number(str));
+};
+
+const isDateLike = (value: any): boolean => {
+  const str = value === null || value === undefined ? '' : String(value).trim();
+  // Support common date formats like 14-NOV-2025 or 2025-11-14
+  return /\d{1,2}[-/](?:[A-Za-z]{3}|[01]?\d)[-/]\d{2,4}/.test(str) ||
+    /^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(str);
+};
+
+const shouldTreatRowAsHeader = (firstRow: any[], secondRow?: any[]): boolean => {
+  if (firstRow.length === 0) return false;
+
+  const cleaned = firstRow.map(cell => (cell === null || cell === undefined ? '' : String(cell).trim()));
+  const duplicates = cleaned.length - new Set(cleaned.map(c => c.toLowerCase())).size;
+  const numericOrDateCount = cleaned.filter(cell => isNumericLike(cell) || isDateLike(cell)).length;
+  const blankValues = cleaned.filter(cell => cell === '').length;
+
+  // If the row is mostly numbers/dates or has duplicated numeric-looking values, it's likely data not headers
+  if (numericOrDateCount >= Math.max(3, Math.ceil(cleaned.length * 0.5))) {
+    return false;
+  }
+
+  if (duplicates > 0 && (numericOrDateCount + blankValues) > 0) {
+    return false;
+  }
+
+  if (secondRow && secondRow.length > 0) {
+    const secondNumericOrDate = secondRow.filter(cell => isNumericLike(cell) || isDateLike(cell)).length;
+    const firstRatio = numericOrDateCount / cleaned.length;
+    const secondRatio = secondNumericOrDate / secondRow.length;
+
+    // If both rows look like data, don't treat the first as headers
+    if (firstRatio >= 0.4 && secondRatio >= 0.4) {
+      return false;
+    }
+
+    // If the first row is text heavy but the next row is numeric heavy, the first row is probably headers
+    if (firstRatio < 0.3 && secondRatio > 0.5) {
+      return true;
+    }
+  }
+
+  // Default to treating the first row as headers to preserve existing behavior
+  return true;
+};
+
+const buildHeadersFromRow = (row: any[]): string[] => {
+  const seen = new Map<string, number>();
+  return row.map((cell, idx) => {
+    const base = (cell === null || cell === undefined || String(cell).trim() === '')
+      ? `Column${idx + 1}`
+      : String(cell).trim();
+    const count = seen.get(base) || 0;
+    seen.set(base, count + 1);
+    return count === 0 ? base : `${base}_${count}`;
+  });
+};
+
+const buildSyntheticHeaders = (length: number): string[] => {
+  return Array.from({ length }, (_, idx) => `Column${idx + 1}`);
+};
+
+const mapRowToObject = (row: any[], headers: string[]): any => {
+  const obj: any = {};
+  headers.forEach((header, idx) => {
+    obj[header] = row[idx] !== undefined ? row[idx] : '';
+  });
+  return obj;
+};
+
+const parseTextFileStream = (
+  file: File,
+  onData: (chunk: any[], headers: string[]) => void,
+  onComplete: (totalRows: number) => void,
+  onError: (error: Error) => void,
+  chunkSize: number = 5000,
+  delimiter?: string
+): { abort: () => void } => {
+  let headers: string[] = [];
+  let buffer: any[] = [];
+  let totalRows = 0;
+  let aborted = false;
+  let pendingRows: any[][] = [];
+  let headerResolved = false;
+
+  const flushBuffer = () => {
+    if (buffer.length >= chunkSize) {
+      onData([...buffer], headers);
+      buffer = [];
+    }
+  };
+
+  const pushRowObject = (row: any[]) => {
+    buffer.push(mapRowToObject(row, headers));
+    totalRows++;
+    flushBuffer();
+  };
+
+  const resolveHeaders = () => {
+    if (headerResolved || pendingRows.length === 0) return;
+
+    const firstRow = pendingRows.shift()!;
+    const secondRow = pendingRows[0];
+    const useFirstRowAsHeader = shouldTreatRowAsHeader(firstRow, secondRow);
+
+    if (useFirstRowAsHeader) {
+      headers = buildHeadersFromRow(firstRow);
+    } else {
+      headers = buildSyntheticHeaders(firstRow.length);
+      pushRowObject(firstRow);
+    }
+
+    headerResolved = true;
+
+    while (pendingRows.length > 0) {
+      pushRowObject(pendingRows.shift()!);
+    }
+  };
+
+  Papa.parse(file, {
+    header: false,
+    skipEmptyLines: true,
+    dynamicTyping: true,
+    delimiter,
+    step: (results: any, parser: any) => {
+      if (aborted) {
+        parser.abort();
+        return;
+      }
+
+      const row = results.data as any[];
+
+      if (!row || row.length === 0) {
+        return;
+      }
+
+      if (!headerResolved) {
+        pendingRows.push(row);
+
+        // Wait for at least two rows before deciding, so we don't misclassify data as headers
+        if (pendingRows.length >= 2) {
+          resolveHeaders();
+        }
+        return;
+      }
+
+      pushRowObject(row);
+    },
+    complete: () => {
+      if (aborted) return;
+      resolveHeaders();
+      if (buffer.length > 0) {
+        onData([...buffer], headers);
+      }
+      onComplete(totalRows);
+    },
+    error: (error: Error) => {
+      if (aborted) return;
+      onError(error);
+    },
+  });
+
+  return {
+    abort: () => {
+      aborted = true;
+    },
+  };
+};
+
 /**
  * Get file metadata
  */
@@ -55,59 +228,13 @@ export const parseCSVStream = (
   onError: (error: Error) => void,
   chunkSize: number = 5000
 ): { abort: () => void } => {
-  let headers: string[] = [];
-  let buffer: any[] = [];
-  let totalRows = 0;
-  let isFirstRow = true;
-  let aborted = false;
-
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: true,
-    step: (results: any, parser: any) => {
-      if (aborted) {
-        parser.abort();
-        return;
-      }
-
-      // Extract headers from first row
-      if (isFirstRow && results.meta?.fields) {
-        headers = results.meta.fields;
-        isFirstRow = false;
-      }
-
-      // Add row to buffer
-      if (results.data) {
-        buffer.push(results.data);
-        totalRows++;
-
-        // When buffer reaches chunk size, send it
-        if (buffer.length >= chunkSize) {
-          onData([...buffer], headers);
-          buffer = [];
-        }
-      }
-    },
-    complete: () => {
-      if (aborted) return;
-      // Send remaining buffer
-      if (buffer.length > 0) {
-        onData([...buffer], headers);
-      }
-      onComplete(totalRows);
-    },
-    error: (error: Error) => {
-      if (aborted) return;
-      onError(error);
-    },
-  });
-
-  return {
-    abort: () => {
-      aborted = true;
-    },
-  };
+  return parseTextFileStream(
+    file,
+    onData,
+    onComplete,
+    onError,
+    chunkSize
+  );
 };
 
 /**
@@ -121,56 +248,14 @@ export const parseTXTStream = (
   chunkSize: number = 5000,
   delimiter: string = '\t'
 ): { abort: () => void } => {
-  let headers: string[] = [];
-  let buffer: any[] = [];
-  let totalRows = 0;
-  let isFirstRow = true;
-  let aborted = false;
-
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: true,
-    delimiter: delimiter,
-    step: (results: any, parser: any) => {
-      if (aborted) {
-        parser.abort();
-        return;
-      }
-
-      if (isFirstRow && results.meta?.fields) {
-        headers = results.meta.fields;
-        isFirstRow = false;
-      }
-
-      if (results.data) {
-        buffer.push(results.data);
-        totalRows++;
-
-        if (buffer.length >= chunkSize) {
-          onData([...buffer], headers);
-          buffer = [];
-        }
-      }
-    },
-    complete: () => {
-      if (aborted) return;
-      if (buffer.length > 0) {
-        onData([...buffer], headers);
-      }
-      onComplete(totalRows);
-    },
-    error: (error: Error) => {
-      if (aborted) return;
-      onError(error);
-    },
-  });
-
-  return {
-    abort: () => {
-      aborted = true;
-    },
-  };
+  return parseTextFileStream(
+    file,
+    onData,
+    onComplete,
+    onError,
+    chunkSize,
+    delimiter
+  );
 };
 
 /**
