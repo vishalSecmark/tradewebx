@@ -1035,37 +1035,40 @@ useEffect(() => {
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
-    //this function is used for 
+    //this function is used for multiCheckBoxColumn in income report
     const multiCheckBoxColumn = settings?.multiCheckBox
     ? [{
-      key: "_multiSelect",
-      name: "",
-      width: 35,
-      renderHeaderCell: () => {
-        const allIds = rows.map(r => r._id);
-        const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
-
-        return (
+        key: "_multiSelect",
+        name: "",
+        width: 35,
+        renderHeaderCell: () => {
+          const allIds = rows.map(r => r._id);
+          const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
+  
+          return (
+            <input
+              type="checkbox"
+              checked={allSelected}
+              aria-label="Select all rows"
+              onChange={(e) => {
+                const newSelection = e.target.checked ? [...rows] : [];
+                setSelectedRows(newSelection);
+                onRowSelect?.(newSelection);
+              }}
+            />
+          );
+        },
+        renderCell: ({ row }: any) => (
           <input
             type="checkbox"
-            checked={allSelected}
-            onChange={(e) => {
-              const newSelection = e.target.checked ? [...rows] : [];
-              setSelectedRows(newSelection);
-              onRowSelect?.(newSelection);
-            }}
+            checked={selectedRows.some(r => r._id === row._id)}
+            aria-label={`Select row with ID ${row._id}`}
+            onChange={(e) => toggleRowSelection(row, e.target.checked)}
           />
-        );
-      },
-      renderCell: ({ row }: any) => (
-        <input
-          type="checkbox"
-          checked={selectedRows.some(r => r._id === row._id)}
-          onChange={(e) => toggleRowSelection(row, e.target.checked)}
-        />
-      )
-    }]
+        )
+      }]
     : [];
+  
 
     console.log(selectedRows,'selectedRows');
     
@@ -1404,47 +1407,102 @@ useEffect(() => {
         ];
         if (isEntryForm) {
             baseColumns.push(
-                {
-                    key: 'actions',
-                    name: 'Actions',
-                    minWidth: 170,
-                    maxWidth: 350,
-                    renderCell: ({ row }: any) => (
-                        isEntryForm && (
-                            <div className="action-buttons">
-                                {isButtonEnabled('View') && (
-                                    <button
-                                        className="view-button"
-                                        style={{}}
-                                        onClick={() => handleAction('view', row)}
-                                    >
-                                        view
-                                    </button>
-                                )}
-                                {isButtonEnabled('Edit') && (
-                                    <button
-                                        className="edit-button"
-                                        style={{}}
-                                        onClick={() => handleAction('edit', row)}
-                                        disabled={row?.isUpdated === "true" ? true : false}
-                                    >
-                                        Edit
-                                    </button>
-                                )}
-                                {isButtonEnabled('Delete') && (
-                                    <button
-                                        className="delete-button"
-                                        style={{}}
-                                        onClick={() => handleAction('delete', row)}
-                                        disabled={row?.isDeleted === "true" ? true : false}
-                                    >
-                                        Delete
-                                    </button>
-                                )}
-                            </div>
-                        )
+        {
+                    key: "actions",
+                    name: "Actions",
+                    width: 220,
+
+                    //  REQUIRED for renderEditCell to show buttons when cell is focused
+                    editable: true,
+                    editorOptions: { editOnClick: true },
+
+                    //  ALWAYS VISIBLE BUTTONS
+                    renderCell: ({ row }) => (
+                        <div className="flex gap-4" 
+                        aria-label="The Actions column, press Enter, then Tab to reach the View button. Press Enter to open the popup, and use Tab to move to the Edit and Delete buttons."
+                        >
+                        <button
+                            tabIndex={-1}      
+                            role="button"
+                            aria-label={`View details for ${row.Name || "this record"}`}
+                            onClick={() => handleAction("view", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
+                            className="view-button"
+                        >
+                            View
+                        </button>
+
+                        <button
+                            tabIndex={-1}
+                            role="button"
+                            aria-label={`Edit details for ${row.Name || "this record"}`}
+                            disabled={row?.isUpdated === "true"}
+                            onClick={() => handleAction("edit", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
+                            className="edit-button"
+                        >
+                            Edit
+                        </button>
+
+                        <button
+                            tabIndex={-1}
+                            role="button"
+                            aria-label={`Delete ${row.Name || "this record"}`}
+                            disabled={row?.isDeleted === "true"}
+                            onClick={() => handleAction("delete", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
+                            className="delete-button"
+                        >
+                            Delete
+                        </button>
+                        </div>
                     ),
-                }
+
+                    //  FOCUSABLE BUTTONS FOR NVDA + KEYBOARD
+                    renderEditCell: ({ row }) => (
+                        <div className="flex gap-4">
+
+                        {/* VIEW */}
+                        <button
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View details for ${row.Name || "this record"}`}
+                            onClick={() => handleAction("view", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
+                            className="view-button"
+                        >
+                            View
+                        </button>
+
+                        {/* EDIT */}
+                        <button
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Edit details for ${row.Name || "this record"}`}
+                            disabled={row?.isUpdated === "true"}
+                            onClick={() => handleAction("edit", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
+                            className="edit-button"
+                        >
+                            Edit
+                        </button>
+
+                        {/* DELETE */}
+                        <button
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`Delete ${row.Name || "this record"}`}
+                            disabled={row?.isDeleted === "true"}
+                            onClick={() => handleAction("delete", row)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
+                            className="delete-button"
+                        >
+                            Delete
+                        </button>
+
+                        </div>
+                    )
+        }
             )
         }
         return baseColumns;
@@ -1548,6 +1606,27 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
         return [totals];
     }, [rows, summary?.columnsToShowTotal, settings?.valueBasedTextColor]);
 
+    function announce(message: string) {
+    const old = document.getElementById("nvdaLiveRegion");
+    if (old) old.remove();
+
+    const region = document.createElement("div");
+    region.id = "nvdaLiveRegion";
+    region.setAttribute("role", "status");
+    region.setAttribute("aria-live", "assertive");
+    region.setAttribute("aria-atomic", "true");
+    region.style.position = "absolute";
+    region.style.left = "-9999px";
+    region.style.height = "1px";
+    region.style.overflow = "hidden";
+
+    document.body.appendChild(region);
+
+    setTimeout(() => {
+        region.textContent = message;
+    }, 20);
+}
+
     return (
         <div
             ref={tableRef}
@@ -1602,7 +1681,7 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
         </button>
         </div>
             </>}
-   
+                                                                                                
             <DataGrid
                 columns={columns}
                 rows={rows}
@@ -1621,6 +1700,26 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
                     if (onRowClick && !props.column.key.startsWith('_') && !isEntryForm) {
                         const { _id, _expanded, ...rowData } = rows[props.rowIdx];
                         onRowClick(rowData);
+                    }
+                }}
+                  
+                /** NVDA + KEYBOARD USERS */
+                onCellKeyDown={(props: any, event: any) => {
+                    if (
+                        (event.key === "Enter" || event.key === " ") &&
+                        onRowClick &&
+                        !props.column.key.startsWith("_") &&
+                        !isEntryForm
+                    ) {
+                        event.preventDefault();
+
+                        const { _id, _expanded, ...rowData } = rows[props.rowIdx];
+
+                        //  ONLY trigger row click. NO ANNOUNCE here.
+                        onRowClick(rowData);
+
+                        //  Announce only a simple action, not row count
+                        announce("Details opening...");
                     }
                 }}
             />

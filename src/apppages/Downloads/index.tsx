@@ -378,7 +378,7 @@ const Downloads = () => {
                 <div className="flex gap-2">
                     <TooltipButton
                         onClick={downloadAllFn}
-                        icon={<FaFileArchive size={20} />}
+                        icon={<FaFileArchive  aria-label="Download All" size={20} />}
                         label="Download All"
                     />
 
@@ -401,7 +401,7 @@ const Downloads = () => {
                             loading ? (
                                 <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
                             ) : (
-                                <FaSync size={20} />
+                                <FaSync  aria-label="Refresh" size={20} />
                             )
                         }
                         label="Refresh"
@@ -416,7 +416,7 @@ const Downloads = () => {
                         onClick={() => setFilterModalVisible(true)}
                         style={{ color: colors.text }}
                     >
-                        <FaFilter size={20} />
+                        <FaFilter  aria-label="Filter" size={20} />
                     </button>
                 </div>
             </div>

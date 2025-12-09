@@ -17,7 +17,7 @@ const AppHeader: React.FC = () => {
   const { theme, setTheme, availableThemes, colors, fonts } = useTheme();
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
   const { companyLogo, companyName, companyInfo } = useAppSelector((state) => state.common);
-  const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { isExpanded, isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const handleToggle = () => {
     if (window.innerWidth >= 991) {
       toggleSidebar();
@@ -129,7 +129,10 @@ const AppHeader: React.FC = () => {
           <button
             className="items-center justify-center w-9 h-9 rounded-lg z-99999 lg:flex lg:h-9 lg:w-9 lg:border"
             onClick={handleToggle}
-            aria-label="Toggle Sidebar"
+            aria-label="Toggle sidebar navigation"
+            aria-controls="app-sidebar"
+            aria-expanded={isMobileOpen || isExpanded}
+            aria-pressed={isMobileOpen || isExpanded}
             style={{
               color: colors.text,
               borderColor: colors.color3,

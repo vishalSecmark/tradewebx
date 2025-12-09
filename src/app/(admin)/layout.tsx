@@ -17,6 +17,13 @@ export default function AdminLayout({
 
   const mainContentWidth = isMobileOpen ? "w-full" : isExpanded || isHovered ? "lg:w-[calc(100%-290px)]" : "lg:w-[calc(100%-90px)]"
   return (
+    <>
+    <div
+      id="sr-alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      className="sr-only"
+    ></div>
     <div className="min-h-screen">
       {/* Sidebar and Backdrop */}
       <AppSidebar />
@@ -24,6 +31,7 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <div
         className={`transition-all duration-300 ease-in-out ${mainContentWidth} ml-auto`}
+        role="main"
       >
         {/* Header */}
         <AppHeader />
@@ -33,5 +41,6 @@ export default function AdminLayout({
         >{children}</div>
       </div>
     </div>
+    </>
   );
 }

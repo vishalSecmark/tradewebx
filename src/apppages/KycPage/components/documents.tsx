@@ -586,6 +586,7 @@ const Documents = ({ formFields, tableData, fieldErrors, setFieldData, setActive
                         backgroundColor: colors.background,
                         border: `1px solid ${colors.buttonBackground}`,
                     }}
+                    aria-label="Back to segment tab"
                     onClick={() => setActiveTab("segment")}
                 >
                     <IoArrowBack size={20} />

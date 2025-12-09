@@ -70,6 +70,7 @@ function lerpColorTable(
 export default function Loader() {
     const [stroke, setStroke] = useState('#ededed');
     const [offset, setOffset] = useState(445);
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
     const animStartRef = useRef<number>(0);
     const animIdRef = useRef<number | null>(null);
 
@@ -124,9 +125,26 @@ export default function Loader() {
     };
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
+
+        handleChange();
+        mediaQuery.addEventListener('change', handleChange);
+
+        return () => {
+            mediaQuery.removeEventListener('change', handleChange);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (prefersReducedMotion) {
+            stop();
+            return;
+        }
         start();
         return () => stop();
-    }, []);
+    }, [prefersReducedMotion]);
 
     const pathStyle = {
         stroke: stroke,
@@ -134,8 +152,10 @@ export default function Loader() {
     };
 
     return (
-        <div className="flex items-center justify-center">
+        <div className="flex items-center justify-center" role="status" aria-live="polite" aria-busy="true">
+            <span className="sr-only">Content is loading</span>
             <svg
+                aria-hidden="true"
                 height="120"
                 width="120"
                 viewBox="0 0 115 115"
@@ -149,14 +169,16 @@ export default function Loader() {
                     strokeWidth="3"
                     d="M 85 85 C -5 16 -39 127 78 30 C 126 -9 57 -16 85 85 C 94 123 124 111 85 85 Z"
                 />
-                <path
-                    style={pathStyle}
-                    className="progressPath"
-                    fill="none"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    d="M 85 85 C -5 16 -39 127 78 30 C 126 -9 57 -16 85 85 C 94 123 124 111 85 85 Z"
-                />
+                {!prefersReducedMotion && (
+                    <path
+                        style={pathStyle}
+                        className="progressPath"
+                        fill="none"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        d="M 85 85 C -5 16 -39 127 78 30 C 126 -9 57 -16 85 85 C 94 123 124 111 85 85 Z"
+                    />
+                )}
             </svg>
             <style jsx>{`
         .progressPath {

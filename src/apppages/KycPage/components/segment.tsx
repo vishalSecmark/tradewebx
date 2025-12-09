@@ -54,6 +54,7 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
               handleSegmentUpdate(row.SegmentValue, field.wKey, newValue);
             }}
             className="h-4 w-4"
+            aria-label={`${field.label} for segment ${row.SegmentValue}`}
           />
         )
       };
@@ -89,6 +90,8 @@ const Segment = ({ formFields, tableData, fieldErrors, setFieldData, setActiveTa
             backgroundColor: colors.background,
             border: `1px solid ${colors.buttonBackground}`,
           }}
+          type="button"
+          aria-label="Back to demat tab"
           onClick={() => setActiveTab("demat")}
         >
           <IoArrowBack size={20} />
