@@ -362,6 +362,8 @@ const KycDemat = ({ formFields, tableData, setFieldData, setActiveTab, Settings 
           onClick={() => setActiveTab("bank")}
         >
           <IoArrowBack size={20} />
+          {/* hidden text for NVDA user issue */}
+          <span className="sr-only">Go back</span>   
         </button>
         {viewMode ? (
           <div className="text-end">

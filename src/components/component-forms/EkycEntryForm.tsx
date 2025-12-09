@@ -534,7 +534,7 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                     <div 
                     tabIndex={0}
                     aria-labelledby={`label-${field.wKey}`}
-                    aria-readonly="true"
+                    // aria-readonly="true"
                     key={`dateBox-${field.Srno}-${field.wKey}`} className={marginBottom}>
                         <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
                             {field.label}
