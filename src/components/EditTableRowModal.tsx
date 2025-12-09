@@ -1236,8 +1236,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                     </div>
                                 ) : (
                                     // Table layout for normal editing
-                                    <div className="p-2">
-                                        <table className="border text-sm">
+                                    <div className="p-2 w-full">
+                                        <table className="w-full min-w-full border text-sm">
                                             <thead>
                                                 <tr>
                                                     {showViewTable === true && <th

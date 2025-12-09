@@ -258,10 +258,8 @@ export const fetchMenuItems = createAsyncThunk(
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(logData)
-                }).catch(err => console.error('Failed to log side menu error:', err));
-            } catch (loggingError) {
-                console.error('Error in side menu error logging:', loggingError);
-            }
+                }).catch(err => {});
+            } catch (loggingError) {}
 
             // Try to load menu from sessionStorage as fallback
             const cachedMenu = loadMenuFromSessionStorage();
