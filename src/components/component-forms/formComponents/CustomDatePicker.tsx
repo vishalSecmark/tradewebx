@@ -68,6 +68,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         `}
         style={{height:"30px"}}
     >
+      {/* @ts-ignore */}
       <DatePicker
         id={inputId ?? id}        
         name={name}
@@ -137,6 +138,8 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             </button>
           </div>
         )}
+
+
       />
       <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
         <FiCalendar className="h-4 w-4" />
