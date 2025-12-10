@@ -629,12 +629,6 @@ const useScreenSize = () => {
 };
 
 const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck,pageData, onDetailClick}) => {
-    console.log("check table data",data,settings,tableRef);
-    console.log("📊 DataTable Columns Check:", { 
-        web: settings?.webColumns, 
-        mobile: settings?.mobileColumns, 
-        settingsObj: settings 
-    });
     // 🆕 ADDITION: Multi-checkbox toggle handler
   const toggleRowSelection = (row: any, checked: boolean) => {
     const updated = checked
@@ -644,17 +638,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     setSelectedRows(updated);
     onRowSelect?.(updated);    
   };
-
-
-  
-
-
-    // Helper function to check if a button is enabled
-    const isButtonEnabled = (buttonType: string): boolean => {
-        if (!buttonConfig) return true; // Default to enabled if no config
-        const config = buttonConfig.find((config: any) => config.ButtonType === buttonType);
-        return config?.EnabledTag === "true";
-    };
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const [selectedRows, setSelectedRows] = useState<any[]>([]);

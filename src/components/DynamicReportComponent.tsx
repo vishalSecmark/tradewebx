@@ -590,8 +590,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
              console.warn('▶️ Fetching data for level:', currentLevel);
              fetchData();
         } else if (currentLevel === 0 && hasFetchedRef.current) {
-             console.warn('▶️ Refreshing main level data (Force Fresh)');
-             fetchData(undefined, false); // Force refresh, bypass cache
+             console.warn('▶️ Refreshing main level data (Using Cache)');
+             // Use cache if available (true), otherwise fetch
+             fetchData(undefined, true);
         }
     }, [currentLevel, primaryKeyFilters, areFiltersInitialized]);
 
