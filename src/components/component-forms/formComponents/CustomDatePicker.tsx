@@ -18,6 +18,7 @@ interface CustomDatePickerProps {
   ariaInvalid?: boolean;
   ariaDisabled?: boolean;
   ariaDescribedBy?: string;
+  
 }
 
 const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
@@ -68,16 +69,15 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         `}
         style={{height:"30px"}}
     >
-      {/* @ts-ignore */}
       <DatePicker
         id={inputId ?? id}        
         name={name}
-        aria-required={ariaRequired}   
-        aria-invalid={ariaInvalid}     
-        aria-disabled={ariaDisabled}   
-        aria-describedby={ariaDescribedBy} 
+        aria-required={ariaRequired as any}   
+        aria-invalid={ariaInvalid as any}     
+        aria-disabled={ariaDisabled as any}   
+        aria-describedby={ariaDescribedBy as any} 
         selected={selected}
-        onBlur={onBlur}
+         onBlur={onBlur}
         onChange={onChange}
         disabled={disabled}
         className="focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none text-[14px]"
@@ -138,8 +138,6 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             </button>
           </div>
         )}
-
-
       />
       <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
         <FiCalendar className="h-4 w-4" />
