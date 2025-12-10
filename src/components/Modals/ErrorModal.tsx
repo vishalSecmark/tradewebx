@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { useTheme } from '@/context/ThemeContext';
+import AccessibleModal from '@/components/a11y/AccessibleModal';
 
 interface ErrorModalProps {
     isOpen: boolean;
@@ -9,17 +10,25 @@ interface ErrorModalProps {
 
 const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, message }) => {
     const { colors } = useTheme();
-
-    if (!isOpen) return null;
+    const titleId = useId();
+    const descriptionId = useId();
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-[200]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+        <AccessibleModal
+            isOpen={isOpen}
+            onDismiss={onClose}
+            labelledBy={titleId}
+            describedBy={descriptionId}
+            role="alertdialog"
+            className="p-6 w-full max-w-lg mx-4 rounded-lg"
+            closeOnOverlayClick={false}
+        >
             <div
-                className="rounded-lg p-6 w-full max-w-[500px] mx-4"
+                className="rounded-lg"
                 style={{ backgroundColor: colors.cardBackground || '#ffffff' }}
             >
-                <div className="flex items-center mb-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                <div className="flex items-center mb-4 px-2">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3" aria-hidden="true">
                         <svg
                             className="w-6 h-6 text-red-600"
                             fill="none"
@@ -35,6 +44,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, message }) => 
                         </svg>
                     </div>
                     <h4
+                        id={titleId}
                         className="text-xl font-semibold"
                         style={{ color: colors.text || '#000000' }}
                     >
@@ -43,32 +53,28 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ isOpen, onClose, message }) => 
                 </div>
 
                 <p
-                    className="text-gray-600 mb-6 leading-relaxed"
+                    id={descriptionId}
+                    className="text-gray-600 mb-6 leading-relaxed px-2"
                     style={{ color: colors.text || '#666666' }}
                 >
                     {message}
                 </p>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end px-2 pb-2">
                     <button
+                        type="button"
                         onClick={onClose}
                         className="px-6 py-2 rounded-md font-medium transition-colors duration-200"
                         style={{
                             backgroundColor: colors.buttonBackground || '#3b82f6',
                             color: colors.buttonText || '#ffffff'
                         }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.opacity = '1';
-                        }}
                     >
                         OK
                     </button>
                 </div>
             </div>
-        </div>
+        </AccessibleModal>
     );
 };
 

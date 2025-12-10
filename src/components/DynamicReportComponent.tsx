@@ -301,6 +301,25 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
     const [showValidationDetails, setShowValidationDetails] = useState(false);
+    const [announceMsg, setAnnounceMsg] = useState("");
+
+    useEffect(() => {
+    if (!announceMsg) return;
+
+    let region = document.getElementById("nvdaLiveRegion");
+    if (!region) {
+        region = document.createElement("div");
+        region.id = "nvdaLiveRegion";
+        region.setAttribute("role", "status");
+        region.setAttribute("aria-live", "assertive");
+        region.setAttribute("aria-atomic", "true");
+        region.style.position = "absolute";
+        region.style.left = "-9999px";
+        document.body.appendChild(region);
+    }
+
+    region.textContent = announceMsg;
+    }, [announceMsg]);
 
     // Add comprehensive cache for different filter combinations and levels
     const [dataCache, setDataCache] = useState<Record<string, {
@@ -791,6 +810,15 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }));
             setApiData(dataWithId);
 
+                // NVDA ANNOUNCEMENT (correct place)
+                if (dataWithId.length >= 0) {
+                    const msg = dataWithId.length > 0
+                        ? `Total records available are ${dataWithId.length}.`
+                        : "No data available.";
+
+                    setAnnounceMsg(msg);
+                }
+
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
             Object.entries(response.data.data).forEach(([key, value]) => {
@@ -846,9 +874,6 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             ongoingRequestRef.current = null; // Clear ongoing request reference
         }
     };
-
-
-
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
         // Handle import type - do nothing, upload interface is shown directly on page
@@ -1086,15 +1111,59 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }
 
     // function to handle table actions
-    const handleTableAction = (action: string, record: any) => {
-        setEntryFormData(record);
-        setEntryAction(action as 'edit' | 'delete' | 'view');
-        if (action === "edit" || action === "view") {
-            setIsEntryModalOpen(true);
-        } else {
-            setIsConfirmationModalOpen(true);
-        }
-    }
+    // const handleTableAction = (action: string, record: any) => {
+    //     setEntryFormData(record);
+    //     setEntryAction(action as 'edit' | 'delete' | 'view');
+    //     if (action === "edit" || action === "view") {
+    //         setIsEntryModalOpen(true);
+    //     } else {
+    //         setIsConfirmationModalOpen(true);
+    //     }
+    // }
+
+const handleTableAction = (action: string, record: any) => {
+  setEntryFormData(record);
+  setEntryAction(action as "edit" | "delete" | "view");
+
+  const alertBox = document.getElementById("sr-alert");
+
+  // Announce Edit + View + Delete
+  if (alertBox) {
+    const readableAction =
+      action === "edit"
+        ? "Edit"
+        : action === "view"
+        ? "View"
+        : "Delete";
+
+    alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
+  }
+
+  // EDIT + VIEW → Open entry modal
+
+  if (action === "edit" || action === "view") {
+    setIsEntryModalOpen(true);
+
+    // Focus the modal heading AFTER modal is visible
+    setTimeout(() => {
+      const modalHeading = document.getElementById("entry-modal-heading");
+      modalHeading?.focus();
+    }, 50);
+
+    return;
+  }
+  
+
+  // DELETE → Open delete modal
+  if (action === "delete") {
+    setIsConfirmationModalOpen(true);
+
+    setTimeout(() => {
+      const deleteHeading = document.getElementById("delete-modal-heading");
+      deleteHeading?.focus();
+    }, 50);
+  }
+};
 
     const handleConfirmDelete = () => {
         deleteMasterRecord();
@@ -1367,6 +1436,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         fetchData();
                                     }}
                                     style={{ color: colors.text }}
+                                    aria-label='Refresh Data'
                                 >
                                     <FaSync size={20} />
                                 </button>
@@ -1382,6 +1452,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsEntryModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label='Add New Entry'
                                     >
                                         <FaPlus size={20} />
                                     </button>
@@ -1398,6 +1469,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsFilterModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label='Apply Filters'
                                     >
                                         <FaFilter size={20} />
                                     </button>
@@ -1414,6 +1486,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
                                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                                     style={{ color: colors.text }}
+                                    aria-label='Click enter for expanded export buttons'
                                 >
                                     <FaEllipsisV size={20} />
                                 </button>
@@ -1435,6 +1508,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Edit Selected Row"
                                                 >
                                                     <FaEdit size={16} />
                                                     Edit Selected Rows
@@ -1448,6 +1522,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Export to Excel"
                                                 >
                                                     <FaFileExcel size={16} />
                                                     Export to Excel
@@ -1462,6 +1537,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Email Report"
                                                 >
                                                     <FaEnvelope size={16} />
                                                     Email Report
@@ -1475,6 +1551,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Download Options"
                                                 >
                                                     <FaDownload size={16} />
                                                     Download Options
@@ -1490,6 +1567,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                             }}
                                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                             style={{ color: colors.text }}
+                                                            aria-label="Export to CSV"
                                                         >
                                                             <FaFileCsv size={16} />
                                                             Export to CSV
@@ -1503,6 +1581,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                             }}
                                                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                             style={{ color: colors.text }}
+                                                            aria-label="Export to PDF"
                                                         >
                                                             <FaFilePdf size={16} />
                                                             Export to PDF
@@ -1518,6 +1597,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                     style={{ color: colors.text }}
+                                                    aria-label='Search Records'
                                                 >
                                                     <FaSearch size={16} />
                                                     Search Records
@@ -1557,6 +1637,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                     onClick={handleSearchClear}
                                                     className="absolute right-1.5 top-1/2 transform -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded"
                                                     style={{ color: colors.text }}
+                                                    aria-label="Close Button"
                                                 >
                                                     <FaTimes size={12} />
                                                 </button>
@@ -1580,6 +1661,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsEditTableRowModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label='Edit Selected Rows'
                                     >
                                         <FaEdit size={20} />
                                     </button>
@@ -1600,6 +1682,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             setIsEntryModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
+                                        aria-label="Add New Entry"
                                     >
                                         <FaPlus size={20} />
                                     </button>
@@ -1628,6 +1711,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         }}
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         style={{ color: colors.text }}
+                                        aria-label="Export Excel"
                                     >
                                         <FaFileExcel size={20} />
                                     </button>
@@ -1648,6 +1732,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             setIsConfirmModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
+                                         aria-label="Email Report"
                                     >
                                         <FaEnvelope size={20} />
                                     </button>
@@ -1667,6 +1752,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             setIsConfirmModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
+                                        aria-label="Export Email"
                                     >
                                         <FaRegEnvelope size={20} />
                                     </button>
@@ -1683,6 +1769,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
                                         style={{ color: colors.text }}
+                                        aria-label="Download Options"
                                     >
                                         <FaDownload size={20} />
                                     </button>
@@ -1700,6 +1787,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 className="p-2 rounded hover:bg-gray-100 transition-colors"
                                                 onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
                                                 style={{ color: colors.text }}
+                                                aria-label="Export to CSV"
                                             >
                                                 <FaFileCsv size={20} />
                                             </button>
@@ -1730,6 +1818,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 }}
                                                 className="p-2 rounded transition-colors flex items-center hover:bg-gray-100"
                                                 style={{ color: colors.text }}
+                                                aria-label="Export to PDF"
                                             >
                                                 <FaFilePdf size={20} />
                                             </button>
@@ -1747,6 +1836,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={handleSearchToggle}
                                         style={{ color: colors.text }}
+                                         aria-label="Search Records"
                                     >
                                         <FaSearch size={20} />
                                     </button>
@@ -1802,6 +1892,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             <div className="relative group">
                                 <button
                                     className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    aria-label="Refresh Data"
                                     onClick={() => {
                                         // Clear cache for current filter combination when manually refreshing
                                         const cacheKey = generateCacheKey(currentLevel, filters, primaryKeyFilters);
@@ -1827,6 +1918,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={() => setIsFilterModalOpen(true)}
                                         style={{ color: colors.text }}
+                                        aria-label="Apply Filters"
                                     >
                                         <FaFilter size={20} />
                                     </button>
@@ -1859,6 +1951,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onSortChange={setSortConfig}
                 isSortingAllowed={safePageData.getCurrentLevel(currentLevel)?.isShortAble !== "false"}
                 onApply={() => { }}
+                totalRecords={apiData?.length}   // <-- REQUIRED
             />
             <ConfirmationModal
                 isOpen={isConfirmationModalOpen}

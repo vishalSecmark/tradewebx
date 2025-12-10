@@ -19,6 +19,11 @@ interface CustomDateTimePickerProps {
   dateFormat?: string;
   minDate?: Date;
   maxDate?: Date;
+  inputId?: string;
+  ariaRequired?: boolean;
+  ariaInvalid?: boolean;
+  ariaDisabled?: boolean;
+  ariaDescribedBy?: string;
 }
 
 const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
@@ -35,7 +40,12 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
   timeIntervals = 5,
   dateFormat = 'dd/MM/yyyy HH:mm',
   minDate,
-  maxDate
+  maxDate,
+  inputId,
+  ariaRequired,
+  ariaInvalid,
+  ariaDisabled,
+  ariaDescribedBy
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -85,6 +95,11 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <input
+          id={inputId ?? id}
+          aria-required={ariaRequired}
+          aria-invalid={ariaInvalid}
+          aria-disabled={ariaDisabled}
+          aria-describedby={ariaDescribedBy}
           type="text"
           className="w-full focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none bg-transparent placeholder-gray-400 cursor-pointer text-[14px]"
           placeholder={placeholderText}

@@ -761,9 +761,7 @@ class ApiService {
                 },
                 body: JSON.stringify(logData)
             });
-        } catch (loggingError) {
-            console.error('Failed to send error log to server:', loggingError);
-        }
+        } catch (loggingError) {}
     }
 }
 

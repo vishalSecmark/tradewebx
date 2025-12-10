@@ -681,8 +681,8 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
                 Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className={`font-semibold ${(data.TradingLedgerBalance || '').includes('-')
-                ? 'text-red-600'
-                : 'text-green-600'
+                ? 'text-red-700'
+                : 'text-green-700'
                 }`}>
                 {data.TradingLedgerBalance ?? "--"}
               </span>
@@ -708,8 +708,8 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
                 Ledger Balance: <FaExternalLinkAlt className="text-sm" />
               </span>
               <span className={`font-semibold ${(data.DPLedgerBalance || '').includes('-')
-                ? 'text-red-600'
-                : 'text-green-600'
+                ? 'text-red-700'
+                : 'text-green-700'
                 }`}>
                 {data.DPLedgerBalance ?? "--"}
               </span>
@@ -723,8 +723,8 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
               </span>
               <span className=
                 {`font-semibold ${(data.DPHoldingValue || '').includes('-')
-                  ? 'text-red-600'
-                  : 'text-green-600'
+                  ? 'text-red-700'
+                  : 'text-green-700'
                   }`}
               >{data.DPHoldingValue ?? "--"}</span>
             </div>
@@ -798,6 +798,7 @@ const AccountClosure: React.FC<AccountClosureProps> = ({
           <div className="mb-4">
             <label className="block font-medium mb-1">Reason for Account Closure:</label>
             <textarea
+              aria-label="Reason"
               className="w-full border rounded px-3 py-2 min-h-[100px] text-sm focus:ring focus:ring-opacity-50"
               value={reason || undefined}
               onChange={(e) => {

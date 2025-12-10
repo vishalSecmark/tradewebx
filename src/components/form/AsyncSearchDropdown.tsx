@@ -140,6 +140,7 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
   return (
     <div className={isHorizontal ? "mb-2" : "mb-4"}>
       <label
+        id={`label-${item.name}`}
         className={`block text-sm mb-1 ${
           isHorizontal ? "font-bold" : "font-medium"
         }`}
@@ -154,6 +155,9 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
       </label>
 
       <Select
+        inputId={`input-${item.name}`}
+        aria-labelledby={`label-${item.name}`}
+        aria-label={item.label || "Search dropdown"}
         key={item.wKey as string}
         value={selectedOption || null}
         options={options}

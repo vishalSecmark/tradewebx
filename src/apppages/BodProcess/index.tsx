@@ -179,7 +179,17 @@ const BodProcess = () => {
                     >
                       Run
                     </button>
+                    {/* <input
+                      type="checkbox"
+                      checked={checkedRows[rowIndex] || false}
+                      onChange={() => handleCheckboxChange(rowIndex)}
+                    /> */}
+                    <label htmlFor={`bod-checkbox-${rowIndex}`} className="sr-only">
+                      Select {row.ProcessName || `Process ${rowIndex + 1}`}
+                    </label>
+
                     <input
+                      id={`bod-checkbox-${rowIndex}`}
                       type="checkbox"
                       checked={checkedRows[rowIndex] || false}
                       onChange={() => handleCheckboxChange(rowIndex)}

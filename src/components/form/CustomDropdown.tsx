@@ -131,11 +131,13 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 
   return (
     <div className={isHorizontal ? "mb-2" : "mb-4"}>
-      <label className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
+      <label id={`label-${item.name}`} className={`block text-sm mb-1 ${isHorizontal ? 'font-bold' : 'font-medium'}`} style={{ color: colors.text }}>
         {item.label}
         {isLoading && <span className="ml-2 inline-block animate-pulse">Loading...</span>}
       </label>
       <Select
+        inputId={`input-${item.name}`}
+        aria-labelledby={`label-${item.name}`}
         options={visibleOptions}
         value={selectedOption}
         isMulti={item.isMultiple}
