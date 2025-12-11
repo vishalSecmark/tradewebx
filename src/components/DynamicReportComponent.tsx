@@ -387,6 +387,21 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const pageData: any = findPageData();
     const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
 
+    // Safe access to pageData properties with validation
+    const safePageData = safePageDataAccess(pageData, validationResult, dynamicLevels);
+
+    // Create merged page data for DataTable to support dynamic levels in exports
+    const mergedPageData = React.useMemo(() => {
+        if (!pageData?.[0]) return pageData;
+        return [{
+            ...pageData[0],
+            levels: [...(pageData[0].levels || []), ...dynamicLevels]
+        }];
+    }, [pageData, dynamicLevels]);
+
+    const showTypeList = safePageData.getSetting('levels.0.settings.showTypstFlag') || false;
+    const showFilterHorizontally = safePageData.getSetting('filterType') === "onPage";
+
     // Validate pageData whenever it changes
     useEffect(() => {
         if (pageData) {
@@ -1412,20 +1427,7 @@ const handleTableAction = (action: string, record: any) => {
         );
     }
 
-    // Safe access to pageData properties with validation
-    const safePageData = safePageDataAccess(pageData, validationResult, dynamicLevels);
 
-    // Create merged page data for DataTable to support dynamic levels in exports
-    const mergedPageData = React.useMemo(() => {
-        if (!pageData?.[0]) return pageData;
-        return [{
-            ...pageData[0],
-            levels: [...(pageData[0].levels || []), ...dynamicLevels]
-        }];
-    }, [pageData, dynamicLevels]);
-
-    const showTypeList = safePageData.getSetting('levels.0.settings.showTypstFlag') || false;
-    const showFilterHorizontally = safePageData.getSetting('filterType') === "onPage";
 
     return (
         <div className=""
