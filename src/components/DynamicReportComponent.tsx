@@ -1444,9 +1444,9 @@ const handleTableAction = (action: string, record: any) => {
                             <button
                                 key={index}
                                 style={{ backgroundColor: colors.cardBackground }}
-                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
-                                    ? `bg-${colors.primary} text-${colors.buttonText}`
-                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                className={`px-4 py-2 text-sm rounded-t-lg font-bold transition-all duration-200 ${currentLevel === level
+                                    ? `bg-${colors.primary} text-${colors.buttonText} border-2 border-black`
+                                    : `bg-${colors.tabBackground} text-${colors.tabText} hover:bg-gray-100`
                                     }`}
                                 onClick={() => handleTabClick(level, index)}
                             >
