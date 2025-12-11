@@ -3197,6 +3197,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 ...(childEntriesTable.length > 0
                                                   ? Object.keys(childEntriesTable[0])
                                                       .filter((key) => key !== "SerialNo" && key?.toLowerCase() !== "id" && key !== "IsDeleted" && key !== "isInserted") // Exclude SerialNo and id
+                                                      .slice(0, 6)
                                                       .map((key) => ({
                                                         key,
                                                         name: key,
