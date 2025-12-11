@@ -20,7 +20,19 @@ import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
 import { useLocalStorage } from '@/hooks/useLocalListner';
 import Loader from './Loader';
+
 import { handleLoopThroughMultiSelectKeyHandler, handleLoopThroughMultiSelectKeyHandlerDownloadZip, handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel, handleLoopThroughMultiSelectKeyHandlerExcel } from '@/utils/dataTableHelper';
+
+
+// Helper to measure text width
+const getTextWidth = (text: string, font: string): number => {
+    if (typeof window === 'undefined') return 0; // Server-side safety
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return 0;
+    context.font = font;
+    return context.measureText(text).width;
+};
 
 
 
@@ -1319,7 +1331,41 @@ useEffect(() => {
                 const isDetailColumn = !!detailColumnConfig;
             
                 // Apply custom width or use default min/max width
-                if (customWidth) {
+                if (settings?.isAutoWidth) {
+                    // Auto-fit logic using text measurement
+                    // 1. Measure Header
+                    const font = "600 14px 'Inter', sans-serif"; // Slightly larger to be safe
+                    const headerWidth = getTextWidth(key, font) + 70; // +70 for sorting icon, filter icon & padding
+
+                    // 2. Measure Content (Sample first 200 rows for performance)
+                    let maxContentWidth = 0;
+                    const sampleRows = formattedData.slice(0, 200); 
+                    
+                    for (const row of sampleRows) {
+                        const value = row[key];
+                        let text = '';
+                        
+                        if (React.isValidElement(value)) {
+                            // Try to extract text from React element if simple
+                            if ((value as any).props?.children) {
+                                text = String((value as any).props.children);
+                            }
+                        } else if (value !== null && value !== undefined) {
+                            text = String(value);
+                        }
+
+                        if (text) {
+                            const width = getTextWidth(text, "14px 'Inter', sans-serif"); // Match header font size
+                            if (width > maxContentWidth) maxContentWidth = width;
+                        }
+                    }
+
+                    // 3. Set Width (Header vs Content, with limits)
+                    const optimalWidth = Math.max(headerWidth, maxContentWidth + 36); // Increased padding for safety
+                    columnConfig.minWidth = Math.min(Math.max(optimalWidth, 80), 800); // Min 80px, Max 800px cap
+                    columnConfig.width = columnConfig.minWidth; // Set width explicitly
+
+                } else if (customWidth) {
                     columnConfig.width = customWidth;
                     columnConfig.minWidth = Math.min(50, Math.floor(customWidth * 0.5)); // Allow resizing down to 50% of custom width or minimum 50px
                     columnConfig.maxWidth = Math.max(600, Math.floor(customWidth * 2)); // Allow resizing up to 200% of custom width or minimum 600px
@@ -1401,7 +1447,11 @@ useEffect(() => {
                             );
                         }
 
-                        return content;
+                        return (
+                            <div title={String(rawValue || '')} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
+                                {content}
+                            </div>
+                        );
                     }
                 };
             }),
