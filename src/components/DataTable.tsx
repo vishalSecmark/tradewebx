@@ -13,26 +13,17 @@ import moment from 'moment';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
+import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
 import { base64ToUint8Array, buildFilterXml, displayAndDownloadFile, getLocalStorage, sendEmailMultiCheckbox } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
 import { useLocalStorage } from '@/hooks/useLocalListner';
+import JSZip from "jszip";
+import { FaSpinner } from 'react-icons/fa';
 import Loader from './Loader';
-
 import { handleLoopThroughMultiSelectKeyHandler, handleLoopThroughMultiSelectKeyHandlerDownloadZip, handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel, handleLoopThroughMultiSelectKeyHandlerExcel } from '@/utils/dataTableHelper';
-
-
-// Helper to measure text width
-const getTextWidth = (text: string, font: string): number => {
-    if (typeof window === 'undefined') return 0; // Server-side safety
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) return 0;
-    context.font = font;
-    return context.measureText(text).width;
-};
 
 
 
@@ -497,7 +488,6 @@ interface DataTableProps {
     };
     onRowClick?: (record: any) => void;
     onRowSelect?: (selectedRows: any[]) => void;
-    onDetailClick?: (detailConfig: any, rowData: any) => void;
     tableRef?: React.RefObject<HTMLDivElement>;
     summary?: any;
     isEntryForm?: boolean;
@@ -640,7 +630,8 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck,pageData, onDetailClick}) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck,pageData}) => {
+
     // 🆕 ADDITION: Multi-checkbox toggle handler
   const toggleRowSelection = (row: any, checked: boolean) => {
     const updated = checked
@@ -650,6 +641,17 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     setSelectedRows(updated);
     onRowSelect?.(updated);    
   };
+
+
+  
+
+
+    // Helper function to check if a button is enabled
+    const isButtonEnabled = (buttonType: string): boolean => {
+        if (!buttonConfig) return true; // Default to enabled if no config
+        const config = buttonConfig.find((config: any) => config.ButtonType === buttonType);
+        return config?.EnabledTag === "true";
+    };
     const { colors, fonts } = useTheme();
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
@@ -1067,6 +1069,11 @@ useEffect(() => {
       }]
     : [];
   
+
+    console.log(selectedRows,'selectedRows');
+    
+    
+
         const baseColumns: any = [
             ...multiCheckBoxColumn,
             ...(settings?.EditableColumn
@@ -1326,46 +1333,8 @@ useEffect(() => {
                     resizable: true,
                 };
 
-                // Check if this column is a detail column
-                const detailColumnConfig = settings?.DetailColumn?.find((dc: any) => dc.wKey === key);
-                const isDetailColumn = !!detailColumnConfig;
-            
                 // Apply custom width or use default min/max width
-                if (settings?.isAutoWidth) {
-                    // Auto-fit logic using text measurement
-                    // 1. Measure Header
-                    const font = "600 14px 'Inter', sans-serif"; // Slightly larger to be safe
-                    const headerWidth = getTextWidth(key, font) + 70; // +70 for sorting icon, filter icon & padding
-
-                    // 2. Measure Content (Sample first 200 rows for performance)
-                    let maxContentWidth = 0;
-                    const sampleRows = formattedData.slice(0, 200); 
-                    
-                    for (const row of sampleRows) {
-                        const value = row[key];
-                        let text = '';
-                        
-                        if (React.isValidElement(value)) {
-                            // Try to extract text from React element if simple
-                            if ((value as any).props?.children) {
-                                text = String((value as any).props.children);
-                            }
-                        } else if (value !== null && value !== undefined) {
-                            text = String(value);
-                        }
-
-                        if (text) {
-                            const width = getTextWidth(text, "14px 'Inter', sans-serif"); // Match header font size
-                            if (width > maxContentWidth) maxContentWidth = width;
-                        }
-                    }
-
-                    // 3. Set Width (Header vs Content, with limits)
-                    const optimalWidth = Math.max(headerWidth, maxContentWidth + 36); // Increased padding for safety
-                    columnConfig.minWidth = Math.min(Math.max(optimalWidth, 80), 800); // Min 80px, Max 800px cap
-                    columnConfig.width = columnConfig.minWidth; // Set width explicitly
-
-                } else if (customWidth) {
+                if (customWidth) {
                     columnConfig.width = customWidth;
                     columnConfig.minWidth = Math.min(50, Math.floor(customWidth * 0.5)); // Allow resizing down to 50% of custom width or minimum 50px
                     columnConfig.maxWidth = Math.max(600, Math.floor(customWidth * 2)); // Allow resizing up to 200% of custom width or minimum 600px
@@ -1400,14 +1369,12 @@ useEffect(() => {
                         }
                         return <div></div>;
                     },
-                    renderCell: (props: any) => {
+                    formatter: (props: any) => {
                         const value = props.row[key];
                         const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
                         const numValue = parseFloat(rawValue);
-                        
-                        let content = value;
 
-                        if (!isNaN(numValue) && !isLeftAligned && typeof value !== 'object' && value !== '') {
+                        if (!isNaN(numValue) && !isLeftAligned) {
                             const formattedValue = new Intl.NumberFormat('en-IN', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
@@ -1417,41 +1384,23 @@ useEffect(() => {
                                 numValue > 0 ? '#16a34a' :
                                     colors.text;
 
-                            content = <div className="numeric-value" style={{ color: textColor }}>{formattedValue}</div>;
-                        } else if (React.isValidElement(value)) {
+                            return <div className="numeric-value" style={{ color: textColor }}>{formattedValue}</div>;
+                        }
+
+                        if (React.isValidElement(value)) {
                             const childValue = (value as StyledValue).props.children;
                             const childNumValue = parseFloat(childValue.toString());
 
                             if (!isNaN(childNumValue) && !isLeftAligned) {
-                                content = React.cloneElement(value as StyledElement, {
+                                return React.cloneElement(value as StyledElement, {
                                     className: "numeric-value",
                                     style: { ...(value as StyledElement).props.style }
                                 });
                             }
+                            return value;
                         }
 
-                        // Wrap value in a clickable element if it's a detail column
-                        if (isDetailColumn) {
-                         return (
-                                <div
-                                    className="cursor-pointer text-blue-600 hover:underline hover:text-blue-800"
-                                    onClick={(e) => {
-                                        e.stopPropagation(); // Prevent row click
-                                        if (onDetailClick) {
-                                            onDetailClick(detailColumnConfig, props.row);
-                                        }
-                                    }}
-                                >
-                                    {content}
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <div title={String(rawValue || '')} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center' }}>
-                                {content}
-                            </div>
-                        );
+                        return value;
                     }
                 };
             }),
@@ -1558,7 +1507,7 @@ useEffect(() => {
         }
         return baseColumns;
         
-    }, [formattedData, colors.text, settings, summary?.columnsToShowTotal, screenSize, expandedRows, selectedRows, filters, onDetailClick]);
+    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
@@ -1600,6 +1549,12 @@ useEffect(() => {
     const rows = useMemo(() => {
         return sortRows(filteredData, sortColumns);
     }, [filteredData, sortColumns]);
+
+// ✅ Add this near your top-level state
+const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
+
+
+
 
     const summmaryRows = useMemo(() => {
         const totals: Record<string, any> = {
@@ -1671,8 +1626,6 @@ useEffect(() => {
         region.textContent = message;
     }, 20);
 }
-
-console.log("check settings rows and columns",settings , rows, columns)
 
     return (
         <div
@@ -1780,15 +1733,14 @@ export const exportTableToExcel = async (
     headerData: any,
     apiData: any,
     pageData: any,
-    appMetadata: any,
-    currentLevel: number = 0
+    appMetadata: any
 ) => {
     if (!apiData || apiData.length === 0) return;
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Report');
 
-    const levelData = pageData[0]?.levels[currentLevel] || {};
+    const levelData = pageData[0]?.levels[0] || {};
     const settings = levelData.settings || {};
     const columnsToShowTotal = levelData.summary?.columnsToShowTotal || [];
     const dateFormatMap: Record<string, string> = {};
@@ -1957,12 +1909,11 @@ export const exportTableToCsv = (
     gridEl: HTMLDivElement | null,
     headerData: any,
     apiData: any,
-    pageData: any,
-    currentLevel: number = 0
+    pageData: any
 ) => {
     if (!apiData || apiData.length === 0) return;
 
-    const levelData = pageData[0]?.levels[currentLevel] || {};
+    const levelData = pageData[0]?.levels[0] || {};
     const settings = levelData.settings || {};
     const columnsToShowTotal = levelData.summary?.columnsToShowTotal || [];
 
@@ -2111,13 +2062,9 @@ export const exportTableToPdf = async (
     //     if (!confirmSend) return;
     // }
 
-    // }
-    
-    // Use currentLevel to get settings
-    const currentLevelData = pageData[0]?.levels?.[currentLevel] || {};
-    const decimalSettings = currentLevelData.settings?.decimalColumns || [];
-    const columnsToHide = currentLevelData.settings?.hideEntireColumn?.split(',') || [];
-    const totalColumns = currentLevelData.summary?.columnsToShowTotal || [];
+    const decimalSettings = pageData[0]?.levels?.[0]?.settings?.decimalColumns || [];
+    const columnsToHide = pageData[0]?.levels?.[0]?.settings?.hideEntireColumn?.split(',') || [];
+    const totalColumns = pageData[0]?.levels?.[0]?.summary?.columnsToShowTotal || [];
 
     const decimalMap: Record<string, number> = {};
     decimalSettings.forEach(({ key, decimalPlaces }: any) => {
@@ -2318,7 +2265,7 @@ export const exportTableToPdf = async (
 
     } else if (mode === 'email') {
         const showTypes = pageData[0]?.levels[0]?.settings?.showTypstFlag || false;
-        // const currentLevelData = pageData[0]?.levels[currentLevel]; // Already defined above
+        const currentLevelData = pageData[0]?.levels[currentLevel];
         const userId = getLocalStorage('userId') || '';
         const userType = getLocalStorage('userType') || '';
 
