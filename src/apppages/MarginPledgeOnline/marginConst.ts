@@ -112,3 +112,123 @@ export const pledgeRedirectApiCall = async (pledgeRedirectApiCall) => {
 }
 
 
+const now = new Date();
+
+// Format: yyyyMMddHHmmss
+  const formatted =
+    now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    String(now.getDate()).padStart(2, '0') +
+    String(now.getHours()).padStart(2, '0') +
+    String(now.getMinutes()).padStart(2, '0') +
+    String(now.getSeconds()).padStart(2, '0');
+
+// Random number between 10 and 99  
+const random = Math.floor(Math.random() * 90) + 10;
+
+const strRequestReference = formatted + random.toString();
+
+
+const strRequestTime =
+    now.getFullYear() + "-" +
+    String(now.getMonth() + 1).padStart(2, '0') + "-" +
+    String(now.getDate()).padStart(2, '0') + "T" +
+    String(now.getHours()).padStart(2, '0') + ":" +
+    String(now.getMinutes()).padStart(2, '0') + ":" +
+    String(now.getSeconds()).padStart(2, '0') +
+    "+0530";
+
+export const pledgeRedirectApiNDSLCall = async() => {
+
+  const pledgeRedirectNsdlData = {
+    success: true,
+    message: '',
+    data: {
+      rs0: [
+        {
+          ResponseFlag: 'S',
+          ResponseMessage: 'Process Executed',
+          DATA: {
+            JsonOutput: {
+              orderDtls: {
+                brokerOrderNo: '1012250426286163',
+                exchangeCd: '02',
+                segment: '00',
+                numOfSecurities: '1',
+                secDtls: [
+                  {
+                    seqNo: '1',
+                    isin: 'INE158A01026',
+                    isinName: 'HEROMOTOCO',
+                    quantity: '1000',
+                    lockInReasonCode: '',
+                    lockInReleaseDate: '',
+                  },
+                ],
+              },
+              pledgeDtls: {
+                pledgorDpId: 'IN303575',
+                pledgorClientId: '10000204',
+                pledgorUCC: '4444',
+                pledgeeDpId: 'IN303575',
+                pledgeeClientId: '10289592',
+                tmId: '937',
+                cmId: '937',
+                execDt: '10-12-2025',
+              },
+            },
+            Param: {
+              TransactionType: 'MPI',
+              Requestor: 'Matalia Stock Broking Pvt.Ltd',
+              RequestorId: 'NS303575',
+              Channel: 'WEB',
+              APIUrl: 'https://dematgw.nsdl.com/mpi-service/v1/public/mpi/orders',
+            },
+          },
+        },
+      ],
+    },
+    datarows: ['1'],
+  };
+
+  try {
+    const redirectData = pledgeRedirectNsdlData?.data?.rs0?.[0]?.DATA;
+    if (!redirectData) return;
+
+    const { JsonOutput, Param } = redirectData;
+    const { APIUrl, TransactionType, Requestor, RequestorId, Channel } =
+      Param;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = APIUrl;
+    form.target = '_blank';
+    form.style.display = 'none';
+
+    const addHiddenField = (name, value) => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    };
+
+    addHiddenField('transactionType', TransactionType);
+    addHiddenField('requestor', Requestor);
+    addHiddenField('requestorId', RequestorId);
+    addHiddenField('requestReference', strRequestReference);
+    addHiddenField('channel', Channel);
+    addHiddenField('orderReqDtls', JSON.stringify(JsonOutput));
+    addHiddenField('requestTime', strRequestTime);
+
+    document.body.appendChild(form);
+    form.submit();
+
+    // setTimeout(() => document.body.removeChild(form), 1000);
+  } catch (error) {
+    console.error('NSDL Redirect Error:', error);
+  }
+};
+
+
+

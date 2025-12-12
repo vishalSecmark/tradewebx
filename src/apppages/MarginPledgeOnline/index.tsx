@@ -1,7 +1,7 @@
 'use client';
 import { useTheme } from '@/context/ThemeContext';
 import React, { useEffect, useState } from 'react';
-import { decimalFormat, dropDownApiCall, rightAlignKeys, tableApiCall } from './marginConst';
+import { decimalFormat, dropDownApiCall, pledgeRedirectApiNDSLCall, rightAlignKeys, tableApiCall } from './marginConst';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from '@/utils/apiService';
 import { getLocalStorage } from '@/utils/helper';
@@ -155,7 +155,7 @@ export default function MarginPledgeOnline() {
     }
   };
 
-  const pledgeRedirectApiCall = () => {
+  const pledgeRedirectApiCDSLCall = () => {
     try {
       const redirectData = pledgeRedirectData?.[0]?.DATA;
       if (!redirectData) return;
@@ -191,8 +191,84 @@ export default function MarginPledgeOnline() {
   };
 
   useEffect(() => {
-    if (pledgeRedirectData.length > 0) pledgeRedirectApiCall();
+    if (pledgeRedirectData.length > 0) pledgeRedirectApiCDSLCall();
   }, [pledgeRedirectData]);
+
+
+
+  //NSDL
+
+  const now = new Date();
+
+// Format: yyyyMMddHHmmss
+  const formatted =
+    now.getFullYear().toString() +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    String(now.getDate()).padStart(2, '0') +
+    String(now.getHours()).padStart(2, '0') +
+    String(now.getMinutes()).padStart(2, '0') +
+    String(now.getSeconds()).padStart(2, '0');
+
+// Random number between 10 and 99  
+const random = Math.floor(Math.random() * 90) + 10;
+
+const strRequestReference = formatted + random.toString();
+
+
+const strRequestTime =
+    now.getFullYear() + "-" +
+    String(now.getMonth() + 1).padStart(2, '0') + "-" +
+    String(now.getDate()).padStart(2, '0') + "T" +
+    String(now.getHours()).padStart(2, '0') + ":" +
+    String(now.getMinutes()).padStart(2, '0') + ":" +
+    String(now.getSeconds()).padStart(2, '0') +
+    "+0530";
+
+  // const pledgeRedirectApiNDSLCall = () => {
+  //   try {
+  //     const redirectData = pledgeRedirectNsdlData?.data?.rs0?.[0];
+  //     console.log(redirectData,'redirectData');
+      
+  //     if (!redirectData) return;
+  //     const { JsonOutput, Param } = redirectData.DATA || {};
+
+  //     const { APIUrl, TransactionType, Requestor, RequestorId,Channel } = Param;
+  //     const orderReqDtls = JsonOutput;
+
+  //     const form = document.createElement('form');
+  //     form.method = 'POST';
+  //     form.action = APIUrl;
+  //     form.target = '_blank';
+
+  //     const addHiddenField = (name: string, value: string) => {
+  //       const input = document.createElement('input');
+  //       input.type = 'hidden';
+  //       input.name = name;
+  //       input.value = value;
+  //       form.appendChild(input);
+  //     };
+
+  //     addHiddenField('transactionType', TransactionType);
+  //     // addHiddenField('requestor', Requestor);
+  //     // addHiddenField('requestorId', RequestorId);
+  //     // addHiddenField('requestReference', strRequestReference);
+  //     // addHiddenField('channel', Channel);
+  //     // addHiddenField('orderReqDtls', JSON.stringify(orderReqDtls));
+  //     // addHiddenField('requestTime', strRequestTime);
+  //     // addHiddenField('digitalSignature', '');
+
+
+  //     document.body.appendChild(form);
+  //     form.submit();
+  //     setTimeout(() => document.body.removeChild(form), 1000);
+  //   } catch (error) {
+  //     console.error("Pledge API Error:", error);
+  //   }
+  // }
+
+  // useEffect(() => {
+  //   pledgeRedirectApiNDSLCall()
+  // },[])
 
   return (
     <div className="w-full">
@@ -349,6 +425,7 @@ export default function MarginPledgeOnline() {
               >
                 OK
               </button>
+              <button onClick={pledgeRedirectApiNDSLCall}>hello kekeke</button>
             </div>
           </>
         )}
