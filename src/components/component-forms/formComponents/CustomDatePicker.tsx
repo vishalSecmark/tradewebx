@@ -13,6 +13,12 @@ interface CustomDatePickerProps {
   id?: string;
   name?: string;
   onBlur?: () => void;
+  inputId?: string;
+  ariaRequired?: boolean;
+  ariaInvalid?: boolean;
+  ariaDisabled?: boolean;
+  ariaDescribedBy?: string;
+  
 }
 
 const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
@@ -23,7 +29,12 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   placeholder = 'Select Date',
   id,
   name,
-  onBlur
+  onBlur,
+  inputId,
+  ariaRequired,
+  ariaInvalid,
+  ariaDisabled,
+  ariaDescribedBy,
 }) => {
   // Generate years array using moment
   const years = [];
@@ -59,10 +70,14 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         style={{height:"30px"}}
     >
       <DatePicker
-        id={id}
+        id={inputId ?? id}        
         name={name}
+        aria-required={ariaRequired as any}   
+        aria-invalid={ariaInvalid as any}     
+        aria-disabled={ariaDisabled as any}   
+        aria-describedby={ariaDescribedBy as any} 
         selected={selected}
-        onBlur={onBlur}
+         onBlur={onBlur}
         onChange={onChange}
         disabled={disabled}
         className="focus:border-none focus:ring-0 focus:ring-offset-0 focus:outline-none text-[14px]"
@@ -71,6 +86,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         showYearDropdown
         showMonthDropdown
         dropdownMode="select"
+        popperProps={{
+          strategy: "fixed",
+        }}
         renderCustomHeader={({
           date,
           changeYear,

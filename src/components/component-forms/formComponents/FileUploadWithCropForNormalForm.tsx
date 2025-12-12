@@ -208,11 +208,12 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
 
   return (
     <div className="mb-1" style={field.isBR === "true" ? containerStylesForBr : containerStyle}>
-      <label className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: "break-all" }}>
+      <label  htmlFor={`file-${field.wKey}`} className="block text-sm font-medium mb-1" style={{ color: colors.text, wordBreak: "break-all" }}>
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
       </label>
       <input
+        id={`file-${field.wKey}`}  
         type="file"
         accept={acceptedTypes}
         onChange={onSelectFile}
@@ -220,6 +221,10 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
         className="w-full px-3 py-1 border rounded-md"
         onBlur={() => handleBlur(field)}
         style={{ width: fieldWidth || '100%' }}
+        aria-required={isRequired}                 
+        aria-invalid={!!fieldErrors[field.wKey]}   
+        aria-describedby={fieldErrors[field.wKey] ? `error-${field.wKey}` : undefined}
+        aria-disabled={isDisabled}                 
       />
 
       {/* Preview section */}
@@ -232,7 +237,7 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
           {currentFile.type.startsWith('image/') ? (
             <Image
               src={getDisplayUrl(croppedImageUrl || currentFile.data, currentFile.type)}
-              alt="Cropped Preview"
+              alt={`Uploaded image preview for ${field.label}`}
               width={150}
               height={150}
               style={{ maxWidth: 150, maxHeight: 150, objectFit: 'contain' }}
@@ -259,14 +264,23 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
       />
 
       {fieldErrors[field.wKey] && (
-        <span className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
+        <span 
+        id={`error-${field.wKey}`}         
+        role="alert" 
+        className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>
       )}
 
       {/* Cropping modal */}
       {showModal && src && (
-        <div className="fixed inset-0 flex items-center justify-center z-[300]" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+        <div 
+          className="fixed inset-0 flex items-center justify-center z-[300]"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          role="dialog"                             
+          aria-modal="true"                          
+          aria-labelledby={`crop-title-${field.wKey}`} 
+          >
           <div className="bg-white p-4 rounded shadow-lg max-w-lg w-full">
-            <h2 className="text-lg font-semibold mb-2">Crop Image</h2>
+            <h2  id={`crop-title-${field.wKey}`} className="text-lg font-semibold mb-2">Crop Image</h2>
             <ReactCrop
               crop={crop}
               onChange={c => setCrop(c)}
@@ -288,12 +302,14 @@ const FileUploadWithCropForNormalForm: React.FC<FileUploadWithCropProps> = ({
               <button
                 className="px-4 py-2 bg-gray-300 rounded mr-2"
                 onClick={() => setShowModal(false)}
+                aria-label="Cancel image crop"
               >
                 Cancel
               </button>
               <button
                 className="px-4 py-2 bg-blue-500 text-white rounded"
                 onClick={handleCropDone}
+                aria-label="Apply crop and save image" 
               >
                 Crop & Save
               </button>

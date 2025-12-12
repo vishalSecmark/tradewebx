@@ -40,6 +40,7 @@ const Downloads = () => {
     const menuItems = useAppSelector(selectAllMenuItems);
     const pageData: any = findPageData(menuItems, "Downloads");
     // console.log('userData', userData);
+
     const getDownloads = async (isReload = false, values?: any) => {
         if (isReload) {
             setLoading(true);
@@ -260,6 +261,7 @@ const Downloads = () => {
 
     };
 
+
     // Define filter fields for the FilterModal
     const filterFields = [
         [
@@ -301,7 +303,7 @@ const Downloads = () => {
                     },
                     X_Filter: "${value}",
                     J_Api: {
-                        UserId: "ADMIN",
+                        UserId: userData.userId,
                         AccYear: 24,
                         MyDbPrefix: "SVVS",
                         MemberCode: "undefined",
@@ -315,27 +317,35 @@ const Downloads = () => {
                 }
             },
             {
-                type: 'WDropDownBox',
+                type: 'WSearchDropDownBox',
                 label: 'Client',
                 wKey: 'ClientCode',
-                wQuery: {
+                dynamicSearch: {
+                    "isDynamic": true,
+                    "minSearchLength": 3,
+                    "debounceMs": 400
+                  },
+                  wQuery: {
                     Sql: "",
                     J_Ui: {
-                        ActionName: "Common",
-                        Option: "Search",
-                        RequestFrom: "W"
+                      ActionName: "Common",
+                      Option: "Search",
+                      RequestFrom: "W"
                     },
-                    X_Filter: "",
+                    X_Filter: "${value}",
+                    X_Filte_Multiple: {
+                      "SearchQuery": "##SearchQuery##"
+                    },
                     J_Api: {
-                        UserId: userData.userId,
-                        AccYear: 24,
-                        MyDbPrefix: "SVVS",
-                        MemberCode: "undefined",
-                        SecretKey: "undefined",
-                        MenuCode: 7,
-                        UserType: userData.userType
+                      UserId: userData.userId,
+                      UserType:userData.userType,
+                      AccYear: 24,
+                      MyDbPrefix: "SVVS",
+                      MemberCode: "undefined",
+                      SecretKey: "undefined",
+                      MenuCode: 7
                     }
-                },
+                  },
                 wDropDownKey: {
                     key: "DisplayName",
                     value: "Value"
@@ -368,7 +378,7 @@ const Downloads = () => {
                 <div className="flex gap-2">
                     <TooltipButton
                         onClick={downloadAllFn}
-                        icon={<FaFileArchive size={20} />}
+                        icon={<FaFileArchive  aria-label="Download All" size={20} />}
                         label="Download All"
                     />
 
@@ -391,7 +401,7 @@ const Downloads = () => {
                             loading ? (
                                 <div className="w-5 h-5 border-2 border-t-transparent border-primary rounded-full animate-spin" />
                             ) : (
-                                <FaSync size={20} />
+                                <FaSync  aria-label="Refresh" size={20} />
                             )
                         }
                         label="Refresh"
@@ -406,7 +416,7 @@ const Downloads = () => {
                         onClick={() => setFilterModalVisible(true)}
                         style={{ color: colors.text }}
                     >
-                        <FaFilter size={20} />
+                        <FaFilter  aria-label="Filter" size={20} />
                     </button>
                 </div>
             </div>
@@ -494,7 +504,6 @@ const Downloads = () => {
                 initialValues={filterValues}
                 onApply={handleApplyFilters}
             />
-
             {/* Loading State */}
             {loading && (
                 <div className="flex items-center justify-center py-8 border rounded-lg" style={{

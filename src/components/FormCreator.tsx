@@ -15,6 +15,7 @@ import { getLocalStorage } from '@/utils/helper';
 import AsyncSearchDropdown from './form/AsyncSearchDropdown';
 
 export interface FormElement {
+    name:string;
     type: string;
     label: string;
     wKey: string | string[];
@@ -891,6 +892,7 @@ const FormCreator: React.FC<FormCreatorProps> = ({
                         [fromKey]: !prev[fromKey],
                       }))
                     }
+                    aria-label="Open date presets" 
                   >
                     <FaCalendarAlt />
                   </button>

@@ -203,12 +203,13 @@ const FileUploadWithCrop: React.FC<FileUploadWithCropProps> = ({
 
   return (
     <div className="mb-1">
-      <label className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
+      <label htmlFor={`file-input-${field.wKey}`} className="block text-sm font-medium mb-1" style={{ color: colors.text }}>
         {field.label}
         {isRequired && <span className="text-red-500 ml-1">*</span>}
       </label>
       <input
         type="file"
+        id={`file-input-${field.wKey}`} 
         accept={acceptedTypes}
         onChange={onSelectFile}
         disabled={isDisabled}

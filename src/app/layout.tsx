@@ -17,6 +17,7 @@ import { setupApiRouter } from "@/utils/apiService";
 import AuthGuard from "@/components/auth/AuthGuard";
 import DevelopmentModeIndicator from "@/components/common/DevelopmentModeIndicator";
 import { getLocalStorage } from "@/utils/helper";
+import SkipLink from "@/components/a11y/SkipLink";
 
 const appMetadata = (() => {
   try {
@@ -65,8 +66,11 @@ export default function RootLayout({
         <Provider store={store}>
           <ThemeProvider>
             <SidebarProvider>
+              <SkipLink targetId="main-content" />
               <AuthGuard>
-                {children}
+                <main id="main-content" role="main" tabIndex={-1} className="min-h-screen">
+                  {children}
+                </main>
               </AuthGuard>
               <DevelopmentModeIndicator />
               <TableStyling />
