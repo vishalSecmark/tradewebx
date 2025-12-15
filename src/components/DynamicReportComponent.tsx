@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import axios from 'axios';
@@ -25,6 +25,7 @@ import { decryptData, getLocalStorage, parseSettingsFromXml } from '@/utils/help
 import { toast } from "react-toastify";
 import MultiEntryDataTables from './MultiEntryDataTables';
 import { recursiveSearch, generatePdf, generateExcel, generateCsv } from '@/utils/multiEntryUtils';
+import MultiFileUploadQueue from './upload/MultiFileUploadQueue';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -296,27 +297,39 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    // State for tracking enabled file records for auto-import
+    const [enabledFileRecords, setEnabledFileRecords] = useState<Set<string>>(new Set());
+
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
     const [showValidationDetails, setShowValidationDetails] = useState(false);
     const [announceMsg, setAnnounceMsg] = useState("");
 
+    // State for Detail Column Click functionality
+    const [detailApiData, setDetailApiData] = useState<any>(null);
+    const [detailColumnInfo, setDetailColumnInfo] = useState<{
+        columnKey: string;
+        rowData: any;
+        tabName: string;
+    } | null>(null);
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
+
     useEffect(() => {
-    if (!announceMsg) return;
+        if (!announceMsg) return;
 
-    let region = document.getElementById("nvdaLiveRegion");
-    if (!region) {
-        region = document.createElement("div");
-        region.id = "nvdaLiveRegion";
-        region.setAttribute("role", "status");
-        region.setAttribute("aria-live", "assertive");
-        region.setAttribute("aria-atomic", "true");
-        region.style.position = "absolute";
-        region.style.left = "-9999px";
-        document.body.appendChild(region);
-    }
+        let region = document.getElementById("nvdaLiveRegion");
+        if (!region) {
+            region = document.createElement("div");
+            region.id = "nvdaLiveRegion";
+            region.setAttribute("role", "status");
+            region.setAttribute("aria-live", "assertive");
+            region.setAttribute("aria-atomic", "true");
+            region.style.position = "absolute";
+            region.style.left = "-9999px";
+            document.body.appendChild(region);
+        }
 
-    region.textContent = announceMsg;
+        region.textContent = announceMsg;
     }, [announceMsg]);
 
     // Add comprehensive cache for different filter combinations and levels
@@ -330,7 +343,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         timestamp: number;
     }>>({});
 
-    console.log("check level stack",levelStack)
+    console.log("check level stack", levelStack)
 
     // Function to generate cache key based on current state
     const generateCacheKey = (level: number, filters: Record<string, any>, primaryFilters: Record<string, any>) => {
@@ -388,6 +401,37 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const pageData: any = findPageData();
     const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
+    const uploadFilters = useMemo(() => {
+        const payload: Record<string, any> = {};
+
+        if (clientCode) {
+            payload.ClientCode = clientCode;
+        }
+
+        const hasFiltersConfigured = pageData?.[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0;
+
+        if (hasFiltersConfigured && areFiltersInitialized) {
+            Object.entries(filters || {}).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+
+                if (value instanceof Date || moment.isMoment(value)) {
+                    payload[key] = moment(value).format('YYYYMMDD');
+                } else {
+                    payload[key] = value;
+                }
+            });
+        }
+
+        if (currentLevel > 0 && Object.keys(primaryKeyFilters).length > 0) {
+            Object.entries(primaryKeyFilters).forEach(([key, value]) => {
+                payload[key] = value;
+            });
+        }
+
+        return payload;
+    }, [clientCode, pageData, filters, areFiltersInitialized, currentLevel, primaryKeyFilters]);
 
     // Validate pageData whenever it changes
     useEffect(() => {
@@ -408,11 +452,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }, [pageData]);
 
     // Helper functions for button configuration
-    const isMasterButtonEnabled = (buttonType: string): boolean => {       
+    const isMasterButtonEnabled = (buttonType: string): boolean => {
         if (!pageData?.[0]?.MasterbuttonConfig) return true; // Default to enabled if no config
         const buttonConfig = pageData[0].MasterbuttonConfig.find(
             (config: any) => config.ButtonType === buttonType
-        );        
+        );
 
         return buttonConfig?.EnabledTag === "true";
     };
@@ -451,7 +495,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }
 
-    
+
 
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
@@ -620,6 +664,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }, [pageData, clientCode, validationResult]);
 
+    // Initialize enabled file records when apiData changes (for import type)
+    useEffect(() => {
+        if (componentType === 'import' && apiData && apiData.length > 0) {
+            // Enable all records by default - use FileName or FileSerialNo as unique identifier
+            const allRecordIds = new Set<string>(
+                apiData.map((record: any) => String(record.FileName || record.FileSerialNo || record.id))
+            );
+            setEnabledFileRecords(allRecordIds);
+        }
+    }, [apiData, componentType]);
+
     // Add new useEffect to handle level changes and manual fetching
     useEffect(() => {
         // Only run after page is loaded and when level or primary filters change
@@ -766,14 +821,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }));
             setApiData(dataWithId);
 
-                // NVDA ANNOUNCEMENT (correct place)
-                if (dataWithId.length >= 0) {
-                    const msg = dataWithId.length > 0
-                        ? `Total records available are ${dataWithId.length}.`
-                        : "No data available.";
+            // NVDA ANNOUNCEMENT (correct place)
+            if (dataWithId.length >= 0) {
+                const msg = dataWithId.length > 0
+                    ? `Total records available are ${dataWithId.length}.`
+                    : "No data available.";
 
-                    setAnnounceMsg(msg);
-                }
+                setAnnounceMsg(msg);
+            }
 
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
@@ -832,6 +887,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
+        // Handle import type - do nothing, upload interface is shown directly on page
+        if (componentType === 'import') {
+            return;
+        }
+
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
             // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
             const primaryKey = pageData[0].levels[currentLevel].primaryHeaderKey ||
@@ -859,6 +919,159 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setSelectedRows(cleaned);
     }
 
+    // Handle click on columns with DetailAPI configuration
+    const handleDetailColumnClick = async (columnKey: string, rowData: any) => {
+        console.log('Detail Column Click:', columnKey, rowData);
+
+        // Get the current level settings
+        const currentLevelSettings = pageData?.[0]?.levels?.[currentLevel]?.settings;
+        if (!currentLevelSettings?.DetailColumn) {
+            console.log('No DetailColumn configuration found');
+            return;
+        }
+
+        // Find the DetailColumn configuration for this column
+        const detailConfig = currentLevelSettings.DetailColumn.find(
+            (config: any) => config.wKey === columnKey
+        );
+
+        if (!detailConfig?.DetailAPI) {
+            console.log('No DetailAPI configuration found for column:', columnKey);
+            return;
+        }
+
+        setIsDetailLoading(true);
+
+        try {
+            const dsXml = detailConfig.DetailAPI.dsXml;
+
+            // Build J_Ui string
+            const jUiData = dsXml.J_Ui || {};
+            const jUiString = Object.entries(jUiData)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            // Build X_Filter with placeholder substitution
+            let filterXml = '';
+            const xFilter = dsXml.X_Filter || {};
+            Object.entries(xFilter).forEach(([key, value]) => {
+                let actualValue = value as string;
+
+                // Replace ##ColumnName## placeholders with actual row values
+                const placeholderMatch = actualValue.match(/##(.+?)##/);
+                if (placeholderMatch) {
+                    const placeholderKey = placeholderMatch[1];
+                    actualValue = rowData[placeholderKey] || '';
+                }
+
+                filterXml += `<${key}>${actualValue}</${key}>`;
+            });
+
+            // Add date filters from the current filters state
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                if (value instanceof Date || moment.isMoment(value)) {
+                    const formattedDate = moment(value).format('YYYYMMDD');
+                    filterXml += `<${key}>${formattedDate}</${key}>`;
+                } else {
+                    filterXml += `<${key}>${value}</${key}>`;
+                }
+            });
+
+            // Build J_Api with placeholder substitution
+            const jApiData = dsXml.J_Api || {};
+            const jApiString = Object.entries(jApiData)
+                .map(([key, value]) => {
+                    let actualValue = value as string;
+                    if (actualValue === '<<USERID>>') {
+                        actualValue = getLocalStorage('userId') || '';
+                    }
+                    return `"${key}":"${actualValue}"`;
+                })
+                .join(',');
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUiString}</J_Ui>
+                <Sql>${dsXml.Sql || ''}</Sql>
+                <X_Filter>${filterXml}</X_Filter>
+                <X_GFilter></X_GFilter>
+                <J_Api>${jApiString}, "UserType":"${getLocalStorage('userType')}"</J_Api>
+            </dsXml>`;
+
+            console.log('Detail API Request:', xmlData);
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            console.log('Detail API Response:', response);
+
+            const rawData = response?.data?.data?.rs0 || [];
+
+            // Check for error flag in the response
+            if (rawData.length > 0 && rawData[0].ErrorFlag === 'E' && rawData[0].ErrorMessage) {
+                setErrorMessage(rawData[0].ErrorMessage);
+                setIsErrorModalOpen(true);
+                return;
+            }
+
+            const dataWithId = rawData.map((row: any, index: number) => ({
+                ...row,
+                _id: index
+            }));
+
+            // Store detail data and info
+            setDetailApiData(dataWithId);
+            setDetailColumnInfo({
+                columnKey,
+                rowData,
+                tabName: `${columnKey} Details`
+            });
+
+            // Add a new tab for detail view (using -1 as special level identifier)
+            setLevelStack(prev => [...prev, -1]);
+
+        } catch (error) {
+            console.error('Error fetching detail column data:', error);
+            toast.error('Failed to fetch details');
+        } finally {
+            setIsDetailLoading(false);
+        }
+    };
+
+    // Handle closing detail view
+    const handleDetailTabClose = () => {
+        setDetailApiData(null);
+        setDetailColumnInfo(null);
+        // Remove the detail level (-1) from stack
+        setLevelStack(prev => prev.filter(level => level !== -1));
+    };
+
+    // Handler for toggling file record enabled/disabled for auto-import
+    const handleToggleFileRecord = (record: any) => {
+        const recordId = String(record.FileName || record.FileSerialNo || record.id);
+        setEnabledFileRecords(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(recordId)) {
+                newSet.delete(recordId);
+            } else {
+                newSet.add(recordId);
+            }
+            return newSet;
+        });
+    };
+
+    // Handler for toggling all file records
+    const handleToggleAllFileRecords = (checked: boolean) => {
+        if (checked && apiData) {
+            const allRecordIds = new Set<string>(
+                apiData.map((record: any) => String(record.FileName || record.FileSerialNo || record.id))
+            );
+            setEnabledFileRecords(allRecordIds);
+        } else {
+            setEnabledFileRecords(new Set());
+        }
+    };
+
 
     // Simple useEffect to set pageLoaded after component mounts
     useEffect(() => {
@@ -882,6 +1095,20 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }
         };
     }, []);
+
+    // Initialize upload success counter for this component instance
+    useEffect(() => {
+        if (componentType === 'import') {
+            // Reset the upload success counter when component mounts
+            (window as any).__prevUploadSuccess = 0;
+        }
+        return () => {
+            // Cleanup on unmount
+            if (componentType === 'import') {
+                delete (window as any).__prevUploadSuccess;
+            }
+        };
+    }, [componentType]);
 
     // Auto-open filter modal when autoFetch is false and filterType is not "onPage"
     useEffect(() => {
@@ -1007,7 +1234,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             if (response?.data?.success) {
-                fetchData(filters,false);
+                fetchData(filters, false);
                 const rawMessage = response?.data?.message
                 const deleteMsg = rawMessage.replace(/<\/?Message>/g, "");
                 toast.success(deleteMsg)
@@ -1032,49 +1259,49 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     //     }
     // }
 
-const handleTableAction = (action: string, record: any) => {
-  setEntryFormData(record);
-  setEntryAction(action as "edit" | "delete" | "view");
+    const handleTableAction = (action: string, record: any) => {
+        setEntryFormData(record);
+        setEntryAction(action as "edit" | "delete" | "view");
 
-  const alertBox = document.getElementById("sr-alert");
+        const alertBox = document.getElementById("sr-alert");
 
-  // Announce Edit + View + Delete
-  if (alertBox) {
-    const readableAction =
-      action === "edit"
-        ? "Edit"
-        : action === "view"
-        ? "View"
-        : "Delete";
+        // Announce Edit + View + Delete
+        if (alertBox) {
+            const readableAction =
+                action === "edit"
+                    ? "Edit"
+                    : action === "view"
+                        ? "View"
+                        : "Delete";
 
-    alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
-  }
+            alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
+        }
 
-  // EDIT + VIEW → Open entry modal
+        // EDIT + VIEW → Open entry modal
 
-  if (action === "edit" || action === "view") {
-    setIsEntryModalOpen(true);
+        if (action === "edit" || action === "view") {
+            setIsEntryModalOpen(true);
 
-    // Focus the modal heading AFTER modal is visible
-    setTimeout(() => {
-      const modalHeading = document.getElementById("entry-modal-heading");
-      modalHeading?.focus();
-    }, 50);
+            // Focus the modal heading AFTER modal is visible
+            setTimeout(() => {
+                const modalHeading = document.getElementById("entry-modal-heading");
+                modalHeading?.focus();
+            }, 50);
 
-    return;
-  }
-  
+            return;
+        }
 
-  // DELETE → Open delete modal
-  if (action === "delete") {
-    setIsConfirmationModalOpen(true);
 
-    setTimeout(() => {
-      const deleteHeading = document.getElementById("delete-modal-heading");
-      deleteHeading?.focus();
-    }, 50);
-  }
-};
+        // DELETE → Open delete modal
+        if (action === "delete") {
+            setIsConfirmationModalOpen(true);
+
+            setTimeout(() => {
+                const deleteHeading = document.getElementById("delete-modal-heading");
+                deleteHeading?.focus();
+            }, 50);
+        }
+    };
 
     const handleConfirmDelete = () => {
         deleteMasterRecord();
@@ -1318,15 +1545,35 @@ const handleTableAction = (action: string, record: any) => {
                             <button
                                 key={index}
                                 style={{ backgroundColor: colors.cardBackground }}
-                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
+                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${level === -1
                                     ? `bg-${colors.primary} text-${colors.buttonText}`
-                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                    : currentLevel === level
+                                        ? `bg-${colors.primary} text-${colors.buttonText}`
+                                        : `bg-${colors.tabBackground} text-${colors.tabText}`
                                     }`}
-                                onClick={() => handleTabClick(level, index)}
+                                onClick={() => {
+                                    if (level === -1) {
+                                        // Clicking on detail tab closes it
+                                        handleDetailTabClose();
+                                    } else {
+                                        // Also close any open detail view when switching to other tabs
+                                        if (detailApiData) {
+                                            handleDetailTabClose();
+                                        }
+                                        handleTabClick(level, index);
+                                    }
+                                }}
                             >
-                                {level === 0
-                                    ? safePageData.getSetting('level') || safePageData.getCurrentLevel(level)?.name || 'Main'
-                                    : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
+                                {level === -1
+                                    ? (
+                                        <span className="flex items-center gap-2">
+                                            {detailColumnInfo?.tabName || 'Details'}
+                                            <span className="text-xs opacity-70">✕</span>
+                                        </span>
+                                    )
+                                    : level === 0
+                                        ? safePageData.getSetting('level') || safePageData.getCurrentLevel(level)?.name || 'Main'
+                                        : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
                                 }
                             </button>
                         ))}
@@ -1616,7 +1863,7 @@ const handleTableAction = (action: string, record: any) => {
                                             setIsConfirmModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
-                                         aria-label="Email Report"
+                                        aria-label="Email Report"
                                     >
                                         <FaEnvelope size={20} />
                                     </button>
@@ -1749,7 +1996,7 @@ const handleTableAction = (action: string, record: any) => {
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={handleSearchToggle}
                                         style={{ color: colors.text }}
-                                         aria-label="Search Records"
+                                        aria-label="Search Records"
                                     >
                                         <FaSearch size={20} />
                                     </button>
@@ -1905,12 +2152,12 @@ const handleTableAction = (action: string, record: any) => {
                 isOpen={isEditTableRowModalOpen}
                 onClose={() => {
                     setIsEditTableRowModalOpen(false)
-                    fetchData(filters,false);
+                    fetchData(filters, false);
                 }}
                 title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
                 pageName={OpenedPageName}
-                isTabs={componentType === "multientry" ? true : false}  
+                isTabs={componentType === "multientry" ? true : false}
                 wPage={safePageData.getSetting('wPage') || ''}
                 settings={{
                     ...safePageData.getCurrentLevel(currentLevel)?.settings,
@@ -1973,15 +2220,219 @@ const handleTableAction = (action: string, record: any) => {
 
                 </div>
             )}
-            {isLoading &&
+            {(isLoading || isDetailLoading) &&
                 <div className="flex inset-0 flex items-center justify-center z-[200] h-[100vh]">
                     <Loader />
                 </div>
             }
 
-            {/* Data Display */}
-            {!isLoading && (
-                (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
+            {/* Detail Column Data Display - Show when detail tab is active */}
+            {!isLoading && !isDetailLoading && detailApiData && detailColumnInfo && levelStack.includes(-1) && (
+                <div className="space-y-0">
+                    <div className="text-sm text-gray-500 mb-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            <div className="flex flex-col gap-1">
+                                <div className="text-lg font-semibold" style={{ color: colors.text }}>
+                                    {detailColumnInfo.tabName}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    Viewing details for: {detailColumnInfo.columnKey} = {detailColumnInfo.rowData[detailColumnInfo.columnKey]}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-xs">
+                                    Total Records: {detailApiData?.length || 0}
+                                </div>
+                                <button
+                                    className="px-3 py-1 text-sm rounded hover:opacity-80 transition-opacity"
+                                    style={{
+                                        backgroundColor: colors.buttonBackground,
+                                        color: colors.buttonText
+                                    }}
+                                    onClick={handleDetailTabClose}
+                                >
+                                    ← Back
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <DataTable
+                        data={detailApiData}
+                        settings={{
+                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                            webColumns: rs1Settings?.webColumns?.[0] || [],
+                        }}
+                        tableRef={tableRef}
+                        fullHeight={true}
+                        buttonConfig={pageData?.[0]?.buttonConfig}
+                        pageData={pageData}
+                    />
+                </div>
+            )}
+
+            {/* Main Data Display - only show when not viewing detail data */}
+            {!isLoading && !isDetailLoading && !levelStack.includes(-1) && (
+                componentType === 'import' ? (
+                    // Show batch upload interface with records table for import type
+                    <div className="space-y-4">
+                        {/* Info Card at Top */}
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg" style={{
+                            backgroundColor: colors.primary ? `${colors.primary}15` : '#eff6ff',
+                        }}>
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0">
+                                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                                        Automatic File Upload
+                                    </h3>
+                                    <p className="text-sm text-blue-800 mb-2">
+                                        Files uploaded here will be automatically matched with the records shown below based on their filename.
+                                        {apiData && apiData.length > 0 ? (
+                                            <> Currently, <strong>{apiData.length} record(s)</strong> are available for automatic matching.</>
+                                        ) : (
+                                            <> No records available yet - files can still be uploaded manually.</>
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-blue-700">
+                                        Supported formats: CSV, TXT, Excel (XLS, XLSX) • Max size: 3GB per file
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Upload Interface */}
+                        <div className="p-6 border rounded-lg" style={{
+                            backgroundColor: colors.cardBackground,
+                            borderColor: '#e5e7eb'
+                        }}>
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-semibold mb-2" style={{ color: colors.text }}>
+                                    {safePageData.getSetting('level') || 'Batch File Upload'}
+                                </h2>
+                                <p className="text-sm mb-4" style={{ color: colors.text, opacity: 0.7 }}>
+                                    Upload multiple files simultaneously. Files will be automatically matched with records by filename.
+                                </p>
+                            </div>
+                            <MultiFileUploadQueue
+                                apiRecords={(apiData || []).filter((record: any) => {
+                                    const recordId = String(record.FileName || record.FileSerialNo || record.id);
+                                    return enabledFileRecords.has(recordId);
+                                })}
+                                allRecords={apiData || []}
+                                filters={uploadFilters}
+                                maxFileSize={3 * 1024 * 1024 * 1024}
+                                allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
+                                onQueueUpdate={(stats) => {
+                                    console.log('Queue stats:', stats);
+                                    // Only refetch if we have new successful uploads
+                                    const prevSuccess = (window as any).__prevUploadSuccess || 0;
+                                    if (stats.success > prevSuccess && stats.success > 0) {
+                                        (window as any).__prevUploadSuccess = stats.success;
+                                        // Add a small delay and error handling
+                                        setTimeout(() => {
+                                            try {
+                                                // Validate that all required data is available before fetching
+                                                if (pageData && pageData.length > 0 && validationResult?.isValid) {
+                                                    fetchData(filters, false);
+                                                } else {
+                                                    console.log('Skipping refetch: page configuration not ready yet');
+                                                }
+                                            } catch (err) {
+                                                console.error('Error refetching data after upload:', err);
+                                            }
+                                        }, 500);
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Available Records Table */}
+                        {apiData && apiData.length > 0 && (
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-lg font-semibold" style={{ color: colors.text }}>
+                                        Available File Records ({enabledFileRecords.size}/{apiData.length} enabled)
+                                    </h3>
+                                    <button
+                                        onClick={() => handleToggleAllFileRecords(enabledFileRecords.size !== apiData.length)}
+                                        className="px-3 py-1 text-sm rounded border"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            borderColor: colors.primary,
+                                            color: colors.primary
+                                        }}
+                                    >
+                                        {enabledFileRecords.size === apiData.length ? 'Uncheck All' : 'Check All'}
+                                    </button>
+                                </div>
+
+                                <div className="border rounded-lg overflow-hidden" style={{ backgroundColor: colors.cardBackground }}>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead style={{ backgroundColor: colors.cardBackground, opacity: 0.9 }}>
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={enabledFileRecords.size === apiData.length}
+                                                            onChange={(e) => handleToggleAllFileRecords(e.target.checked)}
+                                                            className="w-4 h-4 rounded"
+                                                        />
+                                                    </th>
+                                                    {(() => {
+                                                        const columns = rs1Settings?.webColumns?.[0] ||
+                                                            (apiData[0] ? Object.keys(apiData[0]).filter(k => !k.startsWith('_')).map(k => ({ name: k, displayName: k })) : []);
+                                                        return columns.map((col: any, idx: number) => (
+                                                            <th key={idx} className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                                                {col.displayName || col.name || col}
+                                                            </th>
+                                                        ));
+                                                    })()}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200">
+                                                {(searchTerm ? filteredApiData : apiData).map((record: any, rowIdx: number) => {
+                                                    const recordId = String(record.FileName || record.FileSerialNo || record.id);
+                                                    const isEnabled = enabledFileRecords.has(recordId);
+                                                    const columns = rs1Settings?.webColumns?.[0] ||
+                                                        Object.keys(record).filter(k => !k.startsWith('_')).map(k => ({ name: k }));
+
+                                                    return (
+                                                        <tr
+                                                            key={rowIdx}
+                                                            className="hover:bg-gray-50"
+                                                            style={{ opacity: isEnabled ? 1 : 0.5 }}
+                                                        >
+                                                            <td className="px-4 py-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isEnabled}
+                                                                    onChange={() => handleToggleFileRecord(record)}
+                                                                    className="w-4 h-4 rounded"
+                                                                />
+                                                            </td>
+                                                            {columns.map((col: any, colIdx: number) => (
+                                                                <td key={colIdx} className="px-4 py-3 text-sm" style={{ color: colors.text }}>
+                                                                    {record[col.name || col] || '-'}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
                     <div className="flex items-center justify-center py-8 border rounded-lg" style={{
                         backgroundColor: colors.cardBackground,
                         borderColor: '#e5e7eb'
@@ -2042,81 +2493,84 @@ const handleTableAction = (action: string, record: any) => {
                                     } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
                             </div>
                         </div>
-                        </div>
                         {componentType === "multireport" ? (
                             <MultiEntryDataTables 
                                 data={filteredApiData} 
                             />
                         ) : (
                             <>
-                                <DataTable
-                                    data={filteredApiData}
-                                    settings={{
-                                        ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                        webColumns: rs1Settings?.webColumns?.[0] || [],
-                                        // Add level-specific settings
-                                        ...(currentLevel > 0 ? {
-                                            // Override responsive columns for second level if needed
-                                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                            webColumns: rs1Settings?.webColumns?.[0] || []
-                                        } : {})
-                                    }}
-                                    summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                                    onRowClick={handleRecordClick}
-                                    onRowSelect={handleRowSelect}
-                                    tableRef={tableRef}
-                                    isEntryForm={componentType === "entry" || componentType === "multientry"}
-                                    handleAction={handleTableAction}
-                                    fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
-                                    showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
-                                    buttonConfig={pageData?.[0]?.buttonConfig}
-                                    filtersCheck = {filters}
-                                    pageData={pageData}
-                                />
-                                {Object.keys(additionalTables).length > 0 && (
-                                    <div>
-                                        {Object.entries(additionalTables).map(([tableKey, tableData]) => {
-                                            // Get the title from jsonData based on the table key
-                                            const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
-                                            return (
-                                                <div key={tableKey} className="mt-3">
-                                                    <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
-                                                        {tableTitle}
-                                                    </h3>
-                                                    <DataTable
-                                                        data={tableData}
-                                                        settings={{
-                                                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                                                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                            webColumns: rs1Settings?.webColumns?.[0] || [],
-                                                            // Add level-specific settings
-                                                            ...(currentLevel > 0 ? {
-                                                                // Override responsive columns for second level if needed
-                                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                                webColumns: rs1Settings?.webColumns?.[0] || []
-                                                            } : {})
-                                                        }}
-                                                        summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                                                        tableRef={tableRef}
-                                                        fullHeight={false}
-                                                        buttonConfig={pageData?.[0]?.buttonConfig}
-                                                        filtersCheck = {filters}
-                                                        pageData={pageData}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                        <DataTable
+                            data={filteredApiData}
+                            settings={{
+                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                // Add level-specific settings
+                                ...(currentLevel > 0 ? {
+                                    // Override responsive columns for second level if needed
+                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                    webColumns: rs1Settings?.webColumns?.[0] || []
+                                } : {})
+                            }}
+                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                            onRowClick={handleRecordClick}
+                            onRowSelect={handleRowSelect}
+                            tableRef={tableRef}
+                            isEntryForm={componentType === "entry" || componentType === "multientry"}
+                            handleAction={handleTableAction}
+                            fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
+                            showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
+                            buttonConfig={pageData?.[0]?.buttonConfig}
+                            filtersCheck={filters}
+                            pageData={pageData}
+                            detailColumns={safePageData.getCurrentLevel(currentLevel)?.settings?.DetailColumn}
+                            onDetailColumnClick={handleDetailColumnClick}
+                        />
+                        {Object.keys(additionalTables).length > 0 && (
+                            <div>
+                                {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                    // Get the title from jsonData based on the table key
+                                    const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                    return (
+                                        <div key={tableKey} className="mt-3">
+                                            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                                {tableTitle}
+                                            </h3>
+                                            <DataTable
+                                                data={tableData}
+                                                settings={{
+                                                    ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                    webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                    // Add level-specific settings
+                                                    ...(currentLevel > 0 ? {
+                                                        // Override responsive columns for second level if needed
+                                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                        webColumns: rs1Settings?.webColumns?.[0] || []
+                                                    } : {})
+                                                }}
+                                                summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                                                tableRef={tableRef}
+                                                fullHeight={false}
+                                                buttonConfig={pageData?.[0]?.buttonConfig}
+                                                filtersCheck={filters}
+                                                pageData={pageData}
+                                            />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                             </>
                         )}
                     </div>
+                </div>
                 ))}
+
 
             {(componentType === 'entry' || componentType === "multientry") && safePageData.isValid && (
                 <EntryFormModal
@@ -2130,10 +2584,11 @@ const handleTableAction = (action: string, record: any) => {
                     setEntryEditData={setEntryFormData}
                     refreshFunction={() => {
                         // added extra parm if want to skip cache check  send second param as false
-                        fetchData(filters,false);
+                        fetchData(filters, false);
                     }}
                 />
             )}
+
         </div>
     );
 };
