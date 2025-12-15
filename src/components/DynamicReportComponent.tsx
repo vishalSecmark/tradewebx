@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppSelector } from '@/redux/hooks';
 import { selectAllMenuItems } from '@/redux/features/menuSlice';
 import axios from 'axios';
@@ -23,6 +23,7 @@ import Loader from './Loader';
 import apiService from '@/utils/apiService';
 import { decryptData, getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
 import { toast } from "react-toastify";
+import MultiFileUploadQueue from './upload/MultiFileUploadQueue';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -294,6 +295,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
 
+    // State for tracking enabled file records for auto-import
+    const [enabledFileRecords, setEnabledFileRecords] = useState<Set<string>>(new Set());
+
     // Add validation state
     const [validationResult, setValidationResult] = useState<PageDataValidationResult | null>(null);
     const [showValidationDetails, setShowValidationDetails] = useState(false);
@@ -395,6 +399,37 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
     const pageData: any = findPageData();
     const OpenedPageName = pageData?.length ? pageData[0]?.level : "Add Master From Details"
+    const uploadFilters = useMemo(() => {
+        const payload: Record<string, any> = {};
+
+        if (clientCode) {
+            payload.ClientCode = clientCode;
+        }
+
+        const hasFiltersConfigured = pageData?.[0]?.filters && Array.isArray(pageData[0].filters) && pageData[0].filters.length > 0;
+
+        if (hasFiltersConfigured && areFiltersInitialized) {
+            Object.entries(filters || {}).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+
+                if (value instanceof Date || moment.isMoment(value)) {
+                    payload[key] = moment(value).format('YYYYMMDD');
+                } else {
+                    payload[key] = value;
+                }
+            });
+        }
+
+        if (currentLevel > 0 && Object.keys(primaryKeyFilters).length > 0) {
+            Object.entries(primaryKeyFilters).forEach(([key, value]) => {
+                payload[key] = value;
+            });
+        }
+
+        return payload;
+    }, [clientCode, pageData, filters, areFiltersInitialized, currentLevel, primaryKeyFilters]);
 
     // Validate pageData whenever it changes
     useEffect(() => {
@@ -627,6 +662,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }, [pageData, clientCode, validationResult]);
 
+    // Initialize enabled file records when apiData changes (for import type)
+    useEffect(() => {
+        if (componentType === 'import' && apiData && apiData.length > 0) {
+            // Enable all records by default - use FileName or FileSerialNo as unique identifier
+            const allRecordIds = new Set<string>(
+                apiData.map((record: any) => String(record.FileName || record.FileSerialNo || record.id))
+            );
+            setEnabledFileRecords(allRecordIds);
+        }
+    }, [apiData, componentType]);
+
     // Add new useEffect to handle level changes and manual fetching
     useEffect(() => {
         // Only run after page is loaded and when level or primary filters change
@@ -839,6 +885,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     };
     // Modify handleRecordClick
     const handleRecordClick = (record: any) => {
+        // Handle import type - do nothing, upload interface is shown directly on page
+        if (componentType === 'import') {
+            return;
+        }
+
         if (currentLevel < (pageData?.[0].levels.length || 0) - 1) {
             // Get primary key from the current level's primaryHeaderKey or fallback to rs1Settings
             const primaryKey = pageData[0].levels[currentLevel].primaryHeaderKey ||
@@ -993,6 +1044,32 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setLevelStack(prev => prev.filter(level => level !== -1));
     };
 
+    // Handler for toggling file record enabled/disabled for auto-import
+    const handleToggleFileRecord = (record: any) => {
+        const recordId = String(record.FileName || record.FileSerialNo || record.id);
+        setEnabledFileRecords(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(recordId)) {
+                newSet.delete(recordId);
+            } else {
+                newSet.add(recordId);
+            }
+            return newSet;
+        });
+    };
+
+    // Handler for toggling all file records
+    const handleToggleAllFileRecords = (checked: boolean) => {
+        if (checked && apiData) {
+            const allRecordIds = new Set<string>(
+                apiData.map((record: any) => String(record.FileName || record.FileSerialNo || record.id))
+            );
+            setEnabledFileRecords(allRecordIds);
+        } else {
+            setEnabledFileRecords(new Set());
+        }
+    };
+
 
     // Simple useEffect to set pageLoaded after component mounts
     useEffect(() => {
@@ -1016,6 +1093,20 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }
         };
     }, []);
+
+    // Initialize upload success counter for this component instance
+    useEffect(() => {
+        if (componentType === 'import') {
+            // Reset the upload success counter when component mounts
+            (window as any).__prevUploadSuccess = 0;
+        }
+        return () => {
+            // Cleanup on unmount
+            if (componentType === 'import') {
+                delete (window as any).__prevUploadSuccess;
+            }
+        };
+    }, [componentType]);
 
     // Auto-open filter modal when autoFetch is false and filterType is not "onPage"
     useEffect(() => {
@@ -2179,7 +2270,165 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             {/* Main Data Display - only show when not viewing detail data */}
             {!isLoading && !isDetailLoading && !levelStack.includes(-1) && (
-                (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
+                componentType === 'import' ? (
+                    // Show batch upload interface with records table for import type
+                    <div className="space-y-4">
+                        {/* Info Card at Top */}
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg" style={{
+                            backgroundColor: colors.primary ? `${colors.primary}15` : '#eff6ff',
+                        }}>
+                            <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0">
+                                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                                        Automatic File Upload
+                                    </h3>
+                                    <p className="text-sm text-blue-800 mb-2">
+                                        Files uploaded here will be automatically matched with the records shown below based on their filename.
+                                        {apiData && apiData.length > 0 ? (
+                                            <> Currently, <strong>{apiData.length} record(s)</strong> are available for automatic matching.</>
+                                        ) : (
+                                            <> No records available yet - files can still be uploaded manually.</>
+                                        )}
+                                    </p>
+                                    <p className="text-xs text-blue-700">
+                                        Supported formats: CSV, TXT, Excel (XLS, XLSX) • Max size: 3GB per file
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Upload Interface */}
+                        <div className="p-6 border rounded-lg" style={{
+                            backgroundColor: colors.cardBackground,
+                            borderColor: '#e5e7eb'
+                        }}>
+                            <div className="mb-6">
+                                <h2 className="text-2xl font-semibold mb-2" style={{ color: colors.text }}>
+                                    {safePageData.getSetting('level') || 'Batch File Upload'}
+                                </h2>
+                                <p className="text-sm mb-4" style={{ color: colors.text, opacity: 0.7 }}>
+                                    Upload multiple files simultaneously. Files will be automatically matched with records by filename.
+                                </p>
+                            </div>
+                            <MultiFileUploadQueue
+                                apiRecords={(apiData || []).filter((record: any) => {
+                                    const recordId = String(record.FileName || record.FileSerialNo || record.id);
+                                    return enabledFileRecords.has(recordId);
+                                })}
+                                allRecords={apiData || []}
+                                filters={uploadFilters}
+                                maxFileSize={3 * 1024 * 1024 * 1024}
+                                allowedFileTypes={['csv', 'txt', 'xls', 'xlsx']}
+                                onQueueUpdate={(stats) => {
+                                    console.log('Queue stats:', stats);
+                                    // Only refetch if we have new successful uploads
+                                    const prevSuccess = (window as any).__prevUploadSuccess || 0;
+                                    if (stats.success > prevSuccess && stats.success > 0) {
+                                        (window as any).__prevUploadSuccess = stats.success;
+                                        // Add a small delay and error handling
+                                        setTimeout(() => {
+                                            try {
+                                                // Validate that all required data is available before fetching
+                                                if (pageData && pageData.length > 0 && validationResult?.isValid) {
+                                                    fetchData(filters, false);
+                                                } else {
+                                                    console.log('Skipping refetch: page configuration not ready yet');
+                                                }
+                                            } catch (err) {
+                                                console.error('Error refetching data after upload:', err);
+                                            }
+                                        }, 500);
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        {/* Available Records Table */}
+                        {apiData && apiData.length > 0 && (
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-lg font-semibold" style={{ color: colors.text }}>
+                                        Available File Records ({enabledFileRecords.size}/{apiData.length} enabled)
+                                    </h3>
+                                    <button
+                                        onClick={() => handleToggleAllFileRecords(enabledFileRecords.size !== apiData.length)}
+                                        className="px-3 py-1 text-sm rounded border"
+                                        style={{
+                                            backgroundColor: colors.cardBackground,
+                                            borderColor: colors.primary,
+                                            color: colors.primary
+                                        }}
+                                    >
+                                        {enabledFileRecords.size === apiData.length ? 'Uncheck All' : 'Check All'}
+                                    </button>
+                                </div>
+
+                                <div className="border rounded-lg overflow-hidden" style={{ backgroundColor: colors.cardBackground }}>
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead style={{ backgroundColor: colors.cardBackground, opacity: 0.9 }}>
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={enabledFileRecords.size === apiData.length}
+                                                            onChange={(e) => handleToggleAllFileRecords(e.target.checked)}
+                                                            className="w-4 h-4 rounded"
+                                                        />
+                                                    </th>
+                                                    {(() => {
+                                                        const columns = rs1Settings?.webColumns?.[0] ||
+                                                            (apiData[0] ? Object.keys(apiData[0]).filter(k => !k.startsWith('_')).map(k => ({ name: k, displayName: k })) : []);
+                                                        return columns.map((col: any, idx: number) => (
+                                                            <th key={idx} className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                                                {col.displayName || col.name || col}
+                                                            </th>
+                                                        ));
+                                                    })()}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200">
+                                                {(searchTerm ? filteredApiData : apiData).map((record: any, rowIdx: number) => {
+                                                    const recordId = String(record.FileName || record.FileSerialNo || record.id);
+                                                    const isEnabled = enabledFileRecords.has(recordId);
+                                                    const columns = rs1Settings?.webColumns?.[0] ||
+                                                        Object.keys(record).filter(k => !k.startsWith('_')).map(k => ({ name: k }));
+
+                                                    return (
+                                                        <tr
+                                                            key={rowIdx}
+                                                            className="hover:bg-gray-50"
+                                                            style={{ opacity: isEnabled ? 1 : 0.5 }}
+                                                        >
+                                                            <td className="px-4 py-3">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isEnabled}
+                                                                    onChange={() => handleToggleFileRecord(record)}
+                                                                    className="w-4 h-4 rounded"
+                                                                />
+                                                            </td>
+                                                            {columns.map((col: any, colIdx: number) => (
+                                                                <td key={colIdx} className="px-4 py-3 text-sm" style={{ color: colors.text }}>
+                                                                    {record[col.name || col] || '-'}
+                                                                </td>
+                                                            ))}
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
                     <div className="flex items-center justify-center py-8 border rounded-lg" style={{
                         backgroundColor: colors.cardBackground,
                         borderColor: '#e5e7eb'
@@ -2326,6 +2575,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                     }}
                 />
             )}
+
         </div>
     );
 };
