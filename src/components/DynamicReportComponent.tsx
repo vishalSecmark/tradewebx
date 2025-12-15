@@ -23,6 +23,8 @@ import Loader from './Loader';
 import apiService from '@/utils/apiService';
 import { decryptData, getLocalStorage, parseSettingsFromXml } from '@/utils/helper';
 import { toast } from "react-toastify";
+import MultiEntryDataTables from './MultiEntryDataTables';
+import { recursiveSearch, generatePdf, generateExcel, generateCsv } from '@/utils/multiEntryUtils';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -1103,15 +1105,19 @@ const handleTableAction = (action: string, record: any) => {
             return;
         }
 
-        const filtered = apiData.filter((row: any) => {
-            return Object.values(row).some((value: any) => {
-                if (value === null || value === undefined) return false;
-                return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+        if (componentType === "multireport") {
+            const filtered = recursiveSearch(apiData, searchTerm);
+            setFilteredApiData(filtered);
+        } else {
+            const filtered = apiData.filter((row: any) => {
+                return Object.values(row).some((value: any) => {
+                    if (value === null || value === undefined) return false;
+                    return String(value).toLowerCase().includes(searchTerm.toLowerCase());
+                });
             });
-        });
-
-        setFilteredApiData(filtered);
-    }, [apiData, searchTerm]);
+            setFilteredApiData(filtered);
+        }
+    }, [apiData, searchTerm, componentType]);
 
     // Add search handlers
     const handleSearchToggle = () => {
@@ -1601,37 +1607,6 @@ const handleTableAction = (action: string, record: any) => {
                                     </div>
                                 </div>
                             )}
-                            {isMasterButtonEnabled('Excel') && (
-                                <div className="relative group">
-                                    {/* <button
-                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                        onClick={() => exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata)}
-                                        style={{ color: colors.text }}
-                                    >
-                                        <FaFileExcel size={20} />
-                                    </button> */}
-                                    <button
-                                        onClick={() => {
-                                            if (apiData?.length > 25000) {
-                                                toast.warning(`Excel export allowed up to 25,000 records. You have ${apiData?.length} records.`);
-                                                return; // stop here, don't export
-                                            }
-                                            exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
-                                        }}
-                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                        style={{ color: colors.text }}
-                                        aria-label="Export Excel"
-                                    >
-                                        <FaFileExcel size={20} />
-                                    </button>
-
-
-                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                                        Export to Excel
-                                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
-                                    </div>
-                                </div>
-                            )}
                             {isMasterButtonEnabled('Email') && (
                                 <div className="relative group">
                                     <button
@@ -1694,7 +1669,13 @@ const handleTableAction = (action: string, record: any) => {
                                         <div className="relative group">
                                             <button
                                                 className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                                onClick={() => exportTableToCsv(tableRef.current, jsonData, apiData, pageData)}
+                                                onClick={() => {
+                                                    if (componentType === "multireport") {
+                                                        generateCsv(filteredApiData, jsonData);
+                                                    } else {
+                                                        exportTableToCsv(tableRef.current, jsonData, apiData, pageData)
+                                                    }
+                                                }}
                                                 style={{ color: colors.text }}
                                                 aria-label="Export to CSV"
                                             >
@@ -1706,18 +1687,41 @@ const handleTableAction = (action: string, record: any) => {
                                             </div>
                                         </div>
                                     )}
+                                    {isMasterButtonEnabled('Excel') && (
+                                        <div className="relative group">
+                                            <button
+                                                className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                                onClick={() => {
+                                                    if (componentType === "multireport") {
+                                                        generateExcel(filteredApiData, jsonData, appMetadata);
+                                                    } if (apiData?.length > 25000) {
+                                                        toast.warning(`Excel export allowed up to 25,000 records. You have ${apiData?.length} records.`);
+                                                        return; // stop here, don't export
+                                                    }   
+                                                    else {    
+                                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                                    }
+                                                }}
+                                                style={{ color: colors.text }}
+                                                aria-label="Export to Excel"
+                                            >
+                                                <FaFileExcel size={20} className="text-green-600" />
+                                            </button>
+                                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                                Export to Excel
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {isMasterButtonEnabled('PDF') && (
                                         <div className="relative group">
-                                            {/* <button
-                                                className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                                onClick={() => exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download')}
-                                                style={{ color: colors.text }}
-                                            >
-                                                <FaFilePdf size={20} />
-                                            </button> */}
                                             <button
                                                 onClick={() => {
+                                                    if (componentType === "multireport") {
+                                                        generatePdf(filteredApiData, jsonData, appMetadata);
+                                                        return;
+                                                    }
                                                     if (apiData?.length > 8000) {
                                                         toast.warning(`PDF export allowed up to 8,000 records. You have ${apiData?.length} records.`);
                                                         return; // stop here
@@ -1729,7 +1733,7 @@ const handleTableAction = (action: string, record: any) => {
                                                 style={{ color: colors.text }}
                                                 aria-label="Export to PDF"
                                             >
-                                                <FaFilePdf size={20} />
+                                                <FaFilePdf size={20} className='text-red-600'/>
                                             </button>
                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                                                 Export to PDF
@@ -2036,72 +2040,80 @@ const handleTableAction = (action: string, record: any) => {
                                         `Showing ${filteredApiData.length} of ${apiData?.length} records` :
                                         `Total Records: ${apiData?.length}`
                                     } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
-                                </div>
                             </div>
                         </div>
-                        <DataTable
-                            data={filteredApiData}
-                            settings={{
-                                ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                webColumns: rs1Settings?.webColumns?.[0] || [],
-                                // Add level-specific settings
-                                ...(currentLevel > 0 ? {
-                                    // Override responsive columns for second level if needed
-                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                    webColumns: rs1Settings?.webColumns?.[0] || []
-                                } : {})
-                            }}
-                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                            onRowClick={handleRecordClick}
-                            onRowSelect={handleRowSelect}
-                            tableRef={tableRef}
-                            isEntryForm={componentType === "entry" || componentType === "multientry"}
-                            handleAction={handleTableAction}
-                            fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
-                            showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
-                            buttonConfig={pageData?.[0]?.buttonConfig}
-                            filtersCheck = {filters}
-                            pageData={pageData}
-                        />
-                        {Object.keys(additionalTables).length > 0 && (
-                            <div>
-                                {Object.entries(additionalTables).map(([tableKey, tableData]) => {
-                                    // Get the title from jsonData based on the table key
-                                    const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
-                                    return (
-                                        <div key={tableKey} className="mt-3">
-                                            <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
-                                                {tableTitle}
-                                            </h3>
-                                            <DataTable
-                                                data={tableData}
-                                                settings={{
-                                                    ...safePageData.getCurrentLevel(currentLevel)?.settings,
-                                                    mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                                    tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                    webColumns: rs1Settings?.webColumns?.[0] || [],
-                                                    // Add level-specific settings
-                                                    ...(currentLevel > 0 ? {
-                                                        // Override responsive columns for second level if needed
-                                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
-                                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                                        webColumns: rs1Settings?.webColumns?.[0] || []
-                                                    } : {})
-                                                }}
-                                                summary={safePageData.getCurrentLevel(currentLevel)?.summary}
-                                                tableRef={tableRef}
-                                                fullHeight={false}
-                                                buttonConfig={pageData?.[0]?.buttonConfig}
-                                                filtersCheck = {filters}
-                                                pageData={pageData}
-                                            />
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                        </div>
+                        {componentType === "multireport" ? (
+                            <MultiEntryDataTables 
+                                data={filteredApiData} 
+                            />
+                        ) : (
+                            <>
+                                <DataTable
+                                    data={filteredApiData}
+                                    settings={{
+                                        ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                                        mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                        tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                        webColumns: rs1Settings?.webColumns?.[0] || [],
+                                        // Add level-specific settings
+                                        ...(currentLevel > 0 ? {
+                                            // Override responsive columns for second level if needed
+                                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                            webColumns: rs1Settings?.webColumns?.[0] || []
+                                        } : {})
+                                    }}
+                                    summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                                    onRowClick={handleRecordClick}
+                                    onRowSelect={handleRowSelect}
+                                    tableRef={tableRef}
+                                    isEntryForm={componentType === "entry" || componentType === "multientry"}
+                                    handleAction={handleTableAction}
+                                    fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
+                                    showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
+                                    buttonConfig={pageData?.[0]?.buttonConfig}
+                                    filtersCheck = {filters}
+                                    pageData={pageData}
+                                />
+                                {Object.keys(additionalTables).length > 0 && (
+                                    <div>
+                                        {Object.entries(additionalTables).map(([tableKey, tableData]) => {
+                                            // Get the title from jsonData based on the table key
+                                            const tableTitle = jsonData?.TableHeadings?.[0]?.[tableKey]?.[0] || tableKey.toUpperCase();
+                                            return (
+                                                <div key={tableKey} className="mt-3">
+                                                    <h3 className="text-lg font-semibold mb-4" style={{ color: colors.text }}>
+                                                        {tableTitle}
+                                                    </h3>
+                                                    <DataTable
+                                                        data={tableData}
+                                                        settings={{
+                                                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                                                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                            webColumns: rs1Settings?.webColumns?.[0] || [],
+                                                            // Add level-specific settings
+                                                            ...(currentLevel > 0 ? {
+                                                                // Override responsive columns for second level if needed
+                                                                mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                                                                tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                                                                webColumns: rs1Settings?.webColumns?.[0] || []
+                                                            } : {})
+                                                        }}
+                                                        summary={safePageData.getCurrentLevel(currentLevel)?.summary}
+                                                        tableRef={tableRef}
+                                                        fullHeight={false}
+                                                        buttonConfig={pageData?.[0]?.buttonConfig}
+                                                        filtersCheck = {filters}
+                                                        pageData={pageData}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 ))}
