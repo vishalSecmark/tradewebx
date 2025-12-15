@@ -86,6 +86,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         showYearDropdown
         showMonthDropdown
         dropdownMode="select"
+        popperProps={{
+          strategy: "fixed",
+        }}
         renderCustomHeader={({
           date,
           changeYear,
