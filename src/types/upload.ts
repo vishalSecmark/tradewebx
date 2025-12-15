@@ -126,3 +126,31 @@ export interface UploadQueueStats {
   paused: number;
   disabled: number;
 }
+
+// Import filter error types (from UpdateImportSeqFilter API response)
+export interface ImportFilterErrorRecord {
+  tf_Exchange: string;
+  tf_Segment: string;
+  tf_FileType: string;
+  tf_FileName: string;
+  tf_Status: string;
+  tf_Type: string;
+  tf_Code: string;
+  tf_Remark: string;
+  tf_FileDesc: string;
+}
+
+export interface FileImportErrors {
+  fileName: string;
+  fileSeqNo: string;
+  errors: ImportFilterErrorRecord[];
+  processStatus: {
+    flag: string;
+    message: string;
+  };
+}
+
+export interface ImportErrorsCache {
+  files: FileImportErrors[];
+  hasErrors: boolean;
+}

@@ -321,13 +321,20 @@ export const createChunks = (
  * Call UpdateImportSeqFilter API after successful upload
  * This API should be called once all files have been uploaded successfully
  * Uses JSON format matching the import API
+ * Returns rs0 (process status) and rs1 (error records) from the response
  */
 export const callUpdateImportSeqFilter = async (
   apiEndpoint: string,
   fileSeqNo: string,
   xFilter: Record<string, any>,
   userId: string = 'SA'
-): Promise<{ success: boolean; message?: string; error?: string; data?: any }> => {
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  processStatus?: { flag: string; message: string };
+  errorRecords?: any[];
+}> => {
   try {
     // Build the JSON payload matching the import API format
     const payload = {
@@ -369,11 +376,25 @@ export const callUpdateImportSeqFilter = async (
       };
     }
 
-    console.log('✅ UpdateImportSeqFilter API success:', result);
+    // Extract rs0 (process status) and rs1 (error records) from the response
+    const rs0 = result.data?.rs0?.[0] || {};
+    const rs1 = result.data?.rs1 || [];
+
+    const processStatus = {
+      flag: rs0.Column1 || 'S',
+      message: rs0.Column2 || 'Process Completed'
+    };
+
+    console.log('✅ UpdateImportSeqFilter API success:', {
+      processStatus,
+      errorRecordsCount: rs1.length
+    });
+
     return {
       success: true,
-      message: 'Import sequence filter updated successfully',
-      data: result,
+      message: processStatus.message,
+      processStatus,
+      errorRecords: rs1,
     };
   } catch (error: any) {
     console.error('❌ UpdateImportSeqFilter API exception:', error);

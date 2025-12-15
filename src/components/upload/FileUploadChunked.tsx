@@ -11,6 +11,7 @@ import {
   FailedChunk,
   UploadSummary,
   FileMetadata,
+  FileImportErrors,
 } from '@/types/upload';
 import {
   validateFile,
@@ -32,6 +33,7 @@ import {
 } from '@/utils/uploadService';
 import { BASE_URL, UPDATE_IMPORT_SEQ_URL } from '@/utils/constants';
 import { useTheme } from '@/context/ThemeContext';
+import ImportErrorsModal from './ImportErrorsModal';
 
 interface FileUploadChunkedProps {
   apiEndpoint: string;
@@ -92,6 +94,10 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [previewData, setPreviewData] = useState<{ headers: string[]; rows: any[] }>({ headers: [], rows: [] });
   const [summary, setSummary] = useState<UploadSummary | null>(null);
+
+  // Import errors state for the modal
+  const [importErrors, setImportErrors] = useState<FileImportErrors[]>([]);
+  const [showImportErrorsModal, setShowImportErrorsModal] = useState(false);
 
   // Refs
   const parserAbortRef = useRef<{ abort: () => void } | null>(null);
@@ -347,6 +353,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
         const fileSeqNo = String(metadata.selectedRecord.FileSerialNo);
         const xFilter = metadata.filters || {};
         const userId = metadata.selectedRecord?.UserId || 'SA';
+        const fileName = metadata.selectedRecord?.FileName || fileMetadata?.name || 'Unknown File';
 
         console.log('📤 Calling UpdateImportSeqFilter after successful upload...');
 
@@ -358,8 +365,32 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
         );
 
         if (updateResult.success) {
-          toast.success('Import sequence filter updated successfully');
-          console.log('✅ UpdateImportSeqFilter completed:', updateResult);
+          // Store the error records for the modal
+          const fileError: FileImportErrors = {
+            fileName: fileName,
+            fileSeqNo: fileSeqNo,
+            errors: updateResult.errorRecords || [],
+            processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
+          };
+
+          // Check if there are any error records
+          const hasErrors = fileError.errors.length > 0;
+
+          // Set the import errors and show modal
+          setImportErrors([fileError]);
+          setShowImportErrorsModal(true);
+
+          if (hasErrors) {
+            toast.warning(`Upload completed with ${fileError.errors.length} record(s) having errors`);
+          } else {
+            toast.success('Import completed successfully!');
+          }
+
+          console.log('✅ UpdateImportSeqFilter completed:', {
+            fileName,
+            errorCount: fileError.errors.length,
+            processStatus: fileError.processStatus
+          });
         } else {
           toast.warning(`Upload completed but failed to update import filter: ${updateResult.error}`);
           console.warn('⚠️ UpdateImportSeqFilter failed:', updateResult.error);
@@ -534,6 +565,7 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
           const fileSeqNo = String(metadata.selectedRecord.FileSerialNo);
           const xFilter = metadata.filters || {};
           const userId = metadata.selectedRecord?.UserId || 'SA';
+          const fileName = metadata.selectedRecord?.FileName || fileMetadata?.name || 'Unknown File';
 
           console.log('📤 Calling UpdateImportSeqFilter after successful Excel upload...');
 
@@ -545,8 +577,32 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
           );
 
           if (updateResult.success) {
-            toast.success('Import sequence filter updated successfully');
-            console.log('✅ UpdateImportSeqFilter completed:', updateResult);
+            // Store the error records for the modal
+            const fileError: FileImportErrors = {
+              fileName: fileName,
+              fileSeqNo: fileSeqNo,
+              errors: updateResult.errorRecords || [],
+              processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
+            };
+
+            // Check if there are any error records
+            const hasErrors = fileError.errors.length > 0;
+
+            // Set the import errors and show modal
+            setImportErrors([fileError]);
+            setShowImportErrorsModal(true);
+
+            if (hasErrors) {
+              toast.warning(`Upload completed with ${fileError.errors.length} record(s) having errors`);
+            } else {
+              toast.success('Import completed successfully!');
+            }
+
+            console.log('✅ UpdateImportSeqFilter completed:', {
+              fileName,
+              errorCount: fileError.errors.length,
+              processStatus: fileError.processStatus
+            });
           } else {
             toast.warning(`Upload completed but failed to update import filter: ${updateResult.error}`);
             console.warn('⚠️ UpdateImportSeqFilter failed:', updateResult.error);
@@ -994,6 +1050,14 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
           </div>
         </div>
       )}
+
+      {/* Import Errors Modal */}
+      <ImportErrorsModal
+        isOpen={showImportErrorsModal}
+        onClose={() => setShowImportErrorsModal(false)}
+        fileErrors={importErrors}
+        hasErrors={importErrors.some(f => f.errors.length > 0)}
+      />
     </div>
   );
 };
