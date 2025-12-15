@@ -47,7 +47,7 @@ const CustomRecursiveTable = ({ data, level = 0, colors, fonts }: { data: any[];
                         {primitiveKeys.map(key => (
                             <th 
                                 key={key} 
-                                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
+                                className="px-2 py-1 text-left text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
                                 style={{ color: colors.buttonText }}
                             >
                                 {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -82,22 +82,22 @@ const ExpandableRow = ({ row, primitiveKeys, arrayKeys, level, colors, fonts }: 
         <>
             <tr className={`hover:bg-gray-50 transition-colors ${level % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                 {arrayKeys.length > 0 && (
-                     <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 w-10 text-center cursor-pointer" onClick={toggleExpand}>
+                     <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-500 w-8 text-center cursor-pointer" onClick={toggleExpand}>
                          {isExpanded ? <FaMinus size={10} /> : <FaPlus size={10} />}
                     </td>
                 )}
                 {primitiveKeys.map((key: string) => (
-                    <td key={key} className="px-4 py-2 whitespace-nowrap text-sm text-gray-700">
+                    <td key={key} className="px-2 py-1 whitespace-nowrap text-xs text-gray-700">
                         {row[key]}
                     </td>
                 ))}
             </tr>
             {isExpanded && arrayKeys.length > 0 && (
                 <tr>
-                    <td colSpan={primitiveKeys.length + (arrayKeys.length > 0 ? 1 : 0)} className="p-4 bg-gray-50">
+                    <td colSpan={primitiveKeys.length + (arrayKeys.length > 0 ? 1 : 0)} className="p-2 bg-gray-50">
                         {arrayKeys.map((arrayKey: string) => (
                             row[arrayKey] && row[arrayKey].length > 0 && (
-                                <div key={arrayKey} className="mb-4 last:mb-0">
+                                <div key={arrayKey} className="mb-2 last:mb-0">
                                     <div className="mb-2 text-xs font-semibold text-gray-500 uppercase">
                                         {arrayKey.replace(/([A-Z])/g, ' $1').trim()}
                                     </div>
