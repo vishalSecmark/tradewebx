@@ -471,8 +471,8 @@ const ColumnFilterDropdown: React.FC<{
 
 interface DataTableProps {
     data: any[];
-    filtersCheck?:any;
-    pageData?:any
+    filtersCheck?: any;
+    pageData?: any
     settings?: {
         hideEntireColumn?: string;
         leftAlignedColumns?: string;
@@ -498,6 +498,14 @@ interface DataTableProps {
         ButtonType: string;
         EnabledTag: string;
     }>;
+    // Props for detail column click functionality
+    detailColumns?: Array<{
+        Srno: number;
+        wKey: string;
+        showLabel: boolean;
+        DetailAPI: any;
+    }>;
+    onDetailColumnClick?: (columnKey: string, rowData: any) => void;
 }
 
 interface DecimalColumn {
@@ -630,20 +638,20 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig,filtersCheck,pageData}) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig, filtersCheck, pageData, detailColumns, onDetailColumnClick }) => {
 
     // 🆕 ADDITION: Multi-checkbox toggle handler
-  const toggleRowSelection = (row: any, checked: boolean) => {
-    const updated = checked
-      ? [...selectedRows, row]
-      : selectedRows.filter(r => r._id !== row._id);
+    const toggleRowSelection = (row: any, checked: boolean) => {
+        const updated = checked
+            ? [...selectedRows, row]
+            : selectedRows.filter(r => r._id !== row._id);
 
-    setSelectedRows(updated);
-    onRowSelect?.(updated);    
-  };
+        setSelectedRows(updated);
+        onRowSelect?.(updated);
+    };
 
 
-  
+
 
 
     // Helper function to check if a button is enabled
@@ -669,16 +677,16 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
 
     // 🆕 Auto-select all rows on load if multiCheckBox is enabled
-useEffect(() => {
-    if (settings?.multiCheckBox && data?.length > 0) {
-      setSelectedRows(data.map((row, index) => ({
-        ...row,
-        _id: row.id || index
-      })));
-    }
-  }, [settings?.multiCheckBox, data]);
+    useEffect(() => {
+        if (settings?.multiCheckBox && data?.length > 0) {
+            setSelectedRows(data.map((row, index) => ({
+                ...row,
+                _id: row.id || index
+            })));
+        }
+    }, [settings?.multiCheckBox, data]);
 
-  
+
     // Filter functions
     const handleFilterChange = useCallback((columnKey: string, filter: ColumnFilter | null) => {
         setFilters(prev => {
@@ -907,7 +915,7 @@ useEffect(() => {
             return ''; // Default color on error
         }
     };
-      
+
 
     // Process and format the data
     const formattedData = useMemo(() => {
@@ -1035,44 +1043,44 @@ useEffect(() => {
         // Filter out hidden columns
         columnsToShow = columnsToShow.filter(key => !columnsToHide.includes(key));
 
-    //this function is used for multiCheckBoxColumn in income report
-    const multiCheckBoxColumn = settings?.multiCheckBox
-    ? [{
-        key: "_multiSelect",
-        name: "",
-        width: 35,
-        renderHeaderCell: () => {
-          const allIds = rows.map(r => r._id);
-          const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
-  
-          return (
-            <input
-              type="checkbox"
-              checked={allSelected}
-              aria-label="Select all rows"
-              onChange={(e) => {
-                const newSelection = e.target.checked ? [...rows] : [];
-                setSelectedRows(newSelection);
-                onRowSelect?.(newSelection);
-              }}
-            />
-          );
-        },
-        renderCell: ({ row }: any) => (
-          <input
-            type="checkbox"
-            checked={selectedRows.some(r => r._id === row._id)}
-            aria-label={`Select row with ID ${row._id}`}
-            onChange={(e) => toggleRowSelection(row, e.target.checked)}
-          />
-        )
-      }]
-    : [];
-  
+        //this function is used for multiCheckBoxColumn in income report
+        const multiCheckBoxColumn = settings?.multiCheckBox
+            ? [{
+                key: "_multiSelect",
+                name: "",
+                width: 35,
+                renderHeaderCell: () => {
+                    const allIds = rows.map(r => r._id);
+                    const allSelected = allIds.length > 0 && allIds.every(id => selectedRows.some(r => r._id === id));
 
-    console.log(selectedRows,'selectedRows');
-    
-    
+                    return (
+                        <input
+                            type="checkbox"
+                            checked={allSelected}
+                            aria-label="Select all rows"
+                            onChange={(e) => {
+                                const newSelection = e.target.checked ? [...rows] : [];
+                                setSelectedRows(newSelection);
+                                onRowSelect?.(newSelection);
+                            }}
+                        />
+                    );
+                },
+                renderCell: ({ row }: any) => (
+                    <input
+                        type="checkbox"
+                        checked={selectedRows.some(r => r._id === row._id)}
+                        aria-label={`Select row with ID ${row._id}`}
+                        onChange={(e) => toggleRowSelection(row, e.target.checked)}
+                    />
+                )
+            }]
+            : [];
+
+
+        console.log(selectedRows, 'selectedRows');
+
+
 
         const baseColumns: any = [
             ...multiCheckBoxColumn,
@@ -1108,7 +1116,7 @@ useEffect(() => {
                                     }}
                                 />
                             </div>
-                            
+
                         );
                     },
                     renderCell: ({ row }) => (
@@ -1178,7 +1186,7 @@ useEffect(() => {
                         return (
                             <div className="expanded-content" style={{ height: '100%', overflow: 'auto' }}>
                                 <div className="expanded-header">
-                                
+
                                     <div
                                         className="expand-button"
                                         onClick={() => {
@@ -1256,7 +1264,7 @@ useEffect(() => {
                                             </button>
                                         </div>
                                     )}
-                                     
+
                                 </div>
                             </div>
                         );
@@ -1323,12 +1331,17 @@ useEffect(() => {
                     (col: any) => col.key === key
                 );
 
+                // Check if this column is a detail column (clickable)
+                const isDetailColumn = detailColumns?.some(
+                    (col: any) => col.wKey === key && col.DetailAPI
+                );
+
                 // Get custom width for this column if specified
                 const customWidth = columnWidthMap[key];
                 const columnConfig: any = {
                     key,
                     name: key,
-                    
+
                     sortable: true,
                     resizable: true,
                 };
@@ -1346,12 +1359,14 @@ useEffect(() => {
                 return {
                     ...columnConfig,
                     headerCellClass: isNumericColumn ? 'numeric-column-header' : '',
-                    cellClass: isNumericColumn ? 'numeric-column-cell' : '',
+                    cellClass: `${isNumericColumn ? 'numeric-column-cell' : ''} ${isDetailColumn ? 'detail-column-cell' : ''}`.trim(),
                     renderHeaderCell: () => {
-                        // console.log('🏗️ Creating header cell for column:', key, 'with filter:', filters[key] || null);
                         return (
                             <div className="flex items-center justify-between w-full">
-                                <span className="truncate flex-1">{key}</span>
+                                <span className={`truncate flex-1 ${isDetailColumn ? 'detail-column-header' : ''}`}>
+                                    {key}
+                                    {isDetailColumn && <span className="ml-1 text-xs opacity-70">🔗</span>}
+                                </span>
                                 <div onClick={(e) => e.stopPropagation()}>
                                     <ColumnFilterDropdown
                                         column={key}
@@ -1369,45 +1384,94 @@ useEffect(() => {
                         }
                         return <div></div>;
                     },
-                    formatter: (props: any) => {
-                        const value = props.row[key];
-                        const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
-                        const numValue = parseFloat(rawValue);
+                    // Use renderCell for detail columns to make them clickable
+                    renderCell: isDetailColumn
+                        ? ({ row }: any) => {
+                            const value = row[key];
+                            const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
+                            const numValue = parseFloat(rawValue);
 
-                        if (!isNaN(numValue) && !isLeftAligned) {
-                            const formattedValue = new Intl.NumberFormat('en-IN', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                            }).format(numValue);
+                            let displayValue: React.ReactNode = value;
 
-                            const textColor = numValue < 0 ? '#dc2626' :
-                                numValue > 0 ? '#16a34a' :
-                                    colors.text;
+                            // Apply numeric formatting if applicable
+                            if (!isNaN(numValue) && !isLeftAligned) {
+                                const formattedValue = new Intl.NumberFormat('en-IN', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }).format(numValue);
 
-                            return <div className="numeric-value" style={{ color: textColor }}>{formattedValue}</div>;
-                        }
+                                const textColor = numValue < 0 ? '#dc2626' :
+                                    numValue > 0 ? '#16a34a' :
+                                        colors.text;
 
-                        if (React.isValidElement(value)) {
-                            const childValue = (value as StyledValue).props.children;
-                            const childNumValue = parseFloat(childValue.toString());
-
-                            if (!isNaN(childNumValue) && !isLeftAligned) {
-                                return React.cloneElement(value as StyledElement, {
-                                    className: "numeric-value",
-                                    style: { ...(value as StyledElement).props.style }
-                                });
+                                displayValue = <span style={{ color: textColor }}>{formattedValue}</span>;
+                            } else if (React.isValidElement(value)) {
+                                displayValue = value;
                             }
+
+                            return (
+                                <div
+                                    className="detail-column-value"
+                                    style={{
+                                        color: '#2563eb',
+                                        fontWeight: 500,
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (onDetailColumnClick) {
+                                            onDetailColumnClick(key, row);
+                                        }
+                                    }}
+                                    role="button"
+                                    aria-label={`Click to view ${key} details`}
+                                >
+                                    {displayValue}
+                                </div>
+                            );
+                        }
+                        : undefined,
+                    formatter: !isDetailColumn
+                        ? (props: any) => {
+                            const value = props.row[key];
+                            const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
+                            const numValue = parseFloat(rawValue);
+
+                            if (!isNaN(numValue) && !isLeftAligned) {
+                                const formattedValue = new Intl.NumberFormat('en-IN', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                }).format(numValue);
+
+                                const textColor = numValue < 0 ? '#dc2626' :
+                                    numValue > 0 ? '#16a34a' :
+                                        colors.text;
+
+                                return <div className="numeric-value" style={{ color: textColor }}>{formattedValue}</div>;
+                            }
+
+                            if (React.isValidElement(value)) {
+                                const childValue = (value as StyledValue).props.children;
+                                const childNumValue = parseFloat(childValue.toString());
+
+                                if (!isNaN(childNumValue) && !isLeftAligned) {
+                                    return React.cloneElement(value as StyledElement, {
+                                        className: "numeric-value",
+                                        style: { ...(value as StyledElement).props.style }
+                                    });
+                                }
+                                return value;
+                            }
+
                             return value;
                         }
-
-                        return value;
-                    }
+                        : undefined
                 };
             }),
         ];
         if (isEntryForm) {
             baseColumns.push(
-        {
+                {
                     key: "actions",
                     name: "Actions",
                     width: 220,
@@ -1418,43 +1482,43 @@ useEffect(() => {
 
                     //  ALWAYS VISIBLE BUTTONS
                     renderCell: ({ row }) => (
-                        <div className="flex gap-4" 
-                        aria-label="The Actions column, press Enter, then Tab to reach the View button. Press Enter to open the popup, and use Tab to move to the Edit and Delete buttons."
+                        <div className="flex gap-4"
+                            aria-label="The Actions column, press Enter, then Tab to reach the View button. Press Enter to open the popup, and use Tab to move to the Edit and Delete buttons."
                         >
-                        <button
-                            tabIndex={-1}      
-                            role="button"
-                            aria-label={`View details for ${row.Name || "this record"}`}
-                            onClick={() => handleAction("view", row)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
-                            className="view-button"
-                        >
-                            View
-                        </button>
+                            <button
+                                tabIndex={-1}
+                                role="button"
+                                aria-label={`View details for ${row.Name || "this record"}`}
+                                onClick={() => handleAction("view", row)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
+                                className="view-button"
+                            >
+                                View
+                            </button>
 
-                        <button
-                            tabIndex={-1}
-                            role="button"
-                            aria-label={`Edit details for ${row.Name || "this record"}`}
-                            disabled={row?.isUpdated === "true"}
-                            onClick={() => handleAction("edit", row)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
-                            className="edit-button"
-                        >
-                            Edit
-                        </button>
+                            <button
+                                tabIndex={-1}
+                                role="button"
+                                aria-label={`Edit details for ${row.Name || "this record"}`}
+                                disabled={row?.isUpdated === "true"}
+                                onClick={() => handleAction("edit", row)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
+                                className="edit-button"
+                            >
+                                Edit
+                            </button>
 
-                        <button
-                            tabIndex={-1}
-                            role="button"
-                            aria-label={`Delete ${row.Name || "this record"}`}
-                            disabled={row?.isDeleted === "true"}
-                            onClick={() => handleAction("delete", row)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
-                            className="delete-button"
-                        >
-                            Delete
-                        </button>
+                            <button
+                                tabIndex={-1}
+                                role="button"
+                                aria-label={`Delete ${row.Name || "this record"}`}
+                                disabled={row?.isDeleted === "true"}
+                                onClick={() => handleAction("delete", row)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
+                                className="delete-button"
+                            >
+                                Delete
+                            </button>
                         </div>
                     ),
 
@@ -1462,52 +1526,52 @@ useEffect(() => {
                     renderEditCell: ({ row }) => (
                         <div className="flex gap-4">
 
-                        {/* VIEW */}
-                        <button
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`View details for ${row.Name || "this record"}`}
-                            onClick={() => handleAction("view", row)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
-                            className="view-button"
-                        >
-                            View
-                        </button>
+                            {/* VIEW */}
+                            <button
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`View details for ${row.Name || "this record"}`}
+                                onClick={() => handleAction("view", row)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAction("view", row)}
+                                className="view-button"
+                            >
+                                View
+                            </button>
 
-                        {/* EDIT */}
-                        <button
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`Edit details for ${row.Name || "this record"}`}
-                            disabled={row?.isUpdated === "true"}
-                            onClick={() => handleAction("edit", row)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
-                            className="edit-button"
-                        >
-                            Edit
-                        </button>
+                            {/* EDIT */}
+                            <button
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`Edit details for ${row.Name || "this record"}`}
+                                disabled={row?.isUpdated === "true"}
+                                onClick={() => handleAction("edit", row)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAction("edit", row)}
+                                className="edit-button"
+                            >
+                                Edit
+                            </button>
 
-                        {/* DELETE */}
-                        <button
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`Delete ${row.Name || "this record"}`}
-                            disabled={row?.isDeleted === "true"}
-                            onClick={() => handleAction("delete", row)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
-                            className="delete-button"
-                        >
-                            Delete
-                        </button>
+                            {/* DELETE */}
+                            <button
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`Delete ${row.Name || "this record"}`}
+                                disabled={row?.isDeleted === "true"}
+                                onClick={() => handleAction("delete", row)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAction("delete", row)}
+                                className="delete-button"
+                            >
+                                Delete
+                            </button>
 
                         </div>
                     )
-        }
+                }
             )
         }
         return baseColumns;
-        
-    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters]);
+
+    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters, detailColumns, onDetailColumnClick]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
@@ -1550,8 +1614,8 @@ useEffect(() => {
         return sortRows(filteredData, sortColumns);
     }, [filteredData, sortColumns]);
 
-// ✅ Add this near your top-level state
-const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
+    // ✅ Add this near your top-level state
+    const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
 
 
 
@@ -1607,25 +1671,25 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
     }, [rows, summary?.columnsToShowTotal, settings?.valueBasedTextColor]);
 
     function announce(message: string) {
-    const old = document.getElementById("nvdaLiveRegion");
-    if (old) old.remove();
+        const old = document.getElementById("nvdaLiveRegion");
+        if (old) old.remove();
 
-    const region = document.createElement("div");
-    region.id = "nvdaLiveRegion";
-    region.setAttribute("role", "status");
-    region.setAttribute("aria-live", "assertive");
-    region.setAttribute("aria-atomic", "true");
-    region.style.position = "absolute";
-    region.style.left = "-9999px";
-    region.style.height = "1px";
-    region.style.overflow = "hidden";
+        const region = document.createElement("div");
+        region.id = "nvdaLiveRegion";
+        region.setAttribute("role", "status");
+        region.setAttribute("aria-live", "assertive");
+        region.setAttribute("aria-atomic", "true");
+        region.style.position = "absolute";
+        region.style.left = "-9999px";
+        region.style.height = "1px";
+        region.style.overflow = "hidden";
 
-    document.body.appendChild(region);
+        document.body.appendChild(region);
 
-    setTimeout(() => {
-        region.textContent = message;
-    }, 20);
-}
+        setTimeout(() => {
+            region.textContent = message;
+        }, 20);
+    }
 
     return (
         <div
@@ -1634,54 +1698,54 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
         >
             {isLoading && (
                 <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm z-50">
-                <Loader />
+                    <Loader />
                 </div>
             )}
             {settings.multiCheckBox &&
-            <>
-                  <div className='flex'>
-        <button
-         style={{
-            background: colors?.color3 || "#f0f0f0",
-         }}
-        onClick={() => handleLoopThroughMultiSelectKeyHandler(setIsLoading,filtersCheck,userId,pageData,selectedRows,userType,sendEmailMultiCheckbox,setSelectedRows)}
-        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
-        >
-        Send Pdf Mail
-        </button>
+                <>
+                    <div className='flex'>
+                        <button
+                            style={{
+                                background: colors?.color3 || "#f0f0f0",
+                            }}
+                            onClick={() => handleLoopThroughMultiSelectKeyHandler(setIsLoading, filtersCheck, userId, pageData, selectedRows, userType, sendEmailMultiCheckbox, setSelectedRows)}
+                            className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+                        >
+                            Send Pdf Mail
+                        </button>
 
-        <button
-         style={{
-            background: colors?.color3 || "#f0f0f0",
-         }}
-        onClick={() => handleLoopThroughMultiSelectKeyHandlerExcel(setIsLoading,filtersCheck,userId,pageData,selectedRows,userType,sendEmailMultiCheckbox,setSelectedRows)}
-        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
-        >
-        Send Excel Mail
-        </button>
-                 
-        <button
-         style={{
-            background: colors?.color3 || "#f0f0f0",
-         }}
-        onClick={() => handleLoopThroughMultiSelectKeyHandlerDownloadZip(selectedRows,setIsLoading,filtersCheck,userId,userType,setSelectedRows)}
-        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
-        >
-        Download Pdf Zip
-        </button>
-        {/* handleLoopThroughMultiSelectKeyHandlerDownloadExcel */}
-        <button
-         style={{
-            background: colors?.color3 || "#f0f0f0",
-         }}
-        onClick={ () => handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel(selectedRows,setIsLoading,filtersCheck,userId,userType,setSelectedRows)}
-        className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
-        >
-        Download Excel Zip
-        </button>
-        </div>
-            </>}
-                                                                                                
+                        <button
+                            style={{
+                                background: colors?.color3 || "#f0f0f0",
+                            }}
+                            onClick={() => handleLoopThroughMultiSelectKeyHandlerExcel(setIsLoading, filtersCheck, userId, pageData, selectedRows, userType, sendEmailMultiCheckbox, setSelectedRows)}
+                            className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+                        >
+                            Send Excel Mail
+                        </button>
+
+                        <button
+                            style={{
+                                background: colors?.color3 || "#f0f0f0",
+                            }}
+                            onClick={() => handleLoopThroughMultiSelectKeyHandlerDownloadZip(selectedRows, setIsLoading, filtersCheck, userId, userType, setSelectedRows)}
+                            className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+                        >
+                            Download Pdf Zip
+                        </button>
+                        {/* handleLoopThroughMultiSelectKeyHandlerDownloadExcel */}
+                        <button
+                            style={{
+                                background: colors?.color3 || "#f0f0f0",
+                            }}
+                            onClick={() => handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel(selectedRows, setIsLoading, filtersCheck, userId, userType, setSelectedRows)}
+                            className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
+                        >
+                            Download Excel Zip
+                        </button>
+                    </div>
+                </>}
+
             <DataGrid
                 columns={columns}
                 rows={rows}
@@ -1697,19 +1761,30 @@ const [failedRowIds, setFailedRowIds] = useState<number[]>([]);
                 }}
                 bottomSummaryRows={summmaryRows}
                 onCellClick={(props: any) => {
-                    if (onRowClick && !props.column.key.startsWith('_') && !isEntryForm) {
+                    // Skip row click for detail columns (they have their own click handler)
+                    const isDetailColumnClicked = detailColumns?.some(
+                        (col: any) => col.wKey === props.column.key && col.DetailAPI
+                    );
+
+                    if (onRowClick && !props.column.key.startsWith('_') && !isEntryForm && !isDetailColumnClicked) {
                         const { _id, _expanded, ...rowData } = rows[props.rowIdx];
                         onRowClick(rowData);
                     }
                 }}
-                  
+
                 /** NVDA + KEYBOARD USERS */
                 onCellKeyDown={(props: any, event: any) => {
+                    // Skip row click for detail columns
+                    const isDetailColumnClicked = detailColumns?.some(
+                        (col: any) => col.wKey === props.column.key && col.DetailAPI
+                    );
+
                     if (
                         (event.key === "Enter" || event.key === " ") &&
                         onRowClick &&
                         !props.column.key.startsWith("_") &&
-                        !isEntryForm
+                        !isEntryForm &&
+                        !isDetailColumnClicked
                     ) {
                         event.preventDefault();
 
@@ -2270,8 +2345,8 @@ export const exportTableToPdf = async (
         const userType = getLocalStorage('userType') || '';
 
         const filterXml = buildFilterXml(filters, userId);
-        console.log(filterXml,'filterXml email');
-        
+        console.log(filterXml, 'filterXml email');
+
 
         const sendEmail = async (base64Data: string, pdfName: string) => {
             const emailXml = `
@@ -2304,8 +2379,8 @@ export const exportTableToPdf = async (
         };
 
         try {
-            console.log(filterXml,'filterXml typst');
-            
+            console.log(filterXml, 'filterXml typst');
+
             if (showTypes) {
                 const fetchXml = `
                     <dsXml>
@@ -2357,8 +2432,8 @@ export const downloadOption = async (
     const userId = getLocalStorage('userId') || '';
 
     const filterXml = buildFilterXml(filters, userId);
-    console.log(filterXml,'filterXml');
-    
+    console.log(filterXml, 'filterXml');
+
 
     const xmlData1 = ` 
     <dsXml>

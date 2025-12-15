@@ -299,22 +299,31 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [showValidationDetails, setShowValidationDetails] = useState(false);
     const [announceMsg, setAnnounceMsg] = useState("");
 
+    // State for Detail Column Click functionality
+    const [detailApiData, setDetailApiData] = useState<any>(null);
+    const [detailColumnInfo, setDetailColumnInfo] = useState<{
+        columnKey: string;
+        rowData: any;
+        tabName: string;
+    } | null>(null);
+    const [isDetailLoading, setIsDetailLoading] = useState(false);
+
     useEffect(() => {
-    if (!announceMsg) return;
+        if (!announceMsg) return;
 
-    let region = document.getElementById("nvdaLiveRegion");
-    if (!region) {
-        region = document.createElement("div");
-        region.id = "nvdaLiveRegion";
-        region.setAttribute("role", "status");
-        region.setAttribute("aria-live", "assertive");
-        region.setAttribute("aria-atomic", "true");
-        region.style.position = "absolute";
-        region.style.left = "-9999px";
-        document.body.appendChild(region);
-    }
+        let region = document.getElementById("nvdaLiveRegion");
+        if (!region) {
+            region = document.createElement("div");
+            region.id = "nvdaLiveRegion";
+            region.setAttribute("role", "status");
+            region.setAttribute("aria-live", "assertive");
+            region.setAttribute("aria-atomic", "true");
+            region.style.position = "absolute";
+            region.style.left = "-9999px";
+            document.body.appendChild(region);
+        }
 
-    region.textContent = announceMsg;
+        region.textContent = announceMsg;
     }, [announceMsg]);
 
     // Add comprehensive cache for different filter combinations and levels
@@ -328,7 +337,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         timestamp: number;
     }>>({});
 
-    console.log("check level stack",levelStack)
+    console.log("check level stack", levelStack)
 
     // Function to generate cache key based on current state
     const generateCacheKey = (level: number, filters: Record<string, any>, primaryFilters: Record<string, any>) => {
@@ -406,11 +415,11 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     }, [pageData]);
 
     // Helper functions for button configuration
-    const isMasterButtonEnabled = (buttonType: string): boolean => {       
+    const isMasterButtonEnabled = (buttonType: string): boolean => {
         if (!pageData?.[0]?.MasterbuttonConfig) return true; // Default to enabled if no config
         const buttonConfig = pageData[0].MasterbuttonConfig.find(
             (config: any) => config.ButtonType === buttonType
-        );        
+        );
 
         return buttonConfig?.EnabledTag === "true";
     };
@@ -449,7 +458,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         }
     }
 
-    
+
 
     function xmlToJson(xml) {
         if (xml.nodeType !== 1) return null; // Only process element nodes
@@ -764,14 +773,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             }));
             setApiData(dataWithId);
 
-                // NVDA ANNOUNCEMENT (correct place)
-                if (dataWithId.length >= 0) {
-                    const msg = dataWithId.length > 0
-                        ? `Total records available are ${dataWithId.length}.`
-                        : "No data available.";
+            // NVDA ANNOUNCEMENT (correct place)
+            if (dataWithId.length >= 0) {
+                const msg = dataWithId.length > 0
+                    ? `Total records available are ${dataWithId.length}.`
+                    : "No data available.";
 
-                    setAnnounceMsg(msg);
-                }
+                setAnnounceMsg(msg);
+            }
 
             // Handle additional tables (rs3, rs4, etc.)
             const additionalTablesData: Record<string, any[]> = {};
@@ -856,6 +865,133 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         const cleaned = record.map(({ _id, _select, _expanded, ...rest }) => rest);
         setSelectedRows(cleaned);
     }
+
+    // Handle click on columns with DetailAPI configuration
+    const handleDetailColumnClick = async (columnKey: string, rowData: any) => {
+        console.log('Detail Column Click:', columnKey, rowData);
+
+        // Get the current level settings
+        const currentLevelSettings = pageData?.[0]?.levels?.[currentLevel]?.settings;
+        if (!currentLevelSettings?.DetailColumn) {
+            console.log('No DetailColumn configuration found');
+            return;
+        }
+
+        // Find the DetailColumn configuration for this column
+        const detailConfig = currentLevelSettings.DetailColumn.find(
+            (config: any) => config.wKey === columnKey
+        );
+
+        if (!detailConfig?.DetailAPI) {
+            console.log('No DetailAPI configuration found for column:', columnKey);
+            return;
+        }
+
+        setIsDetailLoading(true);
+
+        try {
+            const dsXml = detailConfig.DetailAPI.dsXml;
+
+            // Build J_Ui string
+            const jUiData = dsXml.J_Ui || {};
+            const jUiString = Object.entries(jUiData)
+                .map(([key, value]) => `"${key}":"${value}"`)
+                .join(',');
+
+            // Build X_Filter with placeholder substitution
+            let filterXml = '';
+            const xFilter = dsXml.X_Filter || {};
+            Object.entries(xFilter).forEach(([key, value]) => {
+                let actualValue = value as string;
+
+                // Replace ##ColumnName## placeholders with actual row values
+                const placeholderMatch = actualValue.match(/##(.+?)##/);
+                if (placeholderMatch) {
+                    const placeholderKey = placeholderMatch[1];
+                    actualValue = rowData[placeholderKey] || '';
+                }
+
+                filterXml += `<${key}>${actualValue}</${key}>`;
+            });
+
+            // Add date filters from the current filters state
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                if (value instanceof Date || moment.isMoment(value)) {
+                    const formattedDate = moment(value).format('YYYYMMDD');
+                    filterXml += `<${key}>${formattedDate}</${key}>`;
+                } else {
+                    filterXml += `<${key}>${value}</${key}>`;
+                }
+            });
+
+            // Build J_Api with placeholder substitution
+            const jApiData = dsXml.J_Api || {};
+            const jApiString = Object.entries(jApiData)
+                .map(([key, value]) => {
+                    let actualValue = value as string;
+                    if (actualValue === '<<USERID>>') {
+                        actualValue = getLocalStorage('userId') || '';
+                    }
+                    return `"${key}":"${actualValue}"`;
+                })
+                .join(',');
+
+            const xmlData = `<dsXml>
+                <J_Ui>${jUiString}</J_Ui>
+                <Sql>${dsXml.Sql || ''}</Sql>
+                <X_Filter>${filterXml}</X_Filter>
+                <X_GFilter></X_GFilter>
+                <J_Api>${jApiString}, "UserType":"${getLocalStorage('userType')}"</J_Api>
+            </dsXml>`;
+
+            console.log('Detail API Request:', xmlData);
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            console.log('Detail API Response:', response);
+
+            const rawData = response?.data?.data?.rs0 || [];
+
+            // Check for error flag in the response
+            if (rawData.length > 0 && rawData[0].ErrorFlag === 'E' && rawData[0].ErrorMessage) {
+                setErrorMessage(rawData[0].ErrorMessage);
+                setIsErrorModalOpen(true);
+                return;
+            }
+
+            const dataWithId = rawData.map((row: any, index: number) => ({
+                ...row,
+                _id: index
+            }));
+
+            // Store detail data and info
+            setDetailApiData(dataWithId);
+            setDetailColumnInfo({
+                columnKey,
+                rowData,
+                tabName: `${columnKey} Details`
+            });
+
+            // Add a new tab for detail view (using -1 as special level identifier)
+            setLevelStack(prev => [...prev, -1]);
+
+        } catch (error) {
+            console.error('Error fetching detail column data:', error);
+            toast.error('Failed to fetch details');
+        } finally {
+            setIsDetailLoading(false);
+        }
+    };
+
+    // Handle closing detail view
+    const handleDetailTabClose = () => {
+        setDetailApiData(null);
+        setDetailColumnInfo(null);
+        // Remove the detail level (-1) from stack
+        setLevelStack(prev => prev.filter(level => level !== -1));
+    };
 
 
     // Simple useEffect to set pageLoaded after component mounts
@@ -1005,7 +1141,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
 
             const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
             if (response?.data?.success) {
-                fetchData(filters,false);
+                fetchData(filters, false);
                 const rawMessage = response?.data?.message
                 const deleteMsg = rawMessage.replace(/<\/?Message>/g, "");
                 toast.success(deleteMsg)
@@ -1030,49 +1166,49 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     //     }
     // }
 
-const handleTableAction = (action: string, record: any) => {
-  setEntryFormData(record);
-  setEntryAction(action as "edit" | "delete" | "view");
+    const handleTableAction = (action: string, record: any) => {
+        setEntryFormData(record);
+        setEntryAction(action as "edit" | "delete" | "view");
 
-  const alertBox = document.getElementById("sr-alert");
+        const alertBox = document.getElementById("sr-alert");
 
-  // Announce Edit + View + Delete
-  if (alertBox) {
-    const readableAction =
-      action === "edit"
-        ? "Edit"
-        : action === "view"
-        ? "View"
-        : "Delete";
+        // Announce Edit + View + Delete
+        if (alertBox) {
+            const readableAction =
+                action === "edit"
+                    ? "Edit"
+                    : action === "view"
+                        ? "View"
+                        : "Delete";
 
-    alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
-  }
+            alertBox.textContent = `${OpenedPageName} ${readableAction}. model page opened`;
+        }
 
-  // EDIT + VIEW → Open entry modal
+        // EDIT + VIEW → Open entry modal
 
-  if (action === "edit" || action === "view") {
-    setIsEntryModalOpen(true);
+        if (action === "edit" || action === "view") {
+            setIsEntryModalOpen(true);
 
-    // Focus the modal heading AFTER modal is visible
-    setTimeout(() => {
-      const modalHeading = document.getElementById("entry-modal-heading");
-      modalHeading?.focus();
-    }, 50);
+            // Focus the modal heading AFTER modal is visible
+            setTimeout(() => {
+                const modalHeading = document.getElementById("entry-modal-heading");
+                modalHeading?.focus();
+            }, 50);
 
-    return;
-  }
-  
+            return;
+        }
 
-  // DELETE → Open delete modal
-  if (action === "delete") {
-    setIsConfirmationModalOpen(true);
 
-    setTimeout(() => {
-      const deleteHeading = document.getElementById("delete-modal-heading");
-      deleteHeading?.focus();
-    }, 50);
-  }
-};
+        // DELETE → Open delete modal
+        if (action === "delete") {
+            setIsConfirmationModalOpen(true);
+
+            setTimeout(() => {
+                const deleteHeading = document.getElementById("delete-modal-heading");
+                deleteHeading?.focus();
+            }, 50);
+        }
+    };
 
     const handleConfirmDelete = () => {
         deleteMasterRecord();
@@ -1312,15 +1448,35 @@ const handleTableAction = (action: string, record: any) => {
                             <button
                                 key={index}
                                 style={{ backgroundColor: colors.cardBackground }}
-                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${currentLevel === level
+                                className={`px-4 py-2 text-sm rounded-t-lg font-bold ${level === -1
                                     ? `bg-${colors.primary} text-${colors.buttonText}`
-                                    : `bg-${colors.tabBackground} text-${colors.tabText}`
+                                    : currentLevel === level
+                                        ? `bg-${colors.primary} text-${colors.buttonText}`
+                                        : `bg-${colors.tabBackground} text-${colors.tabText}`
                                     }`}
-                                onClick={() => handleTabClick(level, index)}
+                                onClick={() => {
+                                    if (level === -1) {
+                                        // Clicking on detail tab closes it
+                                        handleDetailTabClose();
+                                    } else {
+                                        // Also close any open detail view when switching to other tabs
+                                        if (detailApiData) {
+                                            handleDetailTabClose();
+                                        }
+                                        handleTabClick(level, index);
+                                    }
+                                }}
                             >
-                                {level === 0
-                                    ? safePageData.getSetting('level') || safePageData.getCurrentLevel(level)?.name || 'Main'
-                                    : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
+                                {level === -1
+                                    ? (
+                                        <span className="flex items-center gap-2">
+                                            {detailColumnInfo?.tabName || 'Details'}
+                                            <span className="text-xs opacity-70">✕</span>
+                                        </span>
+                                    )
+                                    : level === 0
+                                        ? safePageData.getSetting('level') || safePageData.getCurrentLevel(level)?.name || 'Main'
+                                        : safePageData.getCurrentLevel(level)?.name || `Level ${level}`
                                 }
                             </button>
                         ))}
@@ -1641,7 +1797,7 @@ const handleTableAction = (action: string, record: any) => {
                                             setIsConfirmModalOpen(true);
                                         }}
                                         style={{ color: colors.text }}
-                                         aria-label="Email Report"
+                                        aria-label="Email Report"
                                     >
                                         <FaEnvelope size={20} />
                                     </button>
@@ -1745,7 +1901,7 @@ const handleTableAction = (action: string, record: any) => {
                                         className="p-2 rounded hover:bg-gray-100 transition-colors"
                                         onClick={handleSearchToggle}
                                         style={{ color: colors.text }}
-                                         aria-label="Search Records"
+                                        aria-label="Search Records"
                                     >
                                         <FaSearch size={20} />
                                     </button>
@@ -1901,12 +2057,12 @@ const handleTableAction = (action: string, record: any) => {
                 isOpen={isEditTableRowModalOpen}
                 onClose={() => {
                     setIsEditTableRowModalOpen(false)
-                    fetchData(filters,false);
+                    fetchData(filters, false);
                 }}
                 title={safePageData.getCurrentLevel(currentLevel)?.name || 'Edit'}
                 tableData={selectedRows}
                 pageName={OpenedPageName}
-                isTabs={componentType === "multientry" ? true : false}  
+                isTabs={componentType === "multientry" ? true : false}
                 wPage={safePageData.getSetting('wPage') || ''}
                 settings={{
                     ...safePageData.getCurrentLevel(currentLevel)?.settings,
@@ -1969,14 +2125,60 @@ const handleTableAction = (action: string, record: any) => {
 
                 </div>
             )}
-            {isLoading &&
+            {(isLoading || isDetailLoading) &&
                 <div className="flex inset-0 flex items-center justify-center z-[200] h-[100vh]">
                     <Loader />
                 </div>
             }
 
-            {/* Data Display */}
-            {!isLoading && (
+            {/* Detail Column Data Display - Show when detail tab is active */}
+            {!isLoading && !isDetailLoading && detailApiData && detailColumnInfo && levelStack.includes(-1) && (
+                <div className="space-y-0">
+                    <div className="text-sm text-gray-500 mb-2">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            <div className="flex flex-col gap-1">
+                                <div className="text-lg font-semibold" style={{ color: colors.text }}>
+                                    {detailColumnInfo.tabName}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    Viewing details for: {detailColumnInfo.columnKey} = {detailColumnInfo.rowData[detailColumnInfo.columnKey]}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-xs">
+                                    Total Records: {detailApiData?.length || 0}
+                                </div>
+                                <button
+                                    className="px-3 py-1 text-sm rounded hover:opacity-80 transition-opacity"
+                                    style={{
+                                        backgroundColor: colors.buttonBackground,
+                                        color: colors.buttonText
+                                    }}
+                                    onClick={handleDetailTabClose}
+                                >
+                                    ← Back
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <DataTable
+                        data={detailApiData}
+                        settings={{
+                            ...safePageData.getCurrentLevel(currentLevel)?.settings,
+                            mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
+                            tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
+                            webColumns: rs1Settings?.webColumns?.[0] || [],
+                        }}
+                        tableRef={tableRef}
+                        fullHeight={true}
+                        buttonConfig={pageData?.[0]?.buttonConfig}
+                        pageData={pageData}
+                    />
+                </div>
+            )}
+
+            {/* Main Data Display - only show when not viewing detail data */}
+            {!isLoading && !isDetailLoading && !levelStack.includes(-1) && (
                 (!apiData || apiData?.length === 0) && hasFetchAttempted ? (
                     <div className="flex items-center justify-center py-8 border rounded-lg" style={{
                         backgroundColor: colors.cardBackground,
@@ -2063,8 +2265,10 @@ const handleTableAction = (action: string, record: any) => {
                             fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                             showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                             buttonConfig={pageData?.[0]?.buttonConfig}
-                            filtersCheck = {filters}
+                            filtersCheck={filters}
                             pageData={pageData}
+                            detailColumns={safePageData.getCurrentLevel(currentLevel)?.settings?.DetailColumn}
+                            onDetailColumnClick={handleDetailColumnClick}
                         />
                         {Object.keys(additionalTables).length > 0 && (
                             <div>
@@ -2095,7 +2299,7 @@ const handleTableAction = (action: string, record: any) => {
                                                 tableRef={tableRef}
                                                 fullHeight={false}
                                                 buttonConfig={pageData?.[0]?.buttonConfig}
-                                                filtersCheck = {filters}
+                                                filtersCheck={filters}
                                                 pageData={pageData}
                                             />
                                         </div>
@@ -2118,7 +2322,7 @@ const handleTableAction = (action: string, record: any) => {
                     setEntryEditData={setEntryFormData}
                     refreshFunction={() => {
                         // added extra parm if want to skip cache check  send second param as false
-                        fetchData(filters,false);
+                        fetchData(filters, false);
                     }}
                 />
             )}
