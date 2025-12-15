@@ -28,7 +28,9 @@ import {
   calculateUploadStats,
   createChunks,
   uploadChunkWithRetry,
+  callUpdateImportSeqFilter,
 } from '@/utils/uploadService';
+import { BASE_URL, UPDATE_IMPORT_SEQ_URL } from '@/utils/constants';
 import { useTheme } from '@/context/ThemeContext';
 
 interface FileUploadChunkedProps {
@@ -333,10 +335,42 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
   };
 
   // Handle upload completion - called when ALL chunks are done
-  const handleUploadCompletion = (sessionId: string, totalRecords: number) => {
+  const handleUploadCompletion = async (sessionId: string, totalRecords: number) => {
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
 
     setProgress(prev => ({ ...prev, status: 'completed' }));
+
+    // Call UpdateImportSeqFilter API after successful upload
+    if (metadata?.selectedRecord?.FileSerialNo && failedChunks.length === 0) {
+      try {
+        const updateApiEndpoint = `${BASE_URL}${UPDATE_IMPORT_SEQ_URL}`;
+        const fileSeqNo = String(metadata.selectedRecord.FileSerialNo);
+        const xFilter = metadata.filters || {};
+        const userId = metadata.selectedRecord?.UserId || 'SA';
+
+        console.log('📤 Calling UpdateImportSeqFilter after successful upload...');
+
+        const updateResult = await callUpdateImportSeqFilter(
+          updateApiEndpoint,
+          fileSeqNo,
+          xFilter,
+          userId
+        );
+
+        if (updateResult.success) {
+          toast.success('Import sequence filter updated successfully');
+          console.log('✅ UpdateImportSeqFilter completed:', updateResult);
+        } else {
+          toast.warning(`Upload completed but failed to update import filter: ${updateResult.error}`);
+          console.warn('⚠️ UpdateImportSeqFilter failed:', updateResult.error);
+        }
+      } catch (error: any) {
+        toast.warning(`Upload completed but failed to update import filter: ${error.message}`);
+        console.error('❌ Error calling UpdateImportSeqFilter:', error);
+      }
+    } else if (failedChunks.length > 0) {
+      console.log('⚠️ Skipping UpdateImportSeqFilter due to failed chunks');
+    }
 
     if (onUploadComplete) {
       onUploadComplete({
@@ -493,6 +527,38 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       setProgress(prev => ({ ...prev, status: 'completed' }));
       toast.success(`Upload completed! ${stats.successfulRecords} records uploaded successfully.`);
 
+      // Call UpdateImportSeqFilter API after successful upload (for Excel files)
+      if (metadata?.selectedRecord?.FileSerialNo && stats.failedChunks === 0) {
+        try {
+          const updateApiEndpoint = `${BASE_URL}${UPDATE_IMPORT_SEQ_URL}`;
+          const fileSeqNo = String(metadata.selectedRecord.FileSerialNo);
+          const xFilter = metadata.filters || {};
+          const userId = metadata.selectedRecord?.UserId || 'SA';
+
+          console.log('📤 Calling UpdateImportSeqFilter after successful Excel upload...');
+
+          const updateResult = await callUpdateImportSeqFilter(
+            updateApiEndpoint,
+            fileSeqNo,
+            xFilter,
+            userId
+          );
+
+          if (updateResult.success) {
+            toast.success('Import sequence filter updated successfully');
+            console.log('✅ UpdateImportSeqFilter completed:', updateResult);
+          } else {
+            toast.warning(`Upload completed but failed to update import filter: ${updateResult.error}`);
+            console.warn('⚠️ UpdateImportSeqFilter failed:', updateResult.error);
+          }
+        } catch (error: any) {
+          toast.warning(`Upload completed but failed to update import filter: ${error.message}`);
+          console.error('❌ Error calling UpdateImportSeqFilter:', error);
+        }
+      } else if (stats.failedChunks > 0) {
+        console.log('⚠️ Skipping UpdateImportSeqFilter due to failed chunks');
+      }
+
       if (onUploadComplete) {
         onUploadComplete(uploadSummary);
       }
@@ -640,9 +706,8 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
       {!selectedFile && (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all ${
-            isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-          }`}
+          className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+            }`}
           style={{ backgroundColor: isDragActive ? colors.cardBackground : 'transparent' }}
         >
           <input {...getInputProps()} />

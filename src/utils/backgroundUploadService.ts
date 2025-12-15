@@ -11,7 +11,8 @@ import {
   generateSessionId,
   getFileMetadata,
 } from '@/utils/fileParser';
-import { uploadChunkWithRetry } from '@/utils/uploadService';
+import { uploadChunkWithRetry, callUpdateImportSeqFilter } from '@/utils/uploadService';
+import { BASE_URL, UPDATE_IMPORT_SEQ_URL } from '@/utils/constants';
 
 const QUEUE_STORAGE_KEY = 'background_upload_queue';
 const QUEUE_UPDATE_EVENT = 'queue_updated';
@@ -142,8 +143,8 @@ class BackgroundUploadManager {
 
         // Match with or without extension, case-insensitive
         return recordFileNameLower === fileNameLower ||
-               recordFileNameLower === fileNameWithoutExtLower ||
-               recordFileNameLower.replace(/\.[^/.]+$/, '') === fileNameWithoutExtLower;
+          recordFileNameLower === fileNameWithoutExtLower ||
+          recordFileNameLower.replace(/\.[^/.]+$/, '') === fileNameWithoutExtLower;
       });
 
       // If not matched in enabled records, check if it exists in all records (disabled)
@@ -156,8 +157,8 @@ class BackgroundUploadManager {
           const recordFileNameLower = recordFileName.toLowerCase();
 
           return recordFileNameLower === fileNameLower ||
-                 recordFileNameLower === fileNameWithoutExtLower ||
-                 recordFileNameLower.replace(/\.[^/.]+$/, '') === fileNameWithoutExtLower;
+            recordFileNameLower === fileNameWithoutExtLower ||
+            recordFileNameLower.replace(/\.[^/.]+$/, '') === fileNameWithoutExtLower;
         });
 
         if (disabledMatch) {
@@ -277,6 +278,33 @@ class BackgroundUploadManager {
         item.status = 'success';
         item.endTime = Date.now();
         item.progress = 100;
+
+        // Call UpdateImportSeqFilter API after successful upload
+        if (item.matchedRecord?.FileSerialNo) {
+          try {
+            const updateApiEndpoint = `${BASE_URL}${UPDATE_IMPORT_SEQ_URL}`;
+            const fileSeqNo = String(item.matchedRecord.FileSerialNo);
+            const xFilter = item.filters || {};
+            const userId = item.matchedRecord?.UserId || 'SA';
+
+            console.log('📤 Calling UpdateImportSeqFilter after successful background upload...');
+
+            const updateResult = await callUpdateImportSeqFilter(
+              updateApiEndpoint,
+              fileSeqNo,
+              xFilter,
+              userId
+            );
+
+            if (updateResult.success) {
+              console.log('✅ UpdateImportSeqFilter completed for file:', item.fileName);
+            } else {
+              console.warn('⚠️ UpdateImportSeqFilter failed for file:', item.fileName, updateResult.error);
+            }
+          } catch (error: any) {
+            console.error('❌ Error calling UpdateImportSeqFilter for file:', item.fileName, error);
+          }
+        }
       }
     } catch (error: any) {
       item.status = 'failed';

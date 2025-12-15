@@ -316,3 +316,70 @@ export const createChunks = (
 
   return chunks;
 };
+
+/**
+ * Call UpdateImportSeqFilter API after successful upload
+ * This API should be called once all files have been uploaded successfully
+ * Uses JSON format matching the import API
+ */
+export const callUpdateImportSeqFilter = async (
+  apiEndpoint: string,
+  fileSeqNo: string,
+  xFilter: Record<string, any>,
+  userId: string = 'SA'
+): Promise<{ success: boolean; message?: string; error?: string; data?: any }> => {
+  try {
+    // Build the JSON payload matching the import API format
+    const payload = {
+      FileSeqNo: fileSeqNo,
+      X_Filter: xFilter,
+      UserId: userId,
+    };
+
+    console.log('📤 Calling UpdateImportSeqFilter API:', {
+      endpoint: apiEndpoint,
+      payload
+    });
+
+    const response = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      const errorMessage = result.message || `HTTP ${response.status}: ${response.statusText}`;
+      console.error('❌ UpdateImportSeqFilter API error:', errorMessage);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+
+    if (result.success === false || result.status === false) {
+      const errorMessage = result.message || result.data || 'Unknown API error';
+      console.error('❌ UpdateImportSeqFilter API returned error:', errorMessage);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+
+    console.log('✅ UpdateImportSeqFilter API success:', result);
+    return {
+      success: true,
+      message: 'Import sequence filter updated successfully',
+      data: result,
+    };
+  } catch (error: any) {
+    console.error('❌ UpdateImportSeqFilter API exception:', error);
+    return {
+      success: false,
+      error: error.message || 'Unknown error occurred',
+    };
+  }
+};
