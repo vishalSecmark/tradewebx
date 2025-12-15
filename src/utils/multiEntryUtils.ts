@@ -47,7 +47,7 @@ export const recursiveSearch = (data: any[], searchTerm: string): any[] => {
         });
 
         // Check children recursively
-        let childMatch = false;
+        const childMatch = false;
         const newItem = { ...item };
         let hasChildMatch = false;
 
@@ -287,7 +287,7 @@ export const generateExcel = async (data: any[], headerData: any, appMetadata: a
     worksheet.getCell('C2').font = { size: 12, bold: true };
     worksheet.getCell('C2').alignment = { horizontal: 'center' };
 
-    let startRow = 5;
+    const startRow = 5;
     processNodeForExcel(worksheet, data, 0, startRow);
 
     const buffer = await workbook.xlsx.writeBuffer();
