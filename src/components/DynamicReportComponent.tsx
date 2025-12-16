@@ -332,7 +332,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         timestamp: number;
     }>>({});
 
-    console.log("check level stack", levelStack)
+    console.log("check level stack",levelStack)
 
     // Function to generate cache key based on current state
     const generateCacheKey = (level: number, filters: Record<string, any>, primaryFilters: Record<string, any>) => {
@@ -2312,7 +2312,7 @@ const handleTableAction = (action: string, record: any) => {
                             fullHeight={Object.keys(additionalTables).length > 0 ? false : true}
                             showViewDocument={safePageData.getCurrentLevel(currentLevel)?.settings?.ShowViewDocument}
                             buttonConfig={pageData?.[0]?.buttonConfig}
-                            filtersCheck={filters}
+                            filtersCheck = {filters}
                             pageData={pageData}
                         />
                         {Object.keys(additionalTables).length > 0 && (
@@ -2344,7 +2344,7 @@ const handleTableAction = (action: string, record: any) => {
                                                 tableRef={tableRef}
                                                 fullHeight={false}
                                                 buttonConfig={pageData?.[0]?.buttonConfig}
-                                                filtersCheck={filters}
+                                                filtersCheck = {filters}
                                                 pageData={pageData}
                                             />
                                         </div>
