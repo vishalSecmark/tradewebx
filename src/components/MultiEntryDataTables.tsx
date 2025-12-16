@@ -90,7 +90,7 @@ const CustomRecursiveTable = ({ data, level = 0, colors, fonts }: { data: any[];
 };
 
 const ExpandableRow = ({ row, primitiveKeys, arrayKeys, level, colors, fonts, index }: any) => {
-    const [isExpanded, setIsExpanded] = useState(true); 
+    const [isExpanded, setIsExpanded] = useState(level === 0); 
     const [isHovered, setIsHovered] = useState(false);
 
     const toggleExpand = () => setIsExpanded(!isExpanded);
