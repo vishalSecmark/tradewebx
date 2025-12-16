@@ -1797,13 +1797,19 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const itemsXml = finalItems.map(item => {
             const itemTags = Object.entries(item)
-                .map(([key, value]) => `<${key}>${specialCharValueReplacer(value)}</${key}>`)
+                .map(([key, value]) => {
+                    const val = (value === undefined || value === null) ? "" : specialCharValueReplacer(value);
+                    return `<${key}>${val}</${key}>`;
+                })
                 .join('');
             return `<item>${itemTags}</item>`;
         }).join('');
 
         const masterXml = Object.entries(masterValues)
-            .map(([key, value]) => `<${key}>${specialCharValueReplacer(value)}</${key}>`)
+            .map(([key, value]) => {
+                const val = (value === undefined || value === null) ? "" : specialCharValueReplacer(value);
+                return `<${key}>${val}</${key}>`;
+            })
             .join('');
 
         const userId = getLocalStorage('userId') || '';
@@ -3191,6 +3197,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 ...(childEntriesTable.length > 0
                                                   ? Object.keys(childEntriesTable[0])
                                                       .filter((key) => key !== "SerialNo" && key?.toLowerCase() !== "id" && key !== "IsDeleted" && key !== "isInserted") // Exclude SerialNo and id
+                                                      .slice(0, 6)
                                                       .map((key) => ({
                                                         key,
                                                         name: key,
