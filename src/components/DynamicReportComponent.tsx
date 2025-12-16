@@ -2495,7 +2495,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                         </div>
                         {componentType === "multireport" ? (
                             <MultiEntryDataTables 
-                                data={filteredApiData} 
+                                data={filteredApiData}
+                                settings={safePageData.getCurrentLevel(currentLevel)?.settings} 
                             />
                         ) : (
                             <>
@@ -2505,7 +2506,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 ...safePageData.getCurrentLevel(currentLevel)?.settings,
                                 mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                 tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
-                                webColumns: rs1Settings?.webColumns?.[0] || [],
+                                webColumns: rs1Settings?.webColumns?.[0] || [], 
                                 // Add level-specific settings
                                 ...(currentLevel > 0 ? {
                                     // Override responsive columns for second level if needed
