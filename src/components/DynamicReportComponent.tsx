@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope, FaArrowsAltH } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -292,6 +292,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [hasFetchAttempted, setHasFetchAttempted] = useState(false);
     const [pageLoaded, setPageLoaded] = useState(false);
     const [isPageLoaded, setIsPageLoaded] = useState(false);
+    const [isAutoWidth, setIsAutoWidth] = useState(false);
 
     // Error handling state
     const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
@@ -1874,6 +1875,21 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 </div>
                             )}
 
+                            <div className="relative group">
+                                <button
+                                    className="p-2 rounded hover:bg-gray-100 transition-colors"
+                                    onClick={() => setIsAutoWidth(!isAutoWidth)}
+                                    style={{ color: isAutoWidth ? '#3b82f6' : colors.text }}
+                                    aria-label="Toggle Auto Width"
+                                >
+                                    <FaArrowsAltH size={20} />
+                                </button>
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                                    {isAutoWidth ? "Reset Column Widths" : "Fit Columns to Width"}
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                                </div>
+                            </div>
+
                             {isMasterButtonEnabled('ExportEmail') && (
                                 <div className="relative group">
                                     <button
@@ -2513,7 +2529,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                     tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
                                     webColumns: rs1Settings?.webColumns?.[0] || []
-                                } : {})
+                                } : {}),
+                                ...(isAutoWidth ? { columnWidth: undefined, isAutoWidth: true } : {})
                             }}
                             summary={safePageData.getCurrentLevel(currentLevel)?.summary}
                             onRowClick={handleRecordClick}
@@ -2552,7 +2569,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                         mobileColumns: rs1Settings?.mobileColumns?.[0] || [],
                                                         tabletColumns: rs1Settings?.tabletColumns?.[0] || [],
                                                         webColumns: rs1Settings?.webColumns?.[0] || []
-                                                    } : {})
+                                                    } : {}),
+                                                    ...(isAutoWidth ? { columnWidth: undefined, isAutoWidth: true } : {})
                                                 }}
                                                 summary={safePageData.getCurrentLevel(currentLevel)?.summary}
                                                 tableRef={tableRef}

@@ -13,15 +13,12 @@ import moment from 'moment';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import dayjs from 'dayjs';
-import axios from 'axios';
 import { BASE_URL } from '@/utils/constants';
-import { base64ToUint8Array, buildFilterXml, displayAndDownloadFile, getLocalStorage, sendEmailMultiCheckbox } from '@/utils/helper';
+import { buildFilterXml,  getLocalStorage, getTextWidthSize, sendEmailMultiCheckbox } from '@/utils/helper';
 import { toast } from "react-toastify";
 import TableStyling from './ui/table/TableStyling';
 import apiService from '@/utils/apiService';
 import { useLocalStorage } from '@/hooks/useLocalListner';
-import JSZip from "jszip";
-import { FaSpinner } from 'react-icons/fa';
 import Loader from './Loader';
 import { handleLoopThroughMultiSelectKeyHandler, handleLoopThroughMultiSelectKeyHandlerDownloadZip, handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel, handleLoopThroughMultiSelectKeyHandlerExcel } from '@/utils/dataTableHelper';
 import { ensureContrastColor,getReadableTextColor } from '@/utils/helper';
@@ -1354,7 +1351,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                 const columnConfig: any = {
                     key,
                     name: key,
-
+         
                     sortable: true,
                     resizable: true,
                 };
@@ -1364,6 +1361,39 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     columnConfig.width = customWidth;
                     columnConfig.minWidth = Math.min(50, Math.floor(customWidth * 0.5)); // Allow resizing down to 50% of custom width or minimum 50px
                     columnConfig.maxWidth = Math.max(600, Math.floor(customWidth * 2)); // Allow resizing up to 200% of custom width or minimum 600px
+                } else if (settings?.isAutoWidth) {
+                    // Auto-fit logic using text measurement
+                    // 1. Measure Header
+                    const font = "600 14px 'Inter', sans-serif"; // Slightly larger to be safe
+                    const headerWidth = getTextWidthSize(key, font) + 70; // +70 for sorting icon, filter icon & padding
+
+                    // 2. Measure Content (Sample first 200 rows for performance)
+                    let maxContentWidth = 0;
+                    const sampleRows = formattedData.slice(0, 200); 
+                    
+                    for (const row of sampleRows) {
+                        const value = row[key];
+                        let text = '';
+                        
+                        if (React.isValidElement(value)) {
+                            // Try to extract text from React element if simple
+                            if ((value as any).props?.children) {
+                                text = String((value as any).props.children);
+                            }
+                        } else if (value !== null && value !== undefined) {
+                            text = String(value);
+                        }
+
+                        if (text) {
+                            const width = getTextWidthSize(text, "14px 'Inter', sans-serif"); // Match header font size
+                            if (width > maxContentWidth) maxContentWidth = width;
+                        }
+                    }
+
+                    // 3. Set Width (Header vs Content, with limits)
+                    const optimalWidth = Math.max(headerWidth, maxContentWidth + 36); // Increased padding for safety
+                    columnConfig.minWidth = Math.min(Math.max(optimalWidth, 80), 800); // Min 80px, Max 800px cap
+                    columnConfig.width = columnConfig.minWidth; // Set width explicitly
                 } else {
                     columnConfig.minWidth = 80;
                     columnConfig.maxWidth = 400;
