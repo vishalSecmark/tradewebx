@@ -608,6 +608,16 @@ export function formatTextSplitString(text: string) {
     .trim();
 }
 
+// Helper to measure text width
+export const getTextWidthSize = (text: string, font: string): number => {
+    if (typeof window === 'undefined') return 0; // Server-side safety
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return 0;
+    context.font = font;
+    return context.measureText(text).width;
+};
+
 //accessibility color-contrast functions into a common utility file and use them anywhere
 
 export function getLuminance(hex: string) {

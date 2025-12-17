@@ -17,7 +17,7 @@ interface AsyncSearchDropdownProps {
 
   placeholder?: string;
   isDisabled?: boolean;
-
+  ariaLabel?: string; 
   colors?: {
     text?: string;
     primary?: string;
@@ -32,6 +32,7 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
   loadOptions,
   placeholder = "Search…",
   isDisabled = false,
+  ariaLabel,
   colors = {},
 }) => {
   const [defaultOptions, setDefaultOptions] = useState<OptionType[]>([]);
@@ -92,7 +93,7 @@ const AsyncSearchDropdown: React.FC<AsyncSearchDropdownProps> = ({
 
   return (
     <AsyncSelect
-      aria-label="Client Selection"
+      aria-label={ariaLabel}
       cacheOptions
       defaultOptions={defaultOptions}
       loadOptions={loadOptions}
