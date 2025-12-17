@@ -21,7 +21,7 @@ import apiService from '@/utils/apiService';
 import { useLocalStorage } from '@/hooks/useLocalListner';
 import Loader from './Loader';
 import { handleLoopThroughMultiSelectKeyHandler, handleLoopThroughMultiSelectKeyHandlerDownloadZip, handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel, handleLoopThroughMultiSelectKeyHandlerExcel } from '@/utils/dataTableHelper';
-
+import { ensureContrastColor,getReadableTextColor } from '@/utils/helper';
 
 
 // Column Filter Component
@@ -658,6 +658,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         return config?.EnabledTag === "true";
     };
     const { colors, fonts } = useTheme();
+    const bgColor = colors?.color3 || "#f0f0f0";
     const [sortColumns, setSortColumns] = useState<any[]>([]);
     const [selectedRows, setSelectedRows] = useState<any[]>([]);
     const [filters, setFilters] = useState<FilterState>({});
@@ -957,10 +958,19 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     const columns = colorRule.key.split(',').map((key: any) => key.trim());
                     columns.forEach((column: any) => {
                         if (newRow.hasOwnProperty(column)) {
-                            const color = getValueBasedColor(newRow[column], colorRule);
-                            if (color) {
-                                newRow[column] = <div style={{ color }}>{newRow[column]}</div>;
-                            }
+                            // const color = getValueBasedColor(newRow[column], colorRule);
+                            // if (color) {
+                            //     newRow[column] = <div style={{ color }}>{newRow[column]}</div>;
+                            // }
+                            const rawColor = getValueBasedColor(newRow[column], colorRule);
+                             if (rawColor) {
+                             const accessibleColor = ensureContrastColor(rawColor, "#e3f0ff");
+                            newRow[column] = (
+                                <div style={{ color: accessibleColor }}>
+                                    {newRow[column]}
+                                </div>
+                            );
+                          }
                         }
                     });
                 });
@@ -1105,6 +1115,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                 <input
                                     type="checkbox"
+                                    aria-label="Select row"
                                     checked={allSelected}
                                     onChange={(e) => {
                                         const newSelection = e.target.checked ? [...rows] : [];
@@ -1225,8 +1236,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                                     const textColor = numValue < 0 ? '#dc2626' :
                                                         numValue > 0 ? '#16a34a' :
                                                             colors.text;
+                                                         // Ensure WCAG contrast against background
+                                                const contrastTextColor = ensureContrastColor(textColor, '#e3f0ff'); 
 
-                                                    formattedValue = <div style={{ color: textColor }}>{formattedNumber}</div>;
+                                                    formattedValue = <div style={{ color: contrastTextColor }}>{formattedNumber}</div>;
                                                 } else {
                                                     formattedValue = String(value);
                                                 }
@@ -1433,8 +1446,9 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                                 const textColor = numValue < 0 ? '#dc2626' :
                                     numValue > 0 ? '#16a34a' :
                                         colors.text;
-
-                                displayValue = <span style={{ color: textColor }}>{formattedValue}</span>;
+                                 // Ensure WCAG contrast against background
+                            const contrastTextColor = ensureContrastColor(textColor, '#e3f0ff');                 
+                                displayValue = <span style={{ color: contrastTextColor }}>{formattedValue}</span>;
                             } else if (React.isValidElement(value)) {
                                 displayValue = value;
                             }
@@ -1683,8 +1697,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         });
 
                         if (colorRule) {
-                            const color = getValueBasedColor(formattedSum, colorRule);
+                            // const color = getValueBasedColor(formattedSum, colorRule);
+                            let color = getValueBasedColor(formattedSum, colorRule);
                             if (color) {
+                                color = ensureContrastColor(color, "#e3f0ff");
                                 totals[column.key] = <div className="numeric-value font-bold" style={{ color }}>{formattedSum}</div>;
                                 return;
                             }
@@ -1737,6 +1753,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         <button
                             style={{
                                 background: colors?.color3 || "#f0f0f0",
+                                color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
                             }}
                             onClick={() => handleLoopThroughMultiSelectKeyHandler(setIsLoading, filtersCheck, userId, pageData, selectedRows, userType, sendEmailMultiCheckbox, setSelectedRows)}
                             className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
@@ -1747,6 +1764,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         <button
                             style={{
                                 background: colors?.color3 || "#f0f0f0",
+                                color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
                             }}
                             onClick={() => handleLoopThroughMultiSelectKeyHandlerExcel(setIsLoading, filtersCheck, userId, pageData, selectedRows, userType, sendEmailMultiCheckbox, setSelectedRows)}
                             className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
@@ -1757,6 +1775,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         <button
                             style={{
                                 background: colors?.color3 || "#f0f0f0",
+                                color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
                             }}
                             onClick={() => handleLoopThroughMultiSelectKeyHandlerDownloadZip(selectedRows, setIsLoading, filtersCheck, userId, userType, setSelectedRows)}
                             className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
@@ -1767,6 +1786,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         <button
                             style={{
                                 background: colors?.color3 || "#f0f0f0",
+                                color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
                             }}
                             onClick={() => handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel(selectedRows, setIsLoading, filtersCheck, userId, userType, setSelectedRows)}
                             className="bg-[#00732F] text-white py-2 px-8 rounded-md shadow-lg transform transition-transform duration-200 ease-in-out active:scale-95 w-auto font-medium flex items-center m-4 mr-2"
