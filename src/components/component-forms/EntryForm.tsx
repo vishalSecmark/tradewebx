@@ -350,7 +350,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
             // calling the function to  handle the flags
             const columnData = response?.data?.data?.rs0[0]?.Column1
             if (columnData) {
-                handleValidationApiResponse(columnData, field.wKey, field);
+                const filtersTags = X_Filter ? X_Filter : X_Filter_Multiple;
+                handleValidationApiResponse(columnData, field.wKey, field, filtersTags);
             }
         } catch (error) {
             console.error('Validation API error:', error);
@@ -361,14 +362,17 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
 
     // this function is used to show the respected flags according to the response from the API
-    const handleValidationApiResponse = (response: any, currFieldName: any, field: any) => {
+    const handleValidationApiResponse = (response: any, currFieldName: any, field: any, filtersTags: any) => {
         if (!response?.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;
         }
 
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
-
+        const filtersTagsArray = Object.keys(filtersTags || {}).length ? Object.keys(filtersTags || {}) : [];
+        const finalFiltersTagsArray = currFieldName
+            ? [...new Set([...filtersTagsArray, currFieldName])]
+            : filtersTagsArray;
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
@@ -451,6 +455,28 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     });
                 });
                 setFormData(updatedFormData);
+                break;
+            case 'X':
+                  setValidationModal({
+                    isOpen: true,
+                    message: message || 'Are you sure you want to proceed?',
+                    type: 'M',
+                    callback: (confirmed) => {
+                        if (confirmed) {
+                             let dummyFormData = formData;
+                             dummyFormData = dummyFormData.map(field => {
+                                 if(finalFiltersTagsArray.includes(field.wKey)){
+                                     return { ...field, FieldEnabledTag: 'N' };
+                                 }
+                                 return field;
+                             })
+                             setFormData(dummyFormData);
+                        } else {
+                            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                        }
+                        setValidationModal({ isOpen: false, message: '', type: 'M' });
+                    }
+                });
                 break;
             default:
                 console.error("Unknown flag received:", flag);
