@@ -644,8 +644,132 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
-    const validationMethodToModifyTabsForm = (data:any) =>{
-        console.log("getting this data from the validation popup ",data)
+    const validationMethodToModifyTabsForm = (data: any) => {
+        if (!data) return;
+
+        const { tabsToBeDisabled = [], tabsDataChange = {} } = data;
+
+        // --- Part 1: Handle Tab Removal & Re-indexing ---
+        // We calculate the new state for tabs first.
+
+        let newTabsData: TabData[] = [];
+        let newTabFormValues: Record<string, Record<string, any>> = {};
+        let newTabDropdownOptions: Record<string, Record<string, any[]>> = {};
+        let newTabLoadingDropdowns: Record<string, Record<string, boolean>> = {};
+        let newTabTableData: Record<string, any[]> = {};
+
+        // Iterate through current tabs and keep only those NOT in tabsToBeDisabled
+        let newIndex = 0;
+        tabsData.forEach((tab, oldIndex) => {
+            const tabName = tab.TabName;
+            // Check if this tab should be removed
+            // using case-insensitive check if needed, or exact match as per requirement
+            const isDisabled = tabsToBeDisabled.some((disabledName: string) => 
+                disabledName.trim().toLowerCase() === tabName?.trim().toLowerCase()
+            );
+
+            if (!isDisabled) {
+                // Keep this tab
+                const oldKey = `tab_${oldIndex}`;
+                const newKey = `tab_${newIndex}`;
+
+                // clone the tab configuration
+                newTabsData.push({ ...tab });
+
+                // Copy/migrate the state data
+                newTabFormValues[newKey] = { ...(tabFormValues[oldKey] || {}) };
+                newTabDropdownOptions[newKey] = { ...(tabDropdownOptions[oldKey] || {}) };
+                newTabLoadingDropdowns[newKey] = { ...(tabLoadingDropdowns[oldKey] || {}) };
+                newTabTableData[newKey] = [...(tabTableData[oldKey] || [])];
+
+                newIndex++;
+            }
+        });
+
+
+        // --- Part 2: Handle Master Data Updates ---
+        // We clone current master state
+        let newMasterFormData = [...masterFormData];
+        let newMasterFormValues = { ...masterFormValues };
+
+        if (tabsDataChange["Master"]) {
+            const masterChange = tabsDataChange["Master"];
+            const { fieldsValueChange = {}, fieldDisabled = [] } = masterChange;
+
+            // Update Field Values
+            Object.keys(fieldsValueChange).forEach(key => {
+                newMasterFormValues[key] = fieldsValueChange[key];
+            });
+
+            // Disable Fields
+            if (Array.isArray(fieldDisabled) && fieldDisabled.length > 0) {
+                newMasterFormData = newMasterFormData.map(field => {
+                    if (fieldDisabled.includes(field.wKey)) {
+                        return { ...field, FieldEnabledTag: "N" };
+                    }
+                    return field;
+                });
+            }
+        }
+
+        // --- Part 3: Handle Other Tabs Data Updates ---
+        // Now apply changes to the *new* (re-indexed) tabs
+        Object.keys(tabsDataChange).forEach(tabChangeName => {
+            if (tabChangeName === "Master") return; // successfully handled above
+
+            // Find which index this tab corresponds to in our NEW tabsData
+            const tabIndex = newTabsData.findIndex(t => 
+                t.TabName?.trim().toLowerCase() === tabChangeName.trim().toLowerCase()
+            );
+
+            if (tabIndex !== -1) {
+                const tabKey = `tab_${tabIndex}`;
+                const tabChange = tabsDataChange[tabChangeName];
+                const { fieldsValueChange = {}, fieldDisabled = [] } = tabChange;
+
+                // Update Values
+                if (fieldsValueChange && Object.keys(fieldsValueChange).length > 0) {
+                     newTabFormValues[tabKey] = {
+                        ...newTabFormValues[tabKey],
+                        ...fieldsValueChange
+                     };
+                }
+
+                // Disable Fields - We need to update the definition in newTabsData
+                if (Array.isArray(fieldDisabled) && fieldDisabled.length > 0) {
+                    newTabsData[tabIndex] = {
+                        ...newTabsData[tabIndex],
+                        Data: newTabsData[tabIndex].Data.map((field: FormField) => {
+                             if (fieldDisabled.includes(field.wKey)) {
+                                 return { ...field, FieldEnabledTag: "N" };
+                             }
+                             return field;
+                        })
+                    };
+                }
+            }
+        });
+
+        // --- Part 4: Commit Updates to State ---
+        
+        // 1. Master State
+        setMasterFormData(newMasterFormData);
+        setMasterFormValues(newMasterFormValues);
+
+        // 2. Tabs State
+        setTabsData(newTabsData);
+        setTabFormValues(newTabFormValues);
+        setTabDropdownOptions(newTabDropdownOptions);
+        setTabLoadingDropdowns(newTabLoadingDropdowns);
+        setTabTableData(newTabTableData);
+
+        // 3. Handle Active Tab safety
+        // If we removed tabs, the activeTabIndex might be out of bounds.
+        // Or if the logic implies we should reset to the start.
+        // For safety, if current index is >= new length, reset to 0.
+        if (activeTabIndex >= newTabsData.length) {
+            setActiveTabIndex(0);
+        }
     }
 
     const fetchDropdownOptionsForTab = async (field: FormField, tabKey: string) => {
