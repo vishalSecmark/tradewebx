@@ -11,6 +11,7 @@ import apiService from "@/utils/apiService";
 import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 import CustomDateTimePicker from "./formComponents/CustomDateTimePicker";
 import CustomDatePicker from "./formComponents/CustomDatePicker";
+import { convertXmlToModifiedFormData } from "./form-helper/utils";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -235,7 +236,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
     masterValues,
     setFormData,
     setValidationModal,
-    setDropDownOptions
+    setDropDownOptions,
+    validationMethodToModifyTabsForm
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -471,6 +473,9 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                  return field;
                              })
                              setFormData(dummyFormData);
+                             const finalObject = convertXmlToModifiedFormData(response); 
+                             validationMethodToModifyTabsForm(finalObject);
+
                         } else {
                             setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
                         }

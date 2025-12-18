@@ -644,6 +644,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
+    const validationMethodToModifyTabsForm = (data:any) =>{
+        console.log("getting this data from the validation popup ",data)
+    }
+
     const fetchDropdownOptionsForTab = async (field: FormField, tabKey: string) => {
         if (!field.wQuery) return;
 
@@ -2552,6 +2556,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         masterValues={masterFormValues}
                                         setFormData={setMasterFormData}
                                         setValidationModal={setValidationModal}
+                                        validationMethodToModifyTabsForm={validationMethodToModifyTabsForm}
                                     />
                                 </div>
 

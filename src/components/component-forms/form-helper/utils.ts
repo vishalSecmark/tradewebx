@@ -127,3 +127,83 @@ export const getFieldValue = (fieldName: string, parentValue: string | Record<st
     }
     return '';
 };
+
+// this funtion is specifically used in entryForm to convert xml data to object to modify the form filed and form data 
+export const convertXmlToModifiedFormData = (xmlString: string) => {
+  // XML must have a single root – wrap it
+  const wrappedXml = `<Root>${xmlString}</Root>`;
+
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(wrappedXml, 'application/xml');
+
+  const result: {
+    tabsToBeDisabled: string[];
+    tabsDataChange: Record<
+      string,
+      {
+        fieldsValueChange: Record<string, string | number>;
+        fieldDisabled: string[];
+      }
+    >;
+  } = {
+    tabsToBeDisabled: [],
+    tabsDataChange: {}
+  };
+
+  /* ------------------------------------------------
+   1. TabsToDisable → tabsToBeDisabled[]
+  ------------------------------------------------ */
+  const tabsToDisableNode = xmlDoc.querySelector('TabsToDisable');
+
+  if (tabsToDisableNode) {
+    Array.from(tabsToDisableNode.children).forEach(tabNode => {
+      if (tabNode.textContent?.trim() === 'true') {
+        result.tabsToBeDisabled.push(tabNode.tagName);
+      }
+    });
+  }
+
+  /* ------------------------------------------------
+   2. DisabledFields → map by tabName
+  ------------------------------------------------ */
+  const disabledFieldsMap: Record<string, string[]> = {};
+  const disabledFieldsNode = xmlDoc.querySelector('DisabledFields');
+
+  if (disabledFieldsNode) {
+    Array.from(disabledFieldsNode.children).forEach(tabNode => {
+      disabledFieldsMap[tabNode.tagName] =
+        tabNode.textContent
+          ?.split(',')
+          .map(field => field.trim())
+          .filter(Boolean) || [];
+    });
+  }
+
+  /* ------------------------------------------------
+   3. FiledValueChanges → tabsDataChange
+  ------------------------------------------------ */
+  const filedValueChangesNode = xmlDoc.querySelector('FiledValueChanges');
+
+  if (filedValueChangesNode) {
+    Array.from(filedValueChangesNode.children).forEach(tabNode => {
+      const tabName = tabNode.tagName;
+
+      const fieldsValueChange: Record<string, string | number> = {};
+
+      Array.from(tabNode.children).forEach(fieldNode => {
+        const rawValue = fieldNode.textContent?.trim() ?? '';
+
+        fieldsValueChange[fieldNode.tagName] = isNaN(Number(rawValue))
+          ? rawValue
+          : Number(rawValue);
+      });
+
+      result.tabsDataChange[tabName] = {
+        fieldsValueChange,
+        fieldDisabled: disabledFieldsMap[tabName] || []
+      };
+    });
+  }
+
+  return result;
+};
