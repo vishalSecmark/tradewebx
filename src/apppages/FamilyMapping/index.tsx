@@ -40,8 +40,6 @@ export default function Family() {
   const { encPayload } = useSelector((state: RootState) => state.common);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showOtp, setShowOtp] = useState<boolean>(false);
-  const [loggedInUserId, setLoggedInUserId] = useState<string>("");
-
 
   // --- Columns ---
   const columns: Column<FamilyRow>[] = [
@@ -177,8 +175,6 @@ export default function Family() {
       const data = response.data;
       if (!data?.status) return setError(data?.message || "Invalid credentials.");
 
-       setLoggedInUserId(loginData.userId); //storing member of user id
-
       if (data?.token) {
         storeTempOtpToken(data.token);   // store safely
         tempTokenRef.current = data.token; // optional (instant access)
@@ -189,7 +185,7 @@ export default function Family() {
         setOtpRequired(true);
         setLoginMessage(data?.data?.[0]?.LoginMessage || "");
       } else {
-        await saveUccData();
+        await saveUccData(loginData.userId); //  latest value
         fetchFamilyMapping();
         setUcc("");
         setOtp("");
@@ -234,7 +230,7 @@ export default function Family() {
       }
       /** OTP success */
       if (data?.status === true) {
-        await saveUccData();
+        await saveUccData(loginData.userId); //  always latest
         fetchFamilyMapping();
         setUcc("");
         setOtp("");
@@ -249,7 +245,7 @@ export default function Family() {
   };
 
   // --- Save UCC Data ---
-  const saveUccData = async (): Promise<void> => {
+  const saveUccData = async (userId: string): Promise<void> => {
     try {
       const ipAddress = await getIPAddress();
       const xmlData = `<dsXml>
@@ -257,7 +253,7 @@ export default function Family() {
         <Sql></Sql>
         <X_Filter></X_Filter>
         <X_Data>
-          <UccCode>${loggedInUserId}</UccCode>
+          <UccCode>${userId}</UccCode>
           <IPAddress>${ipAddress}</IPAddress>
         </X_Data>
         <J_Api>"UserId":"${getLocalStorage("userId")}","UserType":"${getLocalStorage("userType")}"</J_Api>
