@@ -3,6 +3,35 @@ import { BASE_PATH_FRONT_END, BASE_URL, OTP_VERIFICATION_URL, ENABLE_FERNET, ACT
 import { clearIndexedDB, getLocalStorage, removeLocalStorage, storeLocalStorage, decodeFernetToken } from './helper';
 import { store } from '@/redux/store';
 
+
+// OTP Axios Instance (NO INTERCEPTORS)
+const TEMP_OTP_TOKEN_KEY = 'temp_otp_token';
+export const otpApi = axios.create({
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/xml',
+  },
+});
+
+otpApi.interceptors.request.use(
+  (config) => {
+    const tempToken = getLocalStorage(TEMP_OTP_TOKEN_KEY);
+
+   if (tempToken) {
+      // Attach as Bearer token
+      config.headers.Authorization = `Bearer ${tempToken}`;
+      console.log('Temp OTP token attached as Bearer:', tempToken.substring(0, 25) + '...');
+    } else {
+      console.warn('Temp OTP token missing');
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+
+
 // Create axios instance with default config
 export const api = axios.create({
   baseURL: BASE_URL + '/TradeWebAPI/api',
@@ -361,6 +390,17 @@ export const getUserData = () => {
   };
 };
 
+
+// OTP Token Helpers
+export const storeTempOtpToken = (token: string) => {
+  storeLocalStorage(TEMP_OTP_TOKEN_KEY, token);
+};
+
+export const clearTempOtpToken = () => {
+  removeLocalStorage(TEMP_OTP_TOKEN_KEY);
+};
+
+
 export const clearAuthStorage = () => {
   removeLocalStorage('userId');
   removeLocalStorage('temp_token');
@@ -417,7 +457,9 @@ export const clearAllAuthData = () => {
 
     // Clear IndexedDB
     clearIndexedDB();
-
+    //Removed TempOTP
+    removeLocalStorage('temp_otp_token');
+    
     console.log('All authentication data cleared successfully');
   }
 };

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { DataGrid, Column } from "react-data-grid";
@@ -8,9 +8,15 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import CryptoJS from "crypto-js";
 import { useTheme } from "@/context/ThemeContext";
-import { getLocalStorage } from "@/utils/helper";
+import { getLocalStorage, decodeFernetToken } from "@/utils/helper";
 import { FamilyRow, LoginData } from "@/types/FamilyTypes";
-import { BASE_URL, OTP_VERIFICATION_URL, PRODUCT, ACTION_NAME } from "@/utils/constants";
+import { BASE_URL, OTP_VERIFICATION_URL, PRODUCT, ACTION_NAME, PATH_URL, ENABLE_FERNET } from "@/utils/constants";
+import apiService from "@/utils/apiService";
+import { otpApi } from "@/utils/auth";
+import { storeTempOtpToken } from "@/utils/auth";
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from "@/redux/store";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const passKey = "TradeWebX1234567";
 
@@ -30,6 +36,10 @@ export default function Family() {
   const [error, setError] = useState<string>("");
   const [otpError, setOtpError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const tempTokenRef = useRef<string | null>(null);
+  const { encPayload } = useSelector((state: RootState) => state.common);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showOtp, setShowOtp] = useState<boolean>(false);
 
   // --- Columns ---
   const columns: Column<FamilyRow>[] = [
@@ -84,9 +94,7 @@ export default function Family() {
         <J_Api>"UserId":"${getLocalStorage("userId")}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
-        headers: { "Content-Type": "application/xml" },
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       if (response.data?.data?.rs0?.length) {
         const formattedRows: FamilyRow[] = response.data.data.rs0.map((item: any, idx: number) => ({
@@ -108,7 +116,12 @@ export default function Family() {
 
   // --- Modal Handlers ---
   const openUccModal = () => setIsUccModalOpen(true);
-  const closeUccModal = () => setIsUccModalOpen(false);
+  const closeUccModal = () => {
+    setUcc("");
+    setError("");        // optional: clears validation error
+    setIsUccModalOpen(false);
+  };
+
 
   const openLoginModal = () => setIsLoginModalOpen(true);
   const closeLoginModal = () => {
@@ -118,6 +131,8 @@ export default function Family() {
     setLoginMessage("");
     setError("");
     setOtpError("");
+    setLoginData({ userId: "", password: "" });
+    setUcc("");
   };
 
   const handleUccNext = () => {
@@ -135,6 +150,11 @@ export default function Family() {
     setError("");
     if (!loginData.userId.trim()) return setError("User ID is required.");
     if (!loginData.password.trim()) return setError("Password is required.");
+    //  Same user check
+    if (loginData.userId === getLocalStorage("userId")) {
+      setError("You are already logged in with this User ID.");
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -151,21 +171,26 @@ export default function Family() {
         <J_Api>"UserId":"", "UserType":"User"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
-        headers: { "Content-Type": "application/xml" },
-      });
-
+      const response = await apiService.postWithAuth(BASE_URL + OTP_VERIFICATION_URL, xmlData);
       const data = response.data;
       if (!data?.status) return setError(data?.message || "Invalid credentials.");
 
-      if (data?.token) setTempToken(data.token);
+      if (data?.token) {
+        storeTempOtpToken(data.token);   // store safely
+        tempTokenRef.current = data.token; // optional (instant access)
+      }
 
       const loginType = data?.data?.[0]?.LoginType;
       if (loginType === "2FA") {
         setOtpRequired(true);
         setLoginMessage(data?.data?.[0]?.LoginMessage || "");
       } else {
-        await saveUccData();
+        await saveUccData(loginData.userId); //  latest value
+        fetchFamilyMapping();
+        setUcc("");
+        setOtp("");
+        setOtpRequired(false);
+        closeLoginModal();
       }
     } catch {
       setError("Login failed. Please try again.");
@@ -173,29 +198,45 @@ export default function Family() {
       setIsLoading(false);
     }
   };
-
   // --- Verify OTP ---
   const handleOTPVerify = async (): Promise<void> => {
     if (!otp.trim()) return setOtpError("OTP is required.");
     if (!/^\d{4}$/.test(otp)) return setOtpError("OTP must be 4 digits.");
-
+    const authToken = tempTokenRef.current;
     setIsLoading(true);
     try {
       const xmlData = `<dsXml>
         <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Verify2FA","Level":1,"RequestFrom":"W"</J_Ui>
         <Sql/>
-        <X_Data><OTP>${otp}</OTP></X_Data>
+        <X_Data>
+          <OTP>${otp}</OTP>
+        </X_Data>
+        <X_GFilter/>
         <J_Api>"UserId":"${loginData.userId}", "UserType":"${getLocalStorage("userType")}"</J_Api>
       </dsXml>`;
 
-      await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
-        headers: {
-          "Content-Type": "application/xml",
-          Authorization: `Bearer ${tempToken}`,
-        },
+      const response = await otpApi.request({
+        method: 'post',
+        url: BASE_URL + OTP_VERIFICATION_URL,
+        data: xmlData,
       });
+      // Check both ENABLE_FERNET constant and encPayload from Redux state
+      const shouldDecode = ENABLE_FERNET && encPayload;
+      const data = shouldDecode ? decodeFernetToken(response.data.data) : response.data;
 
-      await saveUccData();
+      if (data?.status === false) {
+        toast.error(data?.message || "Invalid OTP. Please try again.");
+        return; // stop further execution
+      }
+      /** OTP success */
+      if (data?.status === true) {
+        await saveUccData(loginData.userId); //  always latest
+        fetchFamilyMapping();
+        setUcc("");
+        setOtp("");
+        setOtpRequired(false);
+        closeLoginModal();
+      }
     } catch {
       setOtpError("OTP verification failed.");
     } finally {
@@ -204,35 +245,37 @@ export default function Family() {
   };
 
   // --- Save UCC Data ---
-  const saveUccData = async (): Promise<void> => {
+  const saveUccData = async (userId: string): Promise<void> => {
     try {
       const ipAddress = await getIPAddress();
       const xmlData = `<dsXml>
         <J_Ui>"ActionName":"FamilyMapping","Option":"Add","RequestFrom":"W"</J_Ui>
         <Sql></Sql>
+        <X_Filter></X_Filter>
         <X_Data>
-          <UccCode>${ucc}</UccCode>
+          <UccCode>${userId}</UccCode>
           <IPAddress>${ipAddress}</IPAddress>
         </X_Data>
-        <J_Api>"UserId":"${getLocalStorage("userId")}"</J_Api>
+        <J_Api>"UserId":"${getLocalStorage("userId")}","UserType":"${getLocalStorage("userType")}"</J_Api>
       </dsXml>`;
 
-      const response = await axios.post(BASE_URL + OTP_VERIFICATION_URL, xmlData, {
-        headers: { "Content-Type": "application/xml" },
-      });
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
-      if (response.data?.success) {
-        toast.success(response.data.message?.replace(/<[^>]+>/g, "") || "UCC added successfully");
+      if (response?.data?.success === true) {
+        toast.success(response?.data?.message?.replace(/<[^>]+>/g, "") || "Family Mapped successfully");
         fetchFamilyMapping();
         setUcc("");
         setOtp("");
         setOtpRequired(false);
+        setLoginData({ userId: "", password: "" });
         closeLoginModal();
-      } else {
-        toast.error("Failed to add UCC.");
+      } 
+      if (response?.data?.success === false) {
+        toast.error(response?.data?.message.replace(/<[^>]+>/g, "") || "Something went wrong...!");
+        return; // stop further execution
       }
     } catch {
-      toast.error("Failed to save UCC.");
+      toast.error("Something went wrong...!");
     }
   };
 
@@ -243,7 +286,7 @@ export default function Family() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-semibold">Family Mapping</h2>
           <button
-            onClick={openUccModal}
+            onClick={openLoginModal}
             className="py-2 px-4 rounded text-white flex items-center mt-3"
             style={{ backgroundColor: colors.buttonBackground, color: colors.buttonText }}
           >
@@ -261,7 +304,7 @@ export default function Family() {
       </div>
 
       {/* --- UCC Modal --- */}
-      <Modal isOpen={isUccModalOpen} onClose={closeUccModal} isOutsideClickAllowed={false} className="max-w-[400px] p-6">
+      {/* <Modal isOpen={isUccModalOpen} onClose={closeUccModal} isOutsideClickAllowed={false} className="max-w-[400px] p-6">
         <h4 className="text-lg font-semibold mb-4 mt-4">UCC/Code</h4>
         <Input value={ucc} onChange={(e) => setUcc(e.target.value)} placeholder="Enter UCC Code" />
         {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
@@ -275,18 +318,35 @@ export default function Family() {
             Next
           </button>
         </div>
-      </Modal>
+      </Modal> */}
 
       {/* --- Login & OTP Modal --- */}
       <Modal isOpen={isLoginModalOpen} onClose={closeLoginModal} isOutsideClickAllowed={false} className="max-w-[500px] p-6">
-        <h4 className="text-lg font-semibold mb-4">{otpRequired ? "Verify OTP" : "Verify User"}</h4>
+        <h4 className="text-lg font-semibold mb-4">{otpRequired ? "Verify OTP" : "Add Family"}</h4>
 
         {!otpRequired && (
           <>
             <Label>User ID</Label>
-            <Input value={loginData.userId} onChange={(e) => setLoginData({ ...loginData, userId: e.target.value })} />
-            <Label>Password</Label>
-            <Input type="password" value={loginData.password} onChange={(e) => setLoginData({ ...loginData, password: e.target.value })} />
+            <Input
+              value={loginData.userId}
+              onChange={(e) => setLoginData({ ...loginData, userId: e.target.value })}
+            />
+            <Label className="mt-5">Password</Label>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={loginData.password}
+                onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+              />
+              <button
+                type="button"
+                aria-label="Show Password"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
             {error && <div className="text-red-600">{error}</div>}
           </>
         )}
@@ -295,7 +355,17 @@ export default function Family() {
           <>
             {loginMessage && <p className="text-sm text-blue-600 mb-2">{loginMessage}</p>}
             <Label>OTP</Label>
-            <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter 4-digit OTP" />
+            <div className="relative">
+              <Input type={showOtp ? "text" : "password"} value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter 4-digit OTP" />
+              <button
+                type="button"
+                aria-label="Show Password"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                onClick={() => setShowOtp(!showOtp)}
+              >
+                {showOtp ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
             {otpError && <div className="text-red-600">{otpError}</div>}
           </>
         )}
