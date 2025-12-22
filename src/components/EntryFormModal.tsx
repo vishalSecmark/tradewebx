@@ -652,11 +652,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         // --- Part 1: Handle Tab Removal & Re-indexing ---
         // We calculate the new state for tabs first.
 
-        let newTabsData: TabData[] = [];
-        let newTabFormValues: Record<string, Record<string, any>> = {};
-        let newTabDropdownOptions: Record<string, Record<string, any[]>> = {};
-        let newTabLoadingDropdowns: Record<string, Record<string, boolean>> = {};
-        let newTabTableData: Record<string, any[]> = {};
+        const newTabsData: TabData[] = [];
+        const newTabFormValues: Record<string, Record<string, any>> = {};
+        const newTabDropdownOptions: Record<string, Record<string, any[]>> = {};
+        const newTabLoadingDropdowns: Record<string, Record<string, boolean>> = {};
+        const newTabTableData: Record<string, any[]> = {};
 
         // Iterate through current tabs and keep only those NOT in tabsToBeDisabled
         let newIndex = 0;
@@ -690,7 +690,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         // --- Part 2: Handle Master Data Updates ---
         // We clone current master state
         let newMasterFormData = [...masterFormData];
-        let newMasterFormValues = { ...masterFormValues };
+        const newMasterFormValues = { ...masterFormValues };
 
         if (tabsDataChange["Master"]) {
             const masterChange = tabsDataChange["Master"];
