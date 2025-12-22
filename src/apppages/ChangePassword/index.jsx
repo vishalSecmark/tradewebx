@@ -11,7 +11,7 @@ import apiService from "@/utils/apiService";
 import { ACTION_NAME, BASE_URL, PATH_URL, BASE_PATH_FRONT_END } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
 import { getLocalStorage } from "@/utils/helper";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
