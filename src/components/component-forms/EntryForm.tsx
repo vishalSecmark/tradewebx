@@ -371,10 +371,11 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
-        const filtersTagsArray = Object.keys(filtersTags || {}).length ? Object.keys(filtersTags || {}) : [];
-        const finalFiltersTagsArray = currFieldName
-            ? [...new Set([...filtersTagsArray, currFieldName])]
-            : filtersTagsArray;
+        // NOTE : this can be used in future this are the tags keys which we are sending in filter tag
+        // const filtersTagsArray = Object.keys(filtersTags || {}).length ? Object.keys(filtersTags || {}) : [];
+        // const finalFiltersTagsArray = currFieldName
+        //     ? [...new Set([...filtersTagsArray, currFieldName])]
+        //     : filtersTagsArray;
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
@@ -465,15 +466,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     type: 'M',
                     callback: (confirmed) => {
                         if (confirmed) {
-                             let dummyFormData = formData;
-                             dummyFormData = dummyFormData.map(field => {
-                                 if(finalFiltersTagsArray.includes(field.wKey)){
-                                     return { ...field, FieldEnabledTag: 'N' };
-                                 }
-                                 return field;
-                             })
-                             setFormData(dummyFormData);
                              const finalObject = convertXmlToModifiedFormData(response); 
+                             console.log("check final Object",finalObject);
                              validationMethodToModifyTabsForm(finalObject);
 
                         } else {

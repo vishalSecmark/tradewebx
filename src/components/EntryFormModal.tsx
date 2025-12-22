@@ -750,6 +750,98 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
         });
 
+        // --- Part 3.1: Fetch Dependent Options for Master ---
+        newMasterFormData.forEach((field: FormField) => {
+            if (field.type === 'WDropDownBox' && field.dependsOn && !field.wQuery) {
+                let shouldInitialize = false;
+                let parentFieldValue: any = null;
+
+                if (Array.isArray(field.dependsOn.field)) {
+                    // Handle multiple dependencies
+                    const parentValues: Record<string, any> = {};
+                    let allFieldsHaveValues = true;
+
+                    field.dependsOn.field.forEach(fieldName => {
+                        // Check multiple sources for the parent field value
+                        // In validation we prioritized the *new* values which are in newMasterFormValues
+                        const currentVal = newMasterFormValues[fieldName];
+                        parentValues[fieldName] = currentVal;
+
+                        if (!currentVal) {
+                            allFieldsHaveValues = false;
+                        }
+                    });
+
+                    if (allFieldsHaveValues) {
+                        shouldInitialize = true;
+                        parentFieldValue = parentValues;
+                    }
+                } else {
+                    // Single dependency
+                    const parentVal = newMasterFormValues[field.dependsOn.field];
+                    if (parentVal) {
+                        shouldInitialize = true;
+                        parentFieldValue = parentVal;
+                    }
+                }
+
+                if (shouldInitialize) {
+                    fetchDependentOptions(field, parentFieldValue);
+                }
+            }
+        });
+
+        // --- Part 3.2: Fetch Dependent Options for Tabs ---
+        newTabsData.forEach((tab, index) => {
+            const tabKey = `tab_${index}`;
+            
+            tab.Data.forEach((field: FormField) => {
+                if (field.type === 'WDropDownBox' && field.dependsOn && !field.wQuery) {
+                    let shouldInitialize = false;
+                    let parentFieldValue: any = null;
+
+                    if (Array.isArray(field.dependsOn.field)) {
+                        // Handle multiple dependencies
+                        const parentValues: Record<string, any> = {};
+                        let allFieldsHaveValues = true;
+
+                        field.dependsOn.field.forEach(fieldName => {
+                            // Check multiple sources for the parent field value
+                            const parentField = tab.Data.find(f => f.wKey === fieldName);
+                            // Correctly access values from the NEW logic
+                            const value = newMasterFormValues[fieldName] ||
+                                         newTabFormValues[tabKey]?.[fieldName] ||
+                                         parentField?.wValue;
+                            
+                            parentValues[fieldName] = value;
+                            if (!value) {
+                                allFieldsHaveValues = false;
+                            }
+                        });
+
+                        if (allFieldsHaveValues) {
+                            shouldInitialize = true;
+                            parentFieldValue = parentValues;
+                        }
+                    } else {
+                        // Handle single dependency
+                        const parentField = tab.Data.find(f => f.wKey === field.dependsOn.field);
+                        parentFieldValue = newTabFormValues[tabKey]?.[field.dependsOn.field] ||
+                            parentField?.wValue || newMasterFormValues?.[field.dependsOn.field] ;
+                        
+                        if (parentFieldValue) {
+                            shouldInitialize = true;
+                        }
+                    }
+
+                    if (shouldInitialize) {
+                         // Use fetchTabsDependentOptions which accepts the state dictionaries
+                         fetchTabsDependentOptions(field, tabKey, newTabFormValues, newMasterFormValues);
+                    }
+                }
+            });
+        });
+
         // --- Part 4: Commit Updates to State ---
         
         // 1. Master State
@@ -1007,7 +1099,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     toast.error(`Please select the field: ${fieldName}`);
                                     return;
                                 }
-                                xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || fieldValue || ''}</${fieldName}>`;
+                                xFilter += `<${fieldName}>${fieldValue || childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
                             }
                         });
                     } else {
