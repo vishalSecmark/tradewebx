@@ -106,6 +106,7 @@ export interface EntryFormProps {
         callback?: (confirmed: boolean) => void;
     }>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    validationMethodToModifyTabsForm?: (param: any) => void;
 }
 
 export interface ChildEntryModalProps {

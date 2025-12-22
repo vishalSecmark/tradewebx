@@ -644,6 +644,226 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
     };
 
+    const validationMethodToModifyTabsForm = (data: any) => {
+        if (!data) return;
+
+        const { tabsToBeDisabled = [], tabsDataChange = {} } = data;
+
+        // --- Part 1: Handle Tab Removal & Re-indexing ---
+        // We calculate the new state for tabs first.
+
+        const newTabsData: TabData[] = [];
+        const newTabFormValues: Record<string, Record<string, any>> = {};
+        const newTabDropdownOptions: Record<string, Record<string, any[]>> = {};
+        const newTabLoadingDropdowns: Record<string, Record<string, boolean>> = {};
+        const newTabTableData: Record<string, any[]> = {};
+
+        // Iterate through current tabs and keep only those NOT in tabsToBeDisabled
+        let newIndex = 0;
+        tabsData.forEach((tab, oldIndex) => {
+            const tabName = tab.TabName;
+            // Check if this tab should be removed
+            // using case-insensitive check if needed, or exact match as per requirement
+            const isDisabled = tabsToBeDisabled.some((disabledName: string) => 
+                disabledName.trim().toLowerCase() === tabName?.trim().toLowerCase()
+            );
+
+            if (!isDisabled) {
+                // Keep this tab
+                const oldKey = `tab_${oldIndex}`;
+                const newKey = `tab_${newIndex}`;
+
+                // clone the tab configuration
+                newTabsData.push({ ...tab });
+
+                // Copy/migrate the state data
+                newTabFormValues[newKey] = { ...(tabFormValues[oldKey] || {}) };
+                newTabDropdownOptions[newKey] = { ...(tabDropdownOptions[oldKey] || {}) };
+                newTabLoadingDropdowns[newKey] = { ...(tabLoadingDropdowns[oldKey] || {}) };
+                newTabTableData[newKey] = [...(tabTableData[oldKey] || [])];
+
+                newIndex++;
+            }
+        });
+
+
+        // --- Part 2: Handle Master Data Updates ---
+        // We clone current master state
+        let newMasterFormData = [...masterFormData];
+        const newMasterFormValues = { ...masterFormValues };
+
+        if (tabsDataChange["Master"]) {
+            const masterChange = tabsDataChange["Master"];
+            const { fieldsValueChange = {}, fieldDisabled = [] } = masterChange;
+
+            // Update Field Values
+            Object.keys(fieldsValueChange).forEach(key => {
+                newMasterFormValues[key] = fieldsValueChange[key];
+            });
+
+            // Disable Fields
+            if (Array.isArray(fieldDisabled) && fieldDisabled.length > 0) {
+                newMasterFormData = newMasterFormData.map(field => {
+                    if (fieldDisabled.includes(field.wKey)) {
+                        return { ...field, FieldEnabledTag: "N" };
+                    }
+                    return field;
+                });
+            }
+        }
+
+        // --- Part 3: Handle Other Tabs Data Updates ---
+        // Now apply changes to the *new* (re-indexed) tabs
+        Object.keys(tabsDataChange).forEach(tabChangeName => {
+            if (tabChangeName === "Master") return; // successfully handled above
+
+            // Find which index this tab corresponds to in our NEW tabsData
+            const tabIndex = newTabsData.findIndex(t => 
+                t.TabName?.trim().toLowerCase() === tabChangeName.trim().toLowerCase()
+            );
+
+            if (tabIndex !== -1) {
+                const tabKey = `tab_${tabIndex}`;
+                const tabChange = tabsDataChange[tabChangeName];
+                const { fieldsValueChange = {}, fieldDisabled = [] } = tabChange;
+
+                // Update Values
+                if (fieldsValueChange && Object.keys(fieldsValueChange).length > 0) {
+                     newTabFormValues[tabKey] = {
+                        ...newTabFormValues[tabKey],
+                        ...fieldsValueChange
+                     };
+                }
+
+                // Disable Fields - We need to update the definition in newTabsData
+                if (Array.isArray(fieldDisabled) && fieldDisabled.length > 0) {
+                    newTabsData[tabIndex] = {
+                        ...newTabsData[tabIndex],
+                        Data: newTabsData[tabIndex].Data.map((field: FormField) => {
+                             if (fieldDisabled.includes(field.wKey)) {
+                                 return { ...field, FieldEnabledTag: "N" };
+                             }
+                             return field;
+                        })
+                    };
+                }
+            }
+        });
+
+        // --- Part 3.1: Fetch Dependent Options for Master ---
+        newMasterFormData.forEach((field: FormField) => {
+            if (field.type === 'WDropDownBox' && field.dependsOn && !field.wQuery) {
+                let shouldInitialize = false;
+                let parentFieldValue: any = null;
+
+                if (Array.isArray(field.dependsOn.field)) {
+                    // Handle multiple dependencies
+                    const parentValues: Record<string, any> = {};
+                    let allFieldsHaveValues = true;
+
+                    field.dependsOn.field.forEach(fieldName => {
+                        // Check multiple sources for the parent field value
+                        // In validation we prioritized the *new* values which are in newMasterFormValues
+                        const currentVal = newMasterFormValues[fieldName];
+                        parentValues[fieldName] = currentVal;
+
+                        if (!currentVal) {
+                            allFieldsHaveValues = false;
+                        }
+                    });
+
+                    if (allFieldsHaveValues) {
+                        shouldInitialize = true;
+                        parentFieldValue = parentValues;
+                    }
+                } else {
+                    // Single dependency
+                    const parentVal = newMasterFormValues[field.dependsOn.field];
+                    if (parentVal) {
+                        shouldInitialize = true;
+                        parentFieldValue = parentVal;
+                    }
+                }
+
+                if (shouldInitialize) {
+                    fetchDependentOptions(field, parentFieldValue);
+                }
+            }
+        });
+
+        // --- Part 3.2: Fetch Dependent Options for Tabs ---
+        newTabsData.forEach((tab, index) => {
+            const tabKey = `tab_${index}`;
+            
+            tab.Data.forEach((field: FormField) => {
+                if (field.type === 'WDropDownBox' && field.dependsOn && !field.wQuery) {
+                    let shouldInitialize = false;
+                    let parentFieldValue: any = null;
+
+                    if (Array.isArray(field.dependsOn.field)) {
+                        // Handle multiple dependencies
+                        const parentValues: Record<string, any> = {};
+                        let allFieldsHaveValues = true;
+
+                        field.dependsOn.field.forEach(fieldName => {
+                            // Check multiple sources for the parent field value
+                            const parentField = tab.Data.find(f => f.wKey === fieldName);
+                            // Correctly access values from the NEW logic
+                            const value = newMasterFormValues[fieldName] ||
+                                         newTabFormValues[tabKey]?.[fieldName] ||
+                                         parentField?.wValue;
+                            
+                            parentValues[fieldName] = value;
+                            if (!value) {
+                                allFieldsHaveValues = false;
+                            }
+                        });
+
+                        if (allFieldsHaveValues) {
+                            shouldInitialize = true;
+                            parentFieldValue = parentValues;
+                        }
+                    } else {
+                        // Handle single dependency
+                        const parentField = tab.Data.find(f => f.wKey === field.dependsOn.field);
+                        parentFieldValue = newTabFormValues[tabKey]?.[field.dependsOn.field] ||
+                            parentField?.wValue || newMasterFormValues?.[field.dependsOn.field] ;
+                        
+                        if (parentFieldValue) {
+                            shouldInitialize = true;
+                        }
+                    }
+
+                    if (shouldInitialize) {
+                         // Use fetchTabsDependentOptions which accepts the state dictionaries
+                         fetchTabsDependentOptions(field, tabKey, newTabFormValues, newMasterFormValues);
+                    }
+                }
+            });
+        });
+
+        // --- Part 4: Commit Updates to State ---
+        
+        // 1. Master State
+        setMasterFormData(newMasterFormData);
+        setMasterFormValues(newMasterFormValues);
+
+        // 2. Tabs State
+        setTabsData(newTabsData);
+        setTabFormValues(newTabFormValues);
+        setTabDropdownOptions(newTabDropdownOptions);
+        setTabLoadingDropdowns(newTabLoadingDropdowns);
+        setTabTableData(newTabTableData);
+
+        // 3. Handle Active Tab safety
+        // If we removed tabs, the activeTabIndex might be out of bounds.
+        // Or if the logic implies we should reset to the start.
+        // For safety, if current index is >= new length, reset to 0.
+        if (activeTabIndex >= newTabsData.length) {
+            setActiveTabIndex(0);
+        }
+    }
+
     const fetchDropdownOptionsForTab = async (field: FormField, tabKey: string) => {
         if (!field.wQuery) return;
 
@@ -879,7 +1099,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                     toast.error(`Please select the field: ${fieldName}`);
                                     return;
                                 }
-                                xFilter += `<${fieldName}>${childFormValues[fieldName] || masterFormValues[fieldName] || fieldValue || ''}</${fieldName}>`;
+                                xFilter += `<${fieldName}>${fieldValue || childFormValues[fieldName] || masterFormValues[fieldName] || ''}</${fieldName}>`;
                             }
                         });
                     } else {
@@ -2552,6 +2772,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                         masterValues={masterFormValues}
                                         setFormData={setMasterFormData}
                                         setValidationModal={setValidationModal}
+                                        validationMethodToModifyTabsForm={validationMethodToModifyTabsForm}
                                     />
                                 </div>
 
