@@ -15,12 +15,14 @@ import {
   FaExclamationCircle,
   FaSpinner,
   FaDownload,
+  FaEye,
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { useTheme } from '@/context/ThemeContext';
 import { getUploadManager } from '@/utils/backgroundUploadService';
-import { FileQueueItem, UploadQueueStats } from '@/types/upload';
+import { FileQueueItem, UploadQueueStats, FileImportErrors } from '@/types/upload';
 import { formatFileSize, formatDuration, downloadAsCSV } from '@/utils/fileParser';
+import ImportErrorsModal from './ImportErrorsModal';
 
 interface MultiFileUploadQueueProps {
   apiRecords: any[];
@@ -56,6 +58,10 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const lastUpdateRef = React.useRef<string>('');
 
+  // Import errors modal state
+  const [showImportErrorsModal, setShowImportErrorsModal] = useState(false);
+  const [importErrors, setImportErrors] = useState<FileImportErrors[]>([]);
+
   // Update queue state (only if changed to prevent flashing)
   const updateQueueState = useCallback(() => {
     const queue = uploadManager.getQueue();
@@ -63,7 +69,7 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
 
     // Create a hash to detect actual changes
     const queueHash = JSON.stringify({
-      items: queue.items.map(i => ({ id: i.id, status: i.status, progress: i.progress, error: i.error })),
+      items: queue.items.map(i => ({ id: i.id, status: i.status, progress: i.progress, error: i.error, importErrors: i.importErrors?.length })),
       stats: newStats,
       isPaused: queue.isPaused
     });
@@ -74,6 +80,57 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
       setQueueItems(queue.items);
       setStats(newStats);
       setIsPaused(queue.isPaused);
+
+      // Check for files with import errors and show modal
+      const filesWithErrors = queue.items.filter(
+        item => item.status === 'success' && item.importErrors && item.importErrors.length > 0
+      );
+
+      if (filesWithErrors.length > 0) {
+        // Group errors by filename
+        const errorsByFile = new Map<string, FileImportErrors>();
+
+        filesWithErrors.forEach(item => {
+          const itemErrors = item.importErrors || [];
+          const errorsByFileName = new Map<string, any[]>();
+
+          // Group errors from this item by tf_FileName
+          itemErrors.forEach(error => {
+            const errorFileName = error.tf_FileName || item.fileName;
+            if (!errorsByFileName.has(errorFileName)) {
+              errorsByFileName.set(errorFileName, []);
+            }
+            errorsByFileName.get(errorFileName)!.push(error);
+          });
+
+          // Create FileImportErrors for each unique filename
+          errorsByFileName.forEach((errors, errorFileName) => {
+            if (!errorsByFile.has(errorFileName)) {
+              errorsByFile.set(errorFileName, {
+                fileName: errorFileName,
+                fileSeqNo: String(item.matchedRecord?.FileSerialNo || ''),
+                errors: errors,
+                processStatus: item.processStatus || { flag: 'S', message: 'Process Completed' },
+              });
+            } else {
+              // Merge errors if same filename appears in multiple items
+              const existing = errorsByFile.get(errorFileName)!;
+              existing.errors.push(...errors);
+            }
+          });
+        });
+
+        const errorsList = Array.from(errorsByFile.values());
+
+        if (errorsList.length > 0) {
+          setImportErrors(errorsList);
+          setShowImportErrorsModal(true);
+
+          // Show toast notification
+          const totalErrors = errorsList.reduce((sum, f) => sum + f.errors.length, 0);
+          toast.warning(`Found ${totalErrors} error record(s) across ${errorsList.length} file(s)`);
+        }
+      }
 
       if (onQueueUpdate) {
         onQueueUpdate(newStats);
@@ -400,6 +457,35 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
                               <FaRedo />
                             </button>
                           )}
+                          {item.importErrors && item.importErrors.length > 0 && (
+                            <button
+                              onClick={() => {
+                                // Show modal with this item's errors
+                                const errorsByFileName = new Map<string, any[]>();
+                                item.importErrors!.forEach(error => {
+                                  const errorFileName = error.tf_FileName || item.fileName;
+                                  if (!errorsByFileName.has(errorFileName)) {
+                                    errorsByFileName.set(errorFileName, []);
+                                  }
+                                  errorsByFileName.get(errorFileName)!.push(error);
+                                });
+
+                                const errorsList: FileImportErrors[] = Array.from(errorsByFileName.entries()).map(([errorFileName, errors]) => ({
+                                  fileName: errorFileName,
+                                  fileSeqNo: String(item.matchedRecord?.FileSerialNo || ''),
+                                  errors: errors,
+                                  processStatus: item.processStatus || { flag: 'S', message: 'Process Completed' },
+                                }));
+
+                                setImportErrors(errorsList);
+                                setShowImportErrorsModal(true);
+                              }}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                              title={`View ${item.importErrors.length} Import Errors`}
+                            >
+                              <FaEye />
+                            </button>
+                          )}
                           {item.failedChunks && item.failedChunks.length > 0 && (
                             <button
                               onClick={() => handleDownloadFailed(item)}
@@ -437,6 +523,14 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
           <p className="text-sm text-gray-400 mt-1">Drag and drop files to get started</p>
         </div>
       )}
+
+      {/* Import Errors Modal */}
+      <ImportErrorsModal
+        isOpen={showImportErrorsModal}
+        onClose={() => setShowImportErrorsModal(false)}
+        fileErrors={importErrors}
+        hasErrors={importErrors.some(f => f.errors.length > 0)}
+      />
     </div>
   );
 };
