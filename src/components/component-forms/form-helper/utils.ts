@@ -157,7 +157,7 @@ export const convertXmlToModifiedFormData = (xmlString: string) => {
 
   if (tabsToDisableNode) {
     Array.from(tabsToDisableNode.children).forEach(tabNode => {
-      if (tabNode.textContent?.trim() === 'true') {
+      if (tabNode.textContent?.trim() === 'false') {
         result.tabsToBeDisabled.push(tabNode.tagName);
       }
     });
