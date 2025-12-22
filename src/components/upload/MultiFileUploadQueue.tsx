@@ -61,6 +61,7 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
   // Import errors modal state
   const [showImportErrorsModal, setShowImportErrorsModal] = useState(false);
   const [importErrors, setImportErrors] = useState<FileImportErrors[]>([]);
+  const shownErrorsRef = React.useRef<Set<string>>(new Set());
 
   // Update queue state (only if changed to prevent flashing)
   const updateQueueState = useCallback(() => {
@@ -81,54 +82,62 @@ const MultiFileUploadQueue: React.FC<MultiFileUploadQueueProps> = ({
       setStats(newStats);
       setIsPaused(queue.isPaused);
 
-      // Check for files with import errors and show modal
+      // Check for files with import errors and show modal (only for new errors)
       const filesWithErrors = queue.items.filter(
         item => item.status === 'success' && item.importErrors && item.importErrors.length > 0
       );
 
       if (filesWithErrors.length > 0) {
-        // Group errors by filename
-        const errorsByFile = new Map<string, FileImportErrors>();
+        // Check if there are any new files with errors that we haven't shown yet
+        const newFilesWithErrors = filesWithErrors.filter(item => !shownErrorsRef.current.has(item.id));
 
-        filesWithErrors.forEach(item => {
-          const itemErrors = item.importErrors || [];
-          const errorsByFileName = new Map<string, any[]>();
+        if (newFilesWithErrors.length > 0) {
+          // Group errors by filename
+          const errorsByFile = new Map<string, FileImportErrors>();
 
-          // Group errors from this item by tf_FileName
-          itemErrors.forEach(error => {
-            const errorFileName = error.tf_FileName || item.fileName;
-            if (!errorsByFileName.has(errorFileName)) {
-              errorsByFileName.set(errorFileName, []);
-            }
-            errorsByFileName.get(errorFileName)!.push(error);
+          filesWithErrors.forEach(item => {
+            const itemErrors = item.importErrors || [];
+            const errorsByFileName = new Map<string, any[]>();
+
+            // Group errors from this item by tf_FileName
+            itemErrors.forEach(error => {
+              const errorFileName = error.tf_FileName || item.fileName;
+              if (!errorsByFileName.has(errorFileName)) {
+                errorsByFileName.set(errorFileName, []);
+              }
+              errorsByFileName.get(errorFileName)!.push(error);
+            });
+
+            // Create FileImportErrors for each unique filename
+            errorsByFileName.forEach((errors, errorFileName) => {
+              if (!errorsByFile.has(errorFileName)) {
+                errorsByFile.set(errorFileName, {
+                  fileName: errorFileName,
+                  fileSeqNo: String(item.matchedRecord?.FileSerialNo || ''),
+                  errors: errors,
+                  processStatus: item.processStatus || { flag: 'S', message: 'Process Completed' },
+                });
+              } else {
+                // Merge errors if same filename appears in multiple items
+                const existing = errorsByFile.get(errorFileName)!;
+                existing.errors.push(...errors);
+              }
+            });
+
+            // Mark this file as shown
+            shownErrorsRef.current.add(item.id);
           });
 
-          // Create FileImportErrors for each unique filename
-          errorsByFileName.forEach((errors, errorFileName) => {
-            if (!errorsByFile.has(errorFileName)) {
-              errorsByFile.set(errorFileName, {
-                fileName: errorFileName,
-                fileSeqNo: String(item.matchedRecord?.FileSerialNo || ''),
-                errors: errors,
-                processStatus: item.processStatus || { flag: 'S', message: 'Process Completed' },
-              });
-            } else {
-              // Merge errors if same filename appears in multiple items
-              const existing = errorsByFile.get(errorFileName)!;
-              existing.errors.push(...errors);
-            }
-          });
-        });
+          const errorsList = Array.from(errorsByFile.values());
 
-        const errorsList = Array.from(errorsByFile.values());
+          if (errorsList.length > 0) {
+            setImportErrors(errorsList);
+            setShowImportErrorsModal(true);
 
-        if (errorsList.length > 0) {
-          setImportErrors(errorsList);
-          setShowImportErrorsModal(true);
-
-          // Show toast notification
-          const totalErrors = errorsList.reduce((sum, f) => sum + f.errors.length, 0);
-          toast.warning(`Found ${totalErrors} error record(s) across ${errorsList.length} file(s)`);
+            // Show toast notification
+            const totalErrors = errorsList.reduce((sum, f) => sum + f.errors.length, 0);
+            toast.warning(`Found ${totalErrors} error record(s) across ${errorsList.length} file(s)`);
+          }
         }
       }
 
