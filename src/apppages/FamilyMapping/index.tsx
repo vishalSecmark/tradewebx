@@ -17,6 +17,7 @@ import { storeTempOtpToken } from "@/utils/auth";
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from "@/redux/store";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import ConfirmationModal from "@/components/Modals/ConfirmationModal";
 
 const passKey = "TradeWebX1234567";
 
@@ -40,12 +41,28 @@ export default function Family() {
   const { encPayload } = useSelector((state: RootState) => state.common);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showOtp, setShowOtp] = useState<boolean>(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+  const [confirmMessage, setConfirmMessage] = useState<string>("");
+  const [selectedRow, setSelectedRow] = useState<FamilyRow | null>(null);
 
   // --- Columns ---
   const columns: Column<FamilyRow>[] = [
     { key: "FamilyHead", name: "Family Head" },
     { key: "ClientCode", name: "Client Code" },
     { key: "ClientName", name: "Client Name" },
+    {
+      key: "remove",
+      name: "",
+      width: 100,
+      renderCell: ({ row }) => (
+        <span
+          className="text-red-700 cursor-pointer underline"
+          onClick={() => handleRemoveClick(row)}
+        >
+          Remove
+        </span>
+      )
+    }
   ];
 
   // --- AES Encryption ---
@@ -208,6 +225,7 @@ export default function Family() {
       const xmlData = `<dsXml>
         <J_Ui>"ActionName":"${ACTION_NAME}","Option":"Verify2FA","Level":1,"RequestFrom":"W"</J_Ui>
         <Sql/>
+        <X_Filter></X_Filter>
         <X_Data>
           <OTP>${otp}</OTP>
         </X_Data>
@@ -269,7 +287,7 @@ export default function Family() {
         setOtpRequired(false);
         setLoginData({ userId: "", password: "" });
         closeLoginModal();
-      } 
+      }
       if (response?.data?.success === false) {
         toast.error(response?.data?.message.replace(/<[^>]+>/g, "") || "Something went wrong...!");
         return; // stop further execution
@@ -278,6 +296,71 @@ export default function Family() {
       toast.error("Something went wrong...!");
     }
   };
+
+  //Delete working
+  const handleRemoveClick = (row: FamilyRow) => {
+    
+    const isMainMember = row.FamilyHead?.trim().toUpperCase() === "MAIN";
+    const message = isMainMember
+      ? `[${row.ClientCode}  ${row.ClientName} ] Is Main Person Of Family, Remove All Members From Family ?`
+      : `[${row.ClientCode}  ${row.ClientName} ] Remove Member?`;
+
+    setSelectedRow(row);
+    setConfirmMessage(message);
+    setIsConfirmOpen(true);
+  };
+
+  //Yes No Hnadlers 
+  const handleConfirmDelete = async () => {
+    if (!selectedRow) return;
+
+    await deleteFamilyMember(selectedRow.ClientCode);
+
+    setIsConfirmOpen(false);
+    setSelectedRow(null);
+  };
+
+  const handleCancelDelete = () => {
+    setIsConfirmOpen(false);
+    setSelectedRow(null);
+  };
+
+  //Delete API
+
+  const deleteFamilyMember = async (userId: string): Promise<void> => {
+    try {
+      const ipAddress = await getIPAddress();
+
+      const xmlData = `<dsXml>
+      <J_Ui>"ActionName":"FamilyMapping","Option":"DELETE","RequestFrom":"W"</J_Ui>
+      <Sql></Sql>
+      <X_Filter></X_Filter>
+      <X_Data>
+        <UccCode>${userId}</UccCode>
+        <IPAddress>${ipAddress}</IPAddress>
+      </X_Data>
+      <J_Api>"UserId":"${getLocalStorage("userId")}","UserType":"${getLocalStorage("userType")}"</J_Api>
+    </dsXml>`;
+
+      const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+      console.log("delete", response)
+      if (response?.data?.success === true) {
+        toast.success(
+          response?.data?.message?.replace(/<[^>]+>/g, "") ||
+          "Member removed successfully"
+        );
+        fetchFamilyMapping();
+      } else {
+        toast.error(
+          response?.data?.message?.replace(/<[^>]+>/g, "") ||
+          "Failed to remove member"
+        );
+      }
+    } catch {
+      toast.error("Something went wrong while removing member.");
+    }
+  };
+
 
   // --- JSX ---
   return (
@@ -393,6 +476,12 @@ export default function Family() {
           )}
         </div>
       </Modal>
+      <ConfirmationModal
+        message={confirmMessage}
+        isOpen={isConfirmOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 }
