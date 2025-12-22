@@ -11,6 +11,7 @@ import apiService from "@/utils/apiService";
 import { ACTION_NAME, BASE_URL, PATH_URL, BASE_PATH_FRONT_END } from "@/utils/constants";
 import { useTheme } from "@/context/ThemeContext";
 import { getLocalStorage } from "@/utils/helper";
+import { useRouter } from "next/router";
 
 // Password encryption key
 const passKey = "TradeWebX1234567";
@@ -30,6 +31,7 @@ function Encryption(data) {
 }
 
 export default function ChangePassword() {
+    const router = useRouter()
     const { colors } = useTheme();
     const [formData, setFormData] = useState({
         currentPassword: "",
@@ -117,7 +119,8 @@ export default function ChangePassword() {
                     // Redirect to sign-in page after a short delay
                     // Next.js basePath config handles the base path automatically
                     setTimeout(() => {
-                        window.location.href = '/signin';
+                        // window.location.href = '/signin';
+                        router.push('/signin')
                     }, 2000);
                 } else {
                     setError(result.Message);
