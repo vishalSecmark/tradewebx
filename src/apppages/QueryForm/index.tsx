@@ -498,8 +498,8 @@ export default function QueryFormPage() {
                       <FaFileExcel size={20} aria-hidden="true" />
                     </button>
                     
-                    {/* PDF */}
-                    <button
+                    {/* PDF currently commented due to sanjiv sir request*/}
+                    {/* <button
                       onClick={()=>{
                         toast.success("your reports will be downloded in the background")
                         exportTableToPdf(tableRef.current,null,appMetadata,rows,pageData,null,0,"download")
@@ -518,7 +518,7 @@ export default function QueryFormPage() {
                       }}
                     >
                       <FaFilePdf size={20} aria-hidden="true" />
-                    </button>
+                    </button> */}
                   </div>
                     
                   <div
