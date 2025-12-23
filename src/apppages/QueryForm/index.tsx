@@ -123,13 +123,7 @@ export default function QueryFormPage() {
 
   /* Refs */
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
-  const queryTextRef = useRef<HTMLTextAreaElement | null>(null);
-
-
-
-
-  // console.log(Encryption('123456'),'encryption');
-  
+  const queryTextRef = useRef<HTMLTextAreaElement | null>(null);  
 
   /* Focus password on load */
   useEffect(() => {
@@ -174,15 +168,9 @@ export default function QueryFormPage() {
     }
 
     setLoading(true);
-    // const xmlData = buildValidatePasswordXml(password);
-
-    // console.log(xmlData,'xmlData');
 
     try {
       const xmlData = buildValidatePasswordXml(password.trim());
-      console.log(xmlData,'xmlData try block');
-      
-      
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       // Real response contains:
