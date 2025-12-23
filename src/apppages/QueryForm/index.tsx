@@ -15,6 +15,9 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { FaFileCsv,FaFileExcel, FaFilePdf  } from "react-icons/fa";
 import { selectAllMenuItems } from "@/redux/features/menuSlice";
 import {exportTableToCsv, exportTableToPdf, exportTableToExcel} from "@/components/DataTable";
+import { log } from "node:console";
+import CryptoJS from 'crypto-js';
+
 
 /* ----------------------------- Types ------------------------------ */
 
@@ -25,6 +28,27 @@ interface Option {
   value: string;
 }
 
+
+/* --------------------------- Encryption Logic ----------------------- */
+
+const passKey = "TradeWebX1234567";
+
+function Encryption(data) {
+  const key = CryptoJS.enc.Utf8.parse(passKey);
+  const iv = CryptoJS.enc.Utf8.parse(passKey);
+  const encrypted = CryptoJS.AES.encrypt(CryptoJS.enc.Utf8.parse(data), key,
+      {
+          keySize: 128 / 8,
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7
+      });
+  return encrypted.toString();
+}
+
+
+/* ---------------------------- End ----------------------------------- */
+
 /* ------------------------------ XML ------------------------------ */
 
 const buildValidatePasswordXml = (password: string) => `
@@ -33,7 +57,7 @@ const buildValidatePasswordXml = (password: string) => `
     <Sql/>
     <X_Filter></X_Filter>
     <X_Filter_Multiple>
-      <Password>${password}</Password>
+      <EPassword>${Encryption(password)}</EPassword>
     </X_Filter_Multiple>
     <X_GFilter/>
     <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
@@ -101,6 +125,12 @@ export default function QueryFormPage() {
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
   const queryTextRef = useRef<HTMLTextAreaElement | null>(null);
 
+
+
+
+  // console.log(Encryption('123456'),'encryption');
+  
+
   /* Focus password on load */
   useEffect(() => {
     if (!isAuthenticated) passwordInputRef.current?.focus();
@@ -144,9 +174,15 @@ export default function QueryFormPage() {
     }
 
     setLoading(true);
+    // const xmlData = buildValidatePasswordXml(password);
+
+    // console.log(xmlData,'xmlData');
 
     try {
       const xmlData = buildValidatePasswordXml(password.trim());
+      console.log(xmlData,'xmlData try block');
+      
+      
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
 
       // Real response contains:
