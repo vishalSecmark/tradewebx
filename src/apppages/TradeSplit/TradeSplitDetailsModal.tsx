@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useState, useMemo } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
+import { Dialog, Transition, DialogPanel, DialogTitle, TransitionChild } from '@headlessui/react';
 import { DataGrid, Column, RenderCellProps } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import Select from 'react-select';
@@ -337,7 +337,7 @@ const TradeSplitDetailsModal: React.FC<TradeSplitModalProps> = ({ isOpen, onClos
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-[1000]" onClose={onClose}>
-                <Transition.Child
+                <TransitionChild
                     as={Fragment}
                     enter="ease-out duration-300"
                     enterFrom="opacity-0"
@@ -347,11 +347,11 @@ const TradeSplitDetailsModal: React.FC<TradeSplitModalProps> = ({ isOpen, onClos
                     leaveTo="opacity-0"
                 >
                     <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
-                </Transition.Child>
+                </TransitionChild>
 
                 <div className="fixed inset-0 overflow-y-auto">
                     <div className="flex min-h-full items-center justify-center p-4">
-                        <Transition.Child
+                        <TransitionChild
                             as={Fragment}
                             enter="ease-out duration-300"
                             enterFrom="opacity-0 scale-95"
@@ -360,13 +360,13 @@ const TradeSplitDetailsModal: React.FC<TradeSplitModalProps> = ({ isOpen, onClos
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-6xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
-                                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 flex justify-between items-center">
+                            <DialogPanel className="w-full max-w-6xl transform overflow-hidden rounded-2xl bg-white p-6 shadow-xl transition-all">
+                                <DialogTitle as="h3" className="text-lg font-medium leading-6 text-gray-900 flex justify-between items-center">
                                     <span>Detailed Trade Split - {summaryRow?.ScripName} ({summaryRow?.Scrip})</span>
                                     <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
                                         ✕
                                     </button>
-                                </Dialog.Title>
+                                </DialogTitle>
 
                                 <div className="mt-4">
                                     {/* Status Card */}
@@ -396,22 +396,19 @@ const TradeSplitDetailsModal: React.FC<TradeSplitModalProps> = ({ isOpen, onClos
                                                 rowHeight={50} // Increased height for dropdowns
                                             />
                                         )}
-                                    </div>
-                                    
-                                    {/* Add Row Button */}
-                                    <div className="mt-2 text-right">
+                                    </div>        
+                                </div>
+
+                                <div className="mt-6 flex justify-end gap-3">
                                          <button 
                                             type="button"
                                             onClick={handleAddRow}
                                             disabled={isLoading}
                                             className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm font-semibold border border-green-300"
                                          >
-                                            + Add Split Row
+                                            + Add Row
                                          </button>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 flex justify-end gap-3">
+                
                                     <button
                                         type="button"
                                         className="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -428,8 +425,8 @@ const TradeSplitDetailsModal: React.FC<TradeSplitModalProps> = ({ isOpen, onClos
                                         Cancel
                                     </button>
                                 </div>
-                            </Dialog.Panel>
-                        </Transition.Child>
+                            </DialogPanel>
+                        </TransitionChild>
                     </div>
                 </div>
             </Dialog>

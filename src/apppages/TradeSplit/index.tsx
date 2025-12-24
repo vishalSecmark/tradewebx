@@ -1,16 +1,13 @@
-import { selectAllMenuItems } from '@/redux/features/menuSlice';
-import { useAppSelector } from '@/redux/hooks';
-import { findPageData } from '@/utils/helper';
 import React, { useEffect, useState, useMemo } from 'react';
 import { DataGrid, Column, RenderCellProps } from 'react-data-grid';
-import 'react-data-grid/lib/styles.css';
 import TradeSplitDetailsModal from './TradeSplitDetailsModal';
 import { TradeSplitProps, SummaryRow } from '@/types/tradeSplit';
+import { useTheme } from '@/context/ThemeContext';
 
 // ------------------- Component -------------------
 
 const TradeSplit: React.FC<TradeSplitProps> = ({ data, settings, filters }) => {
-    
+    const {colors} = useTheme();
     // State
     const [summaryRows, setSummaryRows] = useState<SummaryRow[]>([]);
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
@@ -65,40 +62,37 @@ const TradeSplit: React.FC<TradeSplitProps> = ({ data, settings, filters }) => {
                     </div>
                 )
             },
-            { key: 'SerialNo', name: 'Serial No', width: 90 },
-            { key: 'Settlement', name: 'Settlement', width: 100 },
-            { key: 'Client', name: 'Client Code', width: 100 },
-            { key: 'ClientName', name: 'Client Name', width: 200 },
-            { key: 'Scrip', name: 'Scrip Code', width: 90 },
-            { key: 'ScripName', name: 'Scrip Name', width: 150 },
-            { key: 'BuySell', name: 'B/S', width: 60 },
-            { key: 'BuyQty', name: 'Buy Qty', width: 90 },
-            { key: 'SellQty', name: 'Sell Qty', width: 90 },
+            { key: 'SerialNo', name: 'Serial No', width: "auto" },
+            { key: 'Settlement', name: 'Settlement', width: "auto" },
+            { key: 'Client', name: 'Client Code', width: "auto" },
+            { key: 'ClientName', name: 'Client Name', width: "auto" },
+            { key: 'Scrip', name: 'Scrip Code', width: "auto" },
+            { key: 'ScripName', name: 'Scrip Name', width: "auto" },
+            { key: 'BuySell', name: 'B/S', width: "auto" },
+            { key: 'BuyQty', name: 'Buy Qty', width: "auto" },
+            { key: 'SellQty', name: 'Sell Qty', width: "auto" },
         ];
     }, [selectedRowId]);
 
     return (
-        <div className="w-full p-4 flex flex-col h-screen max-h-[calc(100vh-100px)]">
-            
-            {/* Top Bar */}
-            <div className="bg-white p-4 shadow-sm rounded-lg mb-4 flex justify-between items-center border border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-700">Trade Split Summary</h2>
-                <div>
-                    <button
-                        onClick={handleEditClick}
-                        disabled={!selectedRow}
-                        className={`px-4 py-2 font-semibold rounded shadow-sm transition-colors ${
-                            selectedRow 
-                             ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                        aria-disabled={!selectedRow}
-                    >
-                        Edit Selected Trade
-                    </button>
-                </div>
+        <div className="w-full p-2 flex flex-col h-screen max-h-[calc(100vh-100px)]">
+            {/* Top Bar - Button Right Aligned */}
+            <div className="flex justify-end mb-2">
+                <button
+                    onClick={handleEditClick}
+                    disabled={!selectedRow}
+                    className={`px-4 py-2 font-semibold rounded shadow-sm transition-colors text-white`}
+                    style={{
+                        backgroundColor: selectedRow ? (colors?.buttonBackground || '#2563eb') : '#e5e7eb',
+                        borderColor: selectedRow ? (colors?.buttonBackground || '#2563eb') : '#d1d5db',
+                        color: selectedRow ?     (colors?.buttonText || '#ffffff') : '#9ca3af',
+                        cursor: selectedRow ? 'pointer' : 'not-allowed'
+                    }}
+                    aria-disabled={!selectedRow}
+                >
+                    Edit Selected Trade
+                </button>
             </div>
-
             {/* Grid */}
             <div className="flex-1 overflow-hidden rounded-lg border border-gray-200 shadow-sm bg-white">
                 <DataGrid
