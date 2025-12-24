@@ -26,6 +26,7 @@ import { toast } from "react-toastify";
 import MultiEntryDataTables from './MultiEntryDataTables';
 import { recursiveSearch, generatePdf, generateExcel, generateCsv } from '@/utils/multiEntryUtils';
 import MultiFileUploadQueue from './upload/MultiFileUploadQueue';
+import TradeSplit from '@/apppages/TradeSplit';
 
 // const { companyLogo, companyName } = useAppSelector((state) => state.common);
 
@@ -2509,7 +2510,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                     } | Response Time: {(apiResponseTime / 1000).toFixed(2)}s
                             </div>
                         </div>
-                        {componentType === "multireport" ? (
+                        {componentType === "tradesplit" ? 
+                         (<TradeSplit
+                            data={filteredApiData}
+                            settings={safePageData.getCurrentLevel(currentLevel)?.settings} 
+                            filters={filters}
+                            isAutoWidth={isAutoWidth}
+                         />) : 
+                         componentType === "multireport" ? (
                             <MultiEntryDataTables 
                                 data={filteredApiData}
                                 settings={safePageData.getCurrentLevel(currentLevel)?.settings} 
