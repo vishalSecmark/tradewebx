@@ -2515,6 +2515,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             data={filteredApiData}
                             settings={safePageData.getCurrentLevel(currentLevel)?.settings} 
                             filters={filters}
+                            isAutoWidth={isAutoWidth}
                          />) : 
                          componentType === "multireport" ? (
                             <MultiEntryDataTables 
