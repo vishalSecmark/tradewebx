@@ -7,7 +7,7 @@ import DataTable from '@/components/DataTable';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import { RootState } from '@/redux/store';
 import FilterModal from '@/components/FilterModal';
-import { FaFileArchive, FaFilter, FaSync } from 'react-icons/fa';
+import { FaFileArchive, FaFilter, FaSync, FaArrowsAltH } from 'react-icons/fa';
 import apiService from '@/utils/apiService';
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -34,6 +34,7 @@ const Downloads = () => {
     const [apiResponseTime, setApiResponseTime] = useState<number | undefined>(undefined);
     const [downloadAllData, setDownloadAllData] = useState([]);
     const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+    const [isAutoWidth, setIsAutoWidth] = useState(false);
 
     const { colors, fonts } = useTheme();
     const userData = useSelector((state: RootState) => state.auth);
@@ -410,6 +411,21 @@ const Downloads = () => {
                         style={{ color: colors.text }}
                     />
 
+                    <div className="relative group">
+                        <button
+                            className="p-2 rounded hover:bg-gray-100 transition-colors"
+                            onClick={() => setIsAutoWidth(!isAutoWidth)}
+                            style={{ color: isAutoWidth ? '#3b82f6' : colors.text }}
+                            aria-label="Toggle Auto Width"
+                        >
+                            <FaArrowsAltH size={20} />
+                        </button>
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                            {isAutoWidth ? "Reset Column Widths" : "Fit Columns to Width"}
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-800"></div>
+                        </div>
+                    </div>
+
 
                     <button
                         className="p-2 rounded"
@@ -490,7 +506,10 @@ const Downloads = () => {
                 <DataTable
                     data={downloads}
                     onRowClick={handleDownload}
-                    settings={tableSettings}
+                    settings={{
+                        ...tableSettings,
+                        ...(isAutoWidth ? { columnWidth: undefined, isAutoWidth: true } : {})
+                    }}
                 />
             )}
 
