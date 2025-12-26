@@ -1361,7 +1361,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     columnConfig.width = customWidth;
                     columnConfig.minWidth = Math.min(50, Math.floor(customWidth * 0.5)); // Allow resizing down to 50% of custom width or minimum 50px
                     columnConfig.maxWidth = Math.max(600, Math.floor(customWidth * 2)); // Allow resizing up to 200% of custom width or minimum 600px
-                } else if (settings?.isAutoWidth ?? columnsToShow.length > 10) {
+                } else if (settings?.isAutoWidth ?? columnsToShow.length > 7) {
                     // Auto-fit logic using text measurement
                     // 1. Measure Header
                     const font = "600 14px 'Inter', sans-serif"; // Slightly larger to be safe

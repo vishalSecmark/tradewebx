@@ -81,6 +81,14 @@ const Downloads = () => {
             if (response.data?.data?.rs0) {
                 setDownloads(response.data.data.rs0);
                 setDownloadAllData(response.data.data.rs0)
+
+                // Auto-enable auto-width for tables with many columns
+                if (response.data.data.rs0.length > 0) {
+                    const columnCount = Object.keys(response.data.data.rs0[0]).filter(key => !key.startsWith('_')).length;
+                    if (columnCount > 7) {
+                        setIsAutoWidth(true);
+                    }
+                }
             }
 
             // Parse headings from RS1 if available
