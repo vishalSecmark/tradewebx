@@ -885,6 +885,22 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         }
     };
 
+    const decimalColumnMap = useMemo(() => {
+        const map: Record<string, number> = {};
+        if (settings?.decimalColumns && Array.isArray(settings.decimalColumns)) {
+            settings.decimalColumns.forEach((decimalSetting: DecimalColumn) => {
+                if (!decimalSetting.key) return;
+                const columns = decimalSetting.key.split(',').map((key) => key.trim());
+                columns.forEach((column) => {
+                    if (column) {
+                        map[column] = decimalSetting.decimalPlaces;
+                    }
+                });
+            });
+        }
+        return map;
+    }, [settings?.decimalColumns]);
+
     // New function to get color based on value comparison
     const getValueBasedColor = (
         value: number | string,
@@ -1431,26 +1447,22 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     renderCell: isDetailColumn
                         ? ({ row }: any) => {
                             const value = row[key];
-                            const rawValue = React.isValidElement(value) ? (value as StyledValue).props.children : value;
-                            const numValue = parseFloat(rawValue);
-
                             let displayValue: React.ReactNode = value;
 
-                            // Apply numeric formatting if applicable
-                            if (!isNaN(numValue) && !isLeftAligned) {
-                                const formattedValue = new Intl.NumberFormat('en-IN', {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                }).format(numValue);
-
-                                const textColor = numValue < 0 ? '#dc2626' :
-                                    numValue > 0 ? '#16a34a' :
-                                        colors.text;
-                                 // Ensure WCAG contrast against background
-                            const contrastTextColor = ensureContrastColor(textColor, '#e3f0ff');                 
-                                displayValue = <span style={{ color: contrastTextColor }}>{formattedValue}</span>;
-                            } else if (React.isValidElement(value)) {
+                            if (React.isValidElement(value)) {
                                 displayValue = value;
+                            } else {
+                                const decimalPlaces = decimalColumnMap[key];
+                                if (decimalPlaces !== undefined && !isLeftAligned) {
+                                    const rawValue = typeof value === 'string' ? value.replace(/,/g, '') : value;
+                                    const numValue = typeof rawValue === 'string' ? parseFloat(rawValue) : rawValue;
+                                    if (!isNaN(numValue)) {
+                                        displayValue = new Intl.NumberFormat('en-IN', {
+                                            minimumFractionDigits: decimalPlaces,
+                                            maximumFractionDigits: decimalPlaces
+                                        }).format(numValue);
+                                    }
+                                }
                             }
 
                             return (
@@ -1615,7 +1627,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         }
         return baseColumns;
 
-    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, expandedRows, selectedRows, filters, detailColumns, onDetailColumnClick]);
+    }, [formattedData, colors.text, settings?.hideEntireColumn, settings?.leftAlignedColumns, settings?.leftAlignedColums, summary?.columnsToShowTotal, screenSize, settings?.mobileColumns, settings?.tabletColumns, settings?.webColumns, settings?.columnWidth, decimalColumnMap, expandedRows, selectedRows, filters, detailColumns, onDetailColumnClick]);
 
     // Sort function
     const sortRows = (initialRows: any[], sortColumns: any[]) => {
