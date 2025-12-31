@@ -2,6 +2,12 @@ import apiService from "@/utils/apiService";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
 import { toast } from "react-toastify";
 
+export const getRowBgColor = (rowIndex: number,gridBgColor:any) => {
+  return rowIndex % 2 === 0
+    ? gridBgColor   // themed background
+    : "#ffffff";    // white
+};
+
 
 export const editableColumns = [
   "APIUrl",
