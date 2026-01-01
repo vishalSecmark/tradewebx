@@ -351,8 +351,28 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     useEffect(() => {
         const triggerEditValidate = async () => {
              if (editValidateData && (action === 'edit' || action === 'view')) {
-                 // Ensure masterFormValues are populated before calling API
+                 if(isLoading) return;
+
+                 // Check if any dropdowns are loading
+                 if (Object.values(masterLoadingDropdowns).some(loading => loading)) return;
+                 if (Object.values(tabLoadingDropdowns).some(tab => Object.values(tab).some(loading => loading))) return;
+
+                 // Check Master Data
+                 if (masterFormData.length === 0) return;
                  if (Object.keys(masterFormValues).length === 0) return;
+
+                 // Check Tabs Data if exists
+                 if (tabsData.length > 0) {
+                     // Ensure we have values and table data for all tabs
+                     // We use keys like 'tab_0', 'tab_1' etc.
+                     // A simple check is to see if the count of keys matches the tabsData length
+                     // But tabs might be filtered or not fully set? 
+                     // fetchTabsData sets them all at once, so key count is a good proxy along with internal structure check.
+                     const tabKeys = Object.keys(tabFormValues);
+                     if (tabKeys.length < tabsData.length) return;
+                     
+                     if (Object.keys(tabTableData).length < tabsData.length) return;
+                 }
 
                  const response = await executeEditValidateApi(editValidateData, masterFormValues);
                  if (response) {
@@ -366,7 +386,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
              }
         };
         triggerEditValidate();
-    }, [editValidateData, masterFormValues, action]);
+    }, [editValidateData, masterFormValues, action, isLoading, masterLoadingDropdowns, tabLoadingDropdowns, masterFormData, tabsData, tabFormValues, tabTableData]);
 
     console.log("check tabs data===>", tabTableData, tabFormValues, tabsData, masterFormValues)
 
