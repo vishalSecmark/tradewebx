@@ -12,12 +12,12 @@ import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
-import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
+import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm, convertXmlToModifiedFormData } from './component-forms/form-helper/utils';
 import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, escapeXmlChars, sanitizePayload } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
-import { handleNextValidationFields } from './component-forms/form-helper/apiHelper';
+import { handleNextValidationFields, executeEditValidateApi } from './component-forms/form-helper/apiHelper';
 import AccessibleModalEntry from './a11y/AccessibleModalEntry';
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
@@ -346,6 +346,27 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [guardianLoading, setGuardianLoading] = useState(false);
     const [finalTabSubmitSuccess, setFinalTabSubmitSuccess] = useState(false);
     const [filtersValueObject,setFiltersValueObject] = useState<Record<string,any>>({});
+    const [editValidateData, setEditValidateData] = useState<any>(null);
+
+    useEffect(() => {
+        const triggerEditValidate = async () => {
+             if (editValidateData && (action === 'edit' || action === 'view')) {
+                 // Ensure masterFormValues are populated before calling API
+                 if (Object.keys(masterFormValues).length === 0) return;
+
+                 const response = await executeEditValidateApi(editValidateData, masterFormValues);
+                 if (response) {
+                      const finalObject = convertXmlToModifiedFormData(response, {
+                          preserveLeadingZeros: true
+                      });
+                      console.log("check final Object", finalObject);
+                      validationMethodToModifyTabsForm(finalObject);
+                 }
+                 setEditValidateData(null);
+             }
+        };
+        triggerEditValidate();
+    }, [editValidateData, masterFormValues, action]);
 
     console.log("check tabs data===>", tabTableData, tabFormValues, tabsData, masterFormValues)
 
@@ -479,6 +500,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     });
 
                     setMasterFormValues(initialMasterValues);
+
+                    if ((action === 'edit' || action === 'view') && masterTab?.Settings?.EditValidate) {
+                         setEditValidateData(masterTab.Settings.EditValidate);
+                    }
 
                     // Fetch initial dropdown options for master form
                     masterFormData.forEach((field: FormField) => {
@@ -697,7 +722,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const { fieldsValueChange = {}, fieldDisabled = [] } = masterChange;
 
             // Update Field Values
+            // Update Field Values
             Object.keys(fieldsValueChange).forEach(key => {
+                const isEditOrView = action === "edit" || action === "view";
+                const currentValue = newMasterFormValues[key];
+                const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== "";
+
+                if (isEditOrView && hasValue) {
+                    return;
+                }
                 newMasterFormValues[key] = fieldsValueChange[key];
             });
 
@@ -728,11 +761,23 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 const { fieldsValueChange = {}, fieldDisabled = [] } = tabChange;
 
                 // Update Values
+                // Update Values
                 if (fieldsValueChange && Object.keys(fieldsValueChange).length > 0) {
-                     newTabFormValues[tabKey] = {
+                    const changesToApply: Record<string, any> = {};
+                    Object.keys(fieldsValueChange).forEach(key => {
+                        const isEditOrView = action === "edit" || action === "view";
+                        const currentValue = newTabFormValues[tabKey]?.[key];
+                        const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== "";
+
+                        if (!(isEditOrView && hasValue)) {
+                            changesToApply[key] = fieldsValueChange[key];
+                        }
+                    });
+
+                    newTabFormValues[tabKey] = {
                         ...newTabFormValues[tabKey],
-                        ...fieldsValueChange
-                     };
+                        ...changesToApply
+                    };
                 }
 
                 // Disable Fields - We need to update the definition in newTabsData
