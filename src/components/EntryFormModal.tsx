@@ -12,12 +12,12 @@ import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
-import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm } from './component-forms/form-helper/utils';
+import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm, convertXmlToModifiedFormData } from './component-forms/form-helper/utils';
 import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, escapeXmlChars, sanitizePayload } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
-import { handleNextValidationFields } from './component-forms/form-helper/apiHelper';
+import { handleNextValidationFields, executeEditValidateApi } from './component-forms/form-helper/apiHelper';
 import AccessibleModalEntry from './a11y/AccessibleModalEntry';
 
 const ChildEntryModal: React.FC<ChildEntryModalProps> = ({
@@ -346,6 +346,47 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [guardianLoading, setGuardianLoading] = useState(false);
     const [finalTabSubmitSuccess, setFinalTabSubmitSuccess] = useState(false);
     const [filtersValueObject,setFiltersValueObject] = useState<Record<string,any>>({});
+    const [editValidateData, setEditValidateData] = useState<any>(null);
+
+    useEffect(() => {
+        const triggerEditValidate = async () => {
+             if (editValidateData && (action === 'edit' || action === 'view')) {
+                 if(isLoading) return;
+
+                 // Check if any dropdowns are loading
+                 if (Object.values(masterLoadingDropdowns).some(loading => loading)) return;
+                 if (Object.values(tabLoadingDropdowns).some(tab => Object.values(tab).some(loading => loading))) return;
+
+                 // Check Master Data
+                 if (masterFormData.length === 0) return;
+                 if (Object.keys(masterFormValues).length === 0) return;
+
+                 // Check Tabs Data if exists
+                 if (tabsData.length > 0) {
+                     // Ensure we have values and table data for all tabs
+                     // We use keys like 'tab_0', 'tab_1' etc.
+                     // A simple check is to see if the count of keys matches the tabsData length
+                     // But tabs might be filtered or not fully set? 
+                     // fetchTabsData sets them all at once, so key count is a good proxy along with internal structure check.
+                     const tabKeys = Object.keys(tabFormValues);
+                     if (tabKeys.length < tabsData.length) return;
+                     
+                     if (Object.keys(tabTableData).length < tabsData.length) return;
+                 }
+
+                 const response = await executeEditValidateApi(editValidateData, masterFormValues);
+                 if (response) {
+                      const finalObject = convertXmlToModifiedFormData(response, {
+                          preserveLeadingZeros: true
+                      });
+                      console.log("check final Object", finalObject);
+                      validationMethodToModifyTabsForm(finalObject);
+                 }
+                 setEditValidateData(null);
+             }
+        };
+        triggerEditValidate();
+    }, [editValidateData, masterFormValues, action, isLoading, masterLoadingDropdowns, tabLoadingDropdowns, masterFormData, tabsData, tabFormValues, tabTableData]);
 
     console.log("check tabs data===>", tabTableData, tabFormValues, tabsData, masterFormValues)
 
@@ -479,6 +520,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     });
 
                     setMasterFormValues(initialMasterValues);
+
+                    if ((action === 'edit' || action === 'view') && masterTab?.Settings?.EditValidate) {
+                         setEditValidateData(masterTab.Settings.EditValidate);
+                    }
 
                     // Fetch initial dropdown options for master form
                     masterFormData.forEach((field: FormField) => {
@@ -697,7 +742,15 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const { fieldsValueChange = {}, fieldDisabled = [] } = masterChange;
 
             // Update Field Values
+            // Update Field Values
             Object.keys(fieldsValueChange).forEach(key => {
+                const isEditOrView = action === "edit" || action === "view";
+                const currentValue = newMasterFormValues[key];
+                const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== "";
+
+                if (isEditOrView && hasValue) {
+                    return;
+                }
                 newMasterFormValues[key] = fieldsValueChange[key];
             });
 
@@ -728,11 +781,23 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 const { fieldsValueChange = {}, fieldDisabled = [] } = tabChange;
 
                 // Update Values
+                // Update Values
                 if (fieldsValueChange && Object.keys(fieldsValueChange).length > 0) {
-                     newTabFormValues[tabKey] = {
+                    const changesToApply: Record<string, any> = {};
+                    Object.keys(fieldsValueChange).forEach(key => {
+                        const isEditOrView = action === "edit" || action === "view";
+                        const currentValue = newTabFormValues[tabKey]?.[key];
+                        const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== "";
+
+                        if (!(isEditOrView && hasValue)) {
+                            changesToApply[key] = fieldsValueChange[key];
+                        }
+                    });
+
+                    newTabFormValues[tabKey] = {
                         ...newTabFormValues[tabKey],
-                        ...fieldsValueChange
-                     };
+                        ...changesToApply
+                    };
                 }
 
                 // Disable Fields - We need to update the definition in newTabsData
