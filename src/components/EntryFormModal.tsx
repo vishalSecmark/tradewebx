@@ -350,7 +350,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     useEffect(() => {
         const triggerEditValidate = async () => {
-             if (editValidateData && (action === 'edit' || action === 'view')) {
+             if (editValidateData && editData && (action === 'edit' || action === 'view')) {
                  if(isLoading) return;
 
                  // Check if any dropdowns are loading
