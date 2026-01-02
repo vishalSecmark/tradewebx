@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import { FaPlus, FaSave, FaTrash } from 'react-icons/fa';
@@ -7,13 +7,13 @@ import { toast } from 'react-toastify';
 import ConfirmationModal from './Modals/ConfirmationModal';
 import CaseConfirmationModal from './Modals/CaseConfirmationModal';
 import { MdArrowBack, MdOutlineClose } from "react-icons/md";
-import { ApiResponse, EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData, GuardianEntryModalProps } from '@/types';
+import { EntryFormModalProps, FormField, ChildEntryModalProps, TabData, GroupedFormData, GuardianEntryModalProps } from '@/types';
 import EntryForm from './component-forms/EntryForm';
 import { handleValidationForDisabledField } from './component-forms/form-helper';
 import apiService from '@/utils/apiService';
 import SaveConfirmationModal from './Modals/SaveConfirmationModal';
 import { extractTagsForTabsDisabling, generateUniqueId, getFieldValue, groupFormData, parseXMLStringToObject, validateForm, convertXmlToModifiedFormData } from './component-forms/form-helper/utils';
-import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, escapeXmlChars, sanitizePayload } from '@/utils/helper';
+import { formatTextSplitString, getLocalStorage, sanitizeValueSpecialChar, sanitizePayload } from '@/utils/helper';
 import { useTheme } from '@/context/ThemeContext';
 import Button from './ui/button/Button';
 import { DataGrid } from 'react-data-grid';
@@ -313,7 +313,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const [masterLoadingDropdowns, setMasterLoadingDropdowns] = useState<Record<string, boolean>>({});
     const [isChildModalOpen, setIsChildModalOpen] = useState(false);
     const [childEntriesTable, setChildEntriesTable] = useState<any[]>([]);
-    const [childEntriesTableBackup, setChildEntriesTableBackup] = useState<any[]>([]);
   
     const [childFormData, setChildFormData] = useState<FormField[]>([]);
     const [childFormValues, setChildFormValues] = useState<Record<string, any>>({});
@@ -350,7 +349,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     useEffect(() => {
         const triggerEditValidate = async () => {
-             if (editValidateData && (action === 'edit' || action === 'view')) {
+             if (editValidateData && editData && (action === 'edit' || action === 'view')) {
                  if(isLoading) return;
 
                  // Check if any dropdowns are loading
@@ -363,11 +362,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                  // Check Tabs Data if exists
                  if (tabsData.length > 0) {
-                     // Ensure we have values and table data for all tabs
-                     // We use keys like 'tab_0', 'tab_1' etc.
-                     // A simple check is to see if the count of keys matches the tabsData length
-                     // But tabs might be filtered or not fully set? 
-                     // fetchTabsData sets them all at once, so key count is a good proxy along with internal structure check.
                      const tabKeys = Object.keys(tabFormValues);
                      if (tabKeys.length < tabsData.length) return;
                      
@@ -590,7 +584,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 const initialTabTableData: Record<string, any[]> = {};
 
                 tabs.forEach((tab, index) => {
-                    const tabKey = `tab_${index}`;
+                    const tabKey = tab.TabName;
                     initialTabFormValues[tabKey] = {};
                     initialTabDropdownOptions[tabKey] = {};
                     initialTabLoadingDropdowns[tabKey] = {};
@@ -694,42 +688,40 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         const { tabsToBeDisabled = [], tabsDataChange = {} } = data;
 
-        // --- Part 1: Handle Tab Removal & Re-indexing ---
-        // We calculate the new state for tabs first.
+        // --- Part 1: Handle Tab Removal ---
+        
+        let newTabsData: TabData[] = [...tabsData];
 
-        const newTabsData: TabData[] = [];
-        const newTabFormValues: Record<string, Record<string, any>> = {};
-        const newTabDropdownOptions: Record<string, Record<string, any[]>> = {};
-        const newTabLoadingDropdowns: Record<string, Record<string, boolean>> = {};
-        const newTabTableData: Record<string, any[]> = {};
+        // Filter out disabled tabs if any
+        if (tabsToBeDisabled && tabsToBeDisabled.length > 0) {
+            newTabsData = newTabsData.filter(tab => {
+                const tabName = tab.TabName;
+                const isDisabled = tabsToBeDisabled.some((disabledName: string) => 
+                     disabledName.trim().toLowerCase() === tabName?.trim().toLowerCase()
+                );
+                return !isDisabled;
+            });
+        }
 
-        // Iterate through current tabs and keep only those NOT in tabsToBeDisabled
-        let newIndex = 0;
-        tabsData.forEach((tab, oldIndex) => {
-            const tabName = tab.TabName;
-            // Check if this tab should be removed
-            // using case-insensitive check if needed, or exact match as per requirement
-            const isDisabled = tabsToBeDisabled.some((disabledName: string) => 
-                disabledName.trim().toLowerCase() === tabName?.trim().toLowerCase()
-            );
+        // Clone state objects to apply updates
+        const newTabFormValues = { ...tabFormValues };
+        const newTabDropdownOptions = { ...tabDropdownOptions };
+        const newTabLoadingDropdowns = { ...tabLoadingDropdowns };
+        const newTabTableData = { ...tabTableData };
 
-            if (!isDisabled) {
-                // Keep this tab
-                const oldKey = `tab_${oldIndex}`;
-                const newKey = `tab_${newIndex}`;
-
-                // clone the tab configuration
-                newTabsData.push({ ...tab });
-
-                // Copy/migrate the state data
-                newTabFormValues[newKey] = { ...(tabFormValues[oldKey] || {}) };
-                newTabDropdownOptions[newKey] = { ...(tabDropdownOptions[oldKey] || {}) };
-                newTabLoadingDropdowns[newKey] = { ...(tabLoadingDropdowns[oldKey] || {}) };
-                newTabTableData[newKey] = [...(tabTableData[oldKey] || [])];
-
-                newIndex++;
-            }
-        });
+        // Remove data for disabled tabs
+        if (tabsToBeDisabled && tabsToBeDisabled.length > 0) {
+             tabsToBeDisabled.forEach((disabledTabName: string) => {
+                 // Ensure we use the exact key (assuming casing matches or is handled)
+                 // The keys in state are the exact TabName strings.
+                 const tabToDelete = newTabsData.find(t => t.TabName?.trim().toLowerCase() === disabledTabName.trim().toLowerCase())?.TabName || disabledTabName;
+                 
+                 delete newTabFormValues[tabToDelete];
+                 delete newTabDropdownOptions[tabToDelete];
+                 delete newTabLoadingDropdowns[tabToDelete];
+                 delete newTabTableData[tabToDelete];
+             });
+        }
 
 
         // --- Part 2: Handle Master Data Updates ---
@@ -742,17 +734,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             const { fieldsValueChange = {}, fieldDisabled = [] } = masterChange;
 
             // Update Field Values
-            // Update Field Values
-            Object.keys(fieldsValueChange).forEach(key => {
-                const isEditOrView = action === "edit" || action === "view";
-                const currentValue = newMasterFormValues[key];
-                const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== "";
-
-                if (isEditOrView && hasValue) {
-                    return;
-                }
-                newMasterFormValues[key] = fieldsValueChange[key];
-            });
+             if (fieldsValueChange && Object.keys(fieldsValueChange).length > 0) {
+                 const changesToApply: Record<string, any> = {};
+                 Object.keys(fieldsValueChange).forEach(key => {
+                        const isEditOrView = action === "edit" || action === "view";
+                        const currentValue = newMasterFormValues[key];
+                        // Only update if current value is empty or not in edit/view mode, 
+                        // OR if we want to force update (logic from original code seems to protect existing values in edit/view)
+                        // Original logic:
+                        const hasValue = currentValue !== undefined && currentValue !== null && currentValue !== "";
+                         if (!(isEditOrView && hasValue)) {
+                             changesToApply[key] = fieldsValueChange[key];
+                         }
+                 });
+                 Object.assign(newMasterFormValues, changesToApply);
+            }
 
             // Disable Fields
             if (Array.isArray(fieldDisabled) && fieldDisabled.length > 0) {
@@ -766,21 +762,21 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
 
         // --- Part 3: Handle Other Tabs Data Updates ---
-        // Now apply changes to the *new* (re-indexed) tabs
         Object.keys(tabsDataChange).forEach(tabChangeName => {
-            if (tabChangeName === "Master") return; // successfully handled above
+            if (tabChangeName === "Master") return; 
 
-            // Find which index this tab corresponds to in our NEW tabsData
+            // use tab name directly
+            const tabKey = tabChangeName;
+            
+            // Find the tab in our newTabsData (to update field definitions if needed)
             const tabIndex = newTabsData.findIndex(t => 
-                t.TabName?.trim().toLowerCase() === tabChangeName.trim().toLowerCase()
+                t.TabName?.trim() === tabChangeName.trim()
             );
 
             if (tabIndex !== -1) {
-                const tabKey = `tab_${tabIndex}`;
                 const tabChange = tabsDataChange[tabChangeName];
                 const { fieldsValueChange = {}, fieldDisabled = [] } = tabChange;
 
-                // Update Values
                 // Update Values
                 if (fieldsValueChange && Object.keys(fieldsValueChange).length > 0) {
                     const changesToApply: Record<string, any> = {};
@@ -795,12 +791,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     });
 
                     newTabFormValues[tabKey] = {
-                        ...newTabFormValues[tabKey],
+                        ...(newTabFormValues[tabKey] || {}),
                         ...changesToApply
                     };
                 }
 
-                // Disable Fields - We need to update the definition in newTabsData
+                // Disable Fields (Update Data definitions)
                 if (Array.isArray(fieldDisabled) && fieldDisabled.length > 0) {
                     newTabsData[tabIndex] = {
                         ...newTabsData[tabIndex],
@@ -858,7 +854,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
         // --- Part 3.2: Fetch Dependent Options for Tabs ---
         newTabsData.forEach((tab, index) => {
-            const tabKey = `tab_${index}`;
+            const tabKey = tab.TabName;
             
             tab.Data.forEach((field: FormField) => {
                 if (field.type === 'WDropDownBox' && field.dependsOn && !field.wQuery) {
@@ -1385,8 +1381,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             }
 
             setChildEntriesTable(response?.data?.data?.rs1 || []);
-            setChildEntriesTableBackup(response?.data?.data?.rs1 || []);
-
+        
             // Initialize form values with any preset values
             const initialValues: Record<string, any> = {};
             formData.forEach((field: FormField) => {
@@ -2210,23 +2205,35 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
   const removeTabsWithReindexing = (apiResponse) => {
     const tabsToRemoveNames = Object.keys(apiResponse).filter(tabName => apiResponse[tabName] === false);
-    // Filter tabsData and create a mapping of old indices to new indices
+    
+    // Filter tabsData to remove tabs
     const updatedTabsData = tabsData.filter(tab => !tabsToRemoveNames.includes(tab.TabName));
-    // Create new objects with reindexed keys
-    const updatedTabFormValue = {};
-    const updatedTabTableData = {};
-    const updatedDropdownOptions = {};
-    updatedTabsData.forEach((tab, newIndex) => {
-        const oldIndex = tabsData.findIndex(t => t.TabName === tab.TabName);
-        updatedTabFormValue[`tab_${newIndex}`] = tabFormValues[`tab_${oldIndex}`] || {};
-        updatedTabTableData[`tab_${newIndex}`] = tabTableData[`tab_${oldIndex}`] || [];
-        updatedDropdownOptions[`tab_${newIndex}`] = tabDropdownOptions[`tab_${oldIndex}`] || {};
-    });
+    
+    // With name-based keys, we don't need to reindex the state maps.
+    // The keys remain valid for the tabs that are kept.
+    // We update tabsData so they are hidden from UI.
     setTabsData(updatedTabsData);
+    
+    // If you want to cleanup state for removed tabs:
+    
+    const updatedTabFormValue = { ...tabFormValues };
+    const updatedDropdownOptions = { ...tabDropdownOptions };
+    const updatedTabTableData = { ...tabTableData };
+    const updatedTabLoadingDropdowns = { ...tabLoadingDropdowns };
+
+    tabsToRemoveNames.forEach(name => {
+        delete updatedTabFormValue[name];
+        delete updatedDropdownOptions[name];
+        delete updatedTabTableData[name];
+        delete updatedTabLoadingDropdowns[name];
+    });
     setTabFormValues(updatedTabFormValue);
-    setTabTableData(updatedTabTableData);
     setTabDropdownOptions(updatedDropdownOptions);
-    };
+    setTabTableData(updatedTabTableData);
+    setTabLoadingDropdowns(updatedTabLoadingDropdowns);
+    
+    // For now, leaving the data in state is safer and keeps it if tab reappears.
+  };
 
 
    const handleTabChangeViewMode = async () =>{
@@ -2247,7 +2254,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const submitTabsFormData = async () => {
         console.log("check active tab index",activeTabIndex)
         const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = currentTab.TabName;
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
 
         // Validate master form first
@@ -2379,7 +2386,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const FinalSubmitTabsFormData = async () => {
         const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = currentTab?.TabName;
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
 
 
@@ -2388,11 +2395,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
 
         tabsData.forEach((tabs, index) => {
-            const currentKey = `tab_${index}`
+            const currentKey = tabs.TabName;
             if (tabs.Settings.isTable === "true") {
                 allData[tabs.TabName] = tabTableData[currentKey]
             } else {
-                allData[tabs.TabName] = Object.keys(tabFormValues[currentKey]).length > 0
+                allData[tabs.TabName] = Object.keys(tabFormValues[currentKey] || {}).length > 0
                     ? [tabFormValues[currentKey]]
                     : [];
             }
@@ -2543,7 +2550,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const handleTabTableDataEdit = (row: any, idx: any) => {
         const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = currentTab.TabName;
         const currentTabFormValues = row || {};
 
         // Check if guardian details are needed
@@ -2560,7 +2567,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         }
         setTabFormValues(pre => ({
             ...pre,
-            [`tab_${activeTabIndex}`]: row
+            [currentTabKey]: row
         }))
         setTabsModal(true);
         setEditTabModalData(true);
@@ -2569,7 +2576,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const handleAddTabsFormTableRow = () => {
         const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = currentTab.TabName;
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
 
         // Validate current tab
@@ -2664,7 +2671,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
         setGuardianLoading(true);
         const currentTab = tabsData[activeTabIndex];
         const guardianFormFetchAPI = currentTab?.Settings?.ChildEntryAPI;
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = currentTab.TabName;
 
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
         try {
@@ -2741,7 +2748,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
     const handleClearTabTableRowEntry = () => {
         const currentTab = tabsData[activeTabIndex];
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = currentTab.TabName;
         const currentTabFormValues = tabFormValues[currentTabKey] || {};
 
         // setTabsModal(false);
@@ -2759,17 +2766,12 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     }
 
     const handleTabTableDataDelete = (idx) => {
-        const currentTabKey = `tab_${activeTabIndex}`;
+        const currentTabKey = tabsData[activeTabIndex]?.TabName;
         setTabTableData(prev => ({
             ...prev,
             [currentTabKey]: prev[currentTabKey].filter((_, i) => i !== idx)
         }
     ));
-        setTabsData(prevTabs => {
-            const newTabs = [...prevTabs];
-            newTabs[activeTabIndex].tableData = newTabs[activeTabIndex]?.tableData.filter((_, i) => i !== idx);
-            return newTabs;
-        });
     }
 
     const handleGuardianFormSubmit = () => {
@@ -2922,7 +2924,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                 } text-white`}
                                                             onClick={() => {
                                                                 const noOfRecordsAllowed = Number(tabsData[activeTabIndex]?.Settings?.maxAllowedRecords)
-                                                                const currentRecords = (tabTableData[`tab_${activeTabIndex}`] || [])?.length;
+                                                                const currentTabKey = tabsData[activeTabIndex]?.TabName;
+                                                                const currentRecords = (tabTableData[currentTabKey] || [])?.length;
                                                                 if (currentRecords >= noOfRecordsAllowed) {
                                                                     toast.warning(`Max number of records allowed ${noOfRecordsAllowed}`);
                                                                 }else{
@@ -3036,6 +3039,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                             }
                                                             {(() => {
                                                                 const currentTab = tabsData[activeTabIndex];
+                                                                const currentTabKey = currentTab?.TabName;
                                                                 const groupedFormData: GroupedFormData[] = groupFormData(
                                                                     currentTab.Data,
                                                                     currentTab.Settings.isGroup === "true"
@@ -3067,35 +3071,36 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                     </h6>
                                                                                 )}
 
+
                                                                                 <EntryForm
                                                                                     formData={group.fields}
-                                                                                    formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                                    formValues={tabFormValues[currentTabKey] || {}}
                                                                                     setFormValues={(values) => {
                                                                                         setTabFormValues((prev) => ({
                                                                                             ...prev,
-                                                                                            [`tab_${activeTabIndex}`]:
+                                                                                            [currentTabKey]:
                                                                                                 typeof values === "function"
-                                                                                                    ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                                                    ? values(prev[currentTabKey] || {})
                                                                                                     : values,
                                                                                         }));
                                                                                     }}
-                                                                                    dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                                                    dropdownOptions={tabDropdownOptions[currentTabKey] || {}}
                                                                                     setDropDownOptions={(options) => {
                                                                                         setTabDropdownOptions((prev) => ({
                                                                                             ...prev,
-                                                                                            [`tab_${activeTabIndex}`]:
+                                                                                            [currentTabKey]:
                                                                                                 typeof options === "function"
-                                                                                                    ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                                                    ? options(prev[currentTabKey] || {})
                                                                                                     : options,
                                                                                         }));
                                                                                     }}
-                                                                                    loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                                                    loadingDropdowns={tabLoadingDropdowns[currentTabKey] || {}}
                                                                                     onDropdownChange={(field) =>
-                                                                                        handleTabDropdownChange(field, `tab_${activeTabIndex}`)
+                                                                                        handleTabDropdownChange(field, currentTabKey)
                                                                                     }
                                                                                     fieldErrors={fieldErrors}
                                                                                     setFieldErrors={setFieldErrors}
-                                                                                    masterValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                                    masterValues={tabFormValues[currentTabKey] || {}}
                                                                                     setFormData={(updatedFormData: FormField[]) => { 
                                                                                         const currentTab = tabsData[activeTabIndex];
                                                                                         const currentTabName = currentTab?.TabName                                                                                  ;
@@ -3139,6 +3144,7 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 )}
                                                 {tabsData[activeTabIndex].Settings.isTable !== "true" && (() => {
                                                     const currentTab = tabsData[activeTabIndex];
+                                                    const currentTabKey = currentTab?.TabName;
                                                     const groupedFormData: GroupedFormData[] = groupFormData(
                                                         currentTab.Data,
                                                         currentTab.Settings.isGroup === "true"
@@ -3170,31 +3176,32 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         </h6>
                                                                     )}
 
+
                                                                     <EntryForm
                                                                         formData={group.fields}
-                                                                        formValues={tabFormValues[`tab_${activeTabIndex}`] || {}}
+                                                                        formValues={tabFormValues[currentTabKey] || {}}
                                                                         setFormValues={(values) => {
                                                                             setTabFormValues((prev) => ({
                                                                                 ...prev,
-                                                                                [`tab_${activeTabIndex}`]:
+                                                                                [currentTabKey]:
                                                                                     typeof values === "function"
-                                                                                        ? values(prev[`tab_${activeTabIndex}`] || {})
+                                                                                        ? values(prev[currentTabKey] || {})
                                                                                         : values,
                                                                             }));
                                                                         }}
-                                                                        dropdownOptions={tabDropdownOptions[`tab_${activeTabIndex}`] || {}}
+                                                                        dropdownOptions={tabDropdownOptions[currentTabKey] || {}}
                                                                         setDropDownOptions={(options) => {
                                                                             setTabDropdownOptions((prev) => ({
                                                                                 ...prev,
-                                                                                [`tab_${activeTabIndex}`]:
+                                                                                [currentTabKey]:
                                                                                     typeof options === "function"
-                                                                                        ? options(prev[`tab_${activeTabIndex}`] || {})
+                                                                                        ? options(prev[currentTabKey] || {})
                                                                                         : options,
                                                                             }));
                                                                         }}
-                                                                        loadingDropdowns={tabLoadingDropdowns[`tab_${activeTabIndex}`] || {}}
+                                                                        loadingDropdowns={tabLoadingDropdowns[currentTabKey] || {}}
                                                                         onDropdownChange={(field) =>
-                                                                            handleTabDropdownChange(field, `tab_${activeTabIndex}`)
+                                                                            handleTabDropdownChange(field, currentTabKey)
                                                                         }
                                                                         fieldErrors={fieldErrors}
                                                                         setFieldErrors={setFieldErrors}
@@ -3235,9 +3242,10 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
 
                                                 {tabsData[activeTabIndex]?.Settings?.isTable === "true" && (
                                                     <div className="overflow-x-auto mt-2">
-                                                    <DataGrid
-                                                        columns={[
-                                                           {
+                                                        {(() => {
+                                                            const currentTabKey = tabsData[activeTabIndex]?.TabName;
+                                                            const columns = [
+                                                                {
                                                                     key: 'actions',
                                                                     name: 'Actions',
                                                                     width: !viewMode ? 300 : 280,
@@ -3245,9 +3253,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         const isNomineeTab = tabsData[activeTabIndex]?.TabName === "NomineeDetails";
                                                                         const isMinor = checkIfMinorforTable(row.NomineeDOB);
                                                                         const hasGuardianDetails = row.guardianDetails && Object.keys(row.guardianDetails).length > 0;
-
                                                                         const showGuardianButton = isNomineeTab && isMinor;
-                                                                    
+
                                                                         return (
                                                                             viewMode ? (
                                                                                 <div>
@@ -3261,11 +3268,11 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                     {showGuardianButton && hasGuardianDetails && (
                                                                                         <button
                                                                                             className={`mr-2 px-3 py-1 rounded-md transition-colors bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700`}
-                                                                                            onClick={()=>{
-                                                                                                    handleAddNominee(row.guardianDetails,row)
-                                                                                                }}
+                                                                                            onClick={() => {
+                                                                                                handleAddNominee(row.guardianDetails, row)
+                                                                                            }}
                                                                                         >
-                                                                                             View Guardian Details
+                                                                                            View Guardian Details
                                                                                         </button>
                                                                                     )}
                                                                                 </div>
@@ -3281,13 +3288,13 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                                     {showGuardianButton && (
                                                                                         <button
                                                                                             className={`mr-1 px-3 py-1 rounded-md transition-colors bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700`}
-                                                                                            onClick={()=>{
-                                                                                                if(hasGuardianDetails){
+                                                                                            onClick={() => {
+                                                                                                if (hasGuardianDetails) {
                                                                                                     handleTabTableDataEdit(row, row._index);
-                                                                                                    setTimeout(()=>{
+                                                                                                    setTimeout(() => {
                                                                                                         handleAddNominee(row.guardianDetails)
-                                                                                                    },400)
-                                                                                                }else{
+                                                                                                    }, 400)
+                                                                                                } else {
                                                                                                     handleAddNominee();
                                                                                                 }
                                                                                             }}
@@ -3306,32 +3313,39 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                                         );
                                                                     }
                                                                 },
-                                                            ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
-                                                                key: col,
-                                                                name: col,
-                                                                renderCell: ({ row }) => {
-                                                                    return(
-                                                                    <div style={{ 
-                                                                        color: row.isModified || row.isInserted ? 'green' : 'inherit'
-                                                                    }}>
-                                                                        {row[col]}
-                                                                    </div>
-                                                                )}
-                                                            }))
-                                                        ]}
-                                                        rows={(tabTableData[`tab_${activeTabIndex}`] || []).map((row, index) => ({
-                                                                ...row,
-                                                                _index: index
-                                                              }))}
-                                                        className="rdg-light"
-                                                        rowHeight={40}
-                                                        headerRowHeight={40}
-                                                        style={{
-                                                            backgroundColor: colors.background,
-                                                            color: colors.text,
-                                                            fontFamily: fonts.content,
-                                                        }}
-                                                    />
+                                                                ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
+                                                                    key: col,
+                                                                    name: col,
+                                                                    renderCell: ({ row }: any) => {
+                                                                        return (
+                                                                            <div style={{
+                                                                                color: row.isModified || row.isInserted ? 'green' : 'inherit'
+                                                                            }}>
+                                                                                {row[col]}
+                                                                            </div>
+                                                                        )
+                                                                    }
+                                                                }))
+                                                            ];
+
+                                                            return (
+                                                                <DataGrid
+                                                                    columns={columns}
+                                                                    rows={(tabTableData[currentTabKey] || []).map((row, index) => ({
+                                                                        ...row,
+                                                                        _index: index
+                                                                    }))}
+                                                                    className="rdg-light"
+                                                                    rowHeight={40}
+                                                                    headerRowHeight={40}
+                                                                    style={{
+                                                                        backgroundColor: colors.background,
+                                                                        color: colors.text,
+                                                                        fontFamily: fonts.content,
+                                                                    }}
+                                                                />
+                                                            );
+                                                        })()}
                                                     </div>
                                                 )}
                                             </>
