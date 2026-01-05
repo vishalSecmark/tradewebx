@@ -8,6 +8,8 @@ interface ChildEntriesTableProps {
     setChildFormValues: (values: any) => void;
     handleChildEditNonSavedData: (row: any) => void;
     columnWidthMap?: Record<string, number | string>;
+    childFormData?: any[];
+    childDropdownOptions?: Record<string, any[]>;
 }
 
 const ChildEntriesTable: React.FC<ChildEntriesTableProps> = ({
@@ -16,7 +18,9 @@ const ChildEntriesTable: React.FC<ChildEntriesTableProps> = ({
     viewMode,
     setChildFormValues,
     handleChildEditNonSavedData,
-    columnWidthMap = {}
+    columnWidthMap = {},
+    childFormData = [],
+    childDropdownOptions = {}
 }) => {
     return (
         <div className="flex flex-col">
@@ -88,8 +92,17 @@ const ChildEntriesTable: React.FC<ChildEntriesTableProps> = ({
                                     name: key,
                                     width: columnWidthMap[key] || "auto",
                                     renderCell: ({ row }: any) => {
-                                        const value =
-                                            row[key] == null || row[key] === "" ? "-" : String(row[key]);
+                                        let value = row[key] == null || row[key] === "" ? "-" : String(row[key]);
+                                        
+                                        // Check if this key corresponds to a dropdown field
+                                        const field = childFormData?.find((f) => f.wKey === key);
+                                        if (field && field.type === 'WDropDownBox' && childDropdownOptions?.[key]) {
+                                            const option = childDropdownOptions[key].find((opt: any) => String(opt.value) === String(row[key]));
+                                            if (option) {
+                                                value = option.label;
+                                            }
+                                        }
+
                                         return (
                                             <div
                                                 className="truncate text-center"

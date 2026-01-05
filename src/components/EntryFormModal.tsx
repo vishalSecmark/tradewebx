@@ -1468,6 +1468,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
             } else {
                 console.log('Calling fetchMasterEntryData for regular entry...');
                 fetchMasterEntryData();
+                if (!isThereChildEntry) {
+                     fetchChildEntryData();
+                }
             }
         } else {
             console.log('Conditions not met:', { isOpen, isEdit, editDataExists: !!editData, editDataLength: Object.keys(editData || {}).length });
@@ -1587,6 +1590,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fetchTabsData(editData);
             } else {
                 fetchMasterEntryData(editData);
+                 if (!isThereChildEntry) {
+                     fetchChildEntryData(editData);
+                }
             }
             setIsEdit(true);
         } else if (action === 'view' && editData) {
@@ -1595,6 +1601,9 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                 fetchTabsData(editData, true);
             } else {
                 fetchMasterEntryData(editData, true);
+                 if (!isThereChildEntry) {
+                     fetchChildEntryData(editData);
+                }
             }
         }
     }, [action, editData, isTabs]);
@@ -1644,8 +1653,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
     const onChildFormSubmit = () => {
         resetChildForm();
         setIsChildModalOpen(false);
-        setChildDropdownOptions({});
-        setChildFormData([]);
         setChildFormValues({});
         // fetchMasterEntryData(masterFormValues);
     };
@@ -2689,6 +2696,8 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                                                 setChildFormValues={setChildFormValues}
                                                 handleChildEditNonSavedData={handleChildEditNonSavedData}
                                                 columnWidthMap={columnWidthMap}
+                                                childFormData={childFormData}
+                                                childDropdownOptions={childDropdownOptions}
                                             />
                                         )}
                                 </div>
@@ -2727,8 +2736,6 @@ const EntryFormModal: React.FC<EntryFormModalProps> = ({ isOpen, onClose, pageDa
                     pageName={pageName}
                     onClose={() => {
                         setIsChildModalOpen(false);
-                        setChildDropdownOptions({});
-                        setChildFormData([]);
                         setChildFormValues({});
                         resetChildForm();
                     }}

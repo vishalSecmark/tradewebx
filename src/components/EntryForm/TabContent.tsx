@@ -564,11 +564,26 @@ const TabContent: React.FC<TabContentProps> = ({
                                                 key: col,
                                                 name: col,
                                                 renderCell: ({ row }: any) => {
+                                                    const currentTab = tabsData[activeTabIndex];
+                                                    const currentTabKey = currentTab?.TabName;
+                                                    let value = row[col];
+
+                                                    // Find field definition
+                                                    const field = currentTab?.Data?.find((f) => f.wKey === col);
+                                                    
+                                                    // Check if dropdown and has options
+                                                    if (field && field.type === 'WDropDownBox' && currentTabKey && tabDropdownOptions?.[currentTabKey]?.[col]) {
+                                                        const option = tabDropdownOptions[currentTabKey][col].find((opt: any) => String(opt.value) === String(row[col]));
+                                                        if (option) {
+                                                            value = option.label;
+                                                        }
+                                                    }
+
                                                     return (
                                                         <div style={{
                                                             color: row.isModified || row.isInserted ? 'green' : 'inherit'
                                                         }}>
-                                                            {row[col]}
+                                                            {value}
                                                         </div>
                                                     )
                                                 }
