@@ -298,6 +298,16 @@ class BackgroundUploadManager {
 
             if (updateResult.success) {
               console.log('✅ UpdateImportSeqFilter completed for file:', item.fileName);
+
+              // Store error records and process status
+              item.importErrors = updateResult.errorRecords || [];
+              item.processStatus = updateResult.processStatus || { flag: 'S', message: 'Process Completed' };
+
+              console.log('📊 Import errors found:', {
+                fileName: item.fileName,
+                errorCount: item.importErrors.length,
+                processStatus: item.processStatus
+              });
             } else {
               console.warn('⚠️ UpdateImportSeqFilter failed for file:', item.fileName, updateResult.error);
             }

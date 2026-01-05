@@ -5,9 +5,10 @@ type ConfirmationModalProps = {
     isOpen: boolean;
     onConfirm: () => void;
     onCancel: () => void;
+    message?: string;
 };
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onConfirm, onCancel }) => {
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onConfirm, onCancel, message="Are you sure you want to delete this record?"}) => {
     const titleId = useId();
     const descriptionId = useId();
 
@@ -25,8 +26,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onConfirm
                 <h4 id={titleId} className="text-xl font-semibold mb-4">
                     Confirm Deletion
                 </h4>
+                {/* Dynamic OR default message */}
                 <p id={descriptionId} className="text-gray-600 mb-6">
-                    Are you sure you want to delete this record?
+                    {message}
                 </p>
                 <div className="flex justify-end gap-4">
                     <button
@@ -39,7 +41,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isOpen, onConfirm
                     <button
                         type="button"
                         onClick={onConfirm}
-                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+                        className="bg-red-600 hover:bg-red-600 text-white px-4 py-2 rounded-md"
                     >
                         Delete
                     </button>

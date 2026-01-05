@@ -395,7 +395,8 @@ export default function SignInForm() {
       storeLocalStorage('tokenExpireTime', currentLoginData.tokenExpireTime);
       storeLocalStorage('temp_token', '');
       console.log('Redirecting to dashboard');
-      if(firstLogin === 'Y') router.push('/changepassword');
+      const isFirstLogin = currentLoginData.firstLogin === 'Y';
+      if(isFirstLogin) router.push('/changepassword');
       else router.push('/dashboard');
     }
   }, [loginData, router, dispatch]);
@@ -654,6 +655,7 @@ export default function SignInForm() {
         // Check for ShowUpdate and Message fields
         const showUpdate = data.data[0].ShowUpdate;
         const message = data.data[0].Message;
+
 
         console.log('Login response fields:', {
           showUpdate,

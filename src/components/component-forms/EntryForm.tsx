@@ -11,6 +11,7 @@ import apiService from "@/utils/apiService";
 import FileUploadWithCropForNormalForm from "./formComponents/FileUploadWithCropForNormalForm";
 import CustomDateTimePicker from "./formComponents/CustomDateTimePicker";
 import CustomDatePicker from "./formComponents/CustomDatePicker";
+import { convertXmlToModifiedFormData } from "./form-helper/utils";
 
 const DropdownField: React.FC<{
     field: FormField;
@@ -235,7 +236,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
     masterValues,
     setFormData,
     setValidationModal,
-    setDropDownOptions
+    setDropDownOptions,
+    validationMethodToModifyTabsForm
 }) => {
     const { colors } = useTheme();
     const marginBottom = 'mb-1';
@@ -350,7 +352,8 @@ const EntryForm: React.FC<EntryFormProps> = ({
             // calling the function to  handle the flags
             const columnData = response?.data?.data?.rs0[0]?.Column1
             if (columnData) {
-                handleValidationApiResponse(columnData, field.wKey, field);
+                const filtersTags = X_Filter ? X_Filter : X_Filter_Multiple;
+                handleValidationApiResponse(columnData, field.wKey, field, filtersTags);
             }
         } catch (error) {
             console.error('Validation API error:', error);
@@ -361,14 +364,18 @@ const EntryForm: React.FC<EntryFormProps> = ({
 
 
     // this function is used to show the respected flags according to the response from the API
-    const handleValidationApiResponse = (response: any, currFieldName: any, field: any) => {
+    const handleValidationApiResponse = (response: any, currFieldName: any, field: any, filtersTags: any) => {
         if (!response?.trim().startsWith("<root>")) {
             response = `<root>${response}</root>`;
         }
 
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(response, "text/xml");
-
+        // NOTE : this can be used in future this are the tags keys which we are sending in filter tag
+        // const filtersTagsArray = Object.keys(filtersTags || {}).length ? Object.keys(filtersTags || {}) : [];
+        // const finalFiltersTagsArray = currFieldName
+        //     ? [...new Set([...filtersTagsArray, currFieldName])]
+        //     : filtersTagsArray;
         const flag = xmlDoc.getElementsByTagName("Flag")[0]?.textContent;
         const message = xmlDoc.getElementsByTagName("Message")[0]?.textContent;
         const dynamicTags = Array.from(xmlDoc.documentElement.children).filter(
@@ -451,6 +458,26 @@ const EntryForm: React.FC<EntryFormProps> = ({
                     });
                 });
                 setFormData(updatedFormData);
+                break;
+            case 'X':
+                  setValidationModal({
+                    isOpen: true,
+                    message: message || 'Are you sure you want to proceed?',
+                    type: 'M',
+                    callback: (confirmed) => {
+                        if (confirmed) {
+                             const finalObject = convertXmlToModifiedFormData(response, {
+                                 preserveLeadingZeros: true
+                             }); 
+                             console.log("check final Object",finalObject);
+                             validationMethodToModifyTabsForm(finalObject);
+
+                        } else {
+                            setFormValues(prev => ({ ...prev, [currFieldName]: "" }));
+                        }
+                        setValidationModal({ isOpen: false, message: '', type: 'M' });
+                    }
+                });
                 break;
             default:
                 console.error("Unknown flag received:", flag);

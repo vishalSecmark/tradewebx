@@ -12,6 +12,7 @@ import {
   UploadSummary,
   FileMetadata,
   FileImportErrors,
+  ImportFilterErrorRecord,
 } from '@/types/upload';
 import {
   validateFile,
@@ -365,31 +366,59 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
         );
 
         if (updateResult.success) {
-          // Store the error records for the modal
-          const fileError: FileImportErrors = {
-            fileName: fileName,
-            fileSeqNo: fileSeqNo,
-            errors: updateResult.errorRecords || [],
-            processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
-          };
+          // Group error records by filename to create separate tabs
+          const errorRecords = updateResult.errorRecords || [];
+          const errorsByFile = new Map<string, ImportFilterErrorRecord[]>();
 
-          // Check if there are any error records
-          const hasErrors = fileError.errors.length > 0;
+          // Group errors by tf_FileName
+          errorRecords.forEach((error: any) => {
+            const errorFileName = error.tf_FileName || fileName;
+            if (!errorsByFile.has(errorFileName)) {
+              errorsByFile.set(errorFileName, []);
+            }
+            errorsByFile.get(errorFileName)!.push(error);
+          });
+
+          // Create FileImportErrors array for each unique file
+          const fileErrorsList: FileImportErrors[] = [];
+
+          if (errorsByFile.size > 0) {
+            // We have files with errors - create tabs for each
+            errorsByFile.forEach((errors, errorFileName) => {
+              fileErrorsList.push({
+                fileName: errorFileName,
+                fileSeqNo: fileSeqNo,
+                errors: errors,
+                processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
+              });
+            });
+          } else {
+            // No errors - create a single entry to show success
+            fileErrorsList.push({
+              fileName: fileName,
+              fileSeqNo: fileSeqNo,
+              errors: [],
+              processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
+            });
+          }
+
+          const totalErrors = errorRecords.length;
+          const hasErrors = totalErrors > 0;
 
           // Set the import errors and show modal
-          setImportErrors([fileError]);
+          setImportErrors(fileErrorsList);
           setShowImportErrorsModal(true);
 
           if (hasErrors) {
-            toast.warning(`Upload completed with ${fileError.errors.length} record(s) having errors`);
+            toast.warning(`Upload completed with ${totalErrors} record(s) having errors across ${fileErrorsList.length} file(s)`);
           } else {
             toast.success('Import completed successfully!');
           }
 
           console.log('✅ UpdateImportSeqFilter completed:', {
-            fileName,
-            errorCount: fileError.errors.length,
-            processStatus: fileError.processStatus
+            filesWithErrors: fileErrorsList.length,
+            totalErrorCount: totalErrors,
+            processStatus: updateResult.processStatus
           });
         } else {
           toast.warning(`Upload completed but failed to update import filter: ${updateResult.error}`);
@@ -577,31 +606,59 @@ const FileUploadChunked: React.FC<FileUploadChunkedProps> = ({
           );
 
           if (updateResult.success) {
-            // Store the error records for the modal
-            const fileError: FileImportErrors = {
-              fileName: fileName,
-              fileSeqNo: fileSeqNo,
-              errors: updateResult.errorRecords || [],
-              processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
-            };
+            // Group error records by filename to create separate tabs
+            const errorRecords = updateResult.errorRecords || [];
+            const errorsByFile = new Map<string, ImportFilterErrorRecord[]>();
 
-            // Check if there are any error records
-            const hasErrors = fileError.errors.length > 0;
+            // Group errors by tf_FileName
+            errorRecords.forEach((error: any) => {
+              const errorFileName = error.tf_FileName || fileName;
+              if (!errorsByFile.has(errorFileName)) {
+                errorsByFile.set(errorFileName, []);
+              }
+              errorsByFile.get(errorFileName)!.push(error);
+            });
+
+            // Create FileImportErrors array for each unique file
+            const fileErrorsList: FileImportErrors[] = [];
+
+            if (errorsByFile.size > 0) {
+              // We have files with errors - create tabs for each
+              errorsByFile.forEach((errors, errorFileName) => {
+                fileErrorsList.push({
+                  fileName: errorFileName,
+                  fileSeqNo: fileSeqNo,
+                  errors: errors,
+                  processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
+                });
+              });
+            } else {
+              // No errors - create a single entry to show success
+              fileErrorsList.push({
+                fileName: fileName,
+                fileSeqNo: fileSeqNo,
+                errors: [],
+                processStatus: updateResult.processStatus || { flag: 'S', message: 'Process Completed' },
+              });
+            }
+
+            const totalErrors = errorRecords.length;
+            const hasErrors = totalErrors > 0;
 
             // Set the import errors and show modal
-            setImportErrors([fileError]);
+            setImportErrors(fileErrorsList);
             setShowImportErrorsModal(true);
 
             if (hasErrors) {
-              toast.warning(`Upload completed with ${fileError.errors.length} record(s) having errors`);
+              toast.warning(`Upload completed with ${totalErrors} record(s) having errors across ${fileErrorsList.length} file(s)`);
             } else {
               toast.success('Import completed successfully!');
             }
 
             console.log('✅ UpdateImportSeqFilter completed:', {
-              fileName,
-              errorCount: fileError.errors.length,
-              processStatus: fileError.processStatus
+              filesWithErrors: fileErrorsList.length,
+              totalErrorCount: totalErrors,
+              processStatus: updateResult.processStatus
             });
           } else {
             toast.warning(`Upload completed but failed to update import filter: ${updateResult.error}`);

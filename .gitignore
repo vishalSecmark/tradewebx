@@ -44,4 +44,5 @@ next-env.d.ts
 package-lock.json
 yarn.lock
 bun.lockb
-.claude/
+.claude/uploads/
+config/

@@ -25,6 +25,7 @@ export interface TabSettings {
     IsChildEntryAllowed?: string;
     ChildEntryAPI?: any;
     maxAllowedRecords: string;
+    EditValidate?: any;
     SaveNextAPI: {
         J_Ui: {
             ActionName: string;
@@ -106,6 +107,7 @@ export interface EntryFormProps {
         callback?: (confirmed: boolean) => void;
     }>>;
     setDropDownOptions: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+    validationMethodToModifyTabsForm?: (param: any) => void;
 }
 
 export interface ChildEntryModalProps {

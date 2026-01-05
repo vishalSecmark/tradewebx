@@ -107,6 +107,8 @@ export interface FileQueueItem {
   endTime?: number;
   sessionId?: string;
   failedChunks?: FailedChunk[];
+  importErrors?: ImportFilterErrorRecord[]; // Errors from UpdateImportSeqFilter API
+  processStatus?: { flag: string; message: string }; // Process status from UpdateImportSeqFilter API
 }
 
 export interface BackgroundUploadQueue {
