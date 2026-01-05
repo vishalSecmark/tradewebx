@@ -5,6 +5,7 @@ import { decimalFormat, dropDownApiCall, pledgeRedirectApiNDSLCall, rightAlignKe
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import apiService from '@/utils/apiService';
 import { getLocalStorage } from '@/utils/helper';
+import { useLocalStorage } from '@/hooks/useLocalListner';
 
 type TableRow = {
   [key: string]: any;
@@ -25,6 +26,8 @@ export default function MarginPledgeOnline() {
   const [tableVisible, setTableVisible] = useState<boolean>(false);
   const [pledgeRedirectData, setPledgeRedirectData] = useState<any>([]);
   const [buttonDisable, setButtonDisable] = useState<boolean>(true);
+  const [userId] = useLocalStorage('userId', null);
+  const [userType] = useLocalStorage('userType', null);
 
   console.log(colors, 'colors');
 
@@ -191,8 +194,17 @@ export default function MarginPledgeOnline() {
   };
 
   useEffect(() => {
-    if (pledgeRedirectData.length > 0) pledgeRedirectApiCDSLCall();
-  }, [pledgeRedirectData]);
+    // if (pledgeRedirectData.length > 0) 
+    if(selectedDemat?.DPType === 'CDSL' && pledgeRedirectData.length > 0) {
+      console.log('cdsl');
+      pledgeRedirectApiCDSLCall();
+    }
+    if(selectedDemat?.DPType === 'NSDL' && pledgeRedirectData.length > 0) {
+      console.log('nsdl');
+      
+      pledgeRedirectApiNDSLCall(userId,userType,pledgeRedirectData)
+    }
+  }, [pledgeRedirectData,selectedDemat?.DPType]);
 
 
 
@@ -224,51 +236,7 @@ const strRequestTime =
     String(now.getSeconds()).padStart(2, '0') +
     "+0530";
 
-  // const pledgeRedirectApiNDSLCall = () => {
-  //   try {
-  //     const redirectData = pledgeRedirectNsdlData?.data?.rs0?.[0];
-  //     console.log(redirectData,'redirectData');
-      
-  //     if (!redirectData) return;
-  //     const { JsonOutput, Param } = redirectData.DATA || {};
 
-  //     const { APIUrl, TransactionType, Requestor, RequestorId,Channel } = Param;
-  //     const orderReqDtls = JsonOutput;
-
-  //     const form = document.createElement('form');
-  //     form.method = 'POST';
-  //     form.action = APIUrl;
-  //     form.target = '_blank';
-
-  //     const addHiddenField = (name: string, value: string) => {
-  //       const input = document.createElement('input');
-  //       input.type = 'hidden';
-  //       input.name = name;
-  //       input.value = value;
-  //       form.appendChild(input);
-  //     };
-
-  //     addHiddenField('transactionType', TransactionType);
-  //     // addHiddenField('requestor', Requestor);
-  //     // addHiddenField('requestorId', RequestorId);
-  //     // addHiddenField('requestReference', strRequestReference);
-  //     // addHiddenField('channel', Channel);
-  //     // addHiddenField('orderReqDtls', JSON.stringify(orderReqDtls));
-  //     // addHiddenField('requestTime', strRequestTime);
-  //     // addHiddenField('digitalSignature', '');
-
-
-  //     document.body.appendChild(form);
-  //     form.submit();
-  //     setTimeout(() => document.body.removeChild(form), 1000);
-  //   } catch (error) {
-  //     console.error("Pledge API Error:", error);
-  //   }
-  // }
-
-  // useEffect(() => {
-  //   pledgeRedirectApiNDSLCall()
-  // },[])
 
   return (
     <div className="w-full">
@@ -425,7 +393,7 @@ const strRequestTime =
               >
                 OK
               </button>
-              <button onClick={pledgeRedirectApiNDSLCall}>hello kekeke</button>
+              {/* <button onClick={() =>{pledgeRedirectApiNDSLCall(userId,userType,pledgeRedirectData)}}>hello kekeke</button> */}
             </div>
           </>
         )}

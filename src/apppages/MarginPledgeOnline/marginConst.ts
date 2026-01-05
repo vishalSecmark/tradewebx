@@ -2,6 +2,7 @@ import apiService from "@/utils/apiService";
 import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants"
 import { getLocalStorage } from "@/utils/helper";
 import axios from "axios"
+import { toast } from "react-toastify";
 
 export const tableHeader = ['Code', 'Name', 'ISIN', 'Rate', 'Holding', 'Value', 'HairCut', 'Net Value', 'Request', 'Value']
 
@@ -138,66 +139,130 @@ const strRequestTime =
     String(now.getSeconds()).padStart(2, '0') +
     "+0530";
 
-export const pledgeRedirectApiNDSLCall = async() => {
 
-  const pledgeRedirectNsdlData = {
-    success: true,
-    message: '',
-    data: {
-      rs0: [
-        {
-          ResponseFlag: 'S',
-          ResponseMessage: 'Process Executed',
-          DATA: {
-            JsonOutput: {
-              orderDtls: {
-                brokerOrderNo: '1012250426286163',
-                exchangeCd: '02',
-                segment: '00',
-                numOfSecurities: '1',
-                secDtls: [
-                  {
-                    seqNo: '1',
-                    isin: 'INE158A01026',
-                    isinName: 'HEROMOTOCO',
-                    quantity: '1000',
-                    lockInReasonCode: '',
-                    lockInReleaseDate: '',
-                  },
-                ],
-              },
-              pledgeDtls: {
-                pledgorDpId: 'IN303575',
-                pledgorClientId: '10000204',
-                pledgorUCC: '4444',
-                pledgeeDpId: 'IN303575',
-                pledgeeClientId: '10289592',
-                tmId: '937',
-                cmId: '937',
-                execDt: '10-12-2025',
-              },
-            },
-            Param: {
-              TransactionType: 'MPI',
-              Requestor: 'Matalia Stock Broking Pvt.Ltd',
-              RequestorId: 'NS303575',
-              Channel: 'WEB',
-              APIUrl: 'https://dematgw.nsdl.com/mpi-service/v1/public/mpi/orders',
-            },
-          },
-        },
-      ],
-    },
-    datarows: ['1'],
-  };
+
+    const digitalSignatureApiCall = async (
+      JsonOutput: unknown,
+      userId:unknown,
+      userType:unknown
+    ): Promise<string | null> => {
+      try {
+        const xml = `
+          <dsXml>
+            <J_Ui>"ActionName":"MARGINPLEDGENSDL","Option":"GETSIGNATURE","RequestFrom":"W"</J_Ui>
+            <Sql/>
+            <X_Filter></X_Filter>
+            <X_Data>
+              <RequestJson><![CDATA[${JSON.stringify(JsonOutput)}]]></RequestJson>
+            </X_Data>
+            <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+          </dsXml>
+        `;
+    
+        const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xml);
+    
+        console.log("Digital Signature API response:", response);
+    
+        // 🔴 API-level failure
+        if (!response?.success) {
+          toast.error(response?.message || "Failed to generate digital signature");
+          return null;
+        }
+    
+        const digitalSignature =
+          response?.data?.data?.rs0?.[0]?.Signature ?? null;
+    
+        // 🔴 Signature missing despite success=true
+        if (!digitalSignature) {
+          toast.error("Digital signature not found in response");
+          return null;
+        }
+    
+        return digitalSignature;
+      } catch (error: any) {
+        console.error("Digital signature API failed:", error);
+        toast.error(
+          error?.message || "Something went wrong while generating signature"
+        );
+        return null;
+      }
+    };
+
+export const pledgeRedirectApiNDSLCall = async(userId,userType,pledgeRedirectData) => {
+
+  // const pledgeRedirectNsdlData = {
+  //   success: true,
+  //   message: '',
+  //   data: {
+  //     rs0: [
+  //       {
+  //         ResponseFlag: 'S',
+  //         ResponseMessage: 'Process Executed',
+  //         DATA: {
+  //           JsonOutput: {
+  //             orderDtls: {
+  //               brokerOrderNo: '1012250426286163',
+  //               exchangeCd: '02',
+  //               segment: '00',
+  //               numOfSecurities: '1',
+  //               secDtls: [
+  //                 {
+  //                   seqNo: '1',
+  //                   isin: 'INE158A01026',
+  //                   isinName: 'HEROMOTOCO',
+  //                   quantity: '1000',
+  //                   lockInReasonCode: '',
+  //                   lockInReleaseDate: '',
+  //                 },
+  //               ],
+  //             },
+  //             pledgeDtls: {
+  //               pledgorDpId: 'IN303575',
+  //               pledgorClientId: '10000204',
+  //               pledgorUCC: '4444',
+  //               pledgeeDpId: 'IN303575',
+  //               pledgeeClientId: '10289592',
+  //               tmId: '937',
+  //               cmId: '937',
+  //               execDt: '10-12-2025',
+  //             },
+  //           },
+  //           Param: {
+  //             TransactionType: 'MPI',
+  //             Requestor: 'Matalia Stock Broking Pvt.Ltd',
+  //             RequestorId: 'NS303575',
+  //             Channel: 'WEB',
+  //             APIUrl: 'https://dematgw.nsdl.com/mpi-service/v1/public/mpi/orders',
+  //           },
+  //         },
+  //       },
+  //     ],
+  //   },
+  //   datarows: ['1'],
+  // };
+
+ 
 
   try {
-    const redirectData = pledgeRedirectNsdlData?.data?.rs0?.[0]?.DATA;
+    const redirectData = pledgeRedirectData?.data?.rs0?.[0]?.DATA;
     if (!redirectData) return;
 
     const { JsonOutput, Param } = redirectData;
     const { APIUrl, TransactionType, Requestor, RequestorId, Channel } =
       Param;
+     
+
+ 
+      
+      const digitalSignature = await digitalSignatureApiCall(JsonOutput,userId,userType);
+
+      // 🔴 STOP HERE if signature not generated
+      if (!digitalSignature) {
+        console.warn("Digital signature missing. Redirect aborted.");
+        return;
+      }
+
+    
 
     const form = document.createElement('form');
     form.method = 'POST';
@@ -220,7 +285,8 @@ export const pledgeRedirectApiNDSLCall = async() => {
     addHiddenField('channel', Channel);
     addHiddenField('orderReqDtls', JSON.stringify(JsonOutput));
     addHiddenField('requestTime', strRequestTime);
-
+    addHiddenField('digitalSignature', digitalSignature);
+    console.log(form,'form')
     document.body.appendChild(form);
     form.submit();
 
