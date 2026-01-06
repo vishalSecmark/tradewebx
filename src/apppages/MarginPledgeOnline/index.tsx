@@ -206,38 +206,6 @@ export default function MarginPledgeOnline() {
     }
   }, [pledgeRedirectData,selectedDemat?.DPType]);
 
-
-
-  //NSDL
-
-  const now = new Date();
-
-// Format: yyyyMMddHHmmss
-  const formatted =
-    now.getFullYear().toString() +
-    String(now.getMonth() + 1).padStart(2, '0') +
-    String(now.getDate()).padStart(2, '0') +
-    String(now.getHours()).padStart(2, '0') +
-    String(now.getMinutes()).padStart(2, '0') +
-    String(now.getSeconds()).padStart(2, '0');
-
-// Random number between 10 and 99  
-const random = Math.floor(Math.random() * 90) + 10;
-
-const strRequestReference = formatted + random.toString();
-
-
-const strRequestTime =
-    now.getFullYear() + "-" +
-    String(now.getMonth() + 1).padStart(2, '0') + "-" +
-    String(now.getDate()).padStart(2, '0') + "T" +
-    String(now.getHours()).padStart(2, '0') + ":" +
-    String(now.getMinutes()).padStart(2, '0') + ":" +
-    String(now.getSeconds()).padStart(2, '0') +
-    "+0530";
-
-
-
   return (
     <div className="w-full">
 

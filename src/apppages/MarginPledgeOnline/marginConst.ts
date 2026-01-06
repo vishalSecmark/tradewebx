@@ -190,59 +190,6 @@ const strRequestTime =
 
 export const pledgeRedirectApiNDSLCall = async(userId,userType,pledgeRedirectData) => {
 
-  // const pledgeRedirectNsdlData = {
-  //   success: true,
-  //   message: '',
-  //   data: {
-  //     rs0: [
-  //       {
-  //         ResponseFlag: 'S',
-  //         ResponseMessage: 'Process Executed',
-  //         DATA: {
-  //           JsonOutput: {
-  //             orderDtls: {
-  //               brokerOrderNo: '1012250426286163',
-  //               exchangeCd: '02',
-  //               segment: '00',
-  //               numOfSecurities: '1',
-  //               secDtls: [
-  //                 {
-  //                   seqNo: '1',
-  //                   isin: 'INE158A01026',
-  //                   isinName: 'HEROMOTOCO',
-  //                   quantity: '1000',
-  //                   lockInReasonCode: '',
-  //                   lockInReleaseDate: '',
-  //                 },
-  //               ],
-  //             },
-  //             pledgeDtls: {
-  //               pledgorDpId: 'IN303575',
-  //               pledgorClientId: '10000204',
-  //               pledgorUCC: '4444',
-  //               pledgeeDpId: 'IN303575',
-  //               pledgeeClientId: '10289592',
-  //               tmId: '937',
-  //               cmId: '937',
-  //               execDt: '10-12-2025',
-  //             },
-  //           },
-  //           Param: {
-  //             TransactionType: 'MPI',
-  //             Requestor: 'Matalia Stock Broking Pvt.Ltd',
-  //             RequestorId: 'NS303575',
-  //             Channel: 'WEB',
-  //             APIUrl: 'https://dematgw.nsdl.com/mpi-service/v1/public/mpi/orders',
-  //           },
-  //         },
-  //       },
-  //     ],
-  //   },
-  //   datarows: ['1'],
-  // };
-
- 
-
   try {
     const redirectData = pledgeRedirectData?.[0]?.DATA;
     if (!redirectData) return;
