@@ -224,7 +224,7 @@ export const handleLoopThroughMultiSelectKeyHandlerDownloadZip = async (selected
 
   setIsLoading(true);
   const filterXml = buildFilterXml(filtersCheck, userId);
-  const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}`;
+  const zipFolderName = `ClientReports_${moment().format("YYYYMMDD_HHmmss")}_Pdf`;
   const zip = new JSZip();
   const pdfFolder = zip.folder(zipFolderName);
 
@@ -359,7 +359,7 @@ export const handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel = async (sel
 
   setIsLoading(true);
   const filterXml = buildFilterXml(filtersCheck, userId);
-  const zipFolderName = `ClientReports_Excel_${moment().format("YYYYMMDD_HHmmss")}`;
+  const zipFolderName = `ClientReports_Excel_${moment().format("YYYYMMDD_HHmmss")}_Excel`;
   const zip = new JSZip();
   const excelFolder = zip.folder(zipFolderName);
 
