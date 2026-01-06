@@ -244,7 +244,7 @@ export const pledgeRedirectApiNDSLCall = async(userId,userType,pledgeRedirectDat
  
 
   try {
-    const redirectData = pledgeRedirectData?.data?.rs0?.[0]?.DATA;
+    const redirectData = pledgeRedirectData?.[0]?.DATA;
     if (!redirectData) return;
 
     const { JsonOutput, Param } = redirectData;
