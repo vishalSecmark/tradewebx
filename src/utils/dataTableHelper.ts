@@ -274,7 +274,7 @@ const clientCode = clientCodeMatch ? clientCodeMatch[1].trim() : "";
         if (emailPayloadXmlSend.success === true && emailResponseData?.Base64PDF) {
           const base64 = emailResponseData.Base64PDF;
           // let pdfName = emailResponseData.PDFName || `Report_${index}.pdf`;
-          let pdfName = [clientCode, row.ReportType, row.ReportName, row.Segment].map(v => typeof v === "string" ? v.replace(/\s+/g, "").replace(/[^\w.-]/g, "").trim(): "")
+          let pdfName = [clientCode, row.ReportName, row.Segment].map(v => typeof v === "string" ? v.replace(/\s+/g, "").replace(/[^\w.-]/g, "").trim(): "")
             .filter(Boolean)
             .join("_") || `Report_${index}.pdf`;
 
@@ -408,7 +408,7 @@ export const handleLoopThroughMultiSelectKeyHandlerDownloadZipExcel = async (sel
               if (emailPayloadXmlSend.success === true && emailResponseData?.Base64Excel) {
                   const base64 = emailResponseData.Base64Excel;
                   let excelName = emailResponseData.ExcelFileName|| `Report_${index}.xlsx`;
-
+                
                   // Ensure file ends with .xlsx
                   if (!excelName.toLowerCase().endsWith(".xlsx")) excelName += ".xlsx";
 
