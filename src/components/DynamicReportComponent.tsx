@@ -1707,10 +1707,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                 }}
                                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
                                                 style={{ color: colors.text }}
-                                                aria-label="Customize Table"
+                                                aria-label="Freeze Columns"
                                             >
                                                 <FaColumns size={16} />
-                                                Customize Table
+                                                Freeze Columns
                                             </button>
                                             {selectedRows.length > 0 && safePageData.getCurrentLevel(currentLevel)?.settings?.EditableColumn && isRowButtonEnabled('Edit') && (
                                                 <button
@@ -2628,7 +2628,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                 } : {}),
                                 ...(isAutoWidth ? { columnWidth: undefined, isAutoWidth: true } : {})
                             }}
-                            summary={jsonData?.Summary}
+                            summary={safePageData.getCurrentLevel(currentLevel)?.summary}
                             onRowClick={handleRecordClick}
                             onRowSelect={handleRowSelect}
                             tableRef={tableRef}
