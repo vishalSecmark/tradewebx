@@ -503,7 +503,6 @@ interface DataTableProps {
         DetailAPI: any;
     }>;
     onDetailColumnClick?: (columnKey: string, rowData: any) => void;
-    frozenColumns?: string[];
 }
 
 interface DecimalColumn {
@@ -636,7 +635,7 @@ const useScreenSize = () => {
     return screenSize;
 };
 
-const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig, filtersCheck, pageData, detailColumns, onDetailColumnClick, frozenColumns = [] }) => {
+const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRowSelect, tableRef, summary, isEntryForm = false, handleAction = () => { }, fullHeight = true, showViewDocument = false, buttonConfig, filtersCheck, pageData, detailColumns, onDetailColumnClick }) => {
 
     // 🆕 ADDITION: Multi-checkbox toggle handler
     const toggleRowSelection = (row: any, checked: boolean) => {
@@ -1371,7 +1370,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
          
                     sortable: true,
                     resizable: true,
-                    frozen: frozenColumns.includes(key) || (settings?.frozenColumns && settings.frozenColumns.includes(key)),
                 };
 
                 // Apply custom width or use default min/max width
