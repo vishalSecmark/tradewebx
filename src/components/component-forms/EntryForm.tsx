@@ -582,6 +582,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                         timeFormat="HH:mm"
                         timeIntervals={15}
                         dateFormat="dd/MM/yyyy HH:mm"
+                        style={{ width: fieldWidth }}
                       />
                       {fieldErrors[field.wKey] && (
                         <span
@@ -632,6 +633,7 @@ const EntryForm: React.FC<EntryFormProps> = ({
                                  placeholder="Select Date"
                                  id={`date-${field.wKey}`}
                                  name={field.wKey}
+                                 style={{ width: fieldWidth }}
                              />
                         {fieldErrors[field.wKey] && (
                             <span id={`error-${field.wKey}`} role="alert" className="text-red-500 text-sm">{fieldErrors[field.wKey]}</span>

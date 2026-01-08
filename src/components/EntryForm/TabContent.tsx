@@ -563,6 +563,11 @@ const TabContent: React.FC<TabContentProps> = ({
                                             ...getTabTableColumns(tabsData[activeTabIndex]).map(col => ({
                                                 key: col,
                                                 name: col,
+                                                renderHeaderCell: () => (
+                                                    <div title={col} className="truncate">
+                                                        {col}
+                                                    </div>
+                                                ),
                                                 renderCell: ({ row }: any) => {
                                                     const currentTab = tabsData[activeTabIndex];
                                                     const currentTabKey = currentTab?.TabName;
