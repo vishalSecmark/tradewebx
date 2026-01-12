@@ -250,7 +250,15 @@ const TabContent: React.FC<TabContentProps> = ({
                                                 className={`flex items-center text-white`}
                                                 onClick={() => {
                                                     setTabsModal(false);
-                                                    setIsMinor(false);
+                                                    const currentTabFields = tabsData[activeTabIndex]?.Data || [];
+                                                    setFieldErrors((prev) => {
+                                                        const newErrors = { ...prev };
+                                                        currentTabFields.forEach((field) => {
+                                                            if (field.wKey) delete newErrors[field.wKey];
+                                                        });
+                                                        return newErrors;
+                                                    });
+                                                    handleClearTabTableRowEntry();
                                                 }}
                                             >
                                                 <MdOutlineClose />     Close
