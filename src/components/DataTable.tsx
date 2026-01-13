@@ -1873,7 +1873,7 @@ export const exportTableToExcel = async (
     apiData: any,
     pageData: any,
     appMetadata: any,
-    textColumns: string[]
+    textColumns: string[] = []
 ) => {
     if (!apiData || apiData.length === 0) return;
 
