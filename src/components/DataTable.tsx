@@ -1872,7 +1872,8 @@ export const exportTableToExcel = async (
     headerData: any,
     apiData: any,
     pageData: any,
-    appMetadata: any
+    appMetadata: any,
+    textColumns: string[]
 ) => {
     if (!apiData || apiData.length === 0) return;
 
@@ -1900,6 +1901,8 @@ export const exportTableToExcel = async (
     const reportHeader = headerData?.ReportHeader?.[0] || "Report Header";
     const rightList: string[] = headerData?.RightList?.[0] || [];
     const normalizedRightList = rightList.map(k => k.replace(/\s+/g, ''));
+    const normalizedTextColumns = textColumns.map(col =>
+    col.replace(/\s+/g, ''));
 
     let [fileTitle] = reportHeader.split("From Date");
     fileTitle = fileTitle?.trim() || "Report";
@@ -1989,7 +1992,11 @@ export const exportTableToExcel = async (
             }
 
             // Assign value & alignment
-            if (!isNaN(value) && value !== '' && typeof value !== 'object') {
+           // ===== TEXT COLUMN HANDLING (DYNAMIC) =====
+            if (normalizedTextColumns.includes(normKey) && value !== null && value !== undefined) {
+                cell.value = `'${value}`; // force text
+                // cell.alignment = { horizontal: 'left' };
+            } else if (!isNaN(value) && value !== '' && typeof value !== 'object') {
                 cell.value = Number(value);
                 cell.alignment = { horizontal: 'right' }; // default numeric right align
             } else {
