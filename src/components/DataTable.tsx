@@ -1994,8 +1994,8 @@ export const exportTableToExcel = async (
             // Assign value & alignment
            // ===== TEXT COLUMN HANDLING (DYNAMIC) =====
             if (normalizedTextColumns.includes(normKey) && value !== null && value !== undefined) {
-                cell.value = `'${value}`; // force text
-                // cell.alignment = { horizontal: 'left' };
+                cell.value = String(value); // always store as string
+                cell.numFmt = '@';           // Number should behaves as text
             } else if (!isNaN(value) && value !== '' && typeof value !== 'object') {
                 cell.value = Number(value);
                 cell.alignment = { horizontal: 'right' }; // default numeric right align
