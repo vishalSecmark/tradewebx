@@ -321,6 +321,14 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     const [isCustomizeModalOpen, setIsCustomizeModalOpen] = useState(false);
     const [frozenColumns, setFrozenColumns] = useState<string[]>([]);
     const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+    const [textColumns, setTextColumns] = useState<string[]>([]);
+    const handleCustomizeSave = (data: {
+        frozenColumns: string[];
+        textColumns: string[];
+    }) => {
+        setFrozenColumns(data.frozenColumns);
+        setTextColumns(data.textColumns);
+    };
 
     useEffect(() => {
         if (!announceMsg) return;
@@ -1729,7 +1737,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             {isMasterButtonEnabled('Excel') && (
                                                 <button
                                                     onClick={() => {
-                                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata, textColumns);
                                                         setIsMobileMenuOpen(false);
                                                     }}
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
@@ -2043,7 +2051,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                         return; // stop here, don't export
                                                     }   
                                                     else {    
-                                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata);
+                                                        exportTableToExcel(tableRef.current, jsonData, apiData, pageData, appMetadata, textColumns);
                                                     }
                                                 }}
                                                 style={{ color: colors.text }}
@@ -2238,7 +2246,8 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onClose={() => setIsCustomizeModalOpen(false)}
                 availableColumns={availableColumns}
                 frozenColumns={frozenColumns}
-                onSave={setFrozenColumns}
+                textColumns={textColumns}
+                onSave={handleCustomizeSave}
             />
             {/* Download Modal */}
             <FilterModal
