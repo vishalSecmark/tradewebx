@@ -47,6 +47,7 @@ interface TabContentProps {
     handleTabChangeViewMode: () => void;
     checkIfMinorforTable: (dob: any) => boolean;
     getTabTableColumns: (tab: TabData) => string[];
+    handleDeleteGuardian: (index: number) => void;
     action: string;
     editData: any;
 }
@@ -90,7 +91,8 @@ const TabContent: React.FC<TabContentProps> = ({
     checkIfMinorforTable,
     getTabTableColumns,
     action,
-    editData
+    editData,
+    handleDeleteGuardian
 }) => {
 
     // Flatten tabTableData into a single context object for validation context
@@ -527,12 +529,12 @@ const TabContent: React.FC<TabContentProps> = ({
                                             {
                                                 key: 'actions',
                                                 name: 'Actions',
-                                                width: !viewMode ? 300 : 280,
+                                                width: !viewMode ? 400 : 300,
                                                 renderCell: ({ row }: any) => {
                                                     const isNomineeTab = tabsData[activeTabIndex]?.TabName === "NomineeDetails";
                                                     const isMinor = checkIfMinorforTable(row.NomineeDOB);
                                                     const hasGuardianDetails = row.guardianDetails && Object.keys(row.guardianDetails).length > 0;
-                                                    const showGuardianButton = isNomineeTab && isMinor;
+                                                    const showGuardianButton = isNomineeTab && (isMinor || hasGuardianDetails);
 
                                                     return (
                                                         viewMode ? (
@@ -565,6 +567,7 @@ const TabContent: React.FC<TabContentProps> = ({
                                                                     Edit
                                                                 </button>
                                                                 {showGuardianButton && (
+                                                                    <>
                                                                     <button
                                                                         className={`mr-1 px-3 py-1 rounded-md transition-colors bg-green-50 text-green-500 hover:bg-green-100 hover:text-green-700`}
                                                                         onClick={() => {
@@ -580,6 +583,16 @@ const TabContent: React.FC<TabContentProps> = ({
                                                                     >
                                                                         {hasGuardianDetails ? "Edit Guardian Details" : "Add Guardian Details"}
                                                                     </button>
+                                                                    {(!isMinor && hasGuardianDetails) && (
+                                                                         <button
+                                                                         className={`mr-1 px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
+                                                                         onClick={() => handleDeleteGuardian(row._index)}
+                                                                         title="Delete Guardian Details"
+                                                                     >
+                                                                         Delete Guardian
+                                                                     </button>
+                                                                    )}
+                                                                    </>
                                                                 )}
                                                                 <button
                                                                     className={`px-3 py-1 rounded-md transition-colors bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700`}
