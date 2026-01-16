@@ -525,13 +525,44 @@ const TabContent: React.FC<TabContentProps> = ({
                                 <div className="overflow-x-auto mt-2">
                                     {(() => {
                                         const currentTabKey = tabsData[activeTabIndex]?.TabName;
+                                        const isNomineeTab = tabsData[activeTabIndex]?.TabName === "NomineeDetails";
+                                        const currentRows = tabTableData[currentTabKey] || [];
+
+                                        // Calculate dynamic width for Actions column
+                                        let maxActionWidth = !viewMode ? 140 : 80; // Base width for Edit/Delete or View
+
+                                        if (currentRows.length > 0) {
+                                            let maxRowWidth = 0;
+                                            currentRows.forEach((row: any) => {
+                                                let rowWidth = !viewMode ? 140 : 80; // Base: Edit+Delete or View
+                                                
+                                                const isMinor = checkIfMinorforTable(row.NomineeDOB);
+                                                const hasGuardianDetails = row.guardianDetails && Object.keys(row.guardianDetails).length > 0;
+                                                const showGuardianButton = isNomineeTab && (isMinor || hasGuardianDetails);
+
+                                                if (showGuardianButton) {
+                                                    rowWidth += 170; // Add/Edit/View Guardian Details button
+                                                }
+
+                                                if (!viewMode && !isMinor && hasGuardianDetails) {
+                                                    rowWidth += 140; // Delete Guardian button
+                                                }
+                                                
+                                                if (rowWidth > maxRowWidth) {
+                                                    maxRowWidth = rowWidth;
+                                                }
+                                            });
+                                            if (maxRowWidth > maxActionWidth) {
+                                                maxActionWidth = maxRowWidth;
+                                            }
+                                        }
+
                                         const columns = [
                                             {
                                                 key: 'actions',
                                                 name: 'Actions',
-                                                width: !viewMode ? 400 : 300,
+                                                width: maxActionWidth + 20, // Add some padding
                                                 renderCell: ({ row }: any) => {
-                                                    const isNomineeTab = tabsData[activeTabIndex]?.TabName === "NomineeDetails";
                                                     const isMinor = checkIfMinorforTable(row.NomineeDOB);
                                                     const hasGuardianDetails = row.guardianDetails && Object.keys(row.guardianDetails).length > 0;
                                                     const showGuardianButton = isNomineeTab && (isMinor || hasGuardianDetails);
