@@ -157,14 +157,8 @@ const ColumnFilterDropdown: React.FC<{
             return 'number';
         }
 
-        // If 80% or more is pure text/very short/alphanumeric codes, don't show filter
-        if (pureTextPercentage >= 0.6) {
-            console.log('Detected as none (too much text/codes)');
-            return 'none'; // Reduced from 0.8 to 0.6 to be more strict
-        }
-
-        // Mixed data - allow text filtering
-        console.log('Detected as text (mixed data)');
+        // For text columns (including pure text), allow text filtering with "contains/like" option
+        console.log('Detected as text column');
         return 'text';
     }, [data, column]);
 
@@ -390,6 +384,42 @@ const ColumnFilterDropdown: React.FC<{
                                     </div>
                                 )}
                             </>
+                        ) : filterType === 'text' ? (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Filter Type
+                                    </label>
+                                    <select
+                                        value={localFilter.operator}
+                                        onChange={(e) => setLocalFilter({
+                                            ...localFilter,
+                                            operator: e.target.value as ColumnFilter['operator']
+                                        })}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                    >
+                                        <option value="contains">Contains</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Value
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={localFilter.value as string || ''}
+                                        onChange={(e) => {
+                                            setLocalFilter({
+                                                ...localFilter,
+                                                value: e.target.value
+                                            });
+                                        }}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        placeholder="Enter text to search"
+                                    />
+                                </div>
+                            </>
                         ) : (
                             <>
                                 <div>
@@ -521,7 +551,7 @@ interface ValueBasedColor {
 
 interface ColumnFilter {
     type: 'number' | 'text' | 'date';
-    operator: 'gte' | 'lte' | 'equals' | 'dateRange';
+    operator: 'gte' | 'lte' | 'equals' | 'dateRange' | 'contains';
     value: string | number | null;
     fromDate?: string;
     toDate?: string;
@@ -841,6 +871,10 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
                         console.log('📅 Date range final result:', rangeResult);
                         return rangeResult;
+
+                    case 'contains':
+                        // Text "like" filter - case insensitive contains search
+                        return stringValue.toLowerCase().includes(String(filter.value).toLowerCase());
 
                     default:
                         return true;
