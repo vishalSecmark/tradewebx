@@ -14,6 +14,8 @@ import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn, getLoca
 import { getFileTypeFromBase64 } from "@/utils/helper";
 import apiService from "@/utils/apiService";
 import AccountClosure from "@/apppages/KycPage/account-closure";
+import OtpModalUI from "@/utils/FormRequest";
+import { useLocalStorage } from "@/hooks/useLocalListner";
 
 interface RowData {
     [key: string]: any;
@@ -68,6 +70,7 @@ interface EditTableRowModalProps {
         }>;
         hideMultiEditColumn?: string;
         ShowViewDocument?: boolean;
+        FundRequestOTP?:boolean;
 
         ShowViewDocumentAPI?: {
             dsXml: {
@@ -92,6 +95,7 @@ interface EditTableRowModalProps {
 
     };
     showViewDocument?: boolean;
+    FundRequestOTP?:boolean;
 }
 
 const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
@@ -104,7 +108,13 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     wPage,
     settings,
     showViewDocument = false,
+    FundRequestOTP = false
 }) => {
+
+
+    const fundRequestOTPEnable = settings.FundRequestOTP
+
+
     const { colors, fonts } = useTheme();
     const [localData, setLocalData] = useState<RowData[]>([]);
     const [previousValues, setPreviousValues] = useState<Record<string, any>>({});
@@ -120,6 +130,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         type: 'E'
     });
 
+
+
     // EntryFormModal states
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
     const [entryFormData, setEntryFormData] = useState<any>(null);
@@ -127,6 +139,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
     const [processResponseData, setProcessResponseData] = useState<any[]>([]);
     const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
+    const [fundRequestOtp,setFundRequestOtp] = useState(fundRequestOTPEnable);
 
     //can be use in future
     // const [viewLogHeader, setViewLogHeader] = useState({})
@@ -151,6 +164,10 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     })
     // loading state for save/process button
     const [isSaving, setIsSaving] = useState(false);
+    const [showOtp, setShowOtp] = useState(false);
+    const [userId] = useLocalStorage('userId', null);
+
+
     
     const formType = tableData?.length > 0 ? tableData[0].FormType : "entry";
     
@@ -167,6 +184,12 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const showViewApi = settings.ViewAPI
 
     const editableColumns = settings.EditableColumn || [];
+
+    const [userType] = useLocalStorage('userType', null);
+
+    console.log(settings,'settings fund');
+
+    console.log(fundRequestOTPEnable,'fundRequestOTPEnable');
     
     
 
@@ -446,6 +469,8 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     }, [isEntryModalOpen, pageData, entryFormData, wPage]);
 
     const handleInputChange = (rowIndex: number | string, key: string, value: any) => {
+        console.log('inside handleInput change');
+        
         let updated: RowData[];
 
         if (rowIndex === "viewModal") {
@@ -680,9 +705,48 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         }
     }
 
+    
+    const sendOtpFund = async(localData: RowData[]) =>  {
+        const fundXML = `
+        <dsXml>
+        <J_Ui>"ActionName":"${ACTION_NAME}","Option":"SendOTP","Level":1,"RequestFrom":"W"</J_Ui>
+        <Sql></Sql>
+        <X_Filter></X_Filter>
+        <X_Data>
+        <ClientCode>${localData[0].ClientCode}</ClientCode>
+        <Type>FR</Type>
+        </X_Data>
+        <X_GFilter></X_GFilter>
+        <J_Api>"UserId":"${userId}", "UserType":"${userType}"</J_Api>
+        </dsXml>
+        `
+
+        try {
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, fundXML);
+            console.log(response.data.message,'responseFund');
+            if(response?.data?.success === true){
+                toast.success(`${response.data.message}`)
+            }else if(response?.data?.success === false){
+                toast.success(`${response.data.message}`)
+                setFundRequestOtp(false)
+            }
+            
+        } catch (error) {
+            console.error('Error saving data:', error);
+            toast.error(`${error}`)
+        }
+
+    }
 
     const handleSave = async () => {
+        console.log(localData[0].ClientCode,'localDataFund');
         
+        console.log(wPage,'after save click');
+        if(fundRequestOtp && userType === 'branch'){
+            sendOtpFund(localData)
+            setShowOtp(true)
+            return
+        };
         setIsSaving(true);
         const xmlData = generateDsXml(localData);
         
@@ -1081,7 +1145,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                         <DialogTitle className="text-lg font-semibold mb-2 flex-shrink-0">{title}</DialogTitle>
                         <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pr-2">
                             {localData.length > 0 ? (
-                                showViewDocument ? (
+                                (showViewDocument) ? (
                                     // Form layout for ShowViewDocument
                                     <div className="mx-auto p-2">
                                         {localData.map((row, rowIndex) => (
@@ -1467,7 +1531,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                                         />
                                     </svg>
                                 )}
-                                {isSaving
+                                { (fundRequestOtp && userType === 'branch') ? 'Send OTP': isSaving
                                     ? 'Processing...'
                                     : (showViewDocumentBtn && showViewDocumentLabel ? saveBtnDocumentName : 'Save')
                                 }
@@ -1658,6 +1722,14 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
                 )
             }
 
+            {showOtp && (
+            <OtpModalUI
+                onClose={() => setShowOtp(false)}
+                setShowOtp = {setShowOtp}
+                setFundRequestOtp={setFundRequestOtp}
+                localData={localData}
+            />
+            )}
 
         </>
     );

@@ -703,8 +703,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     const [userType] = useLocalStorage('userType', null);
     const [isLoading, setIsLoading] = useState(false);
 
-
-
+    const fundLogic = settings.FundRequestOTP
+    
     // 🆕 Auto-select all rows on load if multiCheckBox is enabled
     useEffect(() => {
         if (settings?.multiCheckBox && data?.length > 0) {
@@ -1154,7 +1154,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
 
                         // Don't show header checkbox for single selection mode
-                        if (showViewDocument) {
+                        if (showViewDocument || (fundLogic && userType === 'branch')) {
                             return (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                     <span style={{ fontSize: '12px', color: '#666' }}>Select</span>
@@ -1180,17 +1180,20 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     },
                     renderCell: ({ row }) => (
                         <input
-                            type={showViewDocument ? "radio" : "checkbox"}
-                            name={showViewDocument ? "singleSelection" : undefined}
+                            type={(fundLogic && userType === 'branch') ?  "radio" : showViewDocument ? "radio" : "checkbox"}
+                            name={(fundLogic && userType === 'branch') ?  "singleSelection" :showViewDocument ? "singleSelection" : undefined}
                             checked={selectedRows.some(r => r._id === row._id)}
                             onChange={(e) => {
-                                if (showViewDocument) {
+                                if (showViewDocument || fundLogic) {
                                     // Single selection mode - replace the entire selection
+                                    console.log('Single selection mode - replace the entire selection');
+                                    
                                     const updated = e.target.checked ? [row] : [];
                                     setSelectedRows(updated);
                                     onRowSelect?.(updated);
                                 } else {
                                     // Multiple selection mode - existing logic
+                                    console.log('Multiple selection mode - existing logic');
                                     const exists = selectedRows.some(r => r._id === row._id);
                                     const updated = exists
                                         ? selectedRows.filter(r => r._id !== row._id)
