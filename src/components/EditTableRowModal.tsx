@@ -93,7 +93,7 @@ interface EditTableRowModalProps {
 
     };
     showViewDocument?: boolean;
-    FundRequestOTP?:boolean;
+
 }
 
 const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
@@ -106,7 +106,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     wPage,
     settings,
     showViewDocument = false,
-    FundRequestOTP = false
+
 }) => {
     const fundRequestOTPEnable = settings.FundRequestOTP
 
@@ -132,7 +132,11 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const [isLoadingPageData, setIsLoadingPageData] = useState(false);
     const [processResponseData, setProcessResponseData] = useState<any[]>([]);
     const [isProcessModalOpen, setIsProcessModalOpen] = useState(false);
-    const [fundRequestOtp,setFundRequestOtp] = useState(fundRequestOTPEnable);
+    const [fundRequestOtp, setFundRequestOtp] = useState(fundRequestOTPEnable);
+
+    useEffect(() => {
+        setFundRequestOtp(fundRequestOTPEnable);
+    }, [fundRequestOTPEnable]);
 
     //can be use in future
     // const [viewLogHeader, setViewLogHeader] = useState({})
