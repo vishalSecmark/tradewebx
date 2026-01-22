@@ -15,6 +15,7 @@ interface CustomDropdownProps {
   handleFormChange: (values: any) => void;
   formValues: any;
   isHorizontal?: boolean;
+  isDisabled?: boolean;
 }
 
 const CustomDropdown: React.FC<CustomDropdownProps> = ({
@@ -27,7 +28,8 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   formData,
   handleFormChange,
   formValues,
-  isHorizontal = false
+  isHorizontal = false,
+  isDisabled = false
 }) => {
   // State for scroll-to-load functionality
   const [visibleOptions, setVisibleOptions] = useState(options.slice(0, 50));
@@ -149,7 +151,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
           return inputValue;
         }}
         onMenuScrollToBottom={onMenuScrollToBottom}
-        isDisabled={isLoading}
+        isDisabled={isLoading || isDisabled}
         placeholder={isLoading ? "Loading options..." : "Select..."}
         className="react-select-container"
         classNamePrefix="react-select"
