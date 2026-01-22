@@ -1186,14 +1186,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             onChange={(e) => {
                                 if (showViewDocument || fundLogic) {
                                     // Single selection mode - replace the entire selection
-                                    console.log('Single selection mode - replace the entire selection');
-                                    
                                     const updated = e.target.checked ? [row] : [];
                                     setSelectedRows(updated);
                                     onRowSelect?.(updated);
                                 } else {
                                     // Multiple selection mode - existing logic
-                                    console.log('Multiple selection mode - existing logic');
                                     const exists = selectedRows.some(r => r._id === row._id);
                                     const updated = exists
                                         ? selectedRows.filter(r => r._id !== row._id)

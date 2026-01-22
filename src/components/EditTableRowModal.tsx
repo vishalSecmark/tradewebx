@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import { ACTION_NAME, BASE_URL, PATH_URL } from '@/utils/constants';
 import CustomDropdown from './form/CustomDropdown';
@@ -11,7 +10,6 @@ import { useTheme } from '@/context/ThemeContext';
 import EntryFormModal from './EntryFormModal';
 import KycPage from "@/apppages/KycPage";
 import { clearMakerSates, displayAndDownloadFile, dynamicXmlGenratingFn, getLocalStorage, sanitizeValueSpecialChar, storeLocalStorage } from "@/utils/helper";
-import { getFileTypeFromBase64 } from "@/utils/helper";
 import apiService from "@/utils/apiService";
 import AccountClosure from "@/apppages/KycPage/account-closure";
 import OtpModalUI from "@/utils/FormRequest";
@@ -110,10 +108,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     showViewDocument = false,
     FundRequestOTP = false
 }) => {
-
-
     const fundRequestOTPEnable = settings.FundRequestOTP
-
 
     const { colors, fonts } = useTheme();
     const [localData, setLocalData] = useState<RowData[]>([]);
@@ -129,8 +124,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
         message: '',
         type: 'E'
     });
-
-
 
     // EntryFormModal states
     const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -186,11 +179,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     const editableColumns = settings.EditableColumn || [];
 
     const [userType] = useLocalStorage('userType', null);
-
-    console.log(settings,'settings fund');
-
-    console.log(fundRequestOTPEnable,'fundRequestOTPEnable');
-    
     
 
     // Get column width configuration from settings
@@ -469,7 +457,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     }, [isEntryModalOpen, pageData, entryFormData, wPage]);
 
     const handleInputChange = (rowIndex: number | string, key: string, value: any) => {
-        console.log('inside handleInput change');
         
         let updated: RowData[];
 
@@ -739,9 +726,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     }
 
     const handleSave = async () => {
-        console.log(localData[0].ClientCode,'localDataFund');
-        
-        console.log(wPage,'after save click');
         if(fundRequestOtp && userType === 'branch'){
             sendOtpFund(localData)
             setShowOtp(true)
@@ -796,7 +780,6 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
             toast.success(successMessage);
             onClose();
         } catch (error) {
-            console.error('Error saving data:', error);
             let errorMessage = 'An error occurred while saving. Please try again.';
 
             if (error.response?.data?.success === false) {

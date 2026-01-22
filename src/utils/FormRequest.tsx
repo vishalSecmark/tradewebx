@@ -80,17 +80,12 @@ export default function OtpModalUI({
     try {
       // API call here
       const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
-      console.log(response,'responseFund22');
-      if(response?.data?.success === true){
-        console.log('inside if');
-        
+      if(response?.data?.success === true){   
         toast.success(`${response.data.message}`)
         setError("")
         setFundRequestOtp(false);
         setShowOtp(false);
-      }if(response?.data?.success === false){
-        console.log('inside else if ');
-        
+      }if(response?.data?.success === false){ 
         setShowOtp(true);
         setError(`${response.data.message}`)
       }
