@@ -108,7 +108,7 @@ const EditTableRowModal: React.FC<EditTableRowModalProps> = ({
     showViewDocument = false,
 
 }) => {
-    const fundRequestOTPEnable = settings.FundRequestOTP
+    const fundRequestOTPEnable = settings?.FundRequestOTP ?? false;
 
     const { colors, fonts } = useTheme();
     const [localData, setLocalData] = useState<RowData[]>([]);
