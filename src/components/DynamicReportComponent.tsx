@@ -6,7 +6,7 @@ import axios from 'axios';
 import { BASE_URL, PATH_URL } from '@/utils/constants';
 import moment from 'moment';
 import FilterModal from './FilterModal';
-import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope, FaArrowsAltH, FaColumns, FaCalculator } from 'react-icons/fa';
+import { FaSync, FaFilter, FaDownload, FaFileCsv, FaFilePdf, FaPlus, FaEdit, FaFileExcel, FaEnvelope, FaSearch, FaTimes, FaEllipsisV, FaRegEnvelope, FaArrowsAltH, FaColumns, FaCalculator, FaSpinner } from 'react-icons/fa';
 import { useTheme } from '@/context/ThemeContext';
 import DataTable, { exportTableToCsv, exportTableToPdf, exportTableToExcel, downloadOption } from './DataTable';
 import { store } from "@/redux/store";
@@ -300,6 +300,9 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
     // Error handling state
     const [isErrorModalOpen, setIsErrorModalOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    
+    // Download loading state
+    const [isDownloadLoading, setIsDownloadLoading] = useState(false);
 
     // State for tracking enabled file records for auto-import
     const [enabledFileRecords, setEnabledFileRecords] = useState<Set<string>>(new Set());
@@ -1458,6 +1461,19 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
         setSearchTerm('');
     };
 
+    const handleDownloadOption = async () => {
+        setIsDownloadLoading(true);
+        toast.info("File is being downloaded in the background...", { autoClose: 500 });
+        try {
+            await downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel);
+        } catch (error) {
+            console.error("Download error:", error);
+            toast.error("An error occurred during download.");
+        } finally {
+            setIsDownloadLoading(false);
+        }
+    };
+
     // Close search box when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -1846,14 +1862,17 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                             {showTypeList && isMasterButtonEnabled('Download') && (
                                                 <button
                                                     onClick={() => {
-                                                        downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel);
-                                                        setIsMobileMenuOpen(false);
+                                                        if (!isDownloadLoading) {
+                                                            handleDownloadOption();
+                                                            setIsMobileMenuOpen(false);
+                                                        }
                                                     }}
-                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2"
+                                                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 flex items-center gap-2 ${isDownloadLoading ? 'cursor-wait opacity-70' : ''}`}
                                                     style={{ color: colors.text }}
                                                     aria-label="Download Options"
+                                                    disabled={isDownloadLoading}
                                                 >
-                                                    <FaDownload size={16} />
+                                                    {isDownloadLoading ? <FaSpinner size={16} className="animate-spin" /> : <FaDownload size={16} />}
                                                     Download Options
                                                 </button>
                                             )}
@@ -2113,12 +2132,13 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             {showTypeList && isMasterButtonEnabled('Download') && (
                                 <div className="relative group">
                                     <button
-                                        className="p-2 rounded hover:bg-gray-100 transition-colors"
-                                        onClick={() => downloadOption(jsonData, appMetadata, apiData, pageData, filters, currentLevel)}
+                                        className={`p-2 rounded hover:bg-gray-100 transition-colors ${isDownloadLoading ? 'cursor-wait opacity-70' : ''}`}
+                                        onClick={() => !isDownloadLoading && handleDownloadOption()}
                                         style={{ color: colors.text }}
                                         aria-label="Download Options"
+                                        disabled={isDownloadLoading}
                                     >
-                                        <FaDownload size={20} />
+                                        {isDownloadLoading ? <FaSpinner size={20} className="animate-spin" /> : <FaDownload size={20} />}
                                     </button>
                                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                                         Download Options
