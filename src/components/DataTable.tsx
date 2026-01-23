@@ -1889,11 +1889,6 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                             {button.name}
                         </button>
                     ))}
-                    {selectedRows.length > 0 && (
-                        <span className="flex items-center text-sm ml-2" style={{ color: colors.text }}>
-                            {selectedRows.length} row(s) selected
-                        </span>
-                    )}
                 </div>
             )}
 
