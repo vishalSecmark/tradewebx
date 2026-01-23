@@ -2386,6 +2386,16 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                 onClose={() => setIsGroupSumModalOpen(false)}
                 availableColumns={availableColumns}
                 data={filteredApiData || []}
+                rightList={jsonData?.RightList?.[0] || []}
+                leftAlignedColumns={
+                    safePageData.getCurrentLevel(currentLevel)?.settings?.leftAlignedColumns ||
+                    safePageData.getCurrentLevel(currentLevel)?.settings?.leftAlignedColums
+                        ? (safePageData.getCurrentLevel(currentLevel)?.settings?.leftAlignedColumns ||
+                            safePageData.getCurrentLevel(currentLevel)?.settings?.leftAlignedColums)
+                            .split(',')
+                            .map((col: string) => col.trim())
+                        : []
+                }
             />
             {/* Download Modal */}
             <FilterModal
