@@ -1807,13 +1807,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
         }, 20);
     }
 
-
-
-
     const [formatType, setFormatType] = useState('Pdf'); // 'Pdf' or 'Excel'
-
-
-
+    
     return (
         <div
             ref={tableRef}
@@ -1872,65 +1867,62 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         </button> */}
                     {/* </div> */} 
 
-<div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border rounded-xl">
-  {/* ComboBox: PDF or Excel */}
-  <div className="flex items-center gap-2 min-w-[140px]">
-    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Format:</label>
-    <select
-      value={formatType}
-      onChange={(e) => setFormatType(e.target.value)}
-      className="w-full h-[40px] pl-4 pr-10 py-1.5 text-sm font-medium rounded border border-gray-400 bg-white text-gray-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3EB489]"
-      style={{
-        backgroundColor: colors?.textInputBackground || 'white',
-        boxShadow: '0 0 0 1px rgba(0,0,0,0.05)',
-        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-      }}
-    >
-      <option value="Pdf">📄 PDF</option>
-      <option value="Excel">📊 Excel</option>
-    </select>
-  </div>
-
-  {/* 2 Buttons */}
-  <div className="flex gap-2">
-    {/* Button 1: Send Email (based on ComboBox selection) */}
-    <button
-      style={{
-        background: colors.buttonBackground,
-        color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
-    }}
-      onClick={() => handleSendEmailByFormat(setIsLoading, filtersCheck, userId, pageData, selectedRows, userType, sendEmailMultiCheckbox, setSelectedRows, formatType)}
-      disabled={selectedRows.length === 0}
-      className={`px-6 py-2 rounded-md shadow-lg transform transition-all duration-200 ease-in-out active:scale-95 font-medium flex items-center gap-2 text-sm ${
-        selectedRows.length === 0
-          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-          : 'bg-blue-600 hover:bg-blue-700 text-white'
-      }`}
-    >
-      📧 Send Email ({formatType})
-    </button>
-
-    {/* Button 2: Download Zip (based on ComboBox selection) */}
-    <button
-        style={{
-            background: colors.buttonBackground,
-            color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
-        }}
-      onClick={() => handleDownloadZipByFormat(selectedRows, setIsLoading, filtersCheck, userId, userType, setSelectedRows, formatType)}
-      disabled={selectedRows.length === 0}
-      className={`px-6 py-2 rounded-md shadow-lg transform transition-all duration-200 ease-in-out active:scale-95 font-medium flex items-center gap-2 text-sm ${
-        selectedRows.length === 0
-          ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-          : 'bg-green-600 hover:bg-green-700 text-white'
-      }`}
-    >
-      💾 Download Zip ({formatType})
-    </button>
-  </div>
-</div>
-
-
-
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border rounded-xl">
+                      {/* ComboBox: PDF or Excel */}
+                      <div className="flex items-center gap-2 min-w-[140px]">
+                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Format:</label>
+                        <select
+                          value={formatType}
+                          onChange={(e) => setFormatType(e.target.value)}
+                          className="w-full h-[40px] pl-4 pr-10 py-1.5 text-sm font-medium rounded border border-gray-400 bg-white text-gray-800 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3EB489]"
+                          style={{
+                            backgroundColor: colors?.textInputBackground || 'white',
+                            boxShadow: '0 0 0 1px rgba(0,0,0,0.05)',
+                            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                          }}
+                        >
+                          <option value="Pdf">📄 PDF</option>
+                          <option value="Excel">📊 Excel</option>
+                        </select>
+                      </div>
+                      
+                      {/* 2 Buttons */}
+                      <div className="flex gap-2">
+                        {/* Button 1: Send Email (based on ComboBox selection) */}
+                        <button
+                          style={{
+                            background: colors.buttonBackground,
+                            color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
+                        }}
+                          onClick={() => handleSendEmailByFormat(setIsLoading, filtersCheck, userId, pageData, selectedRows, userType, sendEmailMultiCheckbox, setSelectedRows, formatType)}
+                          disabled={selectedRows.length === 0}
+                          className={`px-6 py-2 rounded-md shadow-lg transform transition-all duration-200 ease-in-out active:scale-95 font-medium flex items-center gap-2 text-sm ${
+                            selectedRows.length === 0
+                              ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white'
+                          }`}
+                        >
+                          📧 Send Email ({formatType})
+                        </button>
+                      
+                        {/* Button 2: Download Zip (based on ComboBox selection) */}
+                        <button
+                            style={{
+                                background: colors.buttonBackground,
+                                color: getReadableTextColor(bgColor),  // If background is light → black text, else white text
+                            }}
+                          onClick={() => handleDownloadZipByFormat(selectedRows, setIsLoading, filtersCheck, userId, userType, setSelectedRows, formatType)}
+                          disabled={selectedRows.length === 0}
+                          className={`px-6 py-2 rounded-md shadow-lg transform transition-all duration-200 ease-in-out active:scale-95 font-medium flex items-center gap-2 text-sm ${
+                            selectedRows.length === 0
+                              ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700 text-white'
+                          }`}
+                        >
+                          💾 Download Zip ({formatType})
+                        </button>
+                      </div>
+                    </div>
                 </>}
 
             {/* Selectable_Buttons: Render dynamic buttons when isCheckbox is true */}
