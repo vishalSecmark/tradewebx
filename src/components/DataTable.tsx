@@ -724,8 +724,8 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
     const [userType] = useLocalStorage('userType', null);
     const [isLoading, setIsLoading] = useState(false);
 
-
-
+    const fundLogic = settings.FundRequestOTP
+    
     // 🆕 Auto-select all rows on load if multiCheckBox is enabled
     useEffect(() => {
         if (settings?.multiCheckBox && data?.length > 0) {
@@ -995,7 +995,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
         return data.map((row, index) => {
             const newRow = { ...row };
-            const rowId = row.id || index;
+            // Determine unique row ID
+            let rowId = row.id || index;
+            if (settings?.primaryKey && newRow[settings.primaryKey]) {
+                rowId = newRow[settings.primaryKey];
+            } else if (!row.id) {
+                 rowId = index;
+            }
 
             // Handle date formatting
             if (settings?.dateFormat?.key) {
@@ -1025,7 +1031,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             }
 
             // Handle value-based text colors
-            if (settings?.valueBasedTextColor) {
+                if (settings?.valueBasedTextColor) {
                 settings.valueBasedTextColor.forEach((colorRule: any) => {
                     const columns = colorRule.key.split(',').map((key: any) => key.trim());
                     columns.forEach((column: any) => {
@@ -1055,7 +1061,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                 _id: rowId
             };
         });
-    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows]);
+    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows, settings?.primaryKey]);
 
     // Apply filters to the formatted data
     const filteredData = useMemo(() => {
@@ -1176,7 +1182,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                         const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.includes(id));
 
                         // Don't show header checkbox for single selection mode
-                        if (showViewDocument) {
+                        if (showViewDocument || (fundLogic && userType === 'branch')) {
                             return (
                                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                     <span style={{ fontSize: '12px', color: '#666' }}>Select</span>
@@ -1202,11 +1208,11 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     },
                     renderCell: ({ row }) => (
                         <input
-                            type={showViewDocument ? "radio" : "checkbox"}
-                            name={showViewDocument ? "singleSelection" : undefined}
+                            type={(fundLogic && userType === 'branch') ?  "radio" : showViewDocument ? "radio" : "checkbox"}
+                            name={(fundLogic && userType === 'branch') ?  "singleSelection" :showViewDocument ? "singleSelection" : undefined}
                             checked={selectedRows.some(r => r._id === row._id)}
                             onChange={(e) => {
-                                if (showViewDocument) {
+                                if (showViewDocument || fundLogic) {
                                     // Single selection mode - replace the entire selection
                                     const updated = e.target.checked ? [row] : [];
                                     setSelectedRows(updated);
@@ -1819,6 +1825,26 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     <Loader />
                 </div>
             )}
+            
+            {/* Show Selected Count */}
+            {selectedRows.length > 0 && (
+                <div className="px-4 py-2 font-medium text-blue-700 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+                    <span>
+                        <span className="font-bold">{selectedRows.length}</span> record{selectedRows.length !== 1 ? 's' : ''} selected
+                    </span>
+                    {/* Optional: Clear selection button could go here */}
+                     <button
+                        onClick={() => {
+                            setSelectedRows([]);
+                            onRowSelect?.([]);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                        Clear Selection
+                    </button>
+                </div>
+            )}
+
             {settings.multiCheckBox &&
                 <>
                     {/* <div className='flex'>
