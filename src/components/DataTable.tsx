@@ -995,7 +995,13 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
 
         return data.map((row, index) => {
             const newRow = { ...row };
-            const rowId = row.id || index;
+            // Determine unique row ID
+            let rowId = row.id || index;
+            if (settings?.primaryKey && newRow[settings.primaryKey]) {
+                rowId = newRow[settings.primaryKey];
+            } else if (!row.id) {
+                 rowId = index;
+            }
 
             // Handle date formatting
             if (settings?.dateFormat?.key) {
@@ -1025,7 +1031,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
             }
 
             // Handle value-based text colors
-            if (settings?.valueBasedTextColor) {
+                if (settings?.valueBasedTextColor) {
                 settings.valueBasedTextColor.forEach((colorRule: any) => {
                     const columns = colorRule.key.split(',').map((key: any) => key.trim());
                     columns.forEach((column: any) => {
@@ -1055,7 +1061,7 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                 _id: rowId
             };
         });
-    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows]);
+    }, [data, settings?.dateFormat, settings?.decimalColumns, settings?.valueBasedTextColor, expandedRows, selectedRows, settings?.primaryKey]);
 
     // Apply filters to the formatted data
     const filteredData = useMemo(() => {
@@ -1817,6 +1823,26 @@ const DataTable: React.FC<DataTableProps> = ({ data, settings, onRowClick, onRow
                     <Loader />
                 </div>
             )}
+            
+            {/* Show Selected Count */}
+            {selectedRows.length > 0 && (
+                <div className="px-4 py-2 font-medium text-blue-700 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+                    <span>
+                        <span className="font-bold">{selectedRows.length}</span> record{selectedRows.length !== 1 ? 's' : ''} selected
+                    </span>
+                    {/* Optional: Clear selection button could go here */}
+                     <button
+                        onClick={() => {
+                            setSelectedRows([]);
+                            onRowSelect?.([]);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    >
+                        Clear Selection
+                    </button>
+                </div>
+            )}
+
             {settings.multiCheckBox &&
                 <>
                     <div className='flex'>
