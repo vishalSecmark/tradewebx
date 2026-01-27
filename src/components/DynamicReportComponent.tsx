@@ -963,6 +963,38 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             // Build J_Api
             const jApi = `"UserId":"${userId}","UserType":"${userType}"`;
 
+            // Build X_Filter from current filters
+            let filterXml = '';
+
+            // Include client code if present
+            if (clientCode) {
+                filterXml += `<ClientCode>${clientCode}</ClientCode>`;
+            }
+
+            // Process current filters
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === '') {
+                    return;
+                }
+                try {
+                    if (value instanceof Date || moment.isMoment(value)) {
+                        const formattedDate = moment(value).format('YYYYMMDD');
+                        filterXml += `<${key}>${formattedDate}</${key}>`;
+                    } else {
+                        filterXml += `<${key}>${value}</${key}>`;
+                    }
+                } catch (error) {
+                    console.warn(`Error processing filter ${key}:`, error);
+                }
+            });
+
+            // Add primary key filters for levels > 0
+            if (currentLevel > 0 && Object.keys(primaryKeyFilters).length > 0) {
+                Object.entries(primaryKeyFilters).forEach(([key, value]) => {
+                    filterXml += `<${key}>${value}</${key}>`;
+                });
+            }
+
             // Build X_Data from selected rows
             let xDataItems = '';
             selectedRows.forEach((row, index) => {
@@ -988,7 +1020,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
             const xmlData = `<dsXml>
                 <J_Ui>${jUi}</J_Ui>
                 <Sql></Sql>
-                <X_Filter></X_Filter>
+                <X_Filter>${filterXml}</X_Filter>
                 <X_Filter_Multiple></X_Filter_Multiple>
                 <X_Data>${X_Data}</X_Data>
                 <J_Api>${jApi}</J_Api>
