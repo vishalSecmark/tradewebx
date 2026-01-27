@@ -17,11 +17,37 @@ interface GroupSumModalProps {
     data: any[];
     rightList?: string[];
     leftAlignedColumns?: string[];
+    pageName?: string;
+    appMetadata?: {
+        companyLogo?: string;
+        companyName?: string;
+    };
+    companyName?: string;
+    reportHeader?: string;
 }
 
 type ConfigRow = {
     id: string;
     columnName: string;
+};
+
+// Helper function to convert BMP to PNG
+const convertBmpToPng = (bmpBase64: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return reject('Canvas context is null');
+            ctx.drawImage(image, 0, 0);
+            const pngBase64 = canvas.toDataURL('image/png');
+            resolve(pngBase64);
+        };
+        image.onerror = reject;
+        image.src = 'data:image/bmp;base64,' + bmpBase64;
+    });
 };
 
 const GroupSumModal: React.FC<GroupSumModalProps> = ({
@@ -30,7 +56,11 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
     availableColumns,
     data,
     rightList = [],
-    leftAlignedColumns = []
+    leftAlignedColumns = [],
+    pageName = 'Grouped Results',
+    appMetadata,
+    companyName = '',
+    reportHeader = ''
 }) => {
     const { colors, fonts } = useTheme();
 
@@ -80,86 +110,303 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
             'Count'
         ];
 
+        let rowCursor = 1;
+
+        // Add company logo if available
+        if (appMetadata?.companyLogo) {
+            try {
+                const pngBase64 = await convertBmpToPng(appMetadata.companyLogo);
+                const imageId = workbook.addImage({ base64: pngBase64, extension: 'png' });
+                worksheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 150, height: 80 } });
+            } catch (err) {
+                console.warn('Logo conversion failed:', err);
+            }
+        }
+
+        // Add company name
+        const displayCompanyName = companyName || appMetadata?.companyName || '';
+        if (displayCompanyName) {
+            worksheet.getCell(`D${rowCursor}`).value = displayCompanyName;
+            worksheet.getCell(`D${rowCursor}`).font = { bold: true, size: 14 };
+            rowCursor++;
+        }
+
+        // Add report header / page name
+        const displayTitle = `${pageName} - Grouped Results`;
+        worksheet.getCell(`D${rowCursor}`).value = displayTitle;
+        worksheet.getCell(`D${rowCursor}`).font = { bold: true, size: 12 };
+        rowCursor++;
+
+        // Add report header lines if available
+        if (reportHeader) {
+            reportHeader.split("\\n").forEach(line => {
+                if (line.trim()) {
+                    worksheet.getCell(`D${rowCursor}`).value = line.trim();
+                    rowCursor++;
+                }
+            });
+        }
+
+        // Add empty row for spacing
+        rowCursor += 2;
+
         // Add header row
-        const headerRow = worksheet.addRow(headers);
-        headerRow.font = { bold: true };
-        headerRow.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFE0E0E0' }
-        };
+        const headerRow = worksheet.getRow(rowCursor);
+        headerRow.height = 25;
+        headers.forEach((header, colIdx) => {
+            const cell = headerRow.getCell(colIdx + 1);
+            cell.value = header;
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF4A5568' }
+            };
+            cell.alignment = { horizontal: header === 'Count' || header.includes('(Total)') ? 'right' : 'left' };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                left: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                bottom: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                right: { style: 'thin', color: { argb: 'FFCBD5E0' } }
+            };
+        });
+        headerRow.commit();
+        rowCursor++;
 
         // Add data rows
-        resultData.forEach(row => {
+        resultData.forEach((row, rowIndex) => {
+            const currentRow = worksheet.getRow(rowCursor);
             const rowData = [
                 ...groupCols.map(col => row[`group_${col}`]),
-                ...sumCols.map(col => typeof row[`sum_${col}`] === 'number' ? row[`sum_${col}`].toFixed(2) : row[`sum_${col}`]),
+                ...sumCols.map(col => typeof row[`sum_${col}`] === 'number' ? row[`sum_${col}`] : row[`sum_${col}`]),
                 row._count
             ];
-            worksheet.addRow(rowData);
+
+            rowData.forEach((value, colIdx) => {
+                const cell = currentRow.getCell(colIdx + 1);
+                const header = headers[colIdx];
+
+                if (typeof value === 'number') {
+                    cell.value = value;
+                    if (header.includes('(Total)')) {
+                        cell.numFmt = '0.00';
+                    }
+                    cell.alignment = { horizontal: 'right' };
+                } else {
+                    cell.value = value;
+                    cell.alignment = { horizontal: 'left' };
+                }
+
+                // Alternate row coloring
+                if (rowIndex % 2 === 0) {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFF7FAFC' }
+                    };
+                }
+
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                    left: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                    bottom: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                    right: { style: 'thin', color: { argb: 'FFCBD5E0' } }
+                };
+            });
+
+            currentRow.commit();
+            rowCursor++;
         });
+
+        // Add totals row
+        const totalRow = worksheet.getRow(rowCursor);
+        totalRow.height = 22;
+
+        // Calculate grand totals
+        const grandTotals = {
+            count: resultData.reduce((acc, row) => acc + row._count, 0),
+            sums: {} as Record<string, number>
+        };
+        sumCols.forEach(col => {
+            grandTotals.sums[col] = resultData.reduce((acc, row) => {
+                const val = row[`sum_${col}`];
+                return acc + (typeof val === 'number' ? val : 0);
+            }, 0);
+        });
+
+        headers.forEach((header, colIdx) => {
+            const cell = totalRow.getCell(colIdx + 1);
+
+            if (colIdx === 0) {
+                cell.value = 'Grand Total';
+            } else if (header === 'Count') {
+                cell.value = grandTotals.count;
+                cell.alignment = { horizontal: 'right' };
+            } else if (header.includes('(Total)')) {
+                const colName = header.replace(' (Total)', '');
+                cell.value = grandTotals.sums[colName] || 0;
+                cell.numFmt = '0.00';
+                cell.alignment = { horizontal: 'right' };
+            } else {
+                cell.value = '';
+            }
+
+            cell.font = { bold: true };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FFD9D9D9' }
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                left: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                bottom: { style: 'thin', color: { argb: 'FFCBD5E0' } },
+                right: { style: 'thin', color: { argb: 'FFCBD5E0' } }
+            };
+        });
+        totalRow.commit();
 
         // Auto-size columns
         worksheet.columns.forEach(column => {
             column.width = 20;
         });
 
-        // Generate file
+        // Generate file with proper naming
+        const fileTitle = pageName.replace(/[^a-zA-Z0-9]/g, "_");
         const buffer = await workbook.xlsx.writeBuffer();
         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `grouped_data_${new Date().getTime()}.xlsx`;
+        link.download = `${fileTitle}_Grouped.xlsx`;
         link.click();
         window.URL.revokeObjectURL(url);
     };
 
-    const exportToPDF = () => {
+    const exportToPDF = async () => {
         if (!resultData || resultData.length === 0) return;
 
         const groupCols = Array.from(selectedGroup);
         const sumCols = Array.from(selectedSum);
 
-        // Build table headers
+        // Build table headers with alignment
         const tableHeaders = [
-            ...groupCols.map(col => ({ text: `${col} (Group)`, style: 'tableHeader' })),
-            ...sumCols.map(col => ({ text: `${col} (Total)`, style: 'tableHeader' })),
-            { text: 'Count', style: 'tableHeader' }
+            ...groupCols.map(col => ({
+                text: `${col} (Group)`,
+                bold: true,
+                fillColor: '#eeeeee',
+                alignment: 'left'
+            })),
+            ...sumCols.map(col => ({
+                text: `${col} (Total)`,
+                bold: true,
+                fillColor: '#eeeeee',
+                alignment: 'right'
+            })),
+            { text: 'Count', bold: true, fillColor: '#eeeeee', alignment: 'right' }
         ];
 
-        // Build table body
+        // Build table body with alignment
         const tableBody = resultData.map(row => {
             return [
-                ...groupCols.map(col => row[`group_${col}`] || ''),
+                ...groupCols.map(col => ({
+                    text: row[`group_${col}`] || '',
+                    alignment: 'left'
+                })),
                 ...sumCols.map(col => {
                     const val = row[`sum_${col}`];
-                    return typeof val === 'number' ? val.toFixed(2) : val;
+                    return {
+                        text: typeof val === 'number' ? val.toFixed(2) : val,
+                        alignment: 'right'
+                    };
                 }),
-                row._count.toString()
+                { text: row._count.toString(), alignment: 'right' }
             ];
         });
 
+        // Calculate grand totals
+        const grandTotals = {
+            count: resultData.reduce((acc, row) => acc + row._count, 0),
+            sums: {} as Record<string, number>
+        };
+        sumCols.forEach(col => {
+            grandTotals.sums[col] = resultData.reduce((acc, row) => {
+                const val = row[`sum_${col}`];
+                return acc + (typeof val === 'number' ? val : 0);
+            }, 0);
+        });
+
+        // Build totals row
+        const totalsRow = [
+            { text: 'Grand Total', bold: true, alignment: 'left' as const },
+            ...groupCols.slice(1).map(() => ({ text: '', bold: true })),
+            ...sumCols.map(col => ({
+                text: (grandTotals.sums[col] || 0).toFixed(2),
+                bold: true,
+                alignment: 'right' as const
+            })),
+            { text: grandTotals.count.toString(), bold: true, alignment: 'right' as const }
+        ];
+
+        // Convert BMP logo if available
+        let logoImage = '';
+        if (appMetadata?.companyLogo) {
+            try {
+                logoImage = await convertBmpToPng(appMetadata.companyLogo);
+            } catch (err) {
+                console.warn('Logo conversion failed:', err);
+            }
+        }
+
+        const displayCompanyName = companyName || appMetadata?.companyName || '';
+        const displayTitle = `${pageName} - Grouped Results`;
+        const columnCount = groupCols.length + sumCols.length + 1;
+        const columnWidth = (100 / columnCount).toFixed(2) + '%';
+
         // PDF document definition
         const docDefinition: any = {
-            pageSize: 'A4',
-            pageOrientation: groupCols.length + sumCols.length > 6 ? 'landscape' : 'portrait',
+            pageSize: columnCount > 15 ? 'A3' : 'A4',
+            pageOrientation: columnCount > 6 ? 'landscape' : 'portrait',
             content: [
                 {
-                    text: 'Grouped Data Report',
-                    style: 'header',
-                    alignment: 'center',
-                    margin: [0, 0, 0, 20]
+                    columns: [
+                        logoImage
+                            ? {
+                                image: logoImage,
+                                width: 60,
+                                height: 40,
+                                margin: [0, 0, 10, 0],
+                            }
+                            : {},
+                        {
+                            stack: [
+                                { text: displayCompanyName, style: 'header' },
+                                { text: displayTitle, style: 'subheader' },
+                                ...(reportHeader ? [{ text: reportHeader.replace(/\\n/g, ' '), style: 'small' }] : [])
+                            ],
+                            alignment: 'center',
+                            width: '*',
+                        },
+                        { text: '', width: 60 },
+                    ]
                 },
+                { text: '', margin: [0, logoImage ? 30 : 15, 0, 0] },
                 {
+                    style: 'tableStyle',
                     table: {
                         headerRows: 1,
-                        widths: Array(tableHeaders.length).fill('auto'),
-                        body: [tableHeaders, ...tableBody]
+                        widths: Array(columnCount).fill(columnWidth),
+                        body: [tableHeaders, ...tableBody, totalsRow]
                     },
                     layout: {
-                        fillColor: (rowIndex: number) => {
-                            return rowIndex === 0 ? '#4a5568' : (rowIndex % 2 === 0 ? '#f7fafc' : null);
+                        paddingLeft: () => 2,
+                        paddingRight: () => 2,
+                        paddingTop: () => 2,
+                        paddingBottom: () => 2,
+                        fillColor: (rowIndex: number, node: any) => {
+                            if (rowIndex === 0) return '#eeeeee';
+                            if (rowIndex === node.table.body.length - 1) return '#e8f4ff';
+                            return rowIndex % 2 === 0 ? '#f7fafc' : null;
                         },
                         hLineWidth: () => 1,
                         vLineWidth: () => 1,
@@ -169,24 +416,29 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                 }
             ],
             styles: {
-                header: {
-                    fontSize: 18,
-                    bold: true,
-                    color: '#333'
-                },
-                tableHeader: {
-                    bold: true,
-                    fontSize: 12,
-                    color: 'white'
-                }
+                header: { fontSize: 14, bold: true, alignment: 'center', margin: [0, 0, 0, 2] },
+                subheader: { fontSize: 10, alignment: 'center', margin: [0, 0, 0, 2] },
+                small: { fontSize: 9, alignment: 'center', margin: [0, 0, 0, 6] },
+                tableStyle: { fontSize: 8, margin: [0, 2, 0, 2] },
+            },
+            footer: function (currentPage: number, pageCount: number) {
+                const now = new Date().toLocaleString('en-GB');
+                return {
+                    columns: [
+                        { text: `Printed on: ${now}`, alignment: 'left', margin: [40, 0] },
+                        { text: `[Page ${currentPage} of ${pageCount}]`, alignment: 'right', margin: [0, 0, 40, 0] },
+                    ],
+                    fontSize: 8,
+                };
             },
             defaultStyle: {
                 fontSize: 10
             }
         };
 
-        // Download PDF
-        pdfMake.createPdf(docDefinition).download(`grouped_data_${new Date().getTime()}.pdf`);
+        // Download PDF with proper naming
+        const fileTitle = pageName.replace(/[^a-zA-Z0-9]/g, "_");
+        pdfMake.createPdf(docDefinition).download(`${fileTitle}_Grouped.pdf`);
     };
 
     /* ---------------- Logic ---------------- */
@@ -455,7 +707,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b">
                     <h2 style={{ color: colors.text }} className="text-xl font-semibold">
-                        {viewMode === 'config' ? 'Group & Sum Configuration' : 'Grouped Results'}
+                        {viewMode === 'config' ? `${pageName} - Group & Sum Configuration` : `${pageName} - Grouped Results`}
                     </h2>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
                         <FaTimes size={18} />

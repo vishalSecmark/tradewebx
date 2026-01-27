@@ -2396,6 +2396,10 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                             .map((col: string) => col.trim())
                         : []
                 }
+                pageName={OpenedPageName}
+                appMetadata={appMetadata}
+                companyName={jsonData?.CompanyName?.[0] || ''}
+                reportHeader={jsonData?.ReportHeader?.[0] || ''}
             />
             {/* Download Modal */}
             <FilterModal
