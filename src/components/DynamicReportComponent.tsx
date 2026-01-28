@@ -1924,7 +1924,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                                             Export to CSV
                                                         </button>
                                                     )}
-                                                    {isMasterButtonEnabled('PDF') && (
+                                                    {!showTypeList && isMasterButtonEnabled('PDF') && (
                                                         <button
                                                             onClick={() => {
                                                                 exportTableToPdf(tableRef.current, jsonData, appMetadata, apiData, pageData, filters, currentLevel, 'download');
@@ -2229,7 +2229,7 @@ const DynamicReportComponent: React.FC<DynamicReportComponentProps> = ({ compone
                                         </div>
                                     )}
 
-                                    {isMasterButtonEnabled('PDF') && (
+                                    {!showTypeList && isMasterButtonEnabled('PDF') && (
                                         <div className="relative group">
                                             <button
                                                 onClick={() => {
