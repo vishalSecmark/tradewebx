@@ -76,6 +76,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
     );
 
     const [selectedGroup, setSelectedGroup] = useState<Set<string>>(new Set());
+    const [selectedSub, setSelectedSub] = useState<Set<string>>(new Set());
     const [selectedSum, setSelectedSum] = useState<Set<string>>(new Set());
     const [resultData, setResultData] = useState<any[] | null>(null);
     const [viewMode, setViewMode] = useState<'config' | 'result'>('config');
@@ -103,11 +104,13 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
 
         // Get column headers
         const groupCols = Array.from(selectedGroup);
+        const subCols = Array.from(selectedSub);
         const sumCols = Array.from(selectedSum);
+        const exportRows = displayRows && displayRows.length > 0 ? displayRows : resultData;
         const headers = [
             ...groupCols.map(col => `${col} (Group)`),
-            ...sumCols.map(col => `${col} (Total)`),
-            'Count'
+            ...subCols.map(col => `${col} (Sub)`),
+            ...sumCols.map(col => `${col} (Total)`)
         ];
 
         let rowCursor = 1;
@@ -162,7 +165,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                 pattern: 'solid',
                 fgColor: { argb: 'FF4A5568' }
             };
-            cell.alignment = { horizontal: header === 'Count' || header.includes('(Total)') ? 'right' : 'left' };
+            cell.alignment = { horizontal: header.includes('(Total)') ? 'right' : 'left' };
             cell.border = {
                 top: { style: 'thin', color: { argb: 'FFCBD5E0' } },
                 left: { style: 'thin', color: { argb: 'FFCBD5E0' } },
@@ -173,13 +176,39 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
         headerRow.commit();
         rowCursor++;
 
+        const getGroupTotalLabel = (value: any) => {
+            const base = value === null || value === undefined ? '' : String(value).trim();
+            return base ? `${base} Total` : 'Total';
+        };
+
         // Add data rows
-        resultData.forEach((row, rowIndex) => {
+        exportRows.forEach((row, rowIndex) => {
             const currentRow = worksheet.getRow(rowCursor);
+            const rowType = row.__rowType ?? 'child';
+            const isGroupHeader = rowType === 'groupHeader';
+            const isSubtotal = rowType === 'subtotal';
+            const isGrandTotal = rowType === 'grandTotal';
+            const isChild = rowType === 'child';
+            const isSpecialRow = isGroupHeader || isSubtotal || isGrandTotal;
+            const fillColor = isGrandTotal ? 'FFD9D9D9' : isSpecialRow ? 'FFF7FAFC' : '';
+
             const rowData = [
-                ...groupCols.map(col => row[`group_${col}`]),
-                ...sumCols.map(col => typeof row[`sum_${col}`] === 'number' ? row[`sum_${col}`] : row[`sum_${col}`]),
-                row._count
+                ...groupCols.map((col, idx) => {
+                    if (isGroupHeader) return row[`group_${col}`];
+                    if (isSubtotal) return idx === 0 ? getGroupTotalLabel(row[`group_${col}`]) : '';
+                    if (isGrandTotal) return idx === 0 ? 'Grand Total' : '';
+                    if (isChild) return '';
+                    return row[`group_${col}`];
+                }),
+                ...subCols.map((col, idx) => {
+                    if (isChild) return row[`sub_${col}`];
+                    if (isGrandTotal && groupCols.length === 0 && idx === 0) return 'Grand Total';
+                    return '';
+                }),
+                ...sumCols.map(col => {
+                    if (isChild || isSubtotal || isGrandTotal) return row[`sum_${col}`];
+                    return '';
+                })
             ];
 
             rowData.forEach((value, colIdx) => {
@@ -197,13 +226,22 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                     cell.alignment = { horizontal: 'left' };
                 }
 
-                // Alternate row coloring
-                if (rowIndex % 2 === 0) {
+                if (fillColor) {
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: fillColor }
+                    };
+                } else if (rowIndex % 2 === 0) {
                     cell.fill = {
                         type: 'pattern',
                         pattern: 'solid',
                         fgColor: { argb: 'FFF7FAFC' }
                     };
+                }
+
+                if (isSpecialRow) {
+                    cell.font = { ...cell.font, bold: true };
                 }
 
                 cell.border = {
@@ -217,54 +255,6 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
             currentRow.commit();
             rowCursor++;
         });
-
-        // Add totals row
-        const totalRow = worksheet.getRow(rowCursor);
-        totalRow.height = 22;
-
-        // Calculate grand totals
-        const grandTotals = {
-            count: resultData.reduce((acc, row) => acc + row._count, 0),
-            sums: {} as Record<string, number>
-        };
-        sumCols.forEach(col => {
-            grandTotals.sums[col] = resultData.reduce((acc, row) => {
-                const val = row[`sum_${col}`];
-                return acc + (typeof val === 'number' ? val : 0);
-            }, 0);
-        });
-
-        headers.forEach((header, colIdx) => {
-            const cell = totalRow.getCell(colIdx + 1);
-
-            if (colIdx === 0) {
-                cell.value = 'Grand Total';
-            } else if (header === 'Count') {
-                cell.value = grandTotals.count;
-                cell.alignment = { horizontal: 'right' };
-            } else if (header.includes('(Total)')) {
-                const colName = header.replace(' (Total)', '');
-                cell.value = grandTotals.sums[colName] || 0;
-                cell.numFmt = '0.00';
-                cell.alignment = { horizontal: 'right' };
-            } else {
-                cell.value = '';
-            }
-
-            cell.font = { bold: true };
-            cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: 'FFD9D9D9' }
-            };
-            cell.border = {
-                top: { style: 'thin', color: { argb: 'FFCBD5E0' } },
-                left: { style: 'thin', color: { argb: 'FFCBD5E0' } },
-                bottom: { style: 'thin', color: { argb: 'FFCBD5E0' } },
-                right: { style: 'thin', color: { argb: 'FFCBD5E0' } }
-            };
-        });
-        totalRow.commit();
 
         // Auto-size columns
         worksheet.columns.forEach(column => {
@@ -287,7 +277,9 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
         if (!resultData || resultData.length === 0) return;
 
         const groupCols = Array.from(selectedGroup);
+        const subCols = Array.from(selectedSub);
         const sumCols = Array.from(selectedSum);
+        const exportRows = displayRows && displayRows.length > 0 ? displayRows : resultData;
 
         // Build table headers with alignment
         const tableHeaders = [
@@ -297,56 +289,71 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                 fillColor: '#eeeeee',
                 alignment: 'left'
             })),
+            ...subCols.map(col => ({
+                text: `${col} (Sub)`,
+                bold: true,
+                fillColor: '#eeeeee',
+                alignment: 'left'
+            })),
             ...sumCols.map(col => ({
                 text: `${col} (Total)`,
                 bold: true,
                 fillColor: '#eeeeee',
                 alignment: 'right'
-            })),
-            { text: 'Count', bold: true, fillColor: '#eeeeee', alignment: 'right' }
+            }))
         ];
+
+        const getGroupTotalLabel = (value: any) => {
+            const base = value === null || value === undefined ? '' : String(value).trim();
+            return base ? `${base} Total` : 'Total';
+        };
+
+        const buildCell = (
+            text: string,
+            alignment: 'left' | 'right',
+            isBold: boolean,
+            fillColor?: string
+        ) => ({
+            text,
+            alignment,
+            ...(isBold ? { bold: true } : {}),
+            ...(fillColor ? { fillColor } : {})
+        });
 
         // Build table body with alignment
-        const tableBody = resultData.map(row => {
+        const tableBody = exportRows.map(row => {
+            const rowType = row.__rowType ?? 'child';
+            const isGroupHeader = rowType === 'groupHeader';
+            const isSubtotal = rowType === 'subtotal';
+            const isGrandTotal = rowType === 'grandTotal';
+            const isChild = rowType === 'child';
+            const isSpecialRow = isGroupHeader || isSubtotal || isGrandTotal;
+            const fillColor = isGrandTotal ? '#e8f4ff' : isSpecialRow ? '#f7fafc' : undefined;
+
             return [
-                ...groupCols.map(col => ({
-                    text: row[`group_${col}`] || '',
-                    alignment: 'left'
-                })),
-                ...sumCols.map(col => {
-                    const val = row[`sum_${col}`];
-                    return {
-                        text: typeof val === 'number' ? val.toFixed(2) : val,
-                        alignment: 'right'
-                    };
+                ...groupCols.map((col, idx) => {
+                    let value = '';
+                    if (isGroupHeader) value = row[`group_${col}`] || '';
+                    else if (isSubtotal) value = idx === 0 ? getGroupTotalLabel(row[`group_${col}`]) : '';
+                    else if (isGrandTotal) value = idx === 0 ? 'Grand Total' : '';
+                    return buildCell(value, 'left', isSpecialRow, fillColor);
                 }),
-                { text: row._count.toString(), alignment: 'right' }
+                ...subCols.map((col, idx) => {
+                    let value = '';
+                    if (isChild) value = row[`sub_${col}`] || '';
+                    else if (isGrandTotal && groupCols.length === 0 && idx === 0) value = 'Grand Total';
+                    return buildCell(value, 'left', isSpecialRow, fillColor);
+                }),
+                ...sumCols.map(col => {
+                    let value = '';
+                    if (isChild || isSubtotal || isGrandTotal) {
+                        const val = row[`sum_${col}`];
+                        value = typeof val === 'number' ? val.toFixed(2) : (val ?? '');
+                    }
+                    return buildCell(value, 'right', isSpecialRow, fillColor);
+                })
             ];
         });
-
-        // Calculate grand totals
-        const grandTotals = {
-            count: resultData.reduce((acc, row) => acc + row._count, 0),
-            sums: {} as Record<string, number>
-        };
-        sumCols.forEach(col => {
-            grandTotals.sums[col] = resultData.reduce((acc, row) => {
-                const val = row[`sum_${col}`];
-                return acc + (typeof val === 'number' ? val : 0);
-            }, 0);
-        });
-
-        // Build totals row
-        const totalsRow = [
-            { text: 'Grand Total', bold: true, alignment: 'left' as const },
-            ...groupCols.slice(1).map(() => ({ text: '', bold: true })),
-            ...sumCols.map(col => ({
-                text: (grandTotals.sums[col] || 0).toFixed(2),
-                bold: true,
-                alignment: 'right' as const
-            })),
-            { text: grandTotals.count.toString(), bold: true, alignment: 'right' as const }
-        ];
 
         // Convert BMP logo if available
         let logoImage = '';
@@ -360,7 +367,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
 
         const displayCompanyName = companyName || appMetadata?.companyName || '';
         const displayTitle = `${pageName} - Grouped Results`;
-        const columnCount = groupCols.length + sumCols.length + 1;
+        const columnCount = groupCols.length + subCols.length + sumCols.length;
         const columnWidth = (100 / columnCount).toFixed(2) + '%';
 
         // PDF document definition
@@ -396,16 +403,15 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                     table: {
                         headerRows: 1,
                         widths: Array(columnCount).fill(columnWidth),
-                        body: [tableHeaders, ...tableBody, totalsRow]
+                        body: [tableHeaders, ...tableBody]
                     },
                     layout: {
                         paddingLeft: () => 2,
                         paddingRight: () => 2,
                         paddingTop: () => 2,
                         paddingBottom: () => 2,
-                        fillColor: (rowIndex: number, node: any) => {
+                        fillColor: (rowIndex: number) => {
                             if (rowIndex === 0) return '#eeeeee';
-                            if (rowIndex === node.table.body.length - 1) return '#e8f4ff';
                             return rowIndex % 2 === 0 ? '#f7fafc' : null;
                         },
                         hLineWidth: () => 1,
@@ -443,8 +449,8 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
 
     /* ---------------- Logic ---------------- */
     const calculateResults = () => {
-        if (selectedGroup.size === 0) {
-            alert("Please select at least one column to group by (Select Column).");
+        if (selectedGroup.size === 0 && selectedSub.size === 0) {
+            alert("Please select at least one column to group by (Group or Sub Column).");
             return;
         }
 
@@ -454,24 +460,34 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
             try {
                 const groups: Record<string, any> = {};
                 const groupCols = Array.from(selectedGroup);
+                const subCols = Array.from(selectedSub);
                 const sumCols = Array.from(selectedSum);
 
+                const normalizeValue = (value: any) =>
+                    value === null || value === undefined ? '' : String(value).trim();
+
                 data.forEach(row => {
-                    // Create a unique key for the group (normalize: remove whitespace)
-                    const keyParts = groupCols.map(col => {
-                        const val = row[col];
-                        return (val === null || val === undefined) ? '' : String(val).trim();
-                    });
+                    // Create a unique key for the group (group + sub columns)
+                    const keyParts = [...groupCols, ...subCols].map(col => normalizeValue(row[col]));
                     const key = keyParts.join('|||');
+
+                    // Group key for display (only group columns)
+                    const groupKeyParts = groupCols.map(col => normalizeValue(row[col]));
+                    const groupKey = groupKeyParts.join('|||');
 
                     if (!groups[key]) {
                         groups[key] = {
                             _count: 0,
                             _key: key,
+                            _groupKey: groupKey
                         };
                         // Initialize group columns
                         groupCols.forEach((col) => {
                             groups[key][`group_${col}`] = row[col];
+                        });
+                        // Initialize sub columns
+                        subCols.forEach((col) => {
+                            groups[key][`sub_${col}`] = row[col];
                         });
                         // Initialize sum columns
                         sumCols.forEach(col => {
@@ -510,7 +526,21 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                     });
                     return result;
                 });
-                setResultData(results);
+                const buildSortKey = (row: any) => {
+                    const groupKey = groupCols
+                        .map(col => normalizeValue(row[`group_${col}`]).toLowerCase())
+                        .join('|||');
+                    const subKey = subCols
+                        .map(col => normalizeValue(row[`sub_${col}`]).toLowerCase())
+                        .join('|||');
+                    return `${groupKey}|||${subKey}`;
+                };
+
+                const sortedResults = results.sort((a: any, b: any) =>
+                    buildSortKey(a).localeCompare(buildSortKey(b), undefined, { numeric: true, sensitivity: 'base' })
+                );
+
+                setResultData(sortedResults);
                 setViewMode('result');
             } catch (err) {
                 console.error("Calculation Error", err);
@@ -531,21 +561,75 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
     );
 
     const toggleGroup = (col: string) => {
+        const willSelect = !selectedGroup.has(col);
         setSelectedGroup(prev => {
             const next = new Set(prev);
             if (next.has(col)) next.delete(col);
             else next.add(col);
             return next;
         });
+        if (willSelect) {
+            setSelectedSub(prev => {
+                if (!prev.has(col)) return prev;
+                const next = new Set(prev);
+                next.delete(col);
+                return next;
+            });
+            setSelectedSum(prev => {
+                if (!prev.has(col)) return prev;
+                const next = new Set(prev);
+                next.delete(col);
+                return next;
+            });
+        }
+    };
+
+    const toggleSub = (col: string) => {
+        const willSelect = !selectedSub.has(col);
+        setSelectedSub(prev => {
+            const next = new Set(prev);
+            if (next.has(col)) next.delete(col);
+            else next.add(col);
+            return next;
+        });
+        if (willSelect) {
+            setSelectedGroup(prev => {
+                if (!prev.has(col)) return prev;
+                const next = new Set(prev);
+                next.delete(col);
+                return next;
+            });
+            setSelectedSum(prev => {
+                if (!prev.has(col)) return prev;
+                const next = new Set(prev);
+                next.delete(col);
+                return next;
+            });
+        }
     };
 
     const toggleSum = (col: string) => {
+        const willSelect = !selectedSum.has(col);
         setSelectedSum(prev => {
             const next = new Set(prev);
             if (next.has(col)) next.delete(col);
             else next.add(col);
             return next;
         });
+        if (willSelect) {
+            setSelectedGroup(prev => {
+                if (!prev.has(col)) return prev;
+                const next = new Set(prev);
+                next.delete(col);
+                return next;
+            });
+            setSelectedSub(prev => {
+                if (!prev.has(col)) return prev;
+                const next = new Set(prev);
+                next.delete(col);
+                return next;
+            });
+        }
     };
 
     const configColumns: Column<ConfigRow>[] = useMemo(
@@ -568,7 +652,25 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                             className="peer h-5 w-5 appearance-none rounded border-2 border-blue-600 bg-white checked:bg-blue-600 cursor-pointer focus:outline-none"
                         />
                         <span className="absolute text-white text-sm font-bold opacity-0 peer-checked:opacity-100 pointer-events-none">
-                            ✓
+                            {"\u2713"}
+                        </span>
+                    </label>
+                )
+            },
+            {
+                key: "sub",
+                name: "Select Sub Column",
+                width: 180,
+                renderCell: ({ row }) => (
+                    <label className="relative inline-flex items-center justify-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={selectedSub.has(row.id)}
+                            onChange={() => toggleSub(row.id)}
+                            className="peer h-5 w-5 appearance-none rounded border-2 border-indigo-600 bg-white checked:bg-indigo-600 cursor-pointer focus:outline-none"
+                        />
+                        <span className="absolute text-white text-sm font-bold opacity-0 peer-checked:opacity-100 pointer-events-none">
+                            {"\u2713"}
                         </span>
                     </label>
                 )
@@ -586,13 +688,13 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                             className="peer h-5 w-5 appearance-none rounded border-2 border-green-600 bg-white checked:bg-green-600 cursor-pointer focus:outline-none"
                         />
                         <span className="absolute text-white text-sm font-bold opacity-0 peer-checked:opacity-100 pointer-events-none">
-                            ✓
+                            {"\u2713"}
                         </span>
                     </label>
                 )
             }
         ],
-        [selectedGroup, selectedSum]
+        [selectedGroup, selectedSub, selectedSum]
     );
 
     /* ---------------- Result View Columns ---------------- */
@@ -600,6 +702,8 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
         if (!resultData || resultData.length === 0) return [];
 
         const cols: Column<any>[] = [];
+        const groupHeaderCellClass = (row: any) =>
+            row.__rowType === 'groupHeader' ? 'group-header-cell' : undefined;
 
         // Helper function to check if column should be right-aligned
         const isRightAligned = (colName: string, colKey: string): boolean => {
@@ -640,25 +744,87 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
         };
 
         // Group Columns
-        Array.from(selectedGroup).forEach(col => {
+        Array.from(selectedGroup).forEach((col, index) => {
             const groupKey = `group_${col}`;
             const shouldRightAlign = isRightAligned(col, groupKey);
+            const isFirstGroupColumn = index === 0;
 
             cols.push({
                 key: groupKey,
                 name: col + " (Group)",
                 resizable: true,
-                renderCell: ({ row }) => (
-                    <div
-                        className="w-full h-full flex items-center px-2"
-                        style={{
-                            justifyContent: shouldRightAlign ? 'flex-end' : 'flex-start',
-                            textAlign: shouldRightAlign ? 'right' : 'left'
-                        }}
-                    >
-                        {row[groupKey]}
-                    </div>
-                )
+                cellClass: groupHeaderCellClass,
+                renderCell: ({ row }) => {
+                    const rowType = row.__rowType;
+
+                    let displayValue = '';
+                    if (rowType === 'grandTotal') {
+                        displayValue = isFirstGroupColumn ? 'Grand Total' : '';
+                    } else if (rowType === 'subtotal') {
+                        if (isFirstGroupColumn) {
+                            const base = row[groupKey];
+                            displayValue = base !== undefined && base !== null && String(base).trim() !== ''
+                                ? `${base} Total`
+                                : 'Total';
+                        }
+                    } else if (rowType === 'groupHeader') {
+                        displayValue = row[groupKey];
+                    } else if (rowType === 'child') {
+                        displayValue = '';
+                    }
+
+                    return (
+                        <div
+                            className="w-full h-full flex items-center px-2"
+                            style={{
+                                justifyContent: shouldRightAlign ? 'flex-end' : 'flex-start',
+                                textAlign: shouldRightAlign ? 'right' : 'left'
+                            }}
+                        >
+                            {displayValue}
+                        </div>
+                    );
+                }
+            });
+        });
+
+        // Sub Columns
+        Array.from(selectedSub).forEach((col, index) => {
+            const subKey = `sub_${col}`;
+            const shouldRightAlign = isRightAligned(col, subKey);
+            const isFirstSubColumn = index === 0;
+
+            cols.push({
+                key: subKey,
+                name: col + " (Sub)",
+                resizable: true,
+                cellClass: groupHeaderCellClass,
+                renderCell: ({ row }) => {
+                    const rowType = row.__rowType;
+
+                    let displayValue = '';
+                    if (rowType === 'child') {
+                        displayValue = row[subKey];
+                    } else if (rowType === 'grandTotal') {
+                        displayValue =
+                            selectedGroup.size === 0 && isFirstSubColumn ? 'Grand Total' : '';
+                    } else if (rowType === 'subtotal') {
+                        displayValue =
+                            selectedGroup.size === 0 && isFirstSubColumn ? 'Total' : '';
+                    }
+
+                    return (
+                        <div
+                            className="w-full h-full flex items-center px-2"
+                            style={{
+                                justifyContent: shouldRightAlign ? 'flex-end' : 'flex-start',
+                                textAlign: shouldRightAlign ? 'right' : 'left'
+                            }}
+                        >
+                            {displayValue}
+                        </div>
+                    );
+                }
             });
         });
 
@@ -671,23 +837,170 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                 key: sumKey,
                 name: col + " (Total)",
                 resizable: true,
-                renderCell: ({ row }) => (
-                    <div
-                        className="w-full h-full flex items-center px-2"
-                        style={{
-                            justifyContent: shouldRightAlign ? 'flex-end' : 'flex-start',
-                            textAlign: shouldRightAlign ? 'right' : 'left'
-                        }}
-                        title={`Sum of ${row._count} records`}
-                    >
-                        {typeof row[sumKey] === 'number' ? row[sumKey].toFixed(2) : row[sumKey]}
-                    </div>
-                )
+                cellClass: groupHeaderCellClass,
+                renderCell: ({ row }) => {
+                    const rowType = row.__rowType;
+                    const displayValue =
+                        rowType === 'child' || rowType === 'subtotal' || rowType === 'grandTotal'
+                            ? (typeof row[sumKey] === 'number' ? row[sumKey].toFixed(2) : row[sumKey])
+                            : '';
+
+                    return (
+                        <div
+                            className="w-full h-full flex items-center px-2"
+                            style={{
+                                justifyContent: shouldRightAlign ? 'flex-end' : 'flex-start',
+                                textAlign: shouldRightAlign ? 'right' : 'left'
+                            }}
+                            title={
+                                rowType === 'grandTotal'
+                                    ? 'Grand Total'
+                                    : rowType === 'subtotal'
+                                        ? 'Group Total'
+                                        : rowType === 'child'
+                                            ? `Sum of ${row._count} records`
+                                            : undefined
+                            }
+                        >
+                            {displayValue}
+                        </div>
+                    );
+                }
             });
         });
 
         return cols;
-    }, [resultData, selectedGroup, selectedSum, normalizedRightList, normalizedLeftAlignedColumns]);
+    }, [resultData, selectedGroup, selectedSub, selectedSum, normalizedRightList, normalizedLeftAlignedColumns]);
+
+    const displayRows = useMemo(() => {
+        if (!resultData) return [];
+
+        const groupCols = Array.from(selectedGroup);
+        const subCols = Array.from(selectedSub);
+        const sumCols = Array.from(selectedSum);
+
+        const normalizeValue = (value: any) =>
+            value === null || value === undefined ? '' : String(value).trim();
+
+        const shouldAddSubtotals = groupCols.length > 0;
+        const groupingCols = groupCols.length > 0 ? groupCols : subCols;
+        const getGroupKey = (row: any) =>
+            groupingCols
+                .map(col => {
+                    const keyPrefix = groupCols.length > 0 ? 'group_' : 'sub_';
+                    return normalizeValue(row[`${keyPrefix}${col}`]);
+                })
+                .join('|||');
+
+        const rows: any[] = [];
+
+        if (!shouldAddSubtotals) {
+            resultData.forEach(row => {
+                rows.push({ ...row, __rowType: 'child' });
+            });
+        } else {
+            let currentGroupKey: string | null = null;
+            let groupTotals: Record<string, number> = {};
+            let groupCount = 0;
+            let groupLabelValues: Record<string, any> = {};
+
+            const resetGroupTotals = () => {
+                groupTotals = {};
+                sumCols.forEach(col => {
+                    groupTotals[col] = 0;
+                });
+                groupCount = 0;
+            };
+
+            const pushGroupHeaderRow = () => {
+                const headerRow: any = {
+                    _key: `__group__${currentGroupKey}`,
+                    __rowType: 'groupHeader'
+                };
+                groupCols.forEach(col => {
+                    headerRow[`group_${col}`] = groupLabelValues[col];
+                });
+                rows.push(headerRow);
+            };
+
+            const pushSubtotalRow = () => {
+                if (currentGroupKey === null) return;
+                const subtotalRow: any = {
+                    _key: `__subtotal__${currentGroupKey}`,
+                    __rowType: 'subtotal',
+                    _count: groupCount
+                };
+                groupCols.forEach(col => {
+                    subtotalRow[`group_${col}`] = groupLabelValues[col];
+                });
+                sumCols.forEach(col => {
+                    subtotalRow[`sum_${col}`] = groupTotals[col] ?? 0;
+                });
+                rows.push(subtotalRow);
+            };
+
+            resetGroupTotals();
+
+            resultData.forEach(row => {
+                const groupKey = getGroupKey(row);
+                const isGroupStart = groupKey !== currentGroupKey;
+
+                if (isGroupStart && currentGroupKey !== null) {
+                    pushSubtotalRow();
+                }
+
+                if (isGroupStart) {
+                    currentGroupKey = groupKey;
+                    groupLabelValues = {};
+                    groupCols.forEach(col => {
+                        groupLabelValues[col] = row[`group_${col}`];
+                    });
+                    pushGroupHeaderRow();
+                    resetGroupTotals();
+                }
+
+                rows.push({ ...row, __rowType: 'child' });
+
+                groupCount += row._count || 0;
+                sumCols.forEach(col => {
+                    const val = row[`sum_${col}`];
+                    groupTotals[col] += typeof val === 'number' ? val : 0;
+                });
+            });
+
+            if (rows.length > 0) {
+                pushSubtotalRow();
+            }
+        }
+
+        if (rows.length === 0) return rows;
+
+        const grandTotals = {
+            count: resultData.reduce((acc, row) => acc + (row._count || 0), 0),
+            sums: {} as Record<string, number>
+        };
+
+        sumCols.forEach(col => {
+            grandTotals.sums[col] = resultData.reduce((acc, row) => {
+                const val = row[`sum_${col}`];
+                return acc + (typeof val === 'number' ? val : 0);
+            }, 0);
+        });
+
+        const totalRow: any = {
+            _key: '__total__',
+            __rowType: 'grandTotal',
+            _count: grandTotals.count
+        };
+
+        sumCols.forEach(col => {
+            totalRow[`sum_${col}`] = grandTotals.sums[col] ?? 0;
+        });
+
+        rows.push(totalRow);
+
+        return rows;
+    }, [resultData, selectedGroup, selectedSub, selectedSum]);
 
 
     /* ---------------- Render Guard ---------------- */
@@ -727,7 +1040,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                     {viewMode === 'config' ? (
                         <>
                             <p className="text-sm text-gray-500 mb-3">
-                                Select columns to group by and columns to calculate totals.
+                                Select columns to group by, sub columns, and columns to calculate totals.
                             </p>
                             <div className="border rounded-lg h-full min-h-[400px] overflow-y-auto">
                                 <DataGrid
@@ -746,10 +1059,10 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                         </>
                     ) : (
                         <div className="border rounded-lg" style={{ height: '500px' }}>
-                            {resultData && resultData.length > 0 ? (
+                            {displayRows && displayRows.length > 0 ? (
                                 <DataGrid
                                     columns={resultColumns}
-                                    rows={resultData}
+                                    rows={displayRows}
                                     rowKeyGetter={(row: any) => row._key}
                                     style={{
                                         backgroundColor: colors.background,
@@ -757,6 +1070,15 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                                         fontFamily: fonts.content,
                                         height: '500px'
                                     }}
+                                    rowClass={(row: any) =>
+                                        row.__rowType === 'grandTotal'
+                                            ? 'font-semibold bg-gray-100'
+                                            : row.__rowType === 'subtotal'
+                                                ? 'font-semibold bg-gray-50'
+                                                : row.__rowType === 'groupHeader'
+                                                    ? 'font-semibold bg-gray-50'
+                                                    : undefined
+                                    }
                                     className="rdg-light"
                                 />
                             ) : (
@@ -828,6 +1150,14 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                     </div>
                 </div>
             </div>
+            <style jsx global>{`
+                .group-header-cell {
+                    position: sticky;
+                    top: var(--rdg-header-row-height);
+                    z-index: 3;
+                    background-color: #f9fafb;
+                }
+            `}</style>
         </div>,
         document.body
     );
