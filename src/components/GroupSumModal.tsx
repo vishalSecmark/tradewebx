@@ -176,10 +176,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
         headerRow.commit();
         rowCursor++;
 
-        const getGroupTotalLabel = (value: any) => {
-            const base = value === null || value === undefined ? '' : String(value).trim();
-            return base ? `${base} Total` : 'Total';
-        };
+        const getGroupTotalLabel = () => 'Total';
 
         // Add data rows
         exportRows.forEach((row, rowIndex) => {
@@ -195,7 +192,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
             const rowData = [
                 ...groupCols.map((col, idx) => {
                     if (isGroupHeader) return row[`group_${col}`];
-                    if (isSubtotal) return idx === 0 ? getGroupTotalLabel(row[`group_${col}`]) : '';
+                    if (isSubtotal) return idx === 0 ? getGroupTotalLabel() : '';
                     if (isGrandTotal) return idx === 0 ? 'Grand Total' : '';
                     if (isChild) return '';
                     return row[`group_${col}`];
@@ -303,10 +300,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
             }))
         ];
 
-        const getGroupTotalLabel = (value: any) => {
-            const base = value === null || value === undefined ? '' : String(value).trim();
-            return base ? `${base} Total` : 'Total';
-        };
+        const getGroupTotalLabel = () => 'Total';
 
         const buildCell = (
             text: string,
@@ -334,7 +328,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                 ...groupCols.map((col, idx) => {
                     let value = '';
                     if (isGroupHeader) value = row[`group_${col}`] || '';
-                    else if (isSubtotal) value = idx === 0 ? getGroupTotalLabel(row[`group_${col}`]) : '';
+                    else if (isSubtotal) value = idx === 0 ? getGroupTotalLabel() : '';
                     else if (isGrandTotal) value = idx === 0 ? 'Grand Total' : '';
                     return buildCell(value, 'left', isSpecialRow, fillColor);
                 }),
@@ -762,10 +756,7 @@ const GroupSumModal: React.FC<GroupSumModalProps> = ({
                         displayValue = isFirstGroupColumn ? 'Grand Total' : '';
                     } else if (rowType === 'subtotal') {
                         if (isFirstGroupColumn) {
-                            const base = row[groupKey];
-                            displayValue = base !== undefined && base !== null && String(base).trim() !== ''
-                                ? `${base} Total`
-                                : 'Total';
+                            displayValue = 'Total';
                         }
                     } else if (rowType === 'groupHeader') {
                         displayValue = row[groupKey];
