@@ -1,0 +1,236 @@
+import { useTheme } from "@/context/ThemeContext";
+import { selectAllMenuItems } from "@/redux/features/menuSlice";
+import { useAppSelector } from "@/redux/hooks";
+import apiService from "@/utils/apiService";
+import { ACTION_NAME, BASE_URL, PATH_URL } from "@/utils/constants";
+import { findPageData, getLocalStorage } from "@/utils/helper";
+import { useEffect, useState } from "react";
+import { DataGrid, Column } from "react-data-grid";
+import "react-data-grid/lib/styles.css";
+import LogModal from "@/components/Modals/LogModal";
+import { toast } from "react-toastify";
+import Loader from "@/components/Loader";
+
+const JobSchedule = () => {
+    const { colors } = useTheme();
+    const menuItems = useAppSelector(selectAllMenuItems);
+    const pageData: any = findPageData(menuItems, "JobSchedule");
+
+    const [rows, setRows] = useState<any[]>([]);
+    const [columns, setColumns] = useState<Column<any>[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Modal State
+    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+    const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+
+    const fetchJobSchedule = async () => {
+        const currentPageData = pageData?.[0]?.levels[0];
+        const juiData = currentPageData?.J_Ui || {};
+        const sql = pageData?.[0]?.Sql || ''
+        
+        setLoading(true);
+        try {
+            const xmlData = `<dsXml>
+                <J_Ui>${JSON.stringify(juiData).slice(1, -1)}</J_Ui>
+                <Sql>${sql}</Sql>
+                <X_Filter>
+                    <UserId>${getLocalStorage('userId')}</UserId>
+                </X_Filter>
+                <X_GFilter></X_GFilter>
+                <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
+            </dsXml>`;
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            const data = response?.data?.data?.rs0 || [];
+
+            if (data.length > 0) {
+                // Append Actions Columns
+                const actionColumns: Column<any>[] = [
+                    {
+                        key: "Log",
+                        name: "Log",
+                        width: 100,
+                        renderCell: (props) => (
+                            <button
+                                onClick={() => handleViewLog(props.row.JobID)}
+                                style={{
+                                    background: colors.buttonBackground,
+                                    color: colors.buttonText,
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    border: "none"
+                                }}
+                            >
+                                View Log
+                            </button>
+                        ),
+                    },
+                    {
+                        key: "QuickRun",
+                        name: "Quick Run",
+                        width: 100,
+                        renderCell: (props) => (
+                            <button
+                                onClick={() => handleQuickRun(props.row.JobID)}
+                                style={{
+                                    background: "#28a745", // Green for run
+                                    color: "#fff",
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    border: "none"
+                                }}
+                            >
+                                Run
+                            </button>
+                        ),
+                    }
+                ];
+
+                //Dynamic Columns
+                const keys = Object.keys(data[0]);
+                
+                // Find LastRunStatus key (case insensitive)
+                const lastRunKey = keys.find(k => k.toLowerCase() === "lastrunstatus");
+                
+                // Filter out LastRunStatus from general dynamic columns
+                const otherKeys = keys.filter(k => k.toLowerCase() !== "lastrunstatus");
+
+                const dynamicColumns: Column<any>[] = otherKeys.map((key) => {
+                    // Calculate dynamic width based on content
+                    const maxContentLength = data.reduce((max, row) => {
+                        const cellValue = String(row[key] || "");
+                        return Math.max(max, cellValue.length);
+                    }, key.length);
+                    
+                    // Approximate width: 10px per character, min 150px, max 600px
+                    const width = Math.min(Math.max(maxContentLength * 10, 150), 600);
+
+                    return {
+                        key,
+                        name: key,
+                        resizable: true,
+                        width: width,
+                        renderCell: (props) => {
+                            const value = props.row[key];
+                            return (
+                                <div title={String(value)} className="w-full h-full flex items-center">
+                                    {value}
+                                </div>
+                            );
+                        }
+                    };
+                });
+
+                const finalColumns = [...actionColumns];
+
+                if (lastRunKey) {
+                    finalColumns.push({
+                        key: lastRunKey,
+                        name: lastRunKey,
+                        resizable: true,
+                        width: 150,
+                        renderCell: (props) => {
+                            const status = props.row[lastRunKey];
+                            const isSuccess = String(status).toLowerCase() === "success";
+                            return (
+                                <span
+                                    style={{
+                                        color: isSuccess ? "#28a745" : "#dc3545",
+                                        fontWeight: "bold",
+                                        padding: "4px 8px",
+                                        borderRadius: "12px",
+                                        backgroundColor: isSuccess ? "rgba(40, 167, 69, 0.1)" : "rgba(220, 53, 69, 0.1)",
+                                        display: "inline-block"
+                                    }}
+                                >
+                                    {status}
+                                </span>
+                            );
+                        }
+                    });
+                }
+
+                finalColumns.push(...dynamicColumns);
+                setColumns(finalColumns);
+                setRows(data);
+            } else {
+                setRows([]);
+                setColumns([]);
+            }
+
+        } catch (error) {
+            console.error("Error fetching job schedule:", error);
+            toast.error("Error fetching job schedule");
+            setRows([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleViewLog = (jobId: number) => {
+        setSelectedJobId(jobId);
+        setIsLogModalOpen(true);
+    };
+
+    const handleQuickRun = async (jobId: number) => {
+        try {
+            const xmlData = `<dsXml>
+                <J_Ui>"ActionName":"${ACTION_NAME}","Option":"JOBQUICKRUN"</J_Ui>
+                <Sql></Sql>
+                <X_Filter>
+                    <JobId>${jobId}</JobId>
+                </X_Filter>
+                <X_GFilter></X_GFilter>
+                <J_Api>"UserId":"${getLocalStorage('userId')}", "UserType":"${getLocalStorage('userType')}"</J_Api>
+            </dsXml>`;
+
+            const response = await apiService.postWithAuth(BASE_URL + PATH_URL, xmlData);
+            const result = response?.data?.data?.rs0?.[0] || {};
+            
+            if (result.STATUS === "SUCCESS") {
+                toast.success(result.Message || "Job executed successfully");
+                fetchJobSchedule(); 
+            } else {
+                toast.error(result.Message || "Failed to trigger job");
+            }
+        } catch (error) {
+            console.error("Error triggering quick run:", error);
+            toast.error("Failed to trigger job");
+        }
+    };
+
+    useEffect(() => {
+        fetchJobSchedule();
+    }, []);
+
+    return (
+        <div style={{ padding: 20, background: colors.background, minHeight: "100vh" }}>
+            <h1 style={{ marginBottom: 20, fontSize: "24px", fontWeight: "bold", color: colors.text }}>Job Schedule</h1>
+            
+            <div style={{ background: colors.cardBackground, height: "80vh", position: "relative" }}>
+                 {loading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-50">
+                        <Loader />
+                    </div>
+                )}
+                <DataGrid
+                    columns={columns}
+                    rows={rows}
+                    className="rdg-light"
+                    style={{ height: "100%", color: colors.text }}
+                />
+            </div>
+
+            <LogModal 
+                isOpen={isLogModalOpen} 
+                onClose={() => setIsLogModalOpen(false)} 
+                jobId={selectedJobId} 
+            />
+        </div>
+    );
+};
+
+export default JobSchedule;
