@@ -8,7 +8,7 @@ import ExcelJS from 'exceljs';
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
 
-pdfMake.vfs = pdfFonts.vfs;
+pdfMake.vfs = (pdfFonts as any).vfs;
 
 interface GroupSumModalProps {
     isOpen: boolean;
