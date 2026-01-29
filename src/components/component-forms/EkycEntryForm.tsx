@@ -693,13 +693,13 @@ const EkycEntryForm: React.FC<EntryFormProps> = ({
                             onChange={(html) => handleInputChange(field.wKey, html)}
                             onBlur={() => handleBlur(field)}
                             disabled={!isEnabled}
-                            error={hasError}
+                            error={!!hasError}
                             placeholder={field.label}
                             maxLength={field.FieldSize ? parseInt(field.FieldSize, 10) : undefined}
                             colors={colors}
                             isJustUpdated={isJustUpdated}
                             ariaRequired={isRequired}
-                            ariaInvalid={hasError}
+                            ariaInvalid={!!hasError}
                             ariaDescribedBy={hasError ? `error-${field.wKey}` : undefined}
                         />
                         {hasError && (
