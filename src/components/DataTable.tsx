@@ -2335,7 +2335,7 @@ export const exportTableToCsv = (
 
 
 // pdfMake.vfs = pdfFonts?.pdfMake?.vfs;
-pdfMake.vfs = pdfFonts.vfs;
+pdfMake.vfs = (pdfFonts as any).vfs;
 
 const convertBmpToPng = (bmpBase64: string): Promise<string> => {
     return new Promise((resolve, reject) => {
